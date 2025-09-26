@@ -25,6 +25,29 @@
  */
 function xoops_module_update_system(XoopsModule $module, $prev_version = null)
 {
+    global $xoopsDB;
+    if ($prev_version < '2.2.0') {
+        //$db = XoopsDatabaseFactory::getDatabaseConnection();
+        $sql = "CREATE TABLE " . $xoopsDB->prefix('') . "_menuscategory (
+                category_id INT AUTO_INCREMENT PRIMARY KEY,
+                category_title VARCHAR(100) NOT NULL,
+                category_url VARCHAR(255) NULL,
+                category_position INT DEFAULT 0,
+                category_active TINYINT(1) DEFAULT 1);";
+        $xoopsDB->query($sql);
+        $sql = "CREATE TABLE " . $xoopsDB->prefix('') . "_menusitems (
+                items_id INT AUTO_INCREMENT PRIMARY KEY,
+                items_pid INT NULL,
+                items_cid INT NULL,
+                items_title VARCHAR(100) NOT NULL,
+                items_url VARCHAR(255) NULL,
+                items_position INT DEFAULT 0,
+                items_active TINYINT(1) DEFAULT 1,
+                FOREIGN KEY (items_cid) REFERENCES menuscategory(category_id) ON DELETE CASCADE,
+                FOREIGN KEY (items_pid) REFERENCES menusitems(items_id) ON DELETE CASCADE);";
+        $xoopsDB->query($sql);
+    }
+
     // irmtfan bug fix: solve templates duplicate issue
     $ret = null;
     if ($prev_version < '2.1.1') {

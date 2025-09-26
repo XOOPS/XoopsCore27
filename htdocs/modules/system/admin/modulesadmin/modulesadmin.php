@@ -68,6 +68,8 @@ function xoops_module_install($dirname)
         'banner',
         'bannerclient',
         'bannerfinish',
+        'menuscategory',
+        'menusitems',
     ];
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');

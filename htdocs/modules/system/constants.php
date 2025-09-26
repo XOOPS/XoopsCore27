@@ -34,6 +34,7 @@ define('XOOPS_SYSTEM_TPLSET', 15);
 define('XOOPS_SYSTEM_FILEMANAGER', 16);
 define('XOOPS_SYSTEM_MAINTENANCE', 17);
 define("XOOPS_SYSTEM_THEME1", 18);
+define("XOOPS_SYSTEM_MENUS", 19);
 // Configuration Category
 define('SYSTEM_CAT_MAIN', 0);
 define('SYSTEM_CAT_USER', 1);

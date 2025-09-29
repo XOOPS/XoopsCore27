@@ -76,7 +76,7 @@ class XoopsMenusCategory extends XoopsObject
         $radio->addOption(0, _NO);
         $form->addElement($radio);
 
-        $form->addElement(new XoopsFormHidden('op', 'save'));
+        $form->addElement(new XoopsFormHidden('op', 'savecat'));
         // submit
         $form->addElement(new XoopsFormButton('', 'submit', _SUBMIT, 'submit'));
 

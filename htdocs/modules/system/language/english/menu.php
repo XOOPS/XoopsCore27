@@ -47,3 +47,7 @@ define('_AM_SYSTEM_MENUS_URL', 'URL of the menu category');
 define('_AM_SYSTEM_MENUS_URLDESC', 'Optional — Only if you want the category title to be a link.');
 define('_AM_SYSTEM_MENUS_POSITION', 'Position of the menu category');
 define('_AM_SYSTEM_MENUS_ACTIVE', 'Active');
+define('_AM_SYSTEM_MENUS_ACTIVE_YES', 'Enabled');
+define('_AM_SYSTEM_MENUS_ACTIVE_NO', 'Disabled');
+define('_AM_SYSTEM_MENUS_ERROR_NOCATEGORY', 'There are no menu categories. You must create one before adding menus.');
+

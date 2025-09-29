@@ -82,26 +82,35 @@
         $('#menus-row').sortable({
             items: '[data-id]',
             placeholder: 'card-placeholder',
+            tolerance: 'pointer',
+            forcePlaceholderSize: true,
+            helper: function(e, ui) {
+                // clone and append to body so dragging isn't constrained by container
+                var $clone = ui.clone();
+                $clone.css({
+                    'width': ui.outerWidth(),
+                    'box-sizing': 'border-box'
+                }).appendTo('body');
+                return $clone;
+            },
+            appendTo: 'body',
+            start: function(evt, ui) {
+                // ensure placeholder has same size as helper
+                ui.placeholder.height(ui.helper.outerHeight());
+                ui.placeholder.width(ui.helper.outerWidth());
+                ui.helper.css('z-index', 1200);
+            },
             update: function() {
                 var ids = $('#menus-row').children('[data-id]').map(function(){ return $(this).data('id'); }).get();
-
-                // relire le token à chaque update (important)
                 var $tokenInput = $('#menus-token').find('input').first();
                 var data = { order: ids };
                 if ($tokenInput.length) {
                     data[$tokenInput.attr('name')] = $tokenInput.val();
-                    // fallback : envoyer aussi sous le nom usuel
-                    data['XOOPS_TOKEN_REQUEST'] = $tokenInput.val();
+                    data['XOOPS_TOKEN_REQUEST'] = $tokenInput.val(); // fallback
                 }
-
                 $.post('admin.php?fct=menus&op=saveorder', data, function(response){
-                    // remplacer le token HTML retourné (si présent)
-                    if (response && response.token) {
-                        $('#menus-token').html(response.token);
-                    }
-                    if (response && response.success) {
-                        console.log('Order saved');
-                    } else {
+                    if (response && response.token) { $('#menus-token').html(response.token); }
+                    if (!(response && response.success)) {
                         alert(response && response.message ? response.message : 'Save failed');
                     }
                 }, 'json').fail(function(jqXHR, textStatus, errorThrown){

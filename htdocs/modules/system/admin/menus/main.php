@@ -149,9 +149,7 @@ switch ($op) {
             echo json_encode([
                 'success' => false,
                 'message' => implode(' ', $errors),
-                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML(),
-                'received_post' => $_POST,
-                'received_raw' => file_get_contents('php://input')
+                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
             ]);
             exit;
         }

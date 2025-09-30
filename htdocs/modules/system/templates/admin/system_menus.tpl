@@ -17,6 +17,20 @@
                 <{$smarty.const._AM_SYSTEM_MENUS_LISTCAT}>
             </button>
             <{/if}>
+            <{if $op == 'viewcat'}>
+            <button id="xo-addmenuitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=additem&amp;category_id=<{$cat_id}>"'
+                    title="<{$smarty.const._AM_SYSTEM_MENUS_ADDITEM}>">
+                <i class="fa fa-plus-circle ic-w mr-1" ></i>
+                <{$smarty.const._AM_SYSTEM_MENUS_ADDITEM}>
+            </button>
+            <{/if}>
+            <{if $op == 'additem' || $op == 'edititem'}>
+            <button id="xo-listitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$cat_id}>"'
+                    title="<{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>">
+                <i class="fa fa-list ic-w mr-1" ></i>
+                <{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>
+            </button>
+            <{/if}>
         </div>
     </div>
 </div>
@@ -56,6 +70,9 @@
                     <div class="btn-group" role="group" aria-label="actions">
                         <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=editcat&amp;category_id=<{$itemcategory.id|escape}>">
                             <i class="fa fa-edit"></i>
+                        </a>
+                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$itemcategory.id|escape}>">
+                            <i class="fa fa-bars"></i>
                         </a>
                         <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delcat&amp;category_id=<{$itemcategory.id|escape}>" onclick="return confirm('Are you sure?')">
                             <i class="fa fa-trash"></i>
@@ -122,7 +139,34 @@
     });
     </script>
     <{/literal}>
-
+<{/if}>
+<{if $op|default:'' == viewcat}>
+    <div class="col-12 mb-3" data-id="<{$cat_id}>">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="me-2" style="flex:1; min-width:0;">
+                    <h5 class="card-title mb-0 text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <{$cat_title}>
+                    </h5>
+                </div>
+                <small class="text-muted ms-2" style="white-space:nowrap;">#<{$cat_id}></small>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <{if $cat_url|default:'' != ''}>
+                    <p class="card-text mb-2">
+                        <a href="<{$cat_url}>" target="_blank" rel="noopener"><{$cat_url}></a>
+                    </p>
+                <{/if}>
+                <div class="mt-auto">
+                    <{if $cat_active}>
+                        <span class="badge badge-success"><{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}></span>
+                    <{else}>
+                        <span class="badge badge-danger"><{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}></span>
+                    <{/if}>
+                </div>
+            </div>
+        </div>
+    </div>
 <{/if}>
 
 <!-- token container pour JS -->

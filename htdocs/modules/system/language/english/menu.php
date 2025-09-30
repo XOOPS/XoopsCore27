@@ -37,17 +37,3 @@ define('_AM_MODULES_INSTALL', 'Install Module');
 define('_AM_BACKUP_RESTORE', 'Backup & Restore');
 define('_AM_SYSTEM_LOGS', 'System Logs');
 define('_AM_PERFORMANCE_MONITOR', 'Performance Monitoring');
-
-// Xoops 2.7
-define('_AM_SYSTEM_MENUS_ADDCAT', 'Add Category');
-define('_AM_SYSTEM_MENUS_EDITCAT', 'Edit Category');
-define('_AM_SYSTEM_MENUS_LISTCAT', 'List Categories');
-define('_AM_SYSTEM_MENUS_TITLE', 'Name of the menu category');
-define('_AM_SYSTEM_MENUS_URL', 'URL of the menu category');
-define('_AM_SYSTEM_MENUS_URLDESC', 'Optional — Only if you want the category title to be a link.');
-define('_AM_SYSTEM_MENUS_POSITION', 'Position of the menu category');
-define('_AM_SYSTEM_MENUS_ACTIVE', 'Active');
-define('_AM_SYSTEM_MENUS_ACTIVE_YES', 'Enabled');
-define('_AM_SYSTEM_MENUS_ACTIVE_NO', 'Disabled');
-define('_AM_SYSTEM_MENUS_ERROR_NOCATEGORY', 'There are no menu categories. You must create one before adding menus.');
-

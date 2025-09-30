@@ -60,15 +60,15 @@ class XoopsMenusCategory extends XoopsObject
         }
 
         // title
-        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_TITLE, 'category_title', 50, 255, $this->getVar('category_title')), true);
+        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_TITLECAT, 'category_title', 50, 255, $this->getVar('category_title')), true);
 
         // url
-        $url = new XoopsFormText(_AM_SYSTEM_MENUS_URL, 'category_url', 50, 255, $this->getVar('category_url'));
-        $url->setDescription(_AM_SYSTEM_MENUS_URLDESC);
+        $url = new XoopsFormText(_AM_SYSTEM_MENUS_URLCAT, 'category_url', 50, 255, $this->getVar('category_url'));
+        $url->setDescription(_AM_SYSTEM_MENUS_URLCATDESC);
         $form->addElement($url, false);
 
         // position
-        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_POSITION, 'category_position', 5, 5, $position));
+        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_POSITIONCAT, 'category_position', 5, 5, $position));
 
         // actif
         $radio = new XoopsFormRadio(_AM_SYSTEM_MENUS_ACTIVE, 'category_active', $active);

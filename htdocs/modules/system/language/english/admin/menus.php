@@ -7,6 +7,7 @@
  */
 // Navigation
 define('_AM_SYSTEM_MENUS_NAV_MAIN', 'Menus Management');
+define('_AM_SYSTEM_MENUS_NAV_CATEGORY', 'Category Management');
 
 // Tips
 define('_AM_SYSTEM_MENUS_NAV_TIPS', '
@@ -14,4 +15,21 @@ define('_AM_SYSTEM_MENUS_NAV_TIPS', '
 <li>Manage Xoops menus</li>
 </ul>');
 // Main
-define('_AM_SYSTEM_MENUS_', '');
+define('_AM_SYSTEM_MENUS_ADDCAT', 'Add Category');
+define('_AM_SYSTEM_MENUS_ADDITEM', 'Adding a submenu item');
+define('_AM_SYSTEM_MENUS_EDITCAT', 'Edit Category');
+define('_AM_SYSTEM_MENUS_EDITITEM', 'Edit a submenu item');
+define('_AM_SYSTEM_MENUS_LISTCAT', 'List Categories');
+define('_AM_SYSTEM_MENUS_LISTITEM', 'List items');
+define('_AM_SYSTEM_MENUS_TITLECAT', 'Name of the menu category');
+define('_AM_SYSTEM_MENUS_TITLEITEM', 'Name of the submenu item');
+define('_AM_SYSTEM_MENUS_URLCAT', 'URL of the menu category');
+define('_AM_SYSTEM_MENUS_URLCATDESC', 'Optional — Only if you want the category title to be a link.');
+define('_AM_SYSTEM_MENUS_URLITEM', 'URL of the submenu item');
+define('_AM_SYSTEM_MENUS_POSITIONCAT', 'Position of the menu category');
+define('_AM_SYSTEM_MENUS_POSITIONITEM', 'Position of the submenu item');
+define('_AM_SYSTEM_MENUS_ACTIVE', 'Active');
+define('_AM_SYSTEM_MENUS_ACTIVE_YES', 'Enabled');
+define('_AM_SYSTEM_MENUS_ACTIVE_NO', 'Disabled');
+define('_AM_SYSTEM_MENUS_PID', 'Upper level menu');
+define('_AM_SYSTEM_MENUS_ERROR_NOCATEGORY', 'There are no menu categories. You must create one before adding menus.');

@@ -43,8 +43,6 @@ if ($op !== 'saveorder') {
     // Define scripts
     $xoTheme->addScript('modules/system/js/admin.js');
     // Define Breadcrumb and tips
-    $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
-    $xoBreadCrumb->render();
 }
 
 
@@ -56,6 +54,8 @@ $nb_limit = $helper->getConfig('avatars_pager', 15);
 switch ($op) {
     case 'list':
     default:
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->render();
         $start = Request::getInt('start', 0);
         /** @var \XoopsPersistableObjectHandler $menuscategoryHandler */
         $menuscategoryHandler = xoops_getHandler('menuscategory');
@@ -90,6 +90,8 @@ switch ($op) {
         break;
 
     case 'addcat':
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->render();
         // Form
         $menuscategoryHandler = xoops_getHandler('menuscategory');
         $obj                  = $menuscategoryHandler->create();
@@ -98,13 +100,14 @@ switch ($op) {
         break;
 
     case 'editcat':
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->render();
         // Form
         $category_id = Request::getInt('category_id', 0);
         if ($category_id == 0) {
             $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
         } else {
             $menuscategoryHandler = xoops_getHandler('menuscategory');
-            $obj                  = $menuscategoryHandler->create();
             $obj = $menuscategoryHandler->get($category_id);
             $form = $obj->getFormCat();
             $xoopsTpl->assign('form', $form->render());
@@ -190,6 +193,62 @@ switch ($op) {
             echo json_encode(['success' => false, 'message' => implode('; ', $errors), 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
         }
         exit;
+        break;
+
+    case 'viewcat':
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_CATEGORY);
+        $xoBreadCrumb->render();
+        $category_id = Request::getInt('category_id', 0);
+        if ($category_id == 0) {
+            $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+        } else {
+            $menuscategoryHandler = xoops_getHandler('menuscategory');
+            $category = $menuscategoryHandler->get($category_id);
+            $xoopsTpl->assign('cat_id', $category->getVar('category_id'));
+            $xoopsTpl->assign('cat_title', $category->getVar('category_title'));
+            $xoopsTpl->assign('cat_url', $category->getVar('category_url'));
+            $xoopsTpl->assign('cat_active', $category->getVar('category_active'));
+        }
+        break;
+
+    case 'additem':
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_CATEGORY);
+        $xoBreadCrumb->render();
+        $category_id = Request::getInt('category_id', 0);
+        $xoopsTpl->assign('cat_id', $category_id);
+        // Form
+        $menusitemsHandler = xoops_getHandler('menusitems');
+        $obj = $menusitemsHandler->create();
+        $form = $obj->getFormItems($category_id);
+        $xoopsTpl->assign('form', $form->render());
+        break;
+
+    case 'saveitem':
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        }
+        $menusitemsHandler = xoops_getHandler('menusitems');
+        $id = Request::getInt('items_id', 0);
+        if ($id > 0) {
+            $obj = $menusitemsHandler->get($id);
+        } else {
+            $obj = $menusitemsHandler->create();
+        }
+        $obj->setVar('items_pid', Request::getInt('items_pid', 0));
+        $items_cid = Request::getInt('items_cid', 0);
+        $obj->setVar('items_cid', $items_cid);
+        $obj->setVar('items_title', Request::getString('items_title', ''));
+        $obj->setVar('items_url', Request::getString('items_url', ''));
+        $obj->setVar('items_position', Request::getInt('items_position', 0));
+        $obj->setVar('items_active', Request::getInt('items_active', 1));
+        if ($menusitemsHandler->insert($obj)) {
+            redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $items_cid, 2, _AM_SYSTEM_DBUPDATED);
+        } else {
+            echo $obj->getHtmlErrors();
+        }
+        break;
 }
 if ($op !== 'saveorder') {
     // Call Footer

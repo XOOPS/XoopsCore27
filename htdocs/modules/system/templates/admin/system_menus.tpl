@@ -59,11 +59,15 @@
                         </p>
                     <{/if}>
                     <div class="mt-auto">
-                        <{if $itemcategory.active}>
-                            <span class="badge badge-success"><{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}></span>
-                        <{else}>
-                            <span class="badge badge-danger"><{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}></span>
-                        <{/if}>
+                    <{if $itemcategory.active}>
+                        <span class="badge badge-success category-active-toggle" data-id="<{$itemcategory.id|escape}>" data-active="1" style="cursor:pointer;">
+                            <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>
+                        </span>
+                    <{else}>
+                        <span class="badge badge-danger category-active-toggle" data-id="<{$itemcategory.id|escape}>" data-active="0" style="cursor:pointer;">
+                            <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>
+                        </span>
+                    <{/if}>
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
@@ -138,6 +142,41 @@
         }).disableSelection();
     });
     </script>
+    <script>
+    jQuery(function($){
+        // toggle active via AJAX
+        $(document).on('click', '.category-active-toggle', function(e){
+            e.preventDefault();
+            var $el = $(this);
+            var id = $el.data('id');
+            // relire token à chaque fois
+            var $tokenInput = $('#menus-token').find('input').first();
+            var data = { category_id: id };
+            if ($tokenInput.length) {
+                data[$tokenInput.attr('name')] = $tokenInput.val();
+                data['XOOPS_TOKEN_REQUEST'] = $tokenInput.val(); // fallback
+            }
+            $.post('admin.php?fct=menus&op=toggleactive', data, function(response){
+                if (response && response.token) {
+                    $('#menus-token').html(response.token);
+                }
+                if (response && response.success) {
+                    var active = parseInt(response.active, 10);
+                    if (active) {
+                        $el.removeClass('badge-danger').addClass('badge-success').attr('data-active', 1).text('<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>');
+                    } else {
+                        $el.removeClass('badge-success').addClass('badge-danger').attr('data-active', 0).text('<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>');
+                    }
+                } else {
+                    alert(response && response.message ? response.message : 'Toggle failed');
+                }
+            }, 'json').fail(function(jqXHR, textStatus, errorThrown){
+                console.error('Ajax error:', textStatus, errorThrown, jqXHR.responseText);
+                alert('Ajax error (voir console)');
+            });
+        });
+    });
+    </script>
     <{/literal}>
 <{/if}>
 <{if $op|default:'' == viewcat}>
@@ -150,20 +189,6 @@
                     </h5>
                 </div>
                 <small class="text-muted ms-2" style="white-space:nowrap;">#<{$cat_id}></small>
-            </div>
-            <div class="card-body d-flex flex-column">
-                <{if $cat_url|default:'' != ''}>
-                    <p class="card-text mb-2">
-                        <a href="<{$cat_url}>" target="_blank" rel="noopener"><{$cat_url}></a>
-                    </p>
-                <{/if}>
-                <div class="mt-auto">
-                    <{if $cat_active}>
-                        <span class="badge badge-success"><{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}></span>
-                    <{else}>
-                        <span class="badge badge-danger"><{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}></span>
-                    <{/if}>
-                </div>
             </div>
         </div>
     </div>

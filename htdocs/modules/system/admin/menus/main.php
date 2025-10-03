@@ -33,7 +33,7 @@ $GLOBALS['xoopsOption']['template_main'] = 'system_menus.tpl';
 $op = Request::getCmd('op', 'list');
 
 // Call Header
-if ($op !== 'saveorder') {
+if ($op !== 'saveorder' && $op !== 'toggleactive') {
     xoops_cp_header();
     $xoopsTpl->assign('op', $op);
     $xoopsTpl->assign('xoops_token', $GLOBALS['xoopsSecurity']->getTokenHTML());
@@ -207,8 +207,6 @@ switch ($op) {
             $category = $menuscategoryHandler->get($category_id);
             $xoopsTpl->assign('cat_id', $category->getVar('category_id'));
             $xoopsTpl->assign('cat_title', $category->getVar('category_title'));
-            $xoopsTpl->assign('cat_url', $category->getVar('category_url'));
-            $xoopsTpl->assign('cat_active', $category->getVar('category_active'));
         }
         break;
 
@@ -249,8 +247,59 @@ switch ($op) {
             echo $obj->getHtmlErrors();
         }
         break;
+
+    case 'toggleactive':
+        // Pour les réponses AJAX : désactiver le logger et vider les buffers
+        if (isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])) {
+            $GLOBALS['xoopsLogger']->activated = false;
+        }
+        while (ob_get_level()) {
+            @ob_end_clean();
+        }
+        // Vérifier token
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => implode(' ', $GLOBALS['xoopsSecurity']->getErrors()),
+                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+            ]);
+            exit;
+        }
+
+        $category_id = Request::getInt('category_id', 0);
+        if ($category_id <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid id', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            exit;
+        }
+
+        $menuscategoryHandler = xoops_getHandler('menuscategory');
+        if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
+            $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
+        }
+
+        $obj = $menuscategoryHandler->get($category_id);
+        if (!is_object($obj)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Not found', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            exit;
+        }
+        $new = $obj->getVar('category_active') ? 0 : 1;
+        $obj->setVar('category_active', $new);
+        $res = $menuscategoryHandler->insert($obj, true);
+
+        header('Content-Type: application/json');
+        if ($res) {
+            echo json_encode(['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Save failed', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+        }
+        exit;
+        break;
+
 }
-if ($op !== 'saveorder') {
+if ($op !== 'saveorder' && $op !== 'toggleactive') {
     // Call Footer
     xoops_cp_footer();
 }

@@ -33,15 +33,17 @@ $GLOBALS['xoopsOption']['template_main'] = 'system_menus.tpl';
 $op = Request::getCmd('op', 'list');
 
 // Call Header
-if ($op !== 'saveorder' && $op !== 'toggleactive') {
+if ($op !== 'saveorder' && $op !== 'toggleactivecat' && $op !== 'toggleactiveitem') {
     xoops_cp_header();
     $xoopsTpl->assign('op', $op);
     $xoopsTpl->assign('xoops_token', $GLOBALS['xoopsSecurity']->getTokenHTML());
 
     // Define Stylesheet
     $xoTheme->addStylesheet(XOOPS_URL . '/modules/system/css/admin.css');
+    $xoTheme->addStylesheet(XOOPS_URL . '/modules/system/css/menus.css');
     // Define scripts
     $xoTheme->addScript('modules/system/js/admin.js');
+    $xoTheme->addScript('modules/system/js/menus.js');
     // Define Breadcrumb and tips
 }
 
@@ -200,12 +202,13 @@ switch ($op) {
         $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_CATEGORY);
         $xoBreadCrumb->render();
         $category_id = Request::getInt('category_id', 0);
+        $xoopsTpl->assign('category_id', $category_id);
         if ($category_id == 0) {
             $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
         } else {
             $menuscategoryHandler = xoops_getHandler('menuscategory');
             $category = $menuscategoryHandler->get($category_id);
-            $xoopsTpl->assign('cat_id', $category->getVar('category_id'));
+            $xoopsTpl->assign('category_id', $category->getVar('category_id'));
             $xoopsTpl->assign('cat_title', $category->getVar('category_title'));
 
             $menusitemsHandler = xoops_getHandler('menusitems');
@@ -239,7 +242,7 @@ switch ($op) {
         $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_CATEGORY);
         $xoBreadCrumb->render();
         $category_id = Request::getInt('category_id', 0);
-        $xoopsTpl->assign('cat_id', $category_id);
+        $xoopsTpl->assign('category_id', $category_id);
         // Form
         $menusitemsHandler = xoops_getHandler('menusitems');
         $obj = $menusitemsHandler->create();
@@ -272,7 +275,30 @@ switch ($op) {
         }
         break;
 
-    case 'toggleactive':
+    case 'edititem':
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_CATEGORY);
+        $xoBreadCrumb->render();
+        // Form
+        $item_id = Request::getInt('item_id', 0);
+        $category_id = Request::getInt('category_id', 0);
+        $xoopsTpl->assign('category_id', $category_id);
+        if ($item_id == 0 || $category_id == 0) {
+            if ($item_id == 0) {
+                $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOITEM);
+            }
+            if ($category_id == 0) {
+                $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+            }
+        } else {
+            $menusitemsHandler = xoops_getHandler('menusitems');
+            $obj = $menusitemsHandler->get($item_id);
+            $form = $obj->getFormItems($category_id);
+            $xoopsTpl->assign('form', $form->render());
+        }
+        break;
+
+    case 'toggleactivecat':
         // Pour les réponses AJAX : désactiver le logger et vider les buffers
         if (isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])) {
             $GLOBALS['xoopsLogger']->activated = false;
@@ -322,8 +348,62 @@ switch ($op) {
         exit;
         break;
 
+    case 'toggleactiveitem':
+        // Disable logger & clear buffers for clean JSON response
+        if (isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])) {
+            $GLOBALS['xoopsLogger']->activated = false;
+        }
+        while (ob_get_level()) {
+            @ob_end_clean();
+        }
+
+        // token check
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => implode(' ', $GLOBALS['xoopsSecurity']->getErrors()),
+                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+            ]);
+            exit;
+        }
+
+        $item_id = Request::getInt('item_id', 0);
+        if ($item_id <= 0) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid id', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            exit;
+        }
+
+        $menusitemsHandler = xoops_getHandler('menusitems');
+        if (!is_object($menusitemsHandler) && class_exists('XoopsMenusItemsHandler')) {
+            $menusitemsHandler = new XoopsMenusItemsHandler($GLOBALS['xoopsDB']);
+        }
+
+        $obj = $menusitemsHandler->get($item_id);
+        if (!is_object($obj)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Not found', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            exit;
+        }
+
+        // Adapt field name si nécessaire (ici 'items_active')
+        $current = (int)$obj->getVar('items_active');
+        $new = $current ? 0 : 1;
+        $obj->setVar('items_active', $new);
+        $res = $menusitemsHandler->insert($obj, true);
+
+        header('Content-Type: application/json');
+        if ($res) {
+            echo json_encode(['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Save failed', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+        }
+        exit;
+        break;
+
 }
-if ($op !== 'saveorder' && $op !== 'toggleactive') {
+if ($op !== 'saveorder' && $op !== 'toggleactivecat' && $op !== 'toggleactiveitem') {
     // Call Footer
     xoops_cp_footer();
 }

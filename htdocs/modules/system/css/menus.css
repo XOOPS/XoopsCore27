@@ -1,0 +1,3 @@
+#menus-row [data-id] { cursor: move; }
+.card-placeholder { border: 2px dashed #ccc; height: 80px; margin-bottom: .75rem; }
+.submenu-indicator { width:1.2rem; display:inline-flex; justify-content:center; align-items:center; color:#6c757d; margin-right:.5rem; }

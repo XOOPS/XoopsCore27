@@ -18,6 +18,8 @@ define('_AM_SYSTEM_MENUS_NAV_TIPS', '
 define('_AM_SYSTEM_MENUS_ADDCAT', 'Add Category');
 define('_AM_SYSTEM_MENUS_ADDITEM', 'Adding a submenu item');
 define('_AM_SYSTEM_MENUS_EDITCAT', 'Edit Category');
+define('_AM_SYSTEM_MENUS_DELCAT', 'Delete Category');
+define('_AM_SYSTEM_MENUS_DELITEM', 'Delete a submenu item');
 define('_AM_SYSTEM_MENUS_EDITITEM', 'Edit a submenu item');
 define('_AM_SYSTEM_MENUS_LISTCAT', 'List Categories');
 define('_AM_SYSTEM_MENUS_LISTITEM', 'List items');
@@ -33,3 +35,4 @@ define('_AM_SYSTEM_MENUS_ACTIVE_YES', 'Enabled');
 define('_AM_SYSTEM_MENUS_ACTIVE_NO', 'Disabled');
 define('_AM_SYSTEM_MENUS_PID', 'Upper level menu');
 define('_AM_SYSTEM_MENUS_ERROR_NOCATEGORY', 'There are no menu categories. You must create one before adding menus.');
+define('_AM_SYSTEM_MENUS_ERROR_NOITEM', 'There are no submenu item.');

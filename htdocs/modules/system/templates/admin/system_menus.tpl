@@ -1,4 +1,12 @@
 <{include file="db:system_header.tpl"}>
+<script type="text/javascript">
+/* expose des labels / options Smarty pour le JS externe */
+window.XOOPS_MENUS = window.XOOPS_MENUS || {};
+window.XOOPS_MENUS.labels = {
+    activeYes: "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>",
+    activeNo:  "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>"
+};
+</script>
 <!-- Buttons -->
 <div class="card">
     <div class="card-header">
@@ -18,14 +26,14 @@
             </button>
             <{/if}>
             <{if $op == 'viewcat'}>
-            <button id="xo-addmenuitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=additem&amp;category_id=<{$cat_id}>"'
+            <button id="xo-addmenuitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=additem&amp;category_id=<{$category_id}>"'
                     title="<{$smarty.const._AM_SYSTEM_MENUS_ADDITEM}>">
                 <i class="fa fa-plus-circle ic-w mr-1" ></i>
                 <{$smarty.const._AM_SYSTEM_MENUS_ADDITEM}>
             </button>
             <{/if}>
             <{if $op == 'additem' || $op == 'edititem'}>
-            <button id="xo-listitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$cat_id}>"'
+            <button id="xo-listitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$category_id}>"'
                     title="<{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>">
                 <i class="fa fa-list ic-w mr-1" ></i>
                 <{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>
@@ -72,13 +80,13 @@
                 </div>
                 <div class="card-footer d-flex justify-content-between">
                     <div class="btn-group" role="group" aria-label="actions">
-                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=editcat&amp;category_id=<{$itemcategory.id|escape}>">
+                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=editcat&amp;category_id=<{$itemcategory.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_EDITCAT}>">
                             <i class="fa fa-edit"></i>
                         </a>
-                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$itemcategory.id|escape}>">
+                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$itemcategory.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>">
                             <i class="fa fa-bars"></i>
                         </a>
-                        <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delcat&amp;category_id=<{$itemcategory.id|escape}>" onclick="return confirm('Are you sure?')">
+                        <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delcat&amp;category_id=<{$itemcategory.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELCAT}>">
                             <i class="fa fa-trash"></i>
                         </a>
                     </div>
@@ -88,103 +96,9 @@
     <{/foreach}>
     </div>
 
-    <{literal}>
-    <style>
-      #menus-row [data-id] { cursor: move; }
-      .card-placeholder { border: 2px dashed #ccc; height: 80px; margin-bottom: .75rem; }
-    </style>
-    <script>
-    jQuery(function($){
-        if (!$.fn.sortable) {
-            console.warn('jQuery UI sortable not found.');
-            return;
-        }
-
-        $('#menus-row').sortable({
-            items: '[data-id]',
-            placeholder: 'card-placeholder',
-            tolerance: 'pointer',
-            forcePlaceholderSize: true,
-            helper: function(e, ui) {
-                // clone and append to body so dragging isn't constrained by container
-                var $clone = ui.clone();
-                $clone.css({
-                    'width': ui.outerWidth(),
-                    'box-sizing': 'border-box'
-                }).appendTo('body');
-                return $clone;
-            },
-            appendTo: 'body',
-            start: function(evt, ui) {
-                // ensure placeholder has same size as helper
-                ui.placeholder.height(ui.helper.outerHeight());
-                ui.placeholder.width(ui.helper.outerWidth());
-                ui.helper.css('z-index', 1200);
-            },
-            update: function() {
-                var ids = $('#menus-row').children('[data-id]').map(function(){ return $(this).data('id'); }).get();
-                var $tokenInput = $('#menus-token').find('input').first();
-                var data = { order: ids };
-                if ($tokenInput.length) {
-                    data[$tokenInput.attr('name')] = $tokenInput.val();
-                    data['XOOPS_TOKEN_REQUEST'] = $tokenInput.val(); // fallback
-                }
-                $.post('admin.php?fct=menus&op=saveorder', data, function(response){
-                    if (response && response.token) { $('#menus-token').html(response.token); }
-                    if (!(response && response.success)) {
-                        alert(response && response.message ? response.message : 'Save failed');
-                    }
-                }, 'json').fail(function(jqXHR, textStatus, errorThrown){
-                    console.error('Ajax error:', textStatus, errorThrown, jqXHR.responseText);
-                    alert('Ajax error (voir console)');
-                });
-            }
-        }).disableSelection();
-    });
-    </script>
-    <script>
-    jQuery(function($){
-        // toggle active via AJAX
-        $(document).on('click', '.category-active-toggle', function(e){
-            e.preventDefault();
-            var $el = $(this);
-            var id = $el.data('id');
-            // relire token à chaque fois
-            var $tokenInput = $('#menus-token').find('input').first();
-            var data = { category_id: id };
-            if ($tokenInput.length) {
-                data[$tokenInput.attr('name')] = $tokenInput.val();
-                data['XOOPS_TOKEN_REQUEST'] = $tokenInput.val(); // fallback
-            }
-            $.post('admin.php?fct=menus&op=toggleactive', data, function(response){
-                if (response && response.token) {
-                    $('#menus-token').html(response.token);
-                }
-                if (response && response.success) {
-                    var active = parseInt(response.active, 10);
-                    if (active) {
-                        $el.removeClass('badge-danger').addClass('badge-success').attr('data-active', 1).text('<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>');
-                    } else {
-                        $el.removeClass('badge-success').addClass('badge-danger').attr('data-active', 0).text('<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>');
-                    }
-                } else {
-                    alert(response && response.message ? response.message : 'Toggle failed');
-                }
-            }, 'json').fail(function(jqXHR, textStatus, errorThrown){
-                console.error('Ajax error:', textStatus, errorThrown, jqXHR.responseText);
-                alert('Ajax error (voir console)');
-            });
-        });
-    });
-    </script>
-    <{/literal}>
 <{/if}>
 <{if $op|default:'' == viewcat}>
-    <style>
-     /* indicator for submenu items */
-     .submenu-indicator { width:1.2rem; display:inline-flex; justify-content:center; align-items:center; color:#6c757d; margin-right:.5rem; }
-    </style>
-    <div class="col-12 mb-3" data-id="<{$cat_id}>">
+    <div class="col-12 mb-3" data-id="<{$category_id}>">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div class="me-2" style="flex:1; min-width:0;">
@@ -192,28 +106,51 @@
                         <{$cat_title}>
                     </h5>
                 </div>
-                <small class="text-muted ms-2" style="white-space:nowrap;">#<{$cat_id}></small>
+                <small class="text-muted ms-2" style="white-space:nowrap;">#<{$category_id}></small>
             </div>
         </div>
     </div>
     <{if $items_count|default:0 != 0}>
-        <ul class="list-group">
+        <ul class="list-group mb-5">
         <{foreach item=item from=$items}>
             <li class="list-group-item">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div style="margin-left: <{$item.level*20}>px;" class="d-flex align-items-center">
+                <div class="d-flex align-items-center w-100">
+                    <!-- left: indicator + title (flexible) -->
+                    <div style="margin-left: <{$item.level*20}>px; flex:1; min-width:0;" class="d-flex align-items-center">
                         <{if $item.level|default:0 gt 0}>
                             <i class="fa fa-chevron-right submenu-indicator" aria-hidden="true"></i>
                         <{/if}>
-                        <div><{$item.title|escape}><{if $item.url != ''}> (<a href="<{$item.url}>"><{$item.url}></a>)<{/if}></div>
+                        <div style="overflow:hidden;">
+                            <span class="d-block text-truncate" style="max-width:100%">
+                                <{$item.title|escape}>
+                                <{if $item.url != ''}>
+                                    &nbsp;(<a href="<{$item.url|escape}>" target="_blank" rel="noopener"><{$item.url|escape}></a>)
+                                <{/if}>
+                            </span>
+                        </div>
                     </div>
-                    <div class="btn-group" role="group" aria-label="actions">
-                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$cat_id|escape}>" title="Edit">
-                            <i class="fa fa-edit"></i>
-                        </a>
-                        <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$cat_id|escape}>" onclick="return confirm('Are you sure?');" title="Delete">
-                            <i class="fa fa-trash"></i>
-                        </a>
+                    <!-- center: badge (fixed width, centered) -->
+                    <div class="text-center mx-3" style="width:120px; flex:0 0 120px;">
+                        <{if $item.active}>
+                            <span class="badge badge-success item-active-toggle" data-id="<{$item.id|escape}>" data-active="1" style="cursor:pointer;">
+                                <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>
+                            </span>
+                        <{else}>
+                            <span class="badge badge-danger item-active-toggle" data-id="<{$item.id|escape}>" data-active="0" style="cursor:pointer;">
+                                <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>
+                            </span>
+                        <{/if}>
+                    </div>
+                    <!-- right: actions -->
+                    <div>
+                        <div class="btn-group" role="group" aria-label="actions">
+                            <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_EDITITEM}>">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                            <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>">
+                                <i class="fa fa-trash"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </li>

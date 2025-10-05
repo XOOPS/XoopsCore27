@@ -84,7 +84,7 @@ class XoopsMenusItems extends XoopsObject
         $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_TITLEITEM, 'items_title', 50, 255, $this->getVar('category_title')), true);
 
         // url
-        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_URLITEM, 'items_url', 50, 255, $this->getVar('category_url')), true);
+        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_URLITEM, 'items_url', 50, 255, $this->getVar('category_url')), false);
 
         // position
         $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_POSITIONITEM, 'items_position', 5, 5, $position));

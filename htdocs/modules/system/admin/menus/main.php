@@ -207,6 +207,30 @@ switch ($op) {
             $category = $menuscategoryHandler->get($category_id);
             $xoopsTpl->assign('cat_id', $category->getVar('category_id'));
             $xoopsTpl->assign('cat_title', $category->getVar('category_title'));
+
+            $menusitemsHandler = xoops_getHandler('menusitems');
+            $criteria = new CriteriaCompo();
+            $criteria->add(new Criteria('items_cid', $category_id));
+            $criteria->setSort('items_position ASC, items_title');
+            $criteria->setOrder('ASC');
+            $items_arr = $menusitemsHandler->getall($criteria);
+            $items_count = $menusitemsHandler->getCount($criteria);
+            $xoopsTpl->assign('items_count', $items_count);
+            xoops_load('SystemMenusTree', 'system');
+            $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
+            $tree_arr = $myTree->makeTree('article_name', '--', 0);
+            if ($items_count > 0) {
+                foreach (array_keys($tree_arr) as $i) {
+                    $items = array();
+                    $items['id']       = $tree_arr[$i]['obj']->getVar('items_id');
+                    $items['title']    = $tree_arr[$i]['obj']->getVar('items_title');
+                    $items['url']      = $tree_arr[$i]['obj']->getVar('items_url');
+                    $items['active']   = $tree_arr[$i]['obj']->getVar('items_active');
+                    $items['level']    = ($tree_arr[$i]['level'] - 1);
+                    $xoopsTpl->append('items', $items);
+		            unset($items);
+                }
+            }
         }
         break;
 

@@ -35,9 +35,9 @@
     </div>
 </div>
 <{if $error_message|default:'' != ''}>
-<div class="alert alert-warning" role="alert">
-    <{$error_message}>
-</div>
+    <div class="alert alert-warning" role="alert">
+        <{$error_message}>
+    </div>
 <{/if}>
 <{if $category_count|default:0 != 0}>
     <div class="row" id="menus-row">
@@ -180,6 +180,10 @@
     <{/literal}>
 <{/if}>
 <{if $op|default:'' == viewcat}>
+    <style>
+     /* indicator for submenu items */
+     .submenu-indicator { width:1.2rem; display:inline-flex; justify-content:center; align-items:center; color:#6c757d; margin-right:.5rem; }
+    </style>
     <div class="col-12 mb-3" data-id="<{$cat_id}>">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -192,8 +196,31 @@
             </div>
         </div>
     </div>
+    <{if $items_count|default:0 != 0}>
+        <ul class="list-group">
+        <{foreach item=item from=$items}>
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div style="margin-left: <{$item.level*20}>px;" class="d-flex align-items-center">
+                        <{if $item.level|default:0 gt 0}>
+                            <i class="fa fa-chevron-right submenu-indicator" aria-hidden="true"></i>
+                        <{/if}>
+                        <div><{$item.title|escape}><{if $item.url != ''}> (<a href="<{$item.url}>"><{$item.url}></a>)<{/if}></div>
+                    </div>
+                    <div class="btn-group" role="group" aria-label="actions">
+                        <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$cat_id|escape}>" title="Edit">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                        <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$cat_id|escape}>" onclick="return confirm('Are you sure?');" title="Delete">
+                            <i class="fa fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </li>
+        <{/foreach}>
+        </ul>
+    <{/if}>
 <{/if}>
-
 <!-- token container pour JS -->
 <div id="menus-token"><{$xoops_token nofilter}></div>
 

@@ -37,3 +37,4 @@ define('_AM_SYSTEM_MENUS_PID', 'Upper level menu');
 define('_AM_SYSTEM_MENUS_ERROR_NOCATEGORY', 'There are no menu categories. You must create one before adding menus.');
 define('_AM_SYSTEM_MENUS_ERROR_NOITEM', 'There are no submenu item.');
 define('_AM_SYSTEM_MENUS_SUREDELCAT', 'Are you sure you want to delete this menu category "%s" with its submenu items?');
+define('_AM_SYSTEM_MENUS_SUREDELITEM', 'Are you sure you want to delete this submenu item "%s"? avec the following submenu items?');

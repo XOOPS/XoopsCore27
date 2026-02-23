@@ -8,7 +8,7 @@ window.XOOPS_MENUS.labels = {
 };
 </script>
 <!-- Buttons -->
-<{if $op != 'delcat'}>
+<{if $op != 'delcat' && $op != 'delitem'}>
 <div class="card">
     <div class="card-header">
         <div class="card-tools">
@@ -149,7 +149,7 @@ window.XOOPS_MENUS.labels = {
                             <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_EDITITEM}>">
                                 <i class="fa fa-edit"></i>
                             </a>
-                            <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>">
+                            <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>">
                                 <i class="fa fa-trash"></i>
                             </a>
                         </div>

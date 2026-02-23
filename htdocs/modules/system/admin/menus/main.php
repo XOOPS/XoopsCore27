@@ -182,6 +182,55 @@ switch ($op) {
         }
         break;
 
+    case 'delitem':
+        $item_id = Request::getInt('item_id', 0);
+        $category_id = Request::getInt('category_id', 0);
+        if ($item_id == 0) {
+            redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_NOITEM);
+        } else {
+            $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+            $xoBreadCrumb->render();
+            include_once $GLOBALS['xoops']->path('class/tree.php');
+            $surdel = Request::getBool('surdel', false);
+            $menusitemsHandler = xoops_getHandler('menusitems');
+            $obj = $menusitemsHandler->get($item_id);
+            if ($surdel === true) {
+                if (!$GLOBALS['xoopsSecurity']->check()) {
+                    redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+                }
+                if ($menusitemsHandler->delete($obj)) {
+                    // delete subitems of this item
+                    $criteria = new CriteriaCompo();
+                    $criteria->add(new Criteria('items_cid', $category_id));
+                    $items_arr = $menusitemsHandler->getall($criteria);
+                    $myTree = new XoopsObjectTree($items_arr, 'items_id', 'items_pid');
+                    $items_arr = $myTree->getAllChild($item_id);
+                    foreach (array_keys($items_arr) as $i) {
+                        $menusitemsHandler->delete($items_arr[$i]);
+                    }
+                    redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 2, _AM_SYSTEM_DBUPDATED);
+                } else {
+                    echo $obj->getHtmlErrors();
+                }
+            } else {
+                $criteria = new CriteriaCompo();
+                $criteria->add(new Criteria('items_cid', $category_id));
+                $items_arr = $menusitemsHandler->getall($criteria);
+                $myTree = new XoopsObjectTree($items_arr, 'items_id', 'items_pid');
+                $items_arr = $myTree->getAllChild($item_id);
+                $items = '<br>';
+                foreach (array_keys($items_arr) as $i) {
+                        $items .= '#' . $items_arr[$i]->getVar('items_id') . ': ' . $items_arr[$i]->getVar('items_title') . '<br>';
+                }
+                xoops_confirm([
+                    'surdel'      => true,
+                    'item_id'     => $item_id,
+                    'category_id' => $category_id,
+                    'op'          => 'delitem'
+                ], $_SERVER['REQUEST_URI'], sprintf(_AM_SYSTEM_MENUS_SUREDELITEM, $obj->getVar('items_title')) . $items);
+            }
+        }
+        break;
 
     case 'saveorder':
         // Pour les réponses AJAX : désactiver le logger et vider les buffers

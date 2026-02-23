@@ -134,7 +134,7 @@ switch ($op) {
         if ($menuscategoryHandler->insert($obj)) {
             redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
         } else {
-            echo $obj->getHtmlErrors();
+            $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
         }
         break;
 
@@ -163,7 +163,7 @@ switch ($op) {
                     }
                     redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
                 } else {
-                    echo $obj->getHtmlErrors();
+                    $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
                 }
             } else {
                 $criteria = new CriteriaCompo();
@@ -210,7 +210,7 @@ switch ($op) {
                     }
                     redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 2, _AM_SYSTEM_DBUPDATED);
                 } else {
-                    echo $obj->getHtmlErrors();
+                    $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
                 }
             } else {
                 $criteria = new CriteriaCompo();
@@ -348,6 +348,10 @@ switch ($op) {
         if (!$GLOBALS['xoopsSecurity']->check()) {
             redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_CATEGORY);
+        $xoBreadCrumb->render();
+
         $menusitemsHandler = xoops_getHandler('menusitems');
         $id = Request::getInt('items_id', 0);
         if ($id > 0) {
@@ -355,17 +359,28 @@ switch ($op) {
         } else {
             $obj = $menusitemsHandler->create();
         }
-        $obj->setVar('items_pid', Request::getInt('items_pid', 0));
+        $error_message = '';
+        if (Request::getInt('items_pid', 0) == $id) {
+            $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
+        } else {
+            $obj->setVar('items_pid', Request::getInt('items_pid', 0));
+        }
         $items_cid = Request::getInt('items_cid', 0);
         $obj->setVar('items_cid', $items_cid);
         $obj->setVar('items_title', Request::getString('items_title', ''));
         $obj->setVar('items_url', Request::getString('items_url', ''));
         $obj->setVar('items_position', Request::getInt('items_position', 0));
         $obj->setVar('items_active', Request::getInt('items_active', 1));
-        if ($menusitemsHandler->insert($obj)) {
-            redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $items_cid, 2, _AM_SYSTEM_DBUPDATED);
+        if ($error_message == '') {
+            if ($menusitemsHandler->insert($obj)) {
+                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $items_cid, 2, _AM_SYSTEM_DBUPDATED);
+            } else {
+                $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
+            }
         } else {
-            echo $obj->getHtmlErrors();
+            $form = $obj->getFormItems($items_cid);
+            $xoopsTpl->assign('form', $form->render());
+            $xoopsTpl->assign('error_message', $error_message);
         }
         break;
 

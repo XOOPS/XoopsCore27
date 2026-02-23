@@ -33,7 +33,7 @@ window.XOOPS_MENUS.labels = {
                 <{$smarty.const._AM_SYSTEM_MENUS_ADDITEM}>
             </button>
             <{/if}>
-            <{if $op == 'additem' || $op == 'edititem'}>
+            <{if $op == 'additem' || $op == 'edititem' || $op == 'saveitem'}>
             <button id="xo-listitem-btn" class="btn btn-sm btn-secondary" onclick='location="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$category_id}>"'
                     title="<{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>">
                 <i class="fa fa-list ic-w mr-1" ></i>

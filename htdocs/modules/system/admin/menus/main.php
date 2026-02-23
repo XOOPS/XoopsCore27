@@ -138,6 +138,51 @@ switch ($op) {
         }
         break;
 
+    case 'delcat':
+        $category_id = Request::getInt('category_id', 0);
+        if ($category_id == 0) {
+            redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+        } else {
+            $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+            $xoBreadCrumb->render();
+            $surdel = Request::getBool('surdel', false);
+            $menuscategoryHandler = xoops_getHandler('menuscategory');
+            $menusitemsHandler = xoops_getHandler('menusitems');
+            $obj = $menuscategoryHandler->get($category_id);
+            if ($surdel === true) {
+                if (!$GLOBALS['xoopsSecurity']->check()) {
+                    redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+                }
+                if ($menuscategoryHandler->delete($obj)) {
+                    // delete items in this category
+                    $criteria = new CriteriaCompo();
+                    $criteria->add(new Criteria('items_cid', $category_id));
+                    $items_arr = $menusitemsHandler->getall($criteria);
+                    foreach (array_keys($items_arr) as $i) {
+                        $menusitemsHandler->delete($items_arr[$i]);
+                    }
+                    redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
+                } else {
+                    echo $obj->getHtmlErrors();
+                }
+            } else {
+                $criteria = new CriteriaCompo();
+                $criteria->add(new Criteria('items_cid', $category_id));
+                $items_arr = $menusitemsHandler->getall($criteria);
+                $items = '<br>';
+                foreach (array_keys($items_arr) as $i) {
+                        $items .= '#' . $items_arr[$i]->getVar('items_id') . ': ' . $items_arr[$i]->getVar('items_title') . '<br>';
+                }
+                xoops_confirm([
+                    'surdel'      => true,
+                    'category_id' => $category_id,
+                    'op'          => 'delcat'
+                ], $_SERVER['REQUEST_URI'], sprintf(_AM_SYSTEM_MENUS_SUREDELCAT, $obj->getVar('category_title')) . $items);
+            }
+        }
+        break;
+
+
     case 'saveorder':
         // Pour les réponses AJAX : désactiver le logger et vider les buffers
         if (isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])) {

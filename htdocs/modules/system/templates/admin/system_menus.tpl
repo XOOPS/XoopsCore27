@@ -8,6 +8,7 @@ window.XOOPS_MENUS.labels = {
 };
 </script>
 <!-- Buttons -->
+<{if $op != 'delcat'}>
 <div class="card">
     <div class="card-header">
         <div class="card-tools">
@@ -42,6 +43,7 @@ window.XOOPS_MENUS.labels = {
         </div>
     </div>
 </div>
+<{/if}>
 <{if $error_message|default:'' != ''}>
     <div class="alert alert-warning" role="alert">
         <{$error_message}>

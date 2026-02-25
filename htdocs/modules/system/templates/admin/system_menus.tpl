@@ -6,6 +6,9 @@ window.XOOPS_MENUS.labels = {
     activeYes: "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>",
     activeNo:  "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>"
 };
+window.XOOPS_MENUS.messages = {
+    parentInactive: "<{$smarty.const._AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE}>"
+};
 </script>
 <!-- Buttons -->
 <{if $op != 'delcat' && $op != 'delitem'}>
@@ -115,7 +118,7 @@ window.XOOPS_MENUS.labels = {
     <{if $items_count|default:0 != 0}>
         <ul class="list-group mb-5">
         <{foreach item=item from=$items}>
-            <li class="list-group-item">
+            <li class="list-group-item" data-id="<{$item.id|escape}>" data-pid="<{$item.pid|default:0|escape}>">
                 <div class="d-flex align-items-center w-100">
                     <!-- left: indicator + title (flexible) -->
                     <div style="margin-left: <{$item.level*20}>px; flex:1; min-width:0;" class="d-flex align-items-center">
@@ -146,10 +149,10 @@ window.XOOPS_MENUS.labels = {
                     <!-- right: actions -->
                     <div>
                         <div class="btn-group" role="group" aria-label="actions">
-                            <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_EDITITEM}>">
+                            <a class="btn btn-sm btn-outline-primary<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_EDITITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
                                 <i class="fa fa-edit"></i>
                             </a>
-                            <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>">
+                            <a class="btn btn-sm btn-outline-danger<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
                                 <i class="fa fa-trash"></i>
                             </a>
                         </div>

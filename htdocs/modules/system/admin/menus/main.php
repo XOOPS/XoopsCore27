@@ -194,6 +194,9 @@ switch ($op) {
             $surdel = Request::getBool('surdel', false);
             $menusitemsHandler = xoops_getHandler('menusitems');
             $obj = $menusitemsHandler->get($item_id);
+            if ($obj->getVar('items_active') == 0){
+                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMDISABLE);
+            }
             if ($surdel === true) {
                 if (!$GLOBALS['xoopsSecurity']->check()) {
                     redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
@@ -403,6 +406,9 @@ switch ($op) {
         } else {
             $menusitemsHandler = xoops_getHandler('menusitems');
             $obj = $menusitemsHandler->get($item_id);
+            if ($obj->getVar('items_active') == 0){
+                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMEDIT);
+            }
             $form = $obj->getFormItems($category_id);
             $xoopsTpl->assign('form', $form->render());
         }
@@ -449,9 +455,53 @@ switch ($op) {
         $obj->setVar('category_active', $new);
         $res = $menuscategoryHandler->insert($obj, true);
 
+        // cascade to all items of this category (and their children)
+        $updatedItems = [];
+        if ($res) {
+            $menusitemsHandler = xoops_getHandler('menusitems');
+            if (!is_object($menusitemsHandler) && class_exists('XoopsMenusItemsHandler')) {
+                $menusitemsHandler = new XoopsMenusItemsHandler($GLOBALS['xoopsDB']);
+            }
+            /**
+             * Recursively update items under a parent (same as toggleactiveitem)
+             */
+            $recursiveUpdate = function ($handler, $parentId, $state, array &$updated) use (&$recursiveUpdate) {
+                $crit = new Criteria('items_pid', (int)$parentId);
+                $children = $handler->getAll($crit);
+                foreach ($children as $child) {
+                    $cid = $child->getVar('items_id');
+                    if ((int)$child->getVar('items_active') !== $state) {
+                        $child->setVar('items_active', $state);
+                        if ($handler->insert($child, true)) {
+                            $updated[] = $cid;
+                        }
+                    }
+                    $recursiveUpdate($handler, $cid, $state, $updated);
+                }
+            };
+            // first update all direct items of category
+            $critCat = new Criteria('items_cid', $category_id);
+            $allItems = $menusitemsHandler->getAll($critCat);
+            foreach ($allItems as $itm) {
+                $idtmp = $itm->getVar('items_id');
+                if ((int)$itm->getVar('items_active') !== $new) {
+                    $itm->setVar('items_active', $new);
+                    if ($menusitemsHandler->insert($itm, true)) {
+                        $updatedItems[] = $idtmp;
+                    }
+                }
+                // propagate to children of this item
+                $recursiveUpdate($menusitemsHandler, $idtmp, $new, $updatedItems);
+            }
+        }
+
         header('Content-Type: application/json');
         if ($res) {
-            echo json_encode(['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            $response = ['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()];
+            if (!empty($updatedItems)) {
+                $response['updated'] = array_values($updatedItems);
+            }
+            echo json_encode($response);
         } else {
             echo json_encode(['success' => false, 'message' => 'Save failed', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
         }
@@ -500,12 +550,67 @@ switch ($op) {
         // Adapt field name si nécessaire (ici 'items_active')
         $current = (int)$obj->getVar('items_active');
         $new = $current ? 0 : 1;
+        // if we try to activate, ensure the parent/ancestors are active
+        if ($new) {
+            $parentId = (int)$obj->getVar('items_pid');
+            while ($parentId > 0) {
+                $parentObj = $menusitemsHandler->get($parentId);
+                if (!is_object($parentObj)) {
+                    break;
+                }
+                if ((int)$parentObj->getVar('items_active') === 0) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => _AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE,
+                        'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+                    ]);
+                    exit;
+                }
+                $parentId = (int)$parentObj->getVar('items_pid');
+            }
+        }
         $obj->setVar('items_active', $new);
         $res = $menusitemsHandler->insert($obj, true);
 
+        // propagate new state to all children recursively
+        $updatedChildren = [];
+        if ($res) {
+            /**
+             * Recursively update child items to match parent state
+             *
+             * @param \XoopsPersistableObjectHandler $handler
+             * @param int                            $parentId
+             * @param int                            $state
+             * @param array                          $updated   (passed by reference)
+             */
+            function propagateActiveState($handler, $parentId, $state, array &$updated)
+            {
+                $criteria = new Criteria('items_pid', (int)$parentId);
+                /** @var \XoopsObject[] $children */
+                $children = $handler->getAll($criteria);
+                foreach ($children as $child) {
+                    $childId = $child->getVar('items_id');
+                    if ((int)$child->getVar('items_active') !== $state) {
+                        $child->setVar('items_active', $state);
+                        if ($handler->insert($child, true)) {
+                            $updated[] = $childId;
+                        }
+                    }
+                    propagateActiveState($handler, $childId, $state, $updated);
+                }
+            }
+
+            propagateActiveState($menusitemsHandler, $item_id, $new, $updatedChildren);
+        }
+
         header('Content-Type: application/json');
         if ($res) {
-            echo json_encode(['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            $response = ['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()];
+            if (!empty($updatedChildren)) {
+                $response['updated'] = array_values($updatedChildren);
+            }
+            echo json_encode($response);
         } else {
             echo json_encode(['success' => false, 'message' => 'Save failed', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
         }

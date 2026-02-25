@@ -39,3 +39,6 @@ define('_AM_SYSTEM_MENUS_ERROR_NOITEM', 'There are no submenu item.');
 define('_AM_SYSTEM_MENUS_SUREDELCAT', 'Are you sure you want to delete this menu category "%s" with its submenu items?');
 define('_AM_SYSTEM_MENUS_SUREDELITEM', 'Are you sure you want to delete this submenu item "%s"? avec the following submenu items?');
 define('_AM_SYSTEM_MENUS_ERROR_ITEMPARENT', 'You cannot select a menu as its own parent.');
+define('_AM_SYSTEM_MENUS_ERROR_ITEMDISABLE', 'You cannot delete a menu that is disabled. Please enable the menu first, then try deleting it again.');
+define('_AM_SYSTEM_MENUS_ERROR_ITEMEDIT', 'You cannot edit a menu that is disabled. Please enable the menu first, then try editing it again.');
+define('_AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE', 'You cannot modify this item while its parent is inactive!');

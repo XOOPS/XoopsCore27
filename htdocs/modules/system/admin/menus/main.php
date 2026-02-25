@@ -360,10 +360,11 @@ switch ($op) {
             $obj = $menusitemsHandler->create();
         }
         $error_message = '';
-        if (Request::getInt('items_pid', 0) == $id) {
+        $itempid = Request::getInt('items_pid', 0);
+        if ($itempid == $id && $itempid != 0) {
             $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
         } else {
-            $obj->setVar('items_pid', Request::getInt('items_pid', 0));
+            $obj->setVar('items_pid', $itempid);
         }
         $items_cid = Request::getInt('items_cid', 0);
         $obj->setVar('items_cid', $items_cid);

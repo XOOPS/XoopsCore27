@@ -293,6 +293,10 @@ class xos_opal_Theme
         $this->template->assign('xoTheme', $this);
         $GLOBALS['xoTheme']  = $this;
         $GLOBALS['xoopsTpl'] = $this->template;
+
+        // load menu categories and their nested items so themes can render navigation
+        $this->template->assign('xoMenuCategories', $this->loadMenus());
+
         $tempPath = str_replace('\\', '/', realpath(XOOPS_ROOT_PATH) . '/');
         $tempName = str_replace('\\', '/', realpath($_SERVER['SCRIPT_FILENAME']));
         $xoops_page = str_replace($tempPath, '', $tempName);
@@ -402,7 +406,83 @@ class xos_opal_Theme
             }
         }
 
+
         return true;
+    }
+
+    /**
+     * Load active menu categories with their nested items.
+     *
+     * @return array
+     */
+    protected function loadMenus()
+    {
+        // automatically includes the shared style sheet for
+        // multilingual menus; it is located in the system module and
+        // is available for all themes.
+        $css = 'multilevelmenu.css';
+        $path = XOOPS_ROOT_PATH . '/modules/system/css/' . $css;
+        if (file_exists($path)) {
+            $this->addStylesheet(XOOPS_URL . '/modules/system/css/' . $css);
+        }
+
+        // include shared javascript helpers for multilevel menus if available
+        $js = 'multilevelmenu.js';
+        $jsPath = XOOPS_ROOT_PATH . '/modules/system/js/' . $js;
+        if (file_exists($jsPath)) {
+            $this->addScript(XOOPS_URL . '/modules/system/js/' . $js);
+        }
+        $menus = [];
+        $menuscategoryHandler = xoops_getHandler('menuscategory');
+        if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
+            $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
+        }
+        $criteria = new Criteria('category_active', 1);
+        $criteria->setSort('category_position');
+        $criteria->setOrder('ASC');
+        $category_arr = $menuscategoryHandler->getAll($criteria);
+        if (!empty($category_arr)) {
+            $menusitemsHandler = xoops_getHandler('menusitems');
+            if (!is_object($menusitemsHandler) && class_exists('XoopsMenusItemsHandler')) {
+                $menusitemsHandler = new XoopsMenusItemsHandler($GLOBALS['xoopsDB']);
+            }
+            foreach ($category_arr as $cat) {
+                $cid = $cat->getVar('category_id');
+                $crit = new CriteriaCompo();
+                $crit->add(new Criteria('items_cid', $cid));
+                $crit->add(new Criteria('items_active', 1));
+                $crit->setSort('items_position ASC, items_title');
+                $crit->setOrder('ASC');
+                $items_arr = $menusitemsHandler->getAll($crit);
+                xoops_load('SystemMenusTree', 'system');
+                $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
+                // recursive closure to build nested structure
+                $buildNested = function ($treeObj, $parentId = 0) use (&$buildNested) {
+                    $nodes = [];
+                    $children = $treeObj->getFirstChild($parentId);
+                    foreach ($children as $child) {
+                        $cid2 = $child->getVar('items_id');
+                        $entry = [
+                            'id'     => $cid2,
+                            'title'  => $child->getVar('items_title'),
+                            'url'    => $child->getVar('items_url'),
+                            'active' => $child->getVar('items_active'),
+                            'children' => $buildNested($treeObj, $cid2),
+                        ];
+                        $nodes[] = $entry;
+                    }
+                    return $nodes;
+                };
+                $item_list = $buildNested($myTree, 0);
+                $menus[] = [
+                    'category_id'    => $cid,
+                    'category_title' => $cat->getVar('category_title'),
+                    'category_url'   => $cat->getVar('category_url'),
+                    'items'          => $item_list,
+                ];
+            }
+        }
+        return $menus;
     }
 
     /**

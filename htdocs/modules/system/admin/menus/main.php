@@ -57,6 +57,7 @@ switch ($op) {
     case 'list':
     default:
         $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
+        $xoBreadCrumb->addTips(sprintf(_AM_SYSTEM_MENUS_NAV_TIPS, $GLOBALS['xoopsConfig']['language']));
         $xoBreadCrumb->render();
         $start = Request::getInt('start', 0);
         /** @var \XoopsPersistableObjectHandler $menuscategoryHandler */
@@ -73,7 +74,7 @@ switch ($op) {
             foreach (array_keys($category_arr) as $i) {
                 $category = array();
                 $category['id']              = $category_arr[$i]->getVar('category_id');
-                $category['title']           = $category_arr[$i]->getVar('category_title');
+                $category['title']           = $category_arr[$i]->getAdminTitle();
                 $category['url']             = $category_arr[$i]->getVar('category_url');
                 $category['position']        = $category_arr[$i]->getVar('category_position');
                 $category['active']          = $category_arr[$i]->getVar('category_active');
@@ -96,6 +97,7 @@ switch ($op) {
         $xoBreadCrumb->render();
         // Form
         $menuscategoryHandler = xoops_getHandler('menuscategory');
+        /** @var \XoopsMenusCategory $obj */
         $obj                  = $menuscategoryHandler->create();
         $form = $obj->getFormCat();
         $xoopsTpl->assign('form', $form->render());
@@ -110,6 +112,7 @@ switch ($op) {
             $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
         } else {
             $menuscategoryHandler = xoops_getHandler('menuscategory');
+            /** @var \XoopsMenusCategory $obj */
             $obj = $menuscategoryHandler->get($category_id);
             $form = $obj->getFormCat();
             $xoopsTpl->assign('form', $form->render());
@@ -148,6 +151,7 @@ switch ($op) {
             $surdel = Request::getBool('surdel', false);
             $menuscategoryHandler = xoops_getHandler('menuscategory');
             $menusitemsHandler = xoops_getHandler('menusitems');
+            /** @var \XoopsMenusCategory $obj */
             $obj = $menuscategoryHandler->get($category_id);
             if ($surdel === true) {
                 if (!$GLOBALS['xoopsSecurity']->check()) {
@@ -193,6 +197,7 @@ switch ($op) {
             include_once $GLOBALS['xoops']->path('class/tree.php');
             $surdel = Request::getBool('surdel', false);
             $menusitemsHandler = xoops_getHandler('menusitems');
+            /** @var \XoopsMenusItems $obj */
             $obj = $menusitemsHandler->get($item_id);
             if ($obj->getVar('items_active') == 0){
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMDISABLE);
@@ -306,7 +311,7 @@ switch ($op) {
             $menuscategoryHandler = xoops_getHandler('menuscategory');
             $category = $menuscategoryHandler->get($category_id);
             $xoopsTpl->assign('category_id', $category->getVar('category_id'));
-            $xoopsTpl->assign('cat_title', $category->getVar('category_title'));
+            $xoopsTpl->assign('cat_title', $category->getAdminTitle());
 
             $menusitemsHandler = xoops_getHandler('menusitems');
             $criteria = new CriteriaCompo();
@@ -323,7 +328,7 @@ switch ($op) {
                 foreach (array_keys($tree_arr) as $i) {
                     $items = array();
                     $items['id']       = $tree_arr[$i]['obj']->getVar('items_id');
-                    $items['title']    = $tree_arr[$i]['obj']->getVar('items_title');
+                    $items['title']    = $tree_arr[$i]['obj']->getAdminTitle();
                     $items['url']      = $tree_arr[$i]['obj']->getVar('items_url');
                     $items['active']   = $tree_arr[$i]['obj']->getVar('items_active');
                     $items['level']    = ($tree_arr[$i]['level'] - 1);
@@ -342,6 +347,7 @@ switch ($op) {
         $xoopsTpl->assign('category_id', $category_id);
         // Form
         $menusitemsHandler = xoops_getHandler('menusitems');
+        /** @var \XoopsMenusItems $obj */
         $obj = $menusitemsHandler->create();
         $form = $obj->getFormItems($category_id);
         $xoopsTpl->assign('form', $form->render());
@@ -357,6 +363,7 @@ switch ($op) {
 
         $menusitemsHandler = xoops_getHandler('menusitems');
         $id = Request::getInt('items_id', 0);
+        /** @var \XoopsMenusItems $obj */
         if ($id > 0) {
             $obj = $menusitemsHandler->get($id);
         } else {
@@ -382,6 +389,7 @@ switch ($op) {
                 $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
             }
         } else {
+            /** @var \XoopsMenusItems $obj */
             $form = $obj->getFormItems($items_cid);
             $xoopsTpl->assign('form', $form->render());
             $xoopsTpl->assign('error_message', $error_message);
@@ -405,6 +413,7 @@ switch ($op) {
             }
         } else {
             $menusitemsHandler = xoops_getHandler('menusitems');
+            /** @var \XoopsMenusItems $obj */
             $obj = $menusitemsHandler->get($item_id);
             if ($obj->getVar('items_active') == 0){
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMEDIT);

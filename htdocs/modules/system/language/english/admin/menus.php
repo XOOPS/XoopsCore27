@@ -12,8 +12,13 @@ define('_AM_SYSTEM_MENUS_NAV_CATEGORY', 'Category Management');
 // Tips
 define('_AM_SYSTEM_MENUS_NAV_TIPS', '
 <ul>
-<li>Manage Xoops menus</li>
-</ul>');
+    <li>This page allows you to manage the main menus of your site.</li>
+    <li>You can create categories to organize your menus, and add submenu items under each category.</li>
+    <li>For each menu item, you can specify a title, URL, position, and whether it is active or not.</li>
+    <li>You can also use language constants for the menu titles. If a constant is used, its value will be displayed in parentheses next to the title.</li>
+    <li>File used for the basic menus. If you wish to add language constants, you must add them to the menus.dist.php file, which must be renamed menus.php.</li>
+    <li>The file is located here: "modules/system/language/%s/admin/menus/menus.php".</li>
+<ul>');
 // Main
 define('_AM_SYSTEM_MENUS_ADDCAT', 'Add Category');
 define('_AM_SYSTEM_MENUS_ADDITEM', 'Adding a submenu item');
@@ -24,7 +29,9 @@ define('_AM_SYSTEM_MENUS_EDITITEM', 'Edit a submenu item');
 define('_AM_SYSTEM_MENUS_LISTCAT', 'List Categories');
 define('_AM_SYSTEM_MENUS_LISTITEM', 'List items');
 define('_AM_SYSTEM_MENUS_TITLECAT', 'Name of the menu category');
+define('_AM_SYSTEM_MENUS_TITLECAT_DESC', 'You can use a constant for the title. If you do, the constant value will be shown in parentheses next to the title in admin side.');
 define('_AM_SYSTEM_MENUS_TITLEITEM', 'Name of the submenu item');
+define('_AM_SYSTEM_MENUS_TITLEITEM_DESC', 'You can use a constant for the title. If you do, the constant value will be shown in parentheses next to the title in admin side.');
 define('_AM_SYSTEM_MENUS_URLCAT', 'URL of the menu category');
 define('_AM_SYSTEM_MENUS_URLCATDESC', 'Optional — Only if you want the category title to be a link.');
 define('_AM_SYSTEM_MENUS_URLITEM', 'URL of the submenu item');
@@ -42,3 +49,5 @@ define('_AM_SYSTEM_MENUS_ERROR_ITEMPARENT', 'You cannot select a menu as its own
 define('_AM_SYSTEM_MENUS_ERROR_ITEMDISABLE', 'You cannot delete a menu that is disabled. Please enable the menu first, then try deleting it again.');
 define('_AM_SYSTEM_MENUS_ERROR_ITEMEDIT', 'You cannot edit a menu that is disabled. Please enable the menu first, then try editing it again.');
 define('_AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE', 'You cannot modify this item while its parent is inactive!');
+
+// Menus

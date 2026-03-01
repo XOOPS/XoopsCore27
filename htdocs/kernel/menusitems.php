@@ -24,6 +24,13 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 class XoopsMenusItems extends XoopsObject
 {
     /**
+     * Tracks included language files to avoid duplicate includes
+     * keyed by full path.
+     *
+     * @var array
+     */
+    private static $languageFilesIncluded = [];
+    /**
      * Constructor
      */
     public function __construct()
@@ -36,6 +43,60 @@ class XoopsMenusItems extends XoopsObject
         $this->initVar('items_url', XOBJ_DTYPE_TXTBOX, null);
         $this->initVar('items_position', XOBJ_DTYPE_INT, null, false);
         $this->initVar('items_active', XOBJ_DTYPE_INT, 1);
+        // Load language file for menu items
+        $language = $GLOBALS['xoopsConfig']['language'] ?? 'english';
+        $fileinc = XOOPS_ROOT_PATH . "/modules/system/language/{$language}/menus/menus.php";
+        if (!isset(self::$languageFilesIncluded[$fileinc])) {
+            if (file_exists($fileinc)) {
+                include_once $fileinc;
+                self::$languageFilesIncluded[$fileinc] = true;
+            }
+        }
+    }
+
+    /**
+     * Retrieve the resolved title for display.
+     *
+     * If the stored title is a constant name, resolves and returns its value.
+     * Otherwise returns the stored title as-is. Used for front-end rendering.
+     *
+     * Example:
+     *   - If items_title = "HOME_LABEL" and HOME_LABEL = "Accueil"
+     *     returns "Accueil"
+     *   - If items_title = "Custom Text"
+     *     returns "Custom Text"
+     *
+     * @return string The resolved title value
+     */
+    public function getResolvedTitle()
+    {
+        $title = $this->getVar('items_title');
+        return defined($title) ? constant($title) : $title;
+    }
+
+    /**
+     * Retrieve the title for administration interface with constant reference.
+     *
+     * If the stored title is a constant name, returns both the resolved value
+     * and the constant name in parentheses. This helps administrators identify
+     * which constant is being used. Otherwise returns the stored title as-is.
+     *
+     * Example:
+     *   - If items_title = "HOME_LABEL" and HOME_LABEL = "Accueil"
+     *     returns "Accueil (HOME_LABEL)"
+     *   - If items_title = "Custom Text"
+     *     returns "Custom Text"
+     *
+     * @return string The resolved title with optional constant reference
+     */
+    public function getAdminTitle()
+    {
+        $title = $this->getVar('items_title');
+        if (defined($title)) {
+            return constant($title) . ' (' . $title . ')';
+        } else {
+            return $title;
+        }
     }
 
     public function getFormItems($category_id, $action = false)
@@ -75,13 +136,22 @@ class XoopsMenusItems extends XoopsObject
         $criteria->setOrder('ASC');
         $menusitemsHandler = xoops_getHandler('menusitems');
         $item_arr = $menusitemsHandler->getall($criteria);
+        // Use admin-friendly title (resolved value + constant name) for select labels
+        foreach ($item_arr as $key => $obj) {
+            if (is_object($obj) && method_exists($obj, 'getAdminTitle')) {
+                $obj->setVar('items_title', $obj->getAdminTitle());
+                $item_arr[$key] = $obj;
+            }
+        }
         include_once $GLOBALS['xoops']->path('class/tree.php');
         $myTree = new XoopsObjectTree($item_arr, 'items_id', 'items_pid');
         $suparticle = $myTree->makeSelectElement('items_pid', 'items_title', '--', $this->getVar('items_pid'), true, 0, '', _AM_SYSTEM_MENUS_PID);
         $form->addElement($suparticle, false);
 
         // title
-        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_TITLEITEM, 'items_title', 50, 255, $this->getVar('items_title')), true);
+        $title = new XoopsFormText(_AM_SYSTEM_MENUS_TITLEITEM, 'items_title', 50, 255, $this->getVar('items_title'));
+        $title->setDescription(_AM_SYSTEM_MENUS_TITLEITEM_DESC);
+        $form->addElement($title, true);
 
         // url
         $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_URLITEM, 'items_url', 50, 255, $this->getVar('items_url')), false);

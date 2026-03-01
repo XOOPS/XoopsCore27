@@ -294,9 +294,6 @@ class xos_opal_Theme
         $GLOBALS['xoTheme']  = $this;
         $GLOBALS['xoopsTpl'] = $this->template;
 
-        // load menu categories and their nested items so themes can render navigation
-        $this->template->assign('xoMenuCategories', $this->loadMenus());
-
         $tempPath = str_replace('\\', '/', realpath(XOOPS_ROOT_PATH) . '/');
         $tempName = str_replace('\\', '/', realpath($_SERVER['SCRIPT_FILENAME']));
         $xoops_page = str_replace($tempPath, '', $tempName);
@@ -406,6 +403,9 @@ class xos_opal_Theme
             }
         }
 
+        // load menu categories and their nested items so themes can render navigation
+        $this->template->assign('xoMenuCategories', $this->loadMenus());
+
 
         return true;
     }
@@ -464,7 +464,7 @@ class xos_opal_Theme
                         $cid2 = $child->getVar('items_id');
                         $entry = [
                             'id'     => $cid2,
-                            'title'  => $child->getVar('items_title'),
+                            'title'  => $child->getResolvedTitle(),
                             'url'    => $child->getVar('items_url'),
                             'active' => $child->getVar('items_active'),
                             'children' => $buildNested($treeObj, $cid2),
@@ -476,7 +476,7 @@ class xos_opal_Theme
                 $item_list = $buildNested($myTree, 0);
                 $menus[] = [
                     'category_id'    => $cid,
-                    'category_title' => $cat->getVar('category_title'),
+                    'category_title' => $cat->getResolvedTitle(),
                     'category_url'   => $cat->getVar('category_url'),
                     'items'          => $item_list,
                 ];

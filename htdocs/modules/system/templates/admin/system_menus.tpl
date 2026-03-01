@@ -59,7 +59,7 @@ window.XOOPS_MENUS.messages = {
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="me-2" style="flex:1; min-width:0;">
-                        <h5 class="card-title mb-0 text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <h5 class="card-title mb-0 text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; width:100%;">
                             <{$itemcategory.title|escape}>
                         </h5>
                     </div>
@@ -107,7 +107,7 @@ window.XOOPS_MENUS.messages = {
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div class="me-2" style="flex:1; min-width:0;">
-                    <h5 class="card-title mb-0 text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    <h5 class="card-title mb-0 text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; width:100%;">
                         <{$cat_title}>
                     </h5>
                 </div>

@@ -99,6 +99,17 @@ class XoopsMenusItems extends XoopsObject
         }
     }
 
+    /**
+     * @return mixed
+     */
+    public function get_new_enreg()
+    {
+        global $xoopsDB;
+        $new_enreg = $xoopsDB->getInsertId();
+
+        return $new_enreg;
+    }
+
     public function getFormItems($category_id, $action = false)
     {
         if ($action === false) {
@@ -164,6 +175,12 @@ class XoopsMenusItems extends XoopsObject
         $radio->addOption(1, _YES);
         $radio->addOption(0, _NO);
         $form->addElement($radio);
+
+        // permission
+        $permHelper = new \Xmf\Module\Helper\Permission();
+        $perm = $permHelper->getGroupSelectFormForItem('menus_items_view', $this->getVar('items_id'), _AM_SYSTEM_MENUS_PERMISSION_VIEW_ITEM, 'menus_items_view_perms', true);
+        $perm->setDescription(_AM_SYSTEM_MENUS_PERMISSION_VIEW_ITEM_DESC);
+        $form->addElement($perm, false);
 
         $form->addElement(new XoopsFormHidden('op', 'saveitem'));
         // submit

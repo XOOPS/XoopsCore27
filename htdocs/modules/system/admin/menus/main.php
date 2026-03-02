@@ -135,6 +135,16 @@ switch ($op) {
         $obj->setVar('category_position', Request::getInt('category_position', 0));
         $obj->setVar('category_active', Request::getInt('category_active', 1));
         if ($menuscategoryHandler->insert($obj)) {
+            // permissions
+            if ($obj->get_new_enreg() == 0) {
+                $perm_id = $obj->getVar('category_id');
+            } else {
+                $perm_id = $obj->get_new_enreg();
+            }
+            $permHelper = new \Xmf\Module\Helper\Permission();
+            // permission view
+            $groups_view = Request::getArray('menus_category_view_perms', [], 'POST');
+            $permHelper->savePermissionForItem('menus_category_view', $perm_id, $groups_view);
             redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
         } else {
             $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
@@ -158,11 +168,17 @@ switch ($op) {
                     redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
                 }
                 if ($menuscategoryHandler->delete($obj)) {
+                    // Del permissions category
+                    $permHelper = new \Xmf\Module\Helper\Permission();
+                    $permHelper->deletePermissionForItem('menus_category_view', $category_id);
                     // delete items in this category
                     $criteria = new CriteriaCompo();
                     $criteria->add(new Criteria('items_cid', $category_id));
                     $items_arr = $menusitemsHandler->getall($criteria);
                     foreach (array_keys($items_arr) as $i) {
+                        // Del permissions item
+                        $permHelper = new \Xmf\Module\Helper\Permission();
+                        $permHelper->deletePermissionForItem('menus_items_view', $items_arr[$i]->getVar('items_id'));
                         $menusitemsHandler->delete($items_arr[$i]);
                     }
                     redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
@@ -207,6 +223,9 @@ switch ($op) {
                     redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
                 }
                 if ($menusitemsHandler->delete($obj)) {
+                    // Del permissions item
+                    $permHelper = new \Xmf\Module\Helper\Permission();
+                    $permHelper->deletePermissionForItem('menus_items_view', $item_id);
                     // delete subitems of this item
                     $criteria = new CriteriaCompo();
                     $criteria->add(new Criteria('items_cid', $category_id));
@@ -214,6 +233,9 @@ switch ($op) {
                     $myTree = new XoopsObjectTree($items_arr, 'items_id', 'items_pid');
                     $items_arr = $myTree->getAllChild($item_id);
                     foreach (array_keys($items_arr) as $i) {
+                        // Del permissions subitem
+                        $permHelper = new \Xmf\Module\Helper\Permission();
+                        $permHelper->deletePermissionForItem('menus_items_view', $items_arr[$i]->getVar('items_id'));
                         $menusitemsHandler->delete($items_arr[$i]);
                     }
                     redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 2, _AM_SYSTEM_DBUPDATED);
@@ -384,6 +406,16 @@ switch ($op) {
         $obj->setVar('items_active', Request::getInt('items_active', 1));
         if ($error_message == '') {
             if ($menusitemsHandler->insert($obj)) {
+                // permissions
+                if ($obj->get_new_enreg() == 0) {
+                    $perm_id = $obj->getVar('items_id');
+                } else {
+                    $perm_id = $obj->get_new_enreg();
+                }
+                $permHelper = new \Xmf\Module\Helper\Permission();
+                // permission view
+                $groups_view = Request::getArray('menus_items_view_perms', [], 'POST');
+                $permHelper->savePermissionForItem('menus_items_view', $perm_id, $groups_view);
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $items_cid, 2, _AM_SYSTEM_DBUPDATED);
             } else {
                 $xoopsTpl->assign('error_message', $obj->getHtmlErrors());

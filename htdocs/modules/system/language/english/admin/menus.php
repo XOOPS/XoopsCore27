@@ -50,4 +50,10 @@ define('_AM_SYSTEM_MENUS_ERROR_ITEMDISABLE', 'You cannot delete a menu that is d
 define('_AM_SYSTEM_MENUS_ERROR_ITEMEDIT', 'You cannot edit a menu that is disabled. Please enable the menu first, then try editing it again.');
 define('_AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE', 'You cannot modify this item while its parent is inactive!');
 
+define('_AM_SYSTEM_MENUS_PERMISSION_VIEW_CATEGORY', 'Permission to view category');
+define('_AM_SYSTEM_MENUS_PERMISSION_VIEW_CATEGORY_DESC', 'Select groups that are allowed to view this category.<br>Note: If a category is not viewable, its submenu items will not be viewable either, regardless of their individual permissions.');
+define('_AM_SYSTEM_MENUS_PERMISSION_VIEW_ITEM', 'Permission to view submenu item');
+define('_AM_SYSTEM_MENUS_PERMISSION_VIEW_ITEM_DESC', 'Select groups that are allowed to view this submenu item.<br>Note: If a submenu item is not viewable, it will not be visible to users in the frontend, regardless of their individual permissions.');
+
+
 // Menus

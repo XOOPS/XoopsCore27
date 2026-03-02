@@ -437,7 +437,21 @@ class xos_opal_Theme
         if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
             $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
         }
-        $criteria = new Criteria('category_active', 1);
+
+        $viewPermissionCat = [];
+        $viewPermissionItem = [];
+        $helper            = Xmf\Module\Helper::getHelper('system');
+        $moduleHandler     = $helper->getModule();
+        $groups            = is_object($GLOBALS['xoopsUser']) ? $GLOBALS['xoopsUser']->getGroups() : XOOPS_GROUP_ANONYMOUS;
+        $gpermHandler      = xoops_getHandler('groupperm');
+        $viewPermissionCat = $gpermHandler->getItemIds('menus_category_view', $groups, $moduleHandler->getVar('mid'));
+        $viewPermissionItem = $gpermHandler->getItemIds('menus_items_view', $groups, $moduleHandler->getVar('mid'));
+
+        $criteria = new CriteriaCompo();
+        $criteria->add(new Criteria('category_active', 1));
+        if (!empty($viewPermissionCat)) {
+            $criteria->add(new Criteria('category_id', '(' . implode(',', $viewPermissionCat) . ')', 'IN'));
+        }
         $criteria->setSort('category_position');
         $criteria->setOrder('ASC');
         $category_arr = $menuscategoryHandler->getAll($criteria);
@@ -449,6 +463,9 @@ class xos_opal_Theme
             foreach ($category_arr as $cat) {
                 $cid = $cat->getVar('category_id');
                 $crit = new CriteriaCompo();
+                if (!empty($viewPermissionItem)) {
+                    $crit->add(new Criteria('items_id', '(' . implode(',', $viewPermissionItem) . ')', 'IN'));
+                }
                 $crit->add(new Criteria('items_cid', $cid));
                 $crit->add(new Criteria('items_active', 1));
                 $crit->setSort('items_position ASC, items_title');

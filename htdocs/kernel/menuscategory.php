@@ -96,6 +96,17 @@ class XoopsMenusCategory extends XoopsObject
         }
     }
 
+    /**
+     * @return mixed
+     */
+    public function get_new_enreg()
+    {
+        global $xoopsDB;
+        $new_enreg = $xoopsDB->getInsertId();
+
+        return $new_enreg;
+    }
+
     public function getFormCat($action = false)
     {
         if ($action === false) {
@@ -136,6 +147,12 @@ class XoopsMenusCategory extends XoopsObject
         $radio->addOption(1, _YES);
         $radio->addOption(0, _NO);
         $form->addElement($radio);
+
+        // permission
+        $permHelper = new \Xmf\Module\Helper\Permission();
+        $perm = $permHelper->getGroupSelectFormForItem('menus_category_view', $this->getVar('category_id'), _AM_SYSTEM_MENUS_PERMISSION_VIEW_CATEGORY, 'menus_category_view_perms', true);
+        $perm->setDescription(_AM_SYSTEM_MENUS_PERMISSION_VIEW_CATEGORY_DESC);
+        $form->addElement($perm, false);
 
         $form->addElement(new XoopsFormHidden('op', 'savecat'));
         // submit

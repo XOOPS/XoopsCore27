@@ -438,65 +438,88 @@ class xos_opal_Theme
             $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
         }
 
-        $viewPermissionCat = [];
+        // Vérifier que le handler est valide et que la table existe
+        $category_arr = [];
         $viewPermissionItem = [];
-        $helper            = Xmf\Module\Helper::getHelper('system');
-        $moduleHandler     = $helper->getModule();
-        $groups            = is_object($GLOBALS['xoopsUser']) ? $GLOBALS['xoopsUser']->getGroups() : XOOPS_GROUP_ANONYMOUS;
-        $gpermHandler      = xoops_getHandler('groupperm');
-        $viewPermissionCat = $gpermHandler->getItemIds('menus_category_view', $groups, $moduleHandler->getVar('mid'));
-        $viewPermissionItem = $gpermHandler->getItemIds('menus_items_view', $groups, $moduleHandler->getVar('mid'));
+        
+        if (is_object($menuscategoryHandler)) {
+            // Vérifier l'existence de la table
+            $tableExists = false;
+            try {
+                // Tenter une requête pour vérifier l'existence
+                $sql = "SHOW TABLES LIKE '" . $menuscategoryHandler->getTableName() . "'";
+                $result = $GLOBALS['xoopsDB']->queryF($sql);
+                $tableExists = $GLOBALS['xoopsDB']->getRowsNum($result) > 0;
+            } catch (Exception $e) {
+                $tableExists = false;
+            }
 
-        $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('category_active', 1));
-        if (!empty($viewPermissionCat)) {
-            $criteria->add(new Criteria('category_id', '(' . implode(',', $viewPermissionCat) . ')', 'IN'));
+            if ($tableExists) {
+                $viewPermissionCat = [];
+                $helper            = Xmf\Module\Helper::getHelper('system');
+                $moduleHandler     = $helper->getModule();
+                $groups            = is_object($GLOBALS['xoopsUser']) ? $GLOBALS['xoopsUser']->getGroups() : XOOPS_GROUP_ANONYMOUS;
+                $gpermHandler      = xoops_getHandler('groupperm');
+                $viewPermissionCat = $gpermHandler->getItemIds('menus_category_view', $groups, $moduleHandler->getVar('mid'));
+                $viewPermissionItem = $gpermHandler->getItemIds('menus_items_view', $groups, $moduleHandler->getVar('mid'));
+
+                $criteria = new CriteriaCompo();
+                $criteria->add(new Criteria('category_active', 1));
+                if (!empty($viewPermissionCat)) {
+                    $criteria->add(new Criteria('category_id', '(' . implode(',', $viewPermissionCat) . ')', 'IN'));
+                }
+                $criteria->setSort('category_position');
+                $criteria->setOrder('ASC');
+                $category_arr = $menuscategoryHandler->getAll($criteria);
+            }
         }
-        $criteria->setSort('category_position');
-        $criteria->setOrder('ASC');
-        $category_arr = $menuscategoryHandler->getAll($criteria);
         if (!empty($category_arr)) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             if (!is_object($menusitemsHandler) && class_exists('XoopsMenusItemsHandler')) {
                 $menusitemsHandler = new XoopsMenusItemsHandler($GLOBALS['xoopsDB']);
             }
             foreach ($category_arr as $cat) {
-                $cid = $cat->getVar('category_id');
-                $crit = new CriteriaCompo();
-                if (!empty($viewPermissionItem)) {
-                    $crit->add(new Criteria('items_id', '(' . implode(',', $viewPermissionItem) . ')', 'IN'));
-                }
-                $crit->add(new Criteria('items_cid', $cid));
-                $crit->add(new Criteria('items_active', 1));
-                $crit->setSort('items_position ASC, items_title');
-                $crit->setOrder('ASC');
-                $items_arr = $menusitemsHandler->getAll($crit);
-                xoops_load('SystemMenusTree', 'system');
-                $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
-                // recursive closure to build nested structure
-                $buildNested = function ($treeObj, $parentId = 0) use (&$buildNested) {
-                    $nodes = [];
-                    $children = $treeObj->getFirstChild($parentId);
-                    foreach ($children as $child) {
-                        $cid2 = $child->getVar('items_id');
-                        $entry = [
-                            'id'     => $cid2,
-                            'title'  => $child->getResolvedTitle(),
-                            'url'    => $child->getVar('items_url'),
-                            'active' => $child->getVar('items_active'),
-                            'children' => $buildNested($treeObj, $cid2),
-                        ];
-                        $nodes[] = $entry;
+                try {
+                    $cid = $cat->getVar('category_id');
+                    $crit = new CriteriaCompo();
+                    if (!empty($viewPermissionItem)) {
+                        $crit->add(new Criteria('items_id', '(' . implode(',', $viewPermissionItem) . ')', 'IN'));
                     }
-                    return $nodes;
-                };
-                $item_list = $buildNested($myTree, 0);
-                $menus[] = [
-                    'category_id'    => $cid,
-                    'category_title' => $cat->getResolvedTitle(),
-                    'category_url'   => $cat->getVar('category_url'),
-                    'items'          => $item_list,
-                ];
+                    $crit->add(new Criteria('items_cid', $cid));
+                    $crit->add(new Criteria('items_active', 1));
+                    $crit->setSort('items_position ASC, items_title');
+                    $crit->setOrder('ASC');
+                    $items_arr = $menusitemsHandler->getAll($crit);
+                    xoops_load('SystemMenusTree', 'system');
+                    $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
+                    // recursive closure to build nested structure
+                    $buildNested = function ($treeObj, $parentId = 0) use (&$buildNested) {
+                        $nodes = [];
+                        $children = $treeObj->getFirstChild($parentId);
+                        foreach ($children as $child) {
+                            $cid2 = $child->getVar('items_id');
+                            $entry = [
+                                'id'     => $cid2,
+                                'title'  => $child->getResolvedTitle(),
+                                'url'    => $child->getVar('items_url'),
+                                'active' => $child->getVar('items_active'),
+                                'children' => $buildNested($treeObj, $cid2),
+                            ];
+                            $nodes[] = $entry;
+                        }
+                        return $nodes;
+                    };
+                    $item_list = $buildNested($myTree, 0);
+                    $menus[] = [
+                        'category_id'    => $cid,
+                        'category_title' => $cat->getResolvedTitle(),
+                        'category_url'   => $cat->getVar('category_url'),
+                        'items'          => $item_list,
+                    ];
+                } catch (Exception $e) {
+                    // Silencieusement ignorer les erreurs de catégories particulières
+                    continue;
+                }
             }
         }
         return $menus;

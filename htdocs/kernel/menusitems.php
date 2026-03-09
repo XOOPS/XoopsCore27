@@ -40,9 +40,15 @@ class XoopsMenusItems extends XoopsObject
         $this->initVar('items_pid', XOBJ_DTYPE_INT, null, false);
         $this->initVar('items_cid', XOBJ_DTYPE_INT, null, false);
         $this->initVar('items_title', XOBJ_DTYPE_TXTBOX, null);
+        $this->initVar('items_prefix', XOBJ_DTYPE_TXTAREA);
+        $this->initVar('items_suffix', XOBJ_DTYPE_TXTAREA);
         $this->initVar('items_url', XOBJ_DTYPE_TXTBOX, null);
+        $this->initVar('items_target', XOBJ_DTYPE_INT, 0);
         $this->initVar('items_position', XOBJ_DTYPE_INT, null, false);
+        $this->initVar('items_protected', XOBJ_DTYPE_INT, 0);
         $this->initVar('items_active', XOBJ_DTYPE_INT, 1);
+        // use html
+		$this->initVar('dohtml', XOBJ_DTYPE_INT, 1, false);
         // Load language file for menu items
         $language = $GLOBALS['xoopsConfig']['language'] ?? 'english';
         $fileinc = XOOPS_ROOT_PATH . "/modules/system/language/{$language}/menus/menus.php";
@@ -163,13 +169,41 @@ class XoopsMenusItems extends XoopsObject
         $title = new XoopsFormText(_AM_SYSTEM_MENUS_TITLEITEM, 'items_title', 50, 255, $this->getVar('items_title'));
         $title->setDescription(_AM_SYSTEM_MENUS_TITLEITEM_DESC);
         $form->addElement($title, true);
-
+        // prefix
+        $editor_configs = array(
+            'name' => 'items_prefix',
+            'value' => $this->getVar('items_prefix'),
+            'rows' => 1,
+            'cols' => 50,
+            'width' => '100%',
+            'height' => '200px',
+            'editor' => 'Plain Text'
+        );
+        $prefix = new XoopsFormEditor(_AM_SYSTEM_MENUS_PREFIXITEM, 'items_prefix', $editor_configs, false, 'textarea');
+        $prefix->setDescription(_AM_SYSTEM_MENUS_PREFIXITEM_DESC);
+        $form->addElement($prefix, false);
+        // suffix
+        $editor_configs = array(
+            'name' => 'items_suffix',
+            'value' => $this->getVar('items_suffix'),
+            'rows' => 1,
+            'cols' => 50,
+            'width' => '100%',
+            'height' => '200px',
+            'editor' => 'Plain Text'
+        );
+        $suffix = new XoopsFormEditor(_AM_SYSTEM_MENUS_SUFFIXITEM, 'items_suffix', $editor_configs, false, 'textarea');
+        $suffix->setDescription(_AM_SYSTEM_MENUS_SUFFIXITEM_DESC);
+        $form->addElement($suffix, false);
         // url
         $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_URLITEM, 'items_url', 50, 255, $this->getVar('items_url')), false);
-
+        // target
+        $radio = new XoopsFormRadio(_AM_SYSTEM_MENUS_TARGET, 'items_target', $this->getVar('items_target'));
+        $radio->addOption(0, _AM_SYSTEM_MENUS_TARGET_SELF);
+        $radio->addOption(1, _AM_SYSTEM_MENUS_TARGET_BLANK);
+        $form->addElement($radio, false);
         // position
         $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_POSITIONITEM, 'items_position', 5, 5, $position));
-
         // actif
         $radio = new XoopsFormRadio(_AM_SYSTEM_MENUS_ACTIVE, 'items_active', $active);
         $radio->addOption(1, _YES);

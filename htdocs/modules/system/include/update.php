@@ -26,13 +26,17 @@
 function xoops_module_update_system(XoopsModule $module, $prev_version = null)
 {
     global $xoopsDB;
-    if ($prev_version < '2.2.0') {
+    if ($prev_version < '2.2.0-Stable') {
         //$db = XoopsDatabaseFactory::getDatabaseConnection();
         $sql = "CREATE TABLE " . $xoopsDB->prefix('') . "_menuscategory (
                 category_id INT AUTO_INCREMENT PRIMARY KEY,
                 category_title VARCHAR(100) NOT NULL,
+                category_prefix VARCHAR(100) NOT NULL,
+                category_suffix VARCHAR(100) NOT NULL,
                 category_url VARCHAR(255) NULL,
+                category_target TINYINT(1) DEFAULT 0,
                 category_position INT DEFAULT 0,
+                category_protected INT DEFAULT 0,
                 category_active TINYINT(1) DEFAULT 1);";
         $xoopsDB->query($sql);
         $sql = "CREATE TABLE " . $xoopsDB->prefix('') . "_menusitems (
@@ -40,8 +44,12 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
                 items_pid INT NULL,
                 items_cid INT NULL,
                 items_title VARCHAR(100) NOT NULL,
+                items_prefix VARCHAR(100) NOT NULL,
+                items_suffix VARCHAR(100) NOT NULL,
                 items_url VARCHAR(255) NULL,
+                items_target TINYINT(1) DEFAULT 0,
                 items_position INT DEFAULT 0,
+                items_protected INT DEFAULT 0,
                 items_active TINYINT(1) DEFAULT 1,
                 FOREIGN KEY (items_cid) REFERENCES menuscategory(category_id) ON DELETE CASCADE,
                 FOREIGN KEY (items_pid) REFERENCES menusitems(items_id) ON DELETE CASCADE);";

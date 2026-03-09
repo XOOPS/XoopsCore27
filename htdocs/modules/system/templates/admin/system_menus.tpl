@@ -60,7 +60,7 @@ window.XOOPS_MENUS.messages = {
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="me-2" style="flex:1; min-width:0;">
                         <h5 class="card-title mb-0 text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; width:100%;">
-                            <{$itemcategory.title|escape}>
+                            <{$itemcategory.prefix}> <{$itemcategory.title|escape}> <{$itemcategory.suffix}>
                         </h5>
                     </div>
                     <small class="text-muted ms-2" style="white-space:nowrap;">#<{$itemcategory.id|escape}></small>
@@ -127,7 +127,7 @@ window.XOOPS_MENUS.messages = {
                         <{/if}>
                         <div style="overflow:hidden;">
                             <span class="d-block text-truncate" style="max-width:100%">
-                                <{$item.title|escape}>
+                                <{$item.prefix}> <{$item.title|escape}> <{$item.suffix}>
                                 <{if $item.url != ''}>
                                     &nbsp;(<a href="<{$item.url|escape}>" target="_blank" rel="noopener"><{$item.url|escape}></a>)
                                 <{/if}>

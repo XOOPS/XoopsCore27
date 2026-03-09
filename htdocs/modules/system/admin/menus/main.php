@@ -75,6 +75,8 @@ switch ($op) {
                 $category = array();
                 $category['id']              = $category_arr[$i]->getVar('category_id');
                 $category['title']           = $category_arr[$i]->getAdminTitle();
+                $category['prefix']          = $category_arr[$i]->getVar('category_prefix');
+                $category['suffix']          = $category_arr[$i]->getVar('category_suffix');
                 $category['url']             = $category_arr[$i]->getVar('category_url');
                 $category['position']        = $category_arr[$i]->getVar('category_position');
                 $category['active']          = $category_arr[$i]->getVar('category_active');
@@ -131,7 +133,10 @@ switch ($op) {
             $obj = $menuscategoryHandler->create();
         }
         $obj->setVar('category_title', Request::getString('category_title', ''));
+        $obj->setVar('category_prefix', Request::getText('category_prefix', ''));
+        $obj->setVar('category_suffix', Request::getText('category_suffix', ''));
         $obj->setVar('category_url', Request::getString('category_url', ''));
+        $obj->setVar('category_target', Request::getInt('category_target', 0));
         $obj->setVar('category_position', Request::getInt('category_position', 0));
         $obj->setVar('category_active', Request::getInt('category_active', 1));
         if ($menuscategoryHandler->insert($obj)) {
@@ -351,6 +356,8 @@ switch ($op) {
                     $items = array();
                     $items['id']       = $tree_arr[$i]['obj']->getVar('items_id');
                     $items['title']    = $tree_arr[$i]['obj']->getAdminTitle();
+                    $items['prefix']   = $tree_arr[$i]['obj']->getVar('items_prefix');
+                    $items['suffix']   = $tree_arr[$i]['obj']->getVar('items_suffix');
                     $items['url']      = $tree_arr[$i]['obj']->getVar('items_url');
                     $items['active']   = $tree_arr[$i]['obj']->getVar('items_active');
                     $items['level']    = ($tree_arr[$i]['level'] - 1);
@@ -401,8 +408,11 @@ switch ($op) {
         $items_cid = Request::getInt('items_cid', 0);
         $obj->setVar('items_cid', $items_cid);
         $obj->setVar('items_title', Request::getString('items_title', ''));
+        $obj->setVar('items_prefix', Request::getText('items_prefix', ''));
+        $obj->setVar('items_suffix', Request::getText('items_suffix', ''));
         $obj->setVar('items_url', Request::getString('items_url', ''));
         $obj->setVar('items_position', Request::getInt('items_position', 0));
+        $obj->setVar('items_target', Request::getInt('items_target', 0));
         $obj->setVar('items_active', Request::getInt('items_active', 1));
         if ($error_message == '') {
             if ($menusitemsHandler->insert($obj)) {

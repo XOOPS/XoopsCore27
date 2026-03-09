@@ -441,19 +441,18 @@ class xos_opal_Theme
         // Vérifier que le handler est valide et que la table existe
         $category_arr = [];
         $viewPermissionItem = [];
-        
+
         if (is_object($menuscategoryHandler)) {
             // Vérifier l'existence de la table
             $tableExists = false;
             try {
                 // Tenter une requête pour vérifier l'existence
-                $sql = "SHOW TABLES LIKE '" . $menuscategoryHandler->getTableName() . "'";
+                $sql = "SHOW TABLES LIKE '" . $GLOBALS['xoopsDB']->prefix('menuscategory') . "'";
                 $result = $GLOBALS['xoopsDB']->queryF($sql);
                 $tableExists = $GLOBALS['xoopsDB']->getRowsNum($result) > 0;
             } catch (Exception $e) {
                 $tableExists = false;
             }
-
             if ($tableExists) {
                 $viewPermissionCat = [];
                 $helper            = Xmf\Module\Helper::getHelper('system');
@@ -501,6 +500,8 @@ class xos_opal_Theme
                             $entry = [
                                 'id'     => $cid2,
                                 'title'  => $child->getResolvedTitle(),
+                                'prefix'    => $child->getVar('items_prefix'),
+                                'suffix'    => $child->getVar('items_suffix'),
                                 'url'    => $child->getVar('items_url'),
                                 'active' => $child->getVar('items_active'),
                                 'children' => $buildNested($treeObj, $cid2),
@@ -511,10 +512,12 @@ class xos_opal_Theme
                     };
                     $item_list = $buildNested($myTree, 0);
                     $menus[] = [
-                        'category_id'    => $cid,
-                        'category_title' => $cat->getResolvedTitle(),
-                        'category_url'   => $cat->getVar('category_url'),
-                        'items'          => $item_list,
+                        'category_id'     => $cid,
+                        'category_title'  => $cat->getResolvedTitle(),
+                        'category_prefix' => $cat->getVar('category_prefix'),
+                        'category_suffix' => $cat->getVar('category_suffix'),
+                        'category_url'    => $cat->getVar('category_url'),
+                        'items'           => $item_list,
                     ];
                 } catch (Exception $e) {
                     // Silencieusement ignorer les erreurs de catégories particulières

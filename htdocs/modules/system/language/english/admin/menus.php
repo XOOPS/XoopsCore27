@@ -58,7 +58,7 @@ define('_AM_SYSTEM_MENUS_TITLECAT_DESC', 'You can use a constant for the title. 
 define('_AM_SYSTEM_MENUS_TITLEITEM', 'Name of the submenu item');
 define('_AM_SYSTEM_MENUS_TITLEITEM_DESC', 'You can use a constant for the title. If you do, the constant value will be shown in parentheses next to the title in admin side.');
 define('_AM_SYSTEM_MENUS_URLCAT', 'URL of the menu category');
-define('_AM_SYSTEM_MENUS_URLCATDESC', 'Optional — Only if you want the category title to be a link.');
+define('_AM_SYSTEM_MENUS_URLCATDESC', 'Optional — Only if you want the category title to be a link.<br>Example: "http://www.example.com" for external links or "index.php?option=value" for internal links.');
 define('_AM_SYSTEM_MENUS_URLITEM', 'URL of the submenu item');
 
 // permissions

@@ -13,7 +13,7 @@
                     <{foreach $items as $item}>
                         <li<{if $item.children}> class="dropdown-submenu"<{/if}>>
                             <a class="dropdown-item<{if $item.children}> dropdown-toggle<{/if}>"
-                               href="<{if $item.url neq ''}><{$item.url|escape}><{else}>#<{/if}>"<{if $item.children}> role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}>>
+                               href="<{if $item.url neq ''}><{$item.url|escape}><{else}>#<{/if}>"<{if $item.children}> role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}> target="<{$item.target}>">
                                 <{$item.prefix}> <{$item.title|escape}> <{$item.suffix}>
                             </a>
                             <{if $item.children}>
@@ -28,7 +28,7 @@
                         <li class="nav-item<{if $cat.items}> dropdown<{/if}>">
                             <a class="nav-link<{if $cat.items}> dropdown-toggle<{/if}>"
                                href="<{$cat.category_url|escape|default:'#'}>"
-                               <{if $cat.items}>role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}>>
+                               <{if $cat.items}>role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}> target="<{$cat.category_target}>">
                                 <{$cat.category_prefix}> <{$cat.category_title|escape}> <{$cat.category_suffix}>
                             </a>
                             <{if $cat.items}>

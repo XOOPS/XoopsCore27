@@ -68,7 +68,7 @@ window.XOOPS_MENUS.messages = {
                 <div class="card-body d-flex flex-column">
                     <{if $itemcategory.url|default:'' != ''}>
                         <p class="card-text mb-2">
-                            <a href="<{$itemcategory.url|escape}>" target="_blank" rel="noopener"><{$itemcategory.url|escape}></a>
+                            <a href="<{$itemcategory.url|escape}>" target="<{$itemcategory.target}>" rel="noopener"><{$itemcategory.url|escape}></a>
                         </p>
                     <{/if}>
                     <div class="mt-auto">
@@ -129,7 +129,7 @@ window.XOOPS_MENUS.messages = {
                             <span class="d-block text-truncate" style="max-width:100%">
                                 <{$item.prefix}> <{$item.title|escape}> <{$item.suffix}>
                                 <{if $item.url != ''}>
-                                    &nbsp;(<a href="<{$item.url|escape}>" target="_blank" rel="noopener"><{$item.url|escape}></a>)
+                                    &nbsp;(<a href="<{$item.url|escape}>" target="<{$item.target}>" rel="noopener"><{$item.url|escape}></a>)
                                 <{/if}>
                             </span>
                         </div>

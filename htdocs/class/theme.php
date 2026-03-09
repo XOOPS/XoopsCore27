@@ -503,6 +503,7 @@ class xos_opal_Theme
                                 'prefix'    => $child->getVar('items_prefix'),
                                 'suffix'    => $child->getVar('items_suffix'),
                                 'url'    => $child->getVar('items_url'),
+                                'target' => ($child->getVar('items_target') == 1) ? '_blank' : '_self',
                                 'active' => $child->getVar('items_active'),
                                 'children' => $buildNested($treeObj, $cid2),
                             ];
@@ -517,6 +518,7 @@ class xos_opal_Theme
                         'category_prefix' => $cat->getVar('category_prefix'),
                         'category_suffix' => $cat->getVar('category_suffix'),
                         'category_url'    => $cat->getVar('category_url'),
+                        'category_target' => ($cat->getVar('category_target') == 1) ? '_blank' : '_self',
                         'items'           => $item_list,
                     ];
                 } catch (Exception $e) {

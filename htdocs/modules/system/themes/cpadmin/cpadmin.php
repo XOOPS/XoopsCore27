@@ -84,7 +84,7 @@ class XoopsGuiCpadmin extends XoopsSystemGui
         $xoTheme->addStylesheet(XOOPS_ADMINTHEME_URL . '/cpadmin/css/style.css');
 
         $tpl->assign('lang_cp', _CPHOME);
-        
+
 
         // ADD MENU *****************************************
 
@@ -165,7 +165,7 @@ class XoopsGuiCpadmin extends XoopsSystemGui
             'text' => '<span class="fa fa-puzzle-piece"></span> ' . _AM_SYSTEM_MODULES,
             'dir'  => $mod->getVar('dirname', 'n'),
             'menu' => $menu]);
-        
+
         //add OPTIONS/links for local support
         if (file_exists($file = XOOPS_ADMINTHEME_PATH . '/transition/language/' . $xoopsConfig['language'] . '/localsupport.php')) {
             $links = include XOOPS_ADMINTHEME_PATH . '/transition/language/' . $xoopsConfig['language'] . '/localsupport.php';
@@ -181,7 +181,7 @@ class XoopsGuiCpadmin extends XoopsSystemGui
 
             return null;
         }
-        
+
     }
 
     /**
@@ -414,7 +414,7 @@ class XoopsGuiCpadmin extends XoopsSystemGui
             'absolute' => 1,
             'url'      => XOOPS_URL . '/modules/system/',
             'options'  => $opt];
-        
+
         // add MODULES  Menu items
         /* @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
@@ -428,7 +428,7 @@ class XoopsGuiCpadmin extends XoopsSystemGui
         $moduleperm_handler = xoops_getHandler('groupperm');
         foreach ($mods as $mod) {
             $rtn    = [];
-            
+
             $sadmin = $moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups());
             if ($sadmin && ($mod->getVar('hasnotification') || is_array($mod->getInfo('config')) || is_array($mod->getInfo('comments')))) {
                 $rtn['link']     = XOOPS_URL . '/modules/system/admin.php?fct=preferences&amp;op=showmod&amp;mod=' . $mod->getVar('mid');

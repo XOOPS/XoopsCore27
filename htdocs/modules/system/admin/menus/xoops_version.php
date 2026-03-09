@@ -27,7 +27,7 @@
     'help'        => 'page=menus',
     'license'     => 'GPL see LICENSE',
     'official'    => 1,
-    'image'       => 'edituser.png',
+    'image'       => 'db.png',
     'icon'        => 'fa fa-bars',
     'hasAdmin'    => 1,
     'adminpath'   => 'admin.php?fct=menus',

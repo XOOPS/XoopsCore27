@@ -68,21 +68,21 @@
       <div class="user-panel mt-3 pb-3 mb-3 d-flex">
         <div class="image">
 		<{if !empty($xoops_name)}>
-           <img src="<{$xoops_avatar}>" class="img-circle elevation-2" alt="User Image" title="<{$xoops_name}>">		
+           <img src="<{$xoops_avatar}>" class="img-circle elevation-2" alt="User Image" title="<{$xoops_name}>">
 		  <{else}>
            <img src="<{$xoops_avatar}>" class="img-circle elevation-2" alt="User Image" title="<{$xoops_uname}>">
-		<{/if}>	
+		<{/if}>
         </div>
         <div class="info">
 		<{if !empty($xoops_name)}>
           <a href="<{xoAppUrl url='user.php'}>" class="d-block text-wrap" rel="external">
             <{$xoops_name}>
-          </a>				
+          </a>
 		  <{else}>
           <a href="<{xoAppUrl url='user.php'}>" class="d-block" rel="external">
             <{$xoops_uname}>
           </a>
-		<{/if}>	
+		<{/if}>
         </div>
       </div>
       <!-- SidebarSearch Form -->
@@ -133,7 +133,7 @@
               <p>
                 <{$pref.text}><i class="fas fa-angle-left right"></i>
               </p>
-            </a> 
+            </a>
             <ul class="nav nav-treeview">
               <{foreach item=op from=$pref.menu|default:null}>
                   <li class="nav-item">
@@ -161,7 +161,7 @@
                   <{if !empty($op.options) && $op.options != 0}></li><{/if}>
                 <{/foreach}>
             </ul>
-            <{/foreach}>  
+            <{/foreach}>
           </li>
           <li class="nav-item">
             <{foreach item=module from=$modules|default:null}>
@@ -271,7 +271,7 @@
     </div>
     <!--{xo-logger-output}-->
   </div>
-  
+
   <footer class="main-footer">
     <strong>Copyright &copy; <{$smarty.now|date_format:"%Y"}> <a href="https://xoops.org">XOOPS</a>.</strong> All rights
     reserved.
@@ -281,9 +281,9 @@
     </div>
   </footer>
 </div>
-  
 
-  <!-- jQuery 
+
+  <!-- jQuery
   <script src="<{$theme_url}>/js/jquery/jquery.min.js"></script>-->
   <!-- jQuery UI 1.11.4 -->
   <script src="<{$theme_url}>/js/jquery-ui/jquery-ui.min.js"></script>

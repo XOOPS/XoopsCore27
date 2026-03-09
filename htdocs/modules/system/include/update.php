@@ -54,6 +54,8 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
                 FOREIGN KEY (items_cid) REFERENCES menuscategory(category_id) ON DELETE CASCADE,
                 FOREIGN KEY (items_pid) REFERENCES menusitems(items_id) ON DELETE CASCADE);";
         $xoopsDB->query($sql);
+        $sql = "INSERT INTO " . $xoopsDB->prefix('') . "_config VALUES (NULL, 1, 0, 'active_menus', '_MI_SYSTEM_PREFERENCE_ACTIVE_MENUS', '1', '', 'hidden', 'int', 21)";
+        $xoopsDB->query($sql);
     }
 
     // irmtfan bug fix: solve templates duplicate issue

@@ -59,11 +59,11 @@ class SystemMenusTree extends XoopsObjectTree
      * @return void
      * @access private
      */
-    protected function addTree($fieldName, $productid, $key, $prefix_orig, $prefix_curr = '', $level = 1)
+    protected function addTree($fieldName, $itemid, $key, $prefix_orig, $prefix_curr = '', $level = 1)
     {
         if ($key > 0) {
-            if (($productid == $this->tree[$key]['obj']->getVar('nomenclature_productid')) || $productid == 0) {
-                $value = $this->tree[$key]['obj']->getVar('nomenclature_id');
+            if (($itemid == $this->tree[$key]['obj']->getVar('items_cid')) || $itemid == 0) {
+                $value = $this->tree[$key]['obj']->getVar('items_id');
                 $name = $prefix_curr . ' ' . $this->tree[$key]['obj']->getVar($fieldName);
                 $prefix_curr .= $prefix_orig;
                 $this->listTree[$this->cpt]['name'] = $name;
@@ -76,7 +76,7 @@ class SystemMenusTree extends XoopsObjectTree
         }
         if (isset($this->tree[$key]['child']) && !empty($this->tree[$key]['child'])) {
             foreach ($this->tree[$key]['child'] as $childKey) {
-                $this->addTree($fieldName, $productid, $childKey, $prefix_orig, $prefix_curr, $level);
+                $this->addTree($fieldName, $itemid, $childKey, $prefix_orig, $prefix_curr, $level);
             }
         }
     }

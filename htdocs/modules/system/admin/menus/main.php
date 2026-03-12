@@ -367,15 +367,17 @@ switch ($op) {
             if ($items_count > 0) {
                 foreach (array_keys($tree_arr) as $i) {
                     $items = array();
-                    $items['id']       = $tree_arr[$i]['obj']->getVar('items_id');
-                    $items['title']    = $tree_arr[$i]['obj']->getAdminTitle();
-                    $items['prefix']   = $tree_arr[$i]['obj']->getVar('items_prefix');
-                    $items['suffix']   = $tree_arr[$i]['obj']->getVar('items_suffix');
-                    $items['url']      = $tree_arr[$i]['obj']->getVar('items_url');
-                    $items['target']   = ($tree_arr[$i]['obj']->getVar('items_target') == 1) ? '_blank' : '_self';
-                    $items['active']   = $tree_arr[$i]['obj']->getVar('items_active');
+                    $items['id']        = $tree_arr[$i]['obj']->getVar('items_id');
+                    $items['title']     = $tree_arr[$i]['obj']->getAdminTitle();
+                    $items['prefix']    = $tree_arr[$i]['obj']->getVar('items_prefix');
+                    $items['suffix']    = $tree_arr[$i]['obj']->getVar('items_suffix');
+                    $items['url']       = $tree_arr[$i]['obj']->getVar('items_url');
+                    $items['target']    = ($tree_arr[$i]['obj']->getVar('items_target') == 1) ? '_blank' : '_self';
+                    $items['active']    = $tree_arr[$i]['obj']->getVar('items_active');
                     $items['protected'] = $tree_arr[$i]['obj']->getVar('items_protected');
-                    $items['level']    = ($tree_arr[$i]['level'] - 1);
+                    $items['pid']       = $tree_arr[$i]['obj']->getVar('items_pid');
+                    $items['cid']       = $tree_arr[$i]['obj']->getVar('items_cid');
+                    $items['level']     = ($tree_arr[$i]['level'] - 1);
                     $xoopsTpl->append('items', $items);
 		            unset($items);
                 }

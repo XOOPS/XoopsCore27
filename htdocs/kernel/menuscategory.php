@@ -56,6 +56,14 @@ class XoopsMenusCategory extends XoopsObject
                 self::$languageFilesIncluded[$fileinc] = true;
             }
         }
+        // Load language file for admin menus
+        $fileinc_admin = XOOPS_ROOT_PATH . "/modules/system/language/{$language}/admin/menus.php";
+        if (!isset(self::$languageFilesIncluded[$fileinc_admin])) {
+            if (file_exists($fileinc_admin)) {
+                include_once $fileinc_admin;
+                self::$languageFilesIncluded[$fileinc_admin] = true;
+            }
+        }
     }
     /**
      * Retrieve the resolved title for display.

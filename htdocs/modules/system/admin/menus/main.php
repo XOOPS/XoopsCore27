@@ -81,6 +81,7 @@ switch ($op) {
                 $category['target']          = ($category_arr[$i]->getVar('category_target') == 1) ? '_blank' : '_self';
                 $category['position']        = $category_arr[$i]->getVar('category_position');
                 $category['active']          = $category_arr[$i]->getVar('category_active');
+                $category['protected']       = $category_arr[$i]->getVar('category_protected');
                 $category_img                = $category_arr[$i]->getVar('category_logo');
                 $xoopsTpl->append('category', $category);
                 unset($category);
@@ -128,15 +129,20 @@ switch ($op) {
         }
         $menuscategoryHandler = xoops_getHandler('menuscategory');
         $id = Request::getInt('category_id', 0);
+        $isProtected = false;
         if ($id > 0) {
             $obj = $menuscategoryHandler->get($id);
+            $isProtected = (int)$obj->getVar('category_protected') === 1;
         } else {
             $obj = $menuscategoryHandler->create();
         }
-        $obj->setVar('category_title', Request::getString('category_title', ''));
-        $obj->setVar('category_prefix', Request::getText('category_prefix', ''));
-        $obj->setVar('category_suffix', Request::getText('category_suffix', ''));
-        $obj->setVar('category_url', Request::getString('category_url', ''));
+        // Server-side lock: protected categories keep immutable label and rendering fields.
+        if (!$isProtected) {
+            $obj->setVar('category_title', Request::getString('category_title', ''));
+            $obj->setVar('category_prefix', Request::getText('category_prefix', ''));
+            $obj->setVar('category_suffix', Request::getText('category_suffix', ''));
+            $obj->setVar('category_url', Request::getString('category_url', ''));
+        }
         $obj->setVar('category_target', Request::getInt('category_target', 0));
         $obj->setVar('category_position', Request::getInt('category_position', 0));
         $obj->setVar('category_active', Request::getInt('category_active', 1));
@@ -169,6 +175,9 @@ switch ($op) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             /** @var \XoopsMenusCategory $obj */
             $obj = $menuscategoryHandler->get($category_id);
+            if (is_object($obj) && (int)$obj->getVar('category_protected') === 1) {
+                redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_CATPROTECTED);
+            }
             if ($surdel === true) {
                 if (!$GLOBALS['xoopsSecurity']->check()) {
                     redirect_header('admin.php?fct=menus', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
@@ -221,6 +230,9 @@ switch ($op) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             /** @var \XoopsMenusItems $obj */
             $obj = $menusitemsHandler->get($item_id);
+            if (is_object($obj) && (int)$obj->getVar('items_protected') === 1) {
+                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMPROTECTED);
+            }
             if ($obj->getVar('items_active') == 0){
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMDISABLE);
             }
@@ -362,6 +374,7 @@ switch ($op) {
                     $items['url']      = $tree_arr[$i]['obj']->getVar('items_url');
                     $items['target']   = ($tree_arr[$i]['obj']->getVar('items_target') == 1) ? '_blank' : '_self';
                     $items['active']   = $tree_arr[$i]['obj']->getVar('items_active');
+                    $items['protected'] = $tree_arr[$i]['obj']->getVar('items_protected');
                     $items['level']    = ($tree_arr[$i]['level'] - 1);
                     $xoopsTpl->append('items', $items);
 		            unset($items);
@@ -394,25 +407,31 @@ switch ($op) {
 
         $menusitemsHandler = xoops_getHandler('menusitems');
         $id = Request::getInt('items_id', 0);
+        $isProtected = false;
         /** @var \XoopsMenusItems $obj */
         if ($id > 0) {
             $obj = $menusitemsHandler->get($id);
+            $isProtected = (int)$obj->getVar('items_protected') === 1;
         } else {
             $obj = $menusitemsHandler->create();
         }
         $error_message = '';
-        $itempid = Request::getInt('items_pid', 0);
-        if ($itempid == $id && $itempid != 0) {
-            $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
-        } else {
-            $obj->setVar('items_pid', $itempid);
+        if (!$isProtected) {
+            $itempid = Request::getInt('items_pid', 0);
+            if ($itempid == $id && $itempid != 0) {
+                $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
+            } else {
+                $obj->setVar('items_pid', $itempid);
+            }
         }
         $items_cid = Request::getInt('items_cid', 0);
         $obj->setVar('items_cid', $items_cid);
-        $obj->setVar('items_title', Request::getString('items_title', ''));
-        $obj->setVar('items_prefix', Request::getText('items_prefix', ''));
-        $obj->setVar('items_suffix', Request::getText('items_suffix', ''));
-        $obj->setVar('items_url', Request::getString('items_url', ''));
+        if (!$isProtected) {
+            $obj->setVar('items_title', Request::getString('items_title', ''));
+            $obj->setVar('items_prefix', Request::getText('items_prefix', ''));
+            $obj->setVar('items_suffix', Request::getText('items_suffix', ''));
+            $obj->setVar('items_url', Request::getString('items_url', ''));
+        }
         $obj->setVar('items_position', Request::getInt('items_position', 0));
         $obj->setVar('items_target', Request::getInt('items_target', 0));
         $obj->setVar('items_active', Request::getInt('items_active', 1));

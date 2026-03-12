@@ -135,10 +135,12 @@ class XoopsMenusCategory extends XoopsObject
         $form = new XoopsThemeForm($title, 'form', $action, 'post', true);
         $form->setExtra('enctype="multipart/form-data"');
 
+        $isProtected = false;
         if (!$this->isNew()) {
             $form->addElement(new XoopsFormHidden('category_id', $this->getVar('category_id')));
             $position = $this->getVar('category_position');
             $active = $this->getVar('category_active');
+            $isProtected = (int)$this->getVar('category_protected') === 1;
         } else {
             $position = 0;
             $active = 1;
@@ -146,6 +148,9 @@ class XoopsMenusCategory extends XoopsObject
 
         // title
         $title = new XoopsFormText(_AM_SYSTEM_MENUS_TITLECAT, 'category_title', 50, 255, $this->getVar('category_title'));
+        if ($isProtected) {
+            $title->setExtra('readonly="readonly"');
+        }
         $title->setDescription(_AM_SYSTEM_MENUS_TITLECAT_DESC);
         $form->addElement($title, true);
         // prefix
@@ -159,6 +164,12 @@ class XoopsMenusCategory extends XoopsObject
             'editor' => 'Plain Text'
         );
         $prefix = new XoopsFormEditor(_AM_SYSTEM_MENUS_PREFIXCAT, 'category_prefix', $editor_configs, false, 'textarea');
+        if ($isProtected) {
+            $prefix->setExtra('readonly="readonly"');
+            if (isset($prefix->editor) && is_object($prefix->editor)) {
+                $prefix->editor->setExtra('readonly="readonly"');
+            }
+        }
         $prefix->setDescription(_AM_SYSTEM_MENUS_PREFIXCAT_DESC);
         $form->addElement($prefix, false);
         // suffix
@@ -172,10 +183,19 @@ class XoopsMenusCategory extends XoopsObject
             'editor' => 'Plain Text'
         );
         $suffix = new XoopsFormEditor(_AM_SYSTEM_MENUS_SUFFIXCAT, 'category_suffix', $editor_configs, false, 'textarea');
+        if ($isProtected) {
+            $suffix->setExtra('readonly="readonly"');
+            if (isset($suffix->editor) && is_object($suffix->editor)) {
+                $suffix->editor->setExtra('readonly="readonly"');
+            }
+        }
         $suffix->setDescription(_AM_SYSTEM_MENUS_SUFFIXCAT_DESC);
         $form->addElement($suffix, false);
         // url
         $url = new XoopsFormText(_AM_SYSTEM_MENUS_URLCAT, 'category_url', 50, 255, $this->getVar('category_url'));
+        if ($isProtected) {
+            $url->setExtra('readonly="readonly"');
+        }
         $url->setDescription(_AM_SYSTEM_MENUS_URLCATDESC);
         $form->addElement($url, false);
         // target

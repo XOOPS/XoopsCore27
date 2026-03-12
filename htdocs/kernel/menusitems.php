@@ -138,10 +138,12 @@ class XoopsMenusItems extends XoopsObject
         $form = new XoopsThemeForm($title, 'form', $action, 'post', true);
         $form->setExtra('enctype="multipart/form-data"');
 
+        $isProtected = false;
         if (!$this->isNew()) {
             $form->addElement(new XoopsFormHidden('items_id', $this->getVar('items_id')));
             $position = $this->getVar('items_position');
             $active = $this->getVar('items_active');
+            $isProtected = (int)$this->getVar('items_protected') === 1;
         } else {
             $position = 0;
             $active = 1;
@@ -171,10 +173,16 @@ class XoopsMenusItems extends XoopsObject
         include_once $GLOBALS['xoops']->path('class/tree.php');
         $myTree = new XoopsObjectTree($item_arr, 'items_id', 'items_pid');
         $suparticle = $myTree->makeSelectElement('items_pid', 'items_title', '--', $this->getVar('items_pid'), true, 0, '', _AM_SYSTEM_MENUS_PID);
+        if ($isProtected) {
+            $suparticle->setExtra('disabled="disabled"');
+        }
         $form->addElement($suparticle, false);
 
         // title
         $title = new XoopsFormText(_AM_SYSTEM_MENUS_TITLEITEM, 'items_title', 50, 255, $this->getVar('items_title'));
+        if ($isProtected) {
+            $title->setExtra('readonly="readonly"');
+        }
         $title->setDescription(_AM_SYSTEM_MENUS_TITLEITEM_DESC);
         $form->addElement($title, true);
         // prefix
@@ -188,6 +196,12 @@ class XoopsMenusItems extends XoopsObject
             'editor' => 'Plain Text'
         );
         $prefix = new XoopsFormEditor(_AM_SYSTEM_MENUS_PREFIXITEM, 'items_prefix', $editor_configs, false, 'textarea');
+        if ($isProtected) {
+            $prefix->setExtra('readonly="readonly"');
+            if (isset($prefix->editor) && is_object($prefix->editor)) {
+                $prefix->editor->setExtra('readonly="readonly"');
+            }
+        }
         $prefix->setDescription(_AM_SYSTEM_MENUS_PREFIXITEM_DESC);
         $form->addElement($prefix, false);
         // suffix
@@ -201,10 +215,20 @@ class XoopsMenusItems extends XoopsObject
             'editor' => 'Plain Text'
         );
         $suffix = new XoopsFormEditor(_AM_SYSTEM_MENUS_SUFFIXITEM, 'items_suffix', $editor_configs, false, 'textarea');
+        if ($isProtected) {
+            $suffix->setExtra('readonly="readonly"');
+            if (isset($suffix->editor) && is_object($suffix->editor)) {
+                $suffix->editor->setExtra('readonly="readonly"');
+            }
+        }
         $suffix->setDescription(_AM_SYSTEM_MENUS_SUFFIXITEM_DESC);
         $form->addElement($suffix, false);
         // url
-        $form->addElement(new XoopsFormText(_AM_SYSTEM_MENUS_URLITEM, 'items_url', 50, 255, $this->getVar('items_url')), false);
+        $url = new XoopsFormText(_AM_SYSTEM_MENUS_URLITEM, 'items_url', 50, 255, $this->getVar('items_url'));
+        if ($isProtected) {
+            $url->setExtra('readonly="readonly"');
+        }
+        $form->addElement($url, false);
         // target
         $radio = new XoopsFormRadio(_AM_SYSTEM_MENUS_TARGET, 'items_target', $this->getVar('items_target'));
         $radio->addOption(0, _AM_SYSTEM_MENUS_TARGET_SELF);

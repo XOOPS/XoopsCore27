@@ -91,9 +91,11 @@ window.XOOPS_MENUS.messages = {
                         <a class="btn btn-sm btn-outline-primary" href="admin.php?fct=menus&amp;op=viewcat&amp;category_id=<{$itemcategory.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_LISTITEM}>">
                             <i class="fa fa-bars"></i>
                         </a>
+                        <{if $itemcategory.protected|default:0 == 0}>
                         <a class="btn btn-sm btn-outline-danger" href="admin.php?fct=menus&amp;op=delcat&amp;category_id=<{$itemcategory.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELCAT}>">
                             <i class="fa fa-trash"></i>
                         </a>
+                        <{/if}>
                     </div>
                 </div>
             </div>
@@ -152,9 +154,11 @@ window.XOOPS_MENUS.messages = {
                             <a class="btn btn-sm btn-outline-primary<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=edititem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_EDITITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
                                 <i class="fa fa-edit"></i>
                             </a>
+                            <{if $item.protected|default:0 == 0}>
                             <a class="btn btn-sm btn-outline-danger<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
                                 <i class="fa fa-trash"></i>
                             </a>
+                            <{/if}>
                         </div>
                     </div>
                 </div>

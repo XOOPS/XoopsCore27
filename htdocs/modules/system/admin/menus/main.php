@@ -363,7 +363,7 @@ switch ($op) {
             $xoopsTpl->assign('items_count', $items_count);
             xoops_load('SystemMenusTree', 'system');
             $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
-            $tree_arr = $myTree->makeTree('article_name', '--', 0);
+            $tree_arr = $myTree->makeTree('items_title', '--', 0);
             if ($items_count > 0) {
                 foreach (array_keys($tree_arr) as $i) {
                     $items = array();

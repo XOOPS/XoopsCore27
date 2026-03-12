@@ -501,8 +501,8 @@ class xos_opal_Theme
                                 $entry = [
                                     'id'     => $cid2,
                                     'title'  => $child->getResolvedTitle(),
-                                    'prefix'    => $child->getVar('items_prefix'),
-                                    'suffix'    => $child->getVar('items_suffix'),
+                                    'prefix'    => $this->renderMenuAffix($child->getVar('items_prefix')),
+                                    'suffix'    => $this->renderMenuAffix($child->getVar('items_suffix')),
                                     'url'    => $child->getVar('items_url'),
                                     'target' => ($child->getVar('items_target') == 1) ? '_blank' : '_self',
                                     'active' => $child->getVar('items_active'),
@@ -519,8 +519,8 @@ class xos_opal_Theme
                     $menus[] = [
                         'category_id'     => $cid,
                         'category_title'  => $cat->getResolvedTitle(),
-                        'category_prefix' => $cat->getVar('category_prefix'),
-                        'category_suffix' => $cat->getVar('category_suffix'),
+                        'category_prefix' => $this->renderMenuAffix($cat->getVar('category_prefix')),
+                        'category_suffix' => $this->renderMenuAffix($cat->getVar('category_suffix')),
                         'category_url'    => $cat->getVar('category_url'),
                         'category_target' => ($cat->getVar('category_target') == 1) ? '_blank' : '_self',
                         'items'           => $item_list,
@@ -532,6 +532,81 @@ class xos_opal_Theme
             }
         }
         return $menus;
+    }
+
+    /**
+     * Render a menu prefix/suffix that contains the xoInboxCount Smarty tag.
+     *
+     * @param string $value
+     * @return string
+     */
+    protected function renderMenuAffix($value)
+    {
+        $value = (string)$value;
+        if ('' === $value) {
+            return $value;
+        }
+
+        // Values coming from DB can be entity-encoded depending on getVar mode.
+        $decodedSuffix = htmlspecialchars_decode($value, ENT_QUOTES | ENT_HTML5);
+        if (false === stripos($decodedSuffix, 'xoInboxCount')) {
+            return $value;
+        }
+
+        try {
+            $unread = $this->getInboxUnreadCount();
+            $replacement = null === $unread ? '' : (string)$unread;
+            $rendered = preg_replace('/<{\s*xoInboxCount(?:\s+[^}]*)?\s*}>/i', $replacement, $decodedSuffix);
+
+            return null !== $rendered ? $rendered : $decodedSuffix;
+        } catch (Exception $e) {
+            return $decodedSuffix;
+        }
+    }
+
+    /**
+     * Get unread private message count for current user.
+     *
+     * Mirrors the cache behavior of smarty_function_xoInboxCount.
+     *
+     * @return int|null
+     */
+    protected function getInboxUnreadCount()
+    {
+        global $xoopsUser;
+
+        if (!isset($xoopsUser) || !is_object($xoopsUser)) {
+            return null;
+        }
+
+        $freshRead = isset($GLOBALS['xoInboxCountFresh']);
+        $pmScripts = ['pmlite', 'readpmsg', 'viewpmsg'];
+        if (in_array(basename($_SERVER['SCRIPT_FILENAME'], '.php'), $pmScripts)) {
+            if (!$freshRead) {
+                unset($_SESSION['xoops_inbox_count'], $_SESSION['xoops_inbox_total'], $_SESSION['xoops_inbox_count_expire']);
+                $GLOBALS['xoInboxCountFresh'] = true;
+            }
+        }
+
+        $time = time();
+        if (isset($_SESSION['xoops_inbox_count']) && (isset($_SESSION['xoops_inbox_count_expire']) && $_SESSION['xoops_inbox_count_expire'] > $time)) {
+            return (int)$_SESSION['xoops_inbox_count'];
+        }
+
+        /** @var \XoopsPrivmessageHandler $pm_handler */
+        $pm_handler = xoops_getHandler('privmessage');
+
+        $xoopsPreload = XoopsPreload::getInstance();
+        $xoopsPreload->triggerEvent('core.class.smarty.xoops_plugins.xoinboxcount', [$pm_handler]);
+
+        $criteria = new CriteriaCompo(new Criteria('to_userid', $xoopsUser->getVar('uid')));
+        $_SESSION['xoops_inbox_total'] = $pm_handler->getCount($criteria);
+
+        $criteria->add(new Criteria('read_msg', 0));
+        $_SESSION['xoops_inbox_count'] = $pm_handler->getCount($criteria);
+        $_SESSION['xoops_inbox_count_expire'] = $time + 60;
+
+        return (int)$_SESSION['xoops_inbox_count'];
     }
 
     /**

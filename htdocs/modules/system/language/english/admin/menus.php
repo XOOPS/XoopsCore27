@@ -51,7 +51,7 @@ define('_AM_SYSTEM_MENUS_SUFFIXCAT_DESC', 'Optional — Text to display after th
 define('_AM_SYSTEM_MENUS_SUFFIXITEM', 'Suffix for the submenu item title');
 define('_AM_SYSTEM_MENUS_SUFFIXITEM_DESC', 'Optional — Text to display after the submenu item title. HTML is allowed.');
 define('_AM_SYSTEM_MENUS_SUREDELCAT', 'Are you sure you want to delete this menu category "%s" with its submenu items?');
-define('_AM_SYSTEM_MENUS_SUREDELITEM', 'Are you sure you want to delete this submenu item "%s"? avec the following submenu items?');
+define('_AM_SYSTEM_MENUS_SUREDELITEM', 'Are you sure you want to delete this submenu item "%s" and all of its child submenu items?');
 define('_AM_SYSTEM_MENUS_TARGET', 'Target');
 define('_AM_SYSTEM_MENUS_TARGET_SELF', 'Same Window');
 define('_AM_SYSTEM_MENUS_TARGET_BLANK', 'New Window');

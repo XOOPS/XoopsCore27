@@ -17,8 +17,8 @@ define('_AM_SYSTEM_MENUS_NAV_TIPS', '
     <li>For each menu item, you can specify a title, URL, position, and whether it is active or not.</li>
     <li>You can also use language constants for the menu titles. If a constant is used, its value will be displayed in parentheses next to the title.</li>
     <li>File used for the basic menus. If you wish to add language constants, you must add them to the menus.dist.php file, which must be renamed menus.php.</li>
-    <li>The file is located here: "modules/system/language/%s/admin/menus/menus.php".</li>
-<ul>');
+    <li>The file is located here: "modules/system/language/%s/menus/menus.php".</li>
+</ul>');
 // Main
 define('_AM_SYSTEM_MENUS_ACTIVE', 'Active');
 define('_AM_SYSTEM_MENUS_ACTIVE_NO', 'Disabled');

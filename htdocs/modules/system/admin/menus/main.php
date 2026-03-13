@@ -361,9 +361,29 @@ switch ($op) {
             $items_arr = $menusitemsHandler->getall($criteria);
             $items_count = $menusitemsHandler->getCount($criteria);
             $xoopsTpl->assign('items_count', $items_count);
-            xoops_load('SystemMenusTree', 'system');
-            $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
-            $tree_arr = $myTree->makeTree('items_title', '--', 0);
+            include_once $GLOBALS['xoops']->path('class/tree.php');
+            $myTree = new XoopsObjectTree($items_arr, 'items_id', 'items_pid');
+            $tree = $myTree->getTree();
+            $tree_arr = [];
+            $prefix = '--';
+            $buildTree = static function ($key, $prefix_curr, $level) use (&$buildTree, &$tree, &$tree_arr, $prefix) {
+                if ($key > 0 && isset($tree[$key]['obj'])) {
+                    $tree_arr[] = [
+                        'name'  => $prefix_curr . ' ' . $tree[$key]['obj']->getVar('items_title'),
+                        'id'    => $tree[$key]['obj']->getVar('items_id'),
+                        'level' => $level,
+                        'obj'   => $tree[$key]['obj'],
+                    ];
+                    $prefix_curr .= $prefix;
+                    $level++;
+                }
+                if (isset($tree[$key]['child']) && !empty($tree[$key]['child'])) {
+                    foreach ($tree[$key]['child'] as $childKey) {
+                        $buildTree($childKey, $prefix_curr, $level);
+                    }
+                }
+            };
+            $buildTree(0, '', 1);
             if ($items_count > 0) {
                 foreach (array_keys($tree_arr) as $i) {
                     $items = array();

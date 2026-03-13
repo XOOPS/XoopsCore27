@@ -491,7 +491,7 @@ class xos_opal_Theme
                         $crit->setOrder('ASC');
                         $items_arr = $menusitemsHandler->getAll($crit);
                         xoops_load('SystemMenusTree', 'system');
-                        $myTree = new SystemMenusTree($items_arr, 'items_id', 'items_pid');
+                        $myTree = new XoopsObjectTree($items_arr, 'items_id', 'items_pid');
                         // recursive closure to build nested structure
                         $buildNested = function ($treeObj, $parentId = 0) use (&$buildNested) {
                             $nodes = [];

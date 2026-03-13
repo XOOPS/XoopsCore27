@@ -37,7 +37,7 @@ class XoopsMenusItems extends XoopsObject
     {
         parent::__construct();
         $this->initVar('items_id', XOBJ_DTYPE_INT, null, false);
-        $this->initVar('items_pid', XOBJ_DTYPE_INT, null, false);
+        $this->initVar('items_pid', XOBJ_DTYPE_INT, 0, false);
         $this->initVar('items_cid', XOBJ_DTYPE_INT, null, false);
         $this->initVar('items_title', XOBJ_DTYPE_TXTBOX, null);
         $this->initVar('items_prefix', XOBJ_DTYPE_TXTAREA);

@@ -27,8 +27,10 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
 {
     global $xoopsDB;
     if ($prev_version < '2.2.0-Stable') {
+    $menusCategoryTable = $xoopsDB->prefix('menuscategory');
+    $menusItemsTable = $xoopsDB->prefix('menusitems');
 
-        $sql = "CREATE TABLE IF NOT EXISTS " . $xoopsDB->prefix('menuscategory') . " (
+    $sql = "CREATE TABLE IF NOT EXISTS " . $menusCategoryTable . " (
                 category_id INT AUTO_INCREMENT PRIMARY KEY,
                 category_title VARCHAR(100) NOT NULL,
                 category_prefix VARCHAR(100) NOT NULL,
@@ -39,7 +41,7 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
                 category_protected INT DEFAULT 0,
                 category_active TINYINT(1) DEFAULT 1);";
         $xoopsDB->query($sql);
-        $sql = "CREATE TABLE IF NOT EXISTS " . $xoopsDB->prefix('menusitems') . " (
+    $sql = "CREATE TABLE IF NOT EXISTS " . $menusItemsTable . " (
                 items_id INT AUTO_INCREMENT PRIMARY KEY,
                 items_pid INT DEFAULT 0,
                 items_cid INT NULL,
@@ -51,32 +53,32 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
                 items_position INT DEFAULT 0,
                 items_protected INT DEFAULT 0,
                 items_active TINYINT(1) DEFAULT 1,
-                FOREIGN KEY (items_cid) REFERENCES menuscategory(category_id) ON DELETE CASCADE,
-                FOREIGN KEY (items_pid) REFERENCES menusitems(items_id) ON DELETE CASCADE);";
+        FOREIGN KEY (items_cid) REFERENCES {$menusCategoryTable}(category_id) ON DELETE CASCADE,
+        FOREIGN KEY (items_pid) REFERENCES {$menusItemsTable}(items_id) ON DELETE CASCADE);";
         $xoopsDB->query($sql);
         // add default data only when not initialized yet
         $sql = 'SELECT category_id FROM ' . $xoopsDB->prefix('menuscategory') . ' WHERE category_id = 1';
         $result = $xoopsDB->query($sql);
         if (!$xoopsDB->isResultSet($result) || 0 === $xoopsDB->getRowsNum($result)) {
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menuscategory') . " VALUES (1, 'MENUS_HOME', '<span class=\"fa fa-home\" ></span>', '', '/', 0, 0, 1, 1)";
+            $sql = "INSERT INTO " . $menusCategoryTable . " VALUES (1, 'MENUS_HOME', '<span class=\"fa fa-home\" ></span>', '', '/', 0, 0, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menuscategory') . " VALUES (2, 'MENUS_ADMIN', '<span class=\"fa fa-wrench fa-fw\" ></span>', '', 'admin.php', 0, 10, 1, 1)";
+            $sql = "INSERT INTO " . $menusCategoryTable . " VALUES (2, 'MENUS_ADMIN', '<span class=\"fa fa-wrench fa-fw\" ></span>', '', 'admin.php', 0, 10, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menuscategory') . " VALUES (3, 'MENUS_ACCOUNT', '<span class=\"fa fa-user fa-fw\" ></span>', '', '', 0, 20, 1, 1)";
+            $sql = "INSERT INTO " . $menusCategoryTable . " VALUES (3, 'MENUS_ACCOUNT', '<span class=\"fa fa-user fa-fw\" ></span>', '', '', 0, 20, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (1, 0, 3, 'MENUS_ACCOUNT_EDIT', '<span class=\"fa fa-edit fa-fw\" ></span>', '', 'user.php', 0, 1, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (1, 0, 3, 'MENUS_ACCOUNT_EDIT', '<span class=\"fa fa-edit fa-fw\" ></span>', '', 'user.php', 0, 1, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (2, 0, 3, 'MENUS_ACCOUNT_LOGIN', '<span class=\"fa fa-sign-in fa-fw\" ></span>', '', 'user.php', 0, 2, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (2, 0, 3, 'MENUS_ACCOUNT_LOGIN', '<span class=\"fa fa-sign-in fa-fw\" ></span>', '', 'user.php', 0, 2, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (3, 0, 3, 'MENUS_ACCOUNT_REGISTER', '<span class=\"fa fa-sign-in fa-fw\" ></span>', '', 'register.php', 0, 2, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (3, 0, 3, 'MENUS_ACCOUNT_REGISTER', '<span class=\"fa fa-sign-in fa-fw\" ></span>', '', 'register.php', 0, 2, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (4, 0, 3, 'MENUS_ACCOUNT_MESSAGES', '<span class=\"fa fa-solid fa-envelope fa-fw\" ></span>', '<span class=\"badge bg-primary rounded-pill\"><{xoInboxCount}></span>', 'viewpmsg.php', 0, 3, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (4, 0, 3, 'MENUS_ACCOUNT_MESSAGES', '<span class=\"fa fa-solid fa-envelope fa-fw\" ></span>', '<span class=\"badge bg-primary rounded-pill\"><{xoInboxCount}></span>', 'viewpmsg.php', 0, 3, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (5, 0, 3, 'MENUS_ACCOUNT_NOTIFICATIONS', '<span class=\"fa fa-info-circle fa-fw\" ></span>', '', 'notifications.php', 0, 4, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (5, 0, 3, 'MENUS_ACCOUNT_NOTIFICATIONS', '<span class=\"fa fa-info-circle fa-fw\" ></span>', '', 'notifications.php', 0, 4, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (6, 0, 3, 'MENUS_ACCOUNT_TOOLBAR', '<span class=\"fa-solid fa-screwdriver-wrench fa-fw\" ></span>', '<span id=\"xswatch-toolbar-ind\"></span>', 'javascript:xswatchToolbarToggle();', 0, 5, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (6, 0, 3, 'MENUS_ACCOUNT_TOOLBAR', '<span class=\"fa-solid fa-screwdriver-wrench fa-fw\" ></span>', '<span id=\"xswatch-toolbar-ind\"></span>', 'javascript:xswatchToolbarToggle();', 0, 5, 1, 1)";
             $xoopsDB->query($sql);
-            $sql = "INSERT INTO " . $xoopsDB->prefix('menusitems') . " VALUES (7, 0, 3, 'MENUS_ACCOUNT_LOGOUT', '<span class=\"fa fa-sign-out fa-fw\" ></span>', '', 'user.php?op=logout', 0, 5, 1, 1)";
+            $sql = "INSERT INTO " . $menusItemsTable . " VALUES (7, 0, 3, 'MENUS_ACCOUNT_LOGOUT', '<span class=\"fa fa-sign-out fa-fw\" ></span>', '', 'user.php?op=logout', 0, 5, 1, 1)";
             $xoopsDB->query($sql);
             // add permissions for category and items
             // MENUS_HOME

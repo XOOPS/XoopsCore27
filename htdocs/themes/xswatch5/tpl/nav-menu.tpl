@@ -12,8 +12,7 @@
                     <ul class="dropdown-menu">
                     <{foreach $items as $item}>
                         <li<{if $item.children}> class="dropdown-submenu"<{/if}>>
-                            <a class="dropdown-item<{if $item.children}> dropdown-toggle<{/if}>"
-                               href="<{if $item.url neq ''}><{$item.url|escape}><{else}>#<{/if}>"<{if $item.children}> role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}> target="<{$item.target}>">
+                            <a class="dropdown-item<{if $item.children}> dropdown-toggle<{/if}>" href="<{if $item.url neq ''}><{$item.url|escape}><{else}>#<{/if}>"<{if $item.children}> role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}> target="<{$item.target}>" <{if $item.target eq '_blank'}>rel="noopener noreferrer"<{/if}>>
                                 <{$item.prefix}> <{$item.title|escape}> <{$item.suffix}>
                             </a>
                             <{if $item.children}>
@@ -26,9 +25,7 @@
                 <ul class="navbar-nav me-auto">
                     <{foreach $xoMenuCategories as $cat}>
                         <li class="nav-item<{if $cat.items}> dropdown<{/if}>">
-                            <a class="nav-link<{if $cat.items}> dropdown-toggle<{/if}>"
-                               href="<{$cat.category_url|escape|default:'#'}>"
-                               <{if $cat.items}>role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}> target="<{$cat.category_target}>">
+                            <a class="nav-link<{if $cat.items}> dropdown-toggle<{/if}>" href="<{$cat.category_url|escape|default:'#'}>" <{if $cat.items}>role="button" data-bs-toggle="dropdown" aria-expanded="false"<{/if}> target="<{$cat.category_target}>" <{if $cat.category_target eq '_blank'}>rel="noopener noreferrer"<{/if}>>
                                 <{$cat.category_prefix}> <{$cat.category_title|escape}> <{$cat.category_suffix}>
                             </a>
                             <{if $cat.items}>

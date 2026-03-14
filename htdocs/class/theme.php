@@ -498,15 +498,16 @@ class xos_opal_Theme
                             $children = $treeObj->getFirstChild($parentId);
                             foreach ($children as $child) {
                                 $cid2 = $child->getVar('items_id');
+                                $childNodes = $buildNested($treeObj, $cid2);
                                 $entry = [
                                     'id'     => $cid2,
                                     'title'  => $child->getResolvedTitle(),
                                     'prefix'    => $this->renderMenuAffix($child->getVar('items_prefix')),
                                     'suffix'    => $this->renderMenuAffix($child->getVar('items_suffix')),
-                                    'url'    => $child->getVar('items_url'),
+                                    'url'    => empty($childNodes) ? $child->getVar('items_url') : '',
                                     'target' => ($child->getVar('items_target') == 1) ? '_blank' : '_self',
                                     'active' => $child->getVar('items_active'),
-                                    'children' => $buildNested($treeObj, $cid2),
+                                    'children' => $childNodes,
                                 ];
                                 $nodes[] = $entry;
                             }
@@ -521,7 +522,7 @@ class xos_opal_Theme
                         'category_title'  => $cat->getResolvedTitle(),
                         'category_prefix' => $this->renderMenuAffix($cat->getVar('category_prefix')),
                         'category_suffix' => $this->renderMenuAffix($cat->getVar('category_suffix')),
-                        'category_url'    => $cat->getVar('category_url'),
+                        'category_url'    => empty($item_list) ? $cat->getVar('category_url') : '',
                         'category_target' => ($cat->getVar('category_target') == 1) ? '_blank' : '_self',
                         'items'           => $item_list,
                     ];

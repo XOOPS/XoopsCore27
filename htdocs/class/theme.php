@@ -417,6 +417,12 @@ class xos_opal_Theme
      */
     protected function loadMenus()
     {
+        $helper = Xmf\Module\Helper::getHelper('system');
+        if (!(int)$helper->getConfig('active_menus', 0)) {
+            return [];
+        }
+        $cacheTtl = max(0, (int)$helper->getConfig('menus_cache_ttl', 300));
+
         // automatically includes the shared style sheet for
         // multilingual menus; it is located in the system module and
         // is available for all themes.
@@ -432,6 +438,17 @@ class xos_opal_Theme
         if (file_exists($jsPath)) {
             $this->addScript(XOOPS_URL . '/modules/system/js/' . $js);
         }
+
+        $groups = is_object($GLOBALS['xoopsUser']) ? $GLOBALS['xoopsUser']->getGroups() : [XOOPS_GROUP_ANONYMOUS];
+        $cacheKey = self::getMenusCacheKey($GLOBALS['xoopsConfig']['language'], $groups);
+        if ($cacheTtl > 0) {
+            xoops_load('xoopscache');
+            $cachedMenus = XoopsCache::read($cacheKey);
+            if (false !== $cachedMenus && is_array($cachedMenus)) {
+                return $this->renderMenuAffixesRecursive($cachedMenus);
+            }
+        }
+
         $menus = [];
         $menuscategoryHandler = xoops_getHandler('menuscategory');
         if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
@@ -445,9 +462,7 @@ class xos_opal_Theme
         if (is_object($menuscategoryHandler)) {
             try {
                 $viewPermissionCat = [];
-                $helper            = Xmf\Module\Helper::getHelper('system');
                 $moduleHandler     = $helper->getModule();
-                $groups            = is_object($GLOBALS['xoopsUser']) ? $GLOBALS['xoopsUser']->getGroups() : XOOPS_GROUP_ANONYMOUS;
                 $gpermHandler      = xoops_getHandler('groupperm');
                 $viewPermissionCat = $gpermHandler->getItemIds('menus_category_view', $groups, $moduleHandler->getVar('mid'));
                 $viewPermissionItem = $gpermHandler->getItemIds('menus_items_view', $groups, $moduleHandler->getVar('mid'));
@@ -494,8 +509,8 @@ class xos_opal_Theme
                                 $entry = [
                                     'id'     => $cid2,
                                     'title'  => $child->getResolvedTitle(),
-                                    'prefix'    => $this->renderMenuAffix($child->getVar('items_prefix')),
-                                    'suffix'    => $this->renderMenuAffix($child->getVar('items_suffix')),
+                                    'prefix'    => $child->getVar('items_prefix'),
+                                    'suffix'    => $child->getVar('items_suffix'),
                                     'url'    => empty($childNodes) ? $child->getVar('items_url') : '',
                                     'target' => ($child->getVar('items_target') == 1) ? '_blank' : '_self',
                                     'active' => $child->getVar('items_active'),
@@ -512,8 +527,8 @@ class xos_opal_Theme
                     $menus[] = [
                         'category_id'     => $cid,
                         'category_title'  => $cat->getResolvedTitle(),
-                        'category_prefix' => $this->renderMenuAffix($cat->getVar('category_prefix')),
-                        'category_suffix' => $this->renderMenuAffix($cat->getVar('category_suffix')),
+                        'category_prefix' => $cat->getVar('category_prefix'),
+                        'category_suffix' => $cat->getVar('category_suffix'),
                         'category_url'    => empty($item_list) ? $cat->getVar('category_url') : '',
                         'category_target' => ($cat->getVar('category_target') == 1) ? '_blank' : '_self',
                         'items'           => $item_list,
@@ -524,6 +539,107 @@ class xos_opal_Theme
                 }
             }
         }
+
+        if ($cacheTtl > 0) {
+            XoopsCache::write($cacheKey, $menus, $cacheTtl);
+            self::registerMenusCacheKey($cacheKey);
+        }
+
+        return $this->renderMenuAffixesRecursive($menus);
+    }
+
+    /**
+     * Return the cache index key used to track menu cache entries.
+     *
+     * @return string
+     */
+    public static function getMenusCacheIndexKey()
+    {
+        return 'system_menus_cache_keys';
+    }
+
+    /**
+     * Build a cache key for menus using language and user groups.
+     *
+     * @param string $language
+     * @param array  $groups
+     * @return string
+     */
+    public static function getMenusCacheKey($language, array $groups)
+    {
+        sort($groups);
+
+        return 'system_menus_' . md5($language . '|' . implode('-', $groups));
+    }
+
+    /**
+     * Track a cache key so admin updates can invalidate all menu variants.
+     *
+     * @param string $cacheKey
+     * @return void
+     */
+    protected static function registerMenusCacheKey($cacheKey)
+    {
+        $indexKey = self::getMenusCacheIndexKey();
+        $cacheKeys = XoopsCache::read($indexKey);
+        if (!is_array($cacheKeys)) {
+            $cacheKeys = [];
+        }
+        if (!in_array($cacheKey, $cacheKeys, true)) {
+            $cacheKeys[] = $cacheKey;
+            XoopsCache::write($indexKey, $cacheKeys, 31536000);
+        }
+    }
+
+    /**
+     * Invalidate all tracked menu cache variants.
+     *
+     * @return void
+     */
+    public static function invalidateMenusCache()
+    {
+        xoops_load('xoopscache');
+
+        $indexKey = self::getMenusCacheIndexKey();
+        $cacheKeys = XoopsCache::read($indexKey);
+        if (is_array($cacheKeys)) {
+            foreach ($cacheKeys as $cacheKey) {
+                XoopsCache::delete($cacheKey);
+            }
+        }
+        XoopsCache::delete($indexKey);
+    }
+
+    /**
+     * Render dynamic affixes after reading the menu tree from cache.
+     *
+     * @param array $menus
+     * @return array
+     */
+    protected function renderMenuAffixesRecursive(array $menus)
+    {
+        foreach ($menus as &$menu) {
+            if (isset($menu['category_prefix'])) {
+                $menu['category_prefix'] = $this->renderMenuAffix($menu['category_prefix']);
+            }
+            if (isset($menu['category_suffix'])) {
+                $menu['category_suffix'] = $this->renderMenuAffix($menu['category_suffix']);
+            }
+            if (isset($menu['prefix'])) {
+                $menu['prefix'] = $this->renderMenuAffix($menu['prefix']);
+            }
+            if (isset($menu['suffix'])) {
+                $menu['suffix'] = $this->renderMenuAffix($menu['suffix']);
+            }
+            if (!empty($menu['children']) && is_array($menu['children'])) {
+                $menu['children'] = $this->renderMenuAffixesRecursive($menu['children']);
+            }
+            if (!empty($menu['items']) && is_array($menu['items'])) {
+                $menu['items'] = $this->renderMenuAffixesRecursive($menu['items']);
+            }
+        }
+        unset($menu);
+
         return $menus;
     }
 

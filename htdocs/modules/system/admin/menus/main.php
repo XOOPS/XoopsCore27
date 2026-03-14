@@ -25,6 +25,11 @@ use Xmf\Module\Helper;
 if (!is_object($xoopsUser) || !is_object($xoopsModule) || !$xoopsUser->isAdmin($xoopsModule->mid())) {
     exit(_NOPERM);
 }
+//  Check is active
+$helper = Helper::getHelper('system');
+if (!(int)$helper->getConfig('active_menus', 0)) {
+    redirect_header('admin.php', 2, _AM_SYSTEM_NOTACTIVE);
+}
 
 // Define main template
 $GLOBALS['xoopsOption']['template_main'] = 'system_menus.tpl';
@@ -157,6 +162,7 @@ switch ($op) {
             // permission view
             $groups_view = Request::getArray('menus_category_view_perms', [], 'POST');
             $permHelper->savePermissionForItem('menus_category_view', $perm_id, $groups_view);
+            xos_opal_Theme::invalidateMenusCache();
             redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
         } else {
             $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
@@ -196,6 +202,7 @@ switch ($op) {
                         $permHelper->deletePermissionForItem('menus_items_view', $items_arr[$i]->getVar('items_id'));
                         $menusitemsHandler->delete($items_arr[$i]);
                     }
+                    xos_opal_Theme::invalidateMenusCache();
                     redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
                 } else {
                     $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
@@ -256,6 +263,7 @@ switch ($op) {
                         $permHelper->deletePermissionForItem('menus_items_view', $items_arr[$i]->getVar('items_id'));
                         $menusitemsHandler->delete($items_arr[$i]);
                     }
+                    xos_opal_Theme::invalidateMenusCache();
                     redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 2, _AM_SYSTEM_DBUPDATED);
                 } else {
                     $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
@@ -332,6 +340,7 @@ switch ($op) {
 
         header('Content-Type: application/json');
         if (empty($errors)) {
+            xos_opal_Theme::invalidateMenusCache();
             echo json_encode(['success' => true, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
         } else {
             echo json_encode(['success' => false, 'message' => implode('; ', $errors), 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
@@ -469,6 +478,7 @@ switch ($op) {
                 // permission view
                 $groups_view = Request::getArray('menus_items_view_perms', [], 'POST');
                 $permHelper->savePermissionForItem('menus_items_view', $perm_id, $groups_view);
+                xos_opal_Theme::invalidateMenusCache();
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $items_cid, 2, _AM_SYSTEM_DBUPDATED);
             } else {
                 $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
@@ -591,6 +601,7 @@ switch ($op) {
 
         header('Content-Type: application/json');
         if ($res) {
+            xos_opal_Theme::invalidateMenusCache();
             $response = ['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()];
             if (!empty($updatedItems)) {
                 $response['updated'] = array_values($updatedItems);
@@ -700,6 +711,7 @@ switch ($op) {
 
         header('Content-Type: application/json');
         if ($res) {
+            xos_opal_Theme::invalidateMenusCache();
             $response = ['success' => true, 'active' => (int)$new, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()];
             if (!empty($updatedChildren)) {
                 $response['updated'] = array_values($updatedChildren);

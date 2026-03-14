@@ -127,9 +127,6 @@ function xoops_module_update_system(XoopsModule $module, $prev_version = null)
             $xoopsDB->query($sql);
             $sql = "INSERT INTO " . $xoopsDB->prefix('group_permission') . " VALUES (NULL, 2, 7, 1, 'menus_items_view')";
             $xoopsDB->query($sql);
-            // Add config for active menus
-            $sql = "INSERT INTO " . $xoopsDB->prefix('config') . " VALUES (NULL, 1, 0, 'active_menus', '_MI_SYSTEM_PREFERENCE_ACTIVE_MENUS', '1', '', 'hidden', 'int', 21)";
-            $xoopsDB->query($sql);
         }
     }
 

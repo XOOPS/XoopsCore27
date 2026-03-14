@@ -33,7 +33,7 @@ jQuery(function($){
             if (typeof onSuccess === 'function') onSuccess(response);
         }).fail(function(jqXHR, textStatus, errorThrown){
             console.error('Ajax error:', textStatus, errorThrown, jqXHR.responseText);
-            alert('Ajax error (voir console)');
+            alert('Ajax error (see console)');
         });
     }
 

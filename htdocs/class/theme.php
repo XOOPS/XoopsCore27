@@ -438,22 +438,12 @@ class xos_opal_Theme
             $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
         }
 
-        // Vérifier que le handler est valide et que la table existe
+        // Check that the handler is valid and that the table exists (mainly to avoid triggering a fatal error before the system module is migrated when updating from a version 2.5.X of XOOPS)
         $category_arr = [];
         $viewPermissionItem = [];
 
         if (is_object($menuscategoryHandler)) {
-            // Vérifier l'existence de la table
-            $tableExists = false;
             try {
-                // Tenter une requête pour vérifier l'existence
-                $sql = "SHOW TABLES LIKE '" . $GLOBALS['xoopsDB']->prefix('menuscategory') . "'";
-                $result = $GLOBALS['xoopsDB']->queryF($sql);
-                $tableExists = $GLOBALS['xoopsDB']->getRowsNum($result) > 0;
-            } catch (Exception $e) {
-                $tableExists = false;
-            }
-            if ($tableExists) {
                 $viewPermissionCat = [];
                 $helper            = Xmf\Module\Helper::getHelper('system');
                 $moduleHandler     = $helper->getModule();
@@ -471,7 +461,9 @@ class xos_opal_Theme
                 } else {
                     $category_arr = [];
                 }
-
+            } catch (Exception $e) {
+                $category_arr = [];
+                $viewPermissionItem = [];
             }
         }
         if (!empty($category_arr)) {

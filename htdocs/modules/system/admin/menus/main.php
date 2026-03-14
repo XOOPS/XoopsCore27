@@ -52,26 +52,17 @@ if ($op !== 'saveorder' && $op !== 'toggleactivecat' && $op !== 'toggleactiveite
     // Define Breadcrumb and tips
 }
 
-
-
-
-$helper = Helper::getHelper('system');
-$nb_limit = $helper->getConfig('avatars_pager', 15);
-
 switch ($op) {
     case 'list':
     default:
         $xoBreadCrumb->addLink(_AM_SYSTEM_MENUS_NAV_MAIN, system_adminVersion('menus', 'adminpath'));
         $xoBreadCrumb->addTips(sprintf(_AM_SYSTEM_MENUS_NAV_TIPS, $GLOBALS['xoopsConfig']['language']));
         $xoBreadCrumb->render();
-        $start = Request::getInt('start', 0);
         /** @var \XoopsPersistableObjectHandler $menuscategoryHandler */
         $menuscategoryHandler = xoops_getHandler('menuscategory');
         $criteria = new CriteriaCompo();
         $criteria->setSort('category_position');
         $criteria->setOrder('ASC');
-        $criteria->setStart($start);
-        $criteria->setLimit($nb_limit);
         $category_arr = $menuscategoryHandler->getall($criteria);
         $category_count = $menuscategoryHandler->getCount($criteria);
         $xoopsTpl->assign('category_count', $category_count);
@@ -90,11 +81,6 @@ switch ($op) {
                 $category_img                = $category_arr[$i]->getVar('category_logo');
                 $xoopsTpl->append('category', $category);
                 unset($category);
-            }
-            // Display Page Navigation
-            if ($category_count > $nb_limit) {
-                $nav = new XoopsPageNav($category_count, $nb_limit, $start, 'start');
-                $xoopsTpl->assign('nav_menu', $nav->renderNav(4));
             }
         } else {
             $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);

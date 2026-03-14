@@ -104,7 +104,7 @@ window.XOOPS_MENUS.messages = {
     </div>
 
 <{/if}>
-<{if $op|default:'' == viewcat}>
+<{if $op|default:'' == 'viewcat'}>
     <div class="col-12 mb-3" data-id="<{$category_id}>">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">

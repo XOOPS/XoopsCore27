@@ -541,7 +541,7 @@ switch ($op) {
                     $obj->setVar('items_pid', $itempid);
                 }
             } else {
-                $obj->setVar('items_pid', 0);
+                $obj->setVar('items_pid', null);
             }
         }
         if (!$isProtected) {

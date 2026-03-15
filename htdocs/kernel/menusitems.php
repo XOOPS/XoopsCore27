@@ -203,7 +203,7 @@ class XoopsMenusItems extends XoopsObject
         }
         include_once $GLOBALS['xoops']->path('class/tree.php');
         $myTree = new XoopsObjectTree($item_arr, 'items_id', 'items_pid');
-        $suparticle = $myTree->makeSelectElement('items_pid', 'items_title', '--', $this->getVar('items_pid'), true, 0, '', _AM_SYSTEM_MENUS_PID);
+        $suparticle = $myTree->makeSelectElement('items_pid', 'items_title', '--', $currentParentId, true, 0, '', _AM_SYSTEM_MENUS_PID);
         if ($isProtected) {
             $suparticle->setExtra('disabled="disabled"');
         }

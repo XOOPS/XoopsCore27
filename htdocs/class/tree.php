@@ -66,6 +66,9 @@ class XoopsObjectTree
             $key1                          = $this->objects[$i]->getVar($this->myId);
             $this->tree[$key1]['obj']     = $this->objects[$i];
             $key2                          = $this->objects[$i]->getVar($this->parentId);
+            if (null === $key2 || '' === $key2) {
+                $key2 = 0;
+            }
             $this->tree[$key1]['parent']  = $key2;
             $this->tree[$key2]['child'][] = $key1;
             if (isset($this->rootId)) {

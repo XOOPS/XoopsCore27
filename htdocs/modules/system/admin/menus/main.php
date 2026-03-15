@@ -42,6 +42,16 @@ if (!class_exists('xos_opal_Theme', false)) {
     include_once XOOPS_ROOT_PATH . '/class/theme.php';
 }
 
+$sendJsonResponse = static function (array $payload, $statusCode = 200) {
+    if (!headers_sent()) {
+        http_response_code((int)$statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+        header('X-Content-Type-Options: nosniff');
+    }
+    echo json_encode($payload);
+    exit;
+};
+
 // Call Header
 if ($op !== 'saveorder' && $op !== 'toggleactivecat' && $op !== 'toggleactiveitem') {
     xoops_cp_header();
@@ -299,56 +309,78 @@ switch ($op) {
         while (ob_get_level()) {
             @ob_end_clean();
         }
-        // vérifie le token
-        if (!$GLOBALS['xoopsSecurity']->check()) {
-            // debug: renvoyer les erreurs et ce qui a été reçu (retirer en production)
-            header('Content-Type: application/json');
-            $errors = $GLOBALS['xoopsSecurity']->getErrors();
-            echo json_encode([
-                'success' => false,
-                'message' => implode(' ', $errors),
-                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
-            ]);
-            exit;
-        }
-
-        $order = Request::getArray('order', []);
-        if (!is_array($order) || count($order) === 0) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'No order provided', 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
-            exit;
-        }
-
-        $menuscategoryHandler = xoops_getHandler('menuscategory');
-        if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
-            $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
-        }
-
-        $pos = 1;
-        $errors = [];
-        foreach ($order as $id) {
-            $id = (int)$id;
-            if ($id <= 0) continue;
-            $obj = $menuscategoryHandler->get($id);
-            if (is_object($obj)) {
-                $obj->setVar('category_position', $pos);
-                if (!$menuscategoryHandler->insert($obj, true)) {
-                    $errors[] = "Failed to update id {$id}";
-                }
-            } else {
-                $errors[] = "Not found id {$id}";
+        try {
+            if (!$GLOBALS['xoopsSecurity']->check()) {
+                $errors = $GLOBALS['xoopsSecurity']->getErrors();
+                $sendJsonResponse([
+                    'success' => false,
+                    'message' => implode(' ', $errors),
+                    'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+                ], 400);
             }
-            $pos++;
-        }
 
-        header('Content-Type: application/json');
-        if (empty($errors)) {
-            xos_opal_Theme::invalidateMenusCache();
-            echo json_encode(['success' => true, 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
-        } else {
-            echo json_encode(['success' => false, 'message' => implode('; ', $errors), 'token' => $GLOBALS['xoopsSecurity']->getTokenHTML()]);
+            $order = Request::getArray('order', []);
+            if (!is_array($order) || count($order) === 0) {
+                $sendJsonResponse([
+                    'success' => false,
+                    'message' => 'No order provided',
+                    'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+                ], 400);
+            }
+
+            $menuscategoryHandler = xoops_getHandler('menuscategory');
+            if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
+                $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
+            }
+            if (!is_object($menuscategoryHandler)) {
+                throw new RuntimeException('Unable to initialize menus category handler.');
+            }
+
+            $pos = 1;
+            $errors = [];
+            foreach ($order as $id) {
+                $id = (int)$id;
+                if ($id <= 0) {
+                    continue;
+                }
+                $obj = $menuscategoryHandler->get($id);
+                if (is_object($obj)) {
+                    $obj->setVar('category_position', $pos);
+                    if (!$menuscategoryHandler->insert($obj, true)) {
+                        $errors[] = "Failed to update id {$id}";
+                    }
+                } else {
+                    $errors[] = "Not found id {$id}";
+                }
+                $pos++;
+            }
+
+            if (empty($errors)) {
+                xos_opal_Theme::invalidateMenusCache();
+                $sendJsonResponse([
+                    'success' => true,
+                    'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+                ]);
+            }
+
+            $sendJsonResponse([
+                'success' => false,
+                'message' => implode('; ', $errors),
+                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+            ], 500);
+        } catch (Throwable $e) {
+            error_log(sprintf(
+                '[menus.saveorder] %s in %s:%d',
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine()
+            ));
+            $sendJsonResponse([
+                'success' => false,
+                'message' => 'Internal server error',
+                'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+            ], 500);
         }
-        exit;
         break;
 
     case 'viewcat':

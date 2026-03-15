@@ -155,7 +155,7 @@ window.XOOPS_MENUS.messages = {
                                 <i class="fa fa-edit"></i>
                             </a>
                             <{if $item.protected|default:0 == 0}>
-                            <a class="btn btn-sm btn-outline-danger<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>&amp;category_id=<{$category_id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
+                            <a class="btn btn-sm btn-outline-danger<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
                                 <i class="fa fa-trash"></i>
                             </a>
                             <{/if}>

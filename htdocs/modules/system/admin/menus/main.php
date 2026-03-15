@@ -222,7 +222,6 @@ switch ($op) {
 
     case 'delitem':
         $item_id = Request::getInt('item_id', 0);
-        $category_id = Request::getInt('category_id', 0);
         if ($item_id == 0) {
             redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_NOITEM);
         } else {
@@ -234,8 +233,9 @@ switch ($op) {
             /** @var \XoopsMenusItems $obj */
             $obj = $menusitemsHandler->get($item_id);
             if (!is_object($obj)) {
-                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 3, _AM_SYSTEM_MENUS_ERROR_NOITEM);
+                redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_NOITEM);
             }
+            $category_id = (int)$obj->getVar('items_cid');
             if (is_object($obj) && (int)$obj->getVar('items_protected') === 1) {
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMPROTECTED);
             }

@@ -486,6 +486,7 @@ class xos_opal_Theme
             if (!is_object($menusitemsHandler) && class_exists('XoopsMenusItemsHandler')) {
                 $menusitemsHandler = new XoopsMenusItemsHandler($GLOBALS['xoopsDB']);
             }
+            include_once $GLOBALS['xoops']->path('class/tree.php');
             foreach ($category_arr as $cat) {
                 try {
                     $cid = $cat->getVar('category_id');
@@ -497,7 +498,6 @@ class xos_opal_Theme
                         $crit->setSort('items_position, items_title');
                         $crit->setOrder('ASC');
                         $items_arr = $menusitemsHandler->getAll($crit);
-                        include_once $GLOBALS['xoops']->path('class/tree.php');
                         $myTree = new XoopsObjectTree($items_arr, 'items_id', 'items_pid');
                         // recursive closure to build nested structure
                         $buildNested = function ($treeObj, $parentId = 0) use (&$buildNested) {

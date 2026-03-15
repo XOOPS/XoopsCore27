@@ -37,6 +37,8 @@ define('_AM_SYSTEM_MENUS_ERROR_CATPROTECTED', 'You cannot delete a protected men
 define('_AM_SYSTEM_MENUS_ERROR_NOCATEGORY', 'There are no menu categories. You must create one before adding menus.');
 define('_AM_SYSTEM_MENUS_ERROR_NOITEM', 'There are no submenu item.');
 define('_AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE', 'You cannot modify this item while its parent is inactive!');
+define('_AM_SYSTEM_MENUS_ERROR_INVALIDCAT', 'The specified category does not exist.');
+define('_AM_SYSTEM_MENUS_ERROR_ITEMCIDCHANGE', 'Cannot move this item to a different category because it has child items. Move or reassign the child items first.');
 define('_AM_SYSTEM_MENUS_LISTCAT', 'List Categories');
 define('_AM_SYSTEM_MENUS_LISTITEM', 'List items');
 define('_AM_SYSTEM_MENUS_PID', 'Upper level menu');

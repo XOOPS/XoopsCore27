@@ -453,17 +453,48 @@ switch ($op) {
         } else {
             $obj = $menusitemsHandler->create();
         }
+        $items_cid = Request::getInt('items_cid', 0);
+        $obj->setVar('items_cid', $items_cid);
         $error_message = '';
         if (!$isProtected) {
             $itempid = Request::getInt('items_pid', 0);
-            if ($itempid == $id && $itempid != 0) {
+            if ($itempid != 0 && $itempid === $id) {
+                // self-parent
                 $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
+            } elseif ($itempid != 0) {
+                // parent must exist in the same category
+                $parentObj = $menusitemsHandler->get($itempid);
+                if (!is_object($parentObj) || (int)$parentObj->getVar('items_cid') !== $items_cid) {
+                    $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
+                } elseif ($id > 0) {
+                    // parent must not be a descendant of the current item
+                    $allInCat = $menusitemsHandler->getall(new Criteria('items_cid', $items_cid));
+                    $descendants = [];
+                    $queue = [$id];
+                    while (!empty($queue)) {
+                        $cur = array_shift($queue);
+                        foreach ($allInCat as $candidate) {
+                            if ((int)$candidate->getVar('items_pid') === $cur) {
+                                $did = (int)$candidate->getVar('items_id');
+                                if (!in_array($did, $descendants, true)) {
+                                    $descendants[] = $did;
+                                    $queue[] = $did;
+                                }
+                            }
+                        }
+                    }
+                    if (in_array($itempid, $descendants, true)) {
+                        $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMPARENT;
+                    } else {
+                        $obj->setVar('items_pid', $itempid);
+                    }
+                } else {
+                    $obj->setVar('items_pid', $itempid);
+                }
             } else {
-                $obj->setVar('items_pid', $itempid);
+                $obj->setVar('items_pid', 0);
             }
         }
-        $items_cid = Request::getInt('items_cid', 0);
-        $obj->setVar('items_cid', $items_cid);
         if (!$isProtected) {
             $obj->setVar('items_title', Request::getString('items_title', ''));
             $obj->setVar('items_prefix', Request::getText('items_prefix', ''));

@@ -168,6 +168,32 @@ class XoopsMenusItems extends XoopsObject
         $criteria->setOrder('ASC');
         $menusitemsHandler = xoops_getHandler('menusitems');
         $item_arr = $menusitemsHandler->getall($criteria);
+
+        // In edit mode, prevent selecting the current item or one of its descendants as parent.
+        $currentItemId = (int)$this->getVar('items_id');
+        if ($currentItemId > 0 && !empty($item_arr)) {
+            $excludedIds = [$currentItemId => true];
+            $updated = true;
+            while ($updated) {
+                $updated = false;
+                foreach ($item_arr as $obj) {
+                    if (!is_object($obj)) {
+                        continue;
+                    }
+                    $itemId = (int)$obj->getVar('items_id');
+                    $parentId = (int)$obj->getVar('items_pid');
+                    if (!isset($excludedIds[$itemId]) && isset($excludedIds[$parentId])) {
+                        $excludedIds[$itemId] = true;
+                        $updated = true;
+                    }
+                }
+            }
+
+            $item_arr = array_filter($item_arr, static function ($obj) use ($excludedIds) {
+                return is_object($obj) && !isset($excludedIds[(int)$obj->getVar('items_id')]);
+            });
+        }
+
         // Use admin-friendly title (resolved value + constant name) for select labels
         foreach ($item_arr as $key => $obj) {
             if (is_object($obj) && method_exists($obj, 'getAdminTitle')) {

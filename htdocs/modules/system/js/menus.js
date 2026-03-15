@@ -22,13 +22,44 @@ jQuery(function($){
     var LABEL_YES = labelsCfg.activeYes || 'Yes';
     var LABEL_NO  = labelsCfg.activeNo  || 'No';
 
+    function parseJsonSafely(rawResponse) {
+        if (rawResponse && typeof rawResponse === 'object') {
+            return rawResponse;
+        }
+        var text = $.trim(String(rawResponse || ''));
+        if (!text) {
+            return null;
+        }
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            // Some environments may prepend notices/HTML before JSON.
+            var start = text.indexOf('{');
+            var end = text.lastIndexOf('}');
+            if (start !== -1 && end > start) {
+                try {
+                    return JSON.parse(text.substring(start, end + 1));
+                } catch (e2) {
+                    return null;
+                }
+            }
+            return null;
+        }
+    }
+
     function ajaxJsonPost(url, data, onSuccess) {
         return $.ajax({
             url: url,
             method: 'POST',
             data: data,
-            dataType: 'json'
-        }).done(function(response){
+            dataType: 'text'
+        }).done(function(rawResponse){
+            var response = parseJsonSafely(rawResponse);
+            if (!response) {
+                console.error('Ajax JSON parse error:', rawResponse);
+                alert('Ajax error: invalid JSON response (see console)');
+                return;
+            }
             updateTokenFromResponse(response);
             if (typeof onSuccess === 'function') onSuccess(response);
         }).fail(function(jqXHR, textStatus, errorThrown){

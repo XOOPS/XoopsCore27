@@ -37,6 +37,11 @@ $GLOBALS['xoopsOption']['template_main'] = 'system_menus.tpl';
 // Get Action type
 $op = Request::getCmd('op', 'list');
 
+// AJAX actions may run without the full theme bootstrap; ensure static menu helpers are available.
+if (!class_exists('xos_opal_Theme', false)) {
+    include_once XOOPS_ROOT_PATH . '/class/theme.php';
+}
+
 // Call Header
 if ($op !== 'saveorder' && $op !== 'toggleactivecat' && $op !== 'toggleactiveitem') {
     xoops_cp_header();

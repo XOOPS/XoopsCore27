@@ -157,8 +157,13 @@ class XoopsMenusItems extends XoopsObject
 
         // Tree
         $criteria = new CriteriaCompo();
-		$criteria->add(new Criteria('items_cid', $category_id));
-		$criteria->add(new Criteria('items_active', 1));
+        $criteria->add(new Criteria('items_cid', $category_id));
+        $currentParentId = (int)$this->getVar('items_pid');
+        $activeOrCurrentParent = new CriteriaCompo(new Criteria('items_active', 1));
+        if ($currentParentId > 0) {
+            $activeOrCurrentParent->add(new Criteria('items_id', $currentParentId), 'OR');
+        }
+        $criteria->add($activeOrCurrentParent);
         $criteria->setSort('items_position ASC, items_title');
         $criteria->setOrder('ASC');
         $menusitemsHandler = xoops_getHandler('menusitems');

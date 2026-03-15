@@ -66,15 +66,16 @@ class XoopsMenusCategory extends XoopsObject
         }
     }
     /**
-     * Retrieve the resolved title for display.
+     * Retrieve the resolved category_title for display via getResolvedTitle().
      *
-     * If the stored title is a constant name, resolves and returns its value.
-     * Otherwise returns the stored title as-is. Used for front-end rendering.
+     * If the stored category_title is a constant name, getResolvedTitle()
+     * resolves and returns its value. Otherwise it returns category_title as-is.
+     * Used for front-end rendering.
      *
      * Example:
-     *   - If items_title = "HOME_LABEL" and HOME_LABEL = "Accueil"
+     *   - If category_title = "HOME_LABEL" and HOME_LABEL = "Accueil"
      *     returns "Accueil"
-     *   - If items_title = "Custom Text"
+     *   - If category_title = "Custom Text"
      *     returns "Custom Text"
      *
      * @return string The resolved title value
@@ -86,16 +87,17 @@ class XoopsMenusCategory extends XoopsObject
     }
 
     /**
-     * Retrieve the title for administration interface with constant reference.
+     * Retrieve category_title for the administration interface via getAdminTitle().
      *
-     * If the stored title is a constant name, returns both the resolved value
-     * and the constant name in parentheses. This helps administrators identify
-     * which constant is being used. Otherwise returns the stored title as-is.
+     * If the stored category_title is a constant name, getAdminTitle() returns
+     * the resolved constant value plus the constant name in parentheses,
+     * for example: constant('HOME_LABEL') . ' (HOME_LABEL)'.
+     * Otherwise getAdminTitle() returns category_title as-is.
      *
      * Example:
-     *   - If items_title = "HOME_LABEL" and HOME_LABEL = "Accueil"
+     *   - If category_title = "HOME_LABEL" and HOME_LABEL = "Accueil"
      *     returns "Accueil (HOME_LABEL)"
-     *   - If items_title = "Custom Text"
+     *   - If category_title = "Custom Text"
      *     returns "Custom Text"
      *
      * @return string The resolved title with optional constant reference

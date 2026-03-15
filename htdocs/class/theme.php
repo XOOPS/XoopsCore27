@@ -511,7 +511,7 @@ class xos_opal_Theme
                                     'title'  => $child->getResolvedTitle(),
                                     'prefix'    => $child->getVar('items_prefix'),
                                     'suffix'    => $child->getVar('items_suffix'),
-                                    'url'    => empty($childNodes) ? $child->getVar('items_url') : '',
+                                    'url'    => empty($childNodes) ? self::normalizeMenuUrl($child->getVar('items_url')) : '',
                                     'target' => ($child->getVar('items_target') == 1) ? '_blank' : '_self',
                                     'active' => $child->getVar('items_active'),
                                     'children' => $childNodes,
@@ -529,7 +529,7 @@ class xos_opal_Theme
                         'category_title'  => $cat->getResolvedTitle(),
                         'category_prefix' => $cat->getVar('category_prefix'),
                         'category_suffix' => $cat->getVar('category_suffix'),
-                        'category_url'    => empty($item_list) ? $cat->getVar('category_url') : '',
+                        'category_url'    => empty($item_list) ? self::normalizeMenuUrl($cat->getVar('category_url')) : '',
                         'category_target' => ($cat->getVar('category_target') == 1) ? '_blank' : '_self',
                         'items'           => $item_list,
                     ];
@@ -619,6 +619,12 @@ class xos_opal_Theme
     protected function renderMenuAffixesRecursive(array $menus)
     {
         foreach ($menus as &$menu) {
+            if (isset($menu['url'])) {
+                $menu['url'] = self::normalizeMenuUrl($menu['url']);
+            }
+            if (isset($menu['category_url'])) {
+                $menu['category_url'] = self::normalizeMenuUrl($menu['category_url']);
+            }
             if (isset($menu['category_prefix'])) {
                 $menu['category_prefix'] = $this->renderMenuAffix($menu['category_prefix']);
             }
@@ -641,6 +647,28 @@ class xos_opal_Theme
         unset($menu);
 
         return $menus;
+    }
+
+    /**
+     * Normalize menu URL values by prefixing XOOPS_URL on relative paths.
+     *
+     * @param string $url
+     * @return string
+     */
+    public static function normalizeMenuUrl($url)
+    {
+        $url = trim((string)$url);
+        if ('' === $url) {
+            return '';
+        }
+        if (0 === strncmp($url, XOOPS_URL, strlen(XOOPS_URL))) {
+            return $url;
+        }
+        if (preg_match('~^(?:[a-z][a-z0-9+\-.]*:|//|/|#|\?)~i', $url)) {
+            return $url;
+        }
+
+        return XOOPS_URL . '/' . ltrim($url, '/');
     }
 
     /**

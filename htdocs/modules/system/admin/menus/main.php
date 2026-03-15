@@ -73,7 +73,7 @@ switch ($op) {
                 $category['title']           = $category_arr[$i]->getAdminTitle();
                 $category['prefix']          = $category_arr[$i]->getVar('category_prefix');
                 $category['suffix']          = $category_arr[$i]->getVar('category_suffix');
-                $category['url']             = $category_arr[$i]->getVar('category_url');
+                $category['url']             = xos_opal_Theme::normalizeMenuUrl($category_arr[$i]->getVar('category_url'));
                 $category['target']          = ($category_arr[$i]->getVar('category_target') == 1) ? '_blank' : '_self';
                 $category['position']        = $category_arr[$i]->getVar('category_position');
                 $category['active']          = $category_arr[$i]->getVar('category_active');
@@ -403,7 +403,7 @@ switch ($op) {
                     $items['title']     = $tree_arr[$i]['obj']->getAdminTitle();
                     $items['prefix']    = $tree_arr[$i]['obj']->getVar('items_prefix');
                     $items['suffix']    = $tree_arr[$i]['obj']->getVar('items_suffix');
-                    $items['url']       = $tree_arr[$i]['obj']->getVar('items_url');
+                    $items['url']       = xos_opal_Theme::normalizeMenuUrl($tree_arr[$i]['obj']->getVar('items_url'));
                     $items['target']    = ($tree_arr[$i]['obj']->getVar('items_target') == 1) ? '_blank' : '_self';
                     $items['active']    = $tree_arr[$i]['obj']->getVar('items_active');
                     $items['protected'] = $tree_arr[$i]['obj']->getVar('items_protected');

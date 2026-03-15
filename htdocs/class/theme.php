@@ -476,7 +476,7 @@ class xos_opal_Theme
                 } else {
                     $category_arr = [];
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $category_arr = [];
                 $viewPermissionItem = [];
             }
@@ -533,7 +533,7 @@ class xos_opal_Theme
                         'category_target' => ($cat->getVar('category_target') == 1) ? '_blank' : '_self',
                         'items'           => $item_list,
                     ];
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
                     // Silencieusement ignorer les erreurs de catégories particulières
                     continue;
                 }
@@ -696,7 +696,7 @@ class xos_opal_Theme
             $rendered = preg_replace('/<{\s*xoInboxCount(?:\s+[^}]*)?\s*}>/i', $replacement, $decodedSuffix);
 
             return null !== $rendered ? $rendered : $decodedSuffix;
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             return $decodedSuffix;
         }
     }

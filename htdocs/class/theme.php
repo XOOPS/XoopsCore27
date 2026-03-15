@@ -494,7 +494,7 @@ class xos_opal_Theme
                         $crit->add(new Criteria('items_id', '(' . implode(',', $viewPermissionItem) . ')', 'IN'));
                         $crit->add(new Criteria('items_cid', $cid));
                         $crit->add(new Criteria('items_active', 1));
-                        $crit->setSort('items_position ASC, items_title');
+                        $crit->setSort('items_position, items_title');
                         $crit->setOrder('ASC');
                         $items_arr = $menusitemsHandler->getAll($crit);
                         include_once $GLOBALS['xoops']->path('class/tree.php');

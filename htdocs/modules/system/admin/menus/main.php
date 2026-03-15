@@ -367,7 +367,7 @@ switch ($op) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             $criteria = new CriteriaCompo();
             $criteria->add(new Criteria('items_cid', $category_id));
-            $criteria->setSort('items_position ASC, items_title');
+            $criteria->setSort('items_position, items_title');
             $criteria->setOrder('ASC');
             $items_arr = $menusitemsHandler->getall($criteria);
             $items_count = $menusitemsHandler->getCount($criteria);

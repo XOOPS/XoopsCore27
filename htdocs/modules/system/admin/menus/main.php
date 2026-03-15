@@ -109,8 +109,12 @@ switch ($op) {
             $menuscategoryHandler = xoops_getHandler('menuscategory');
             /** @var \XoopsMenusCategory $obj */
             $obj = $menuscategoryHandler->get($category_id);
-            $form = $obj->getFormCat();
-            $xoopsTpl->assign('form', $form->render());
+            if (!is_object($obj)) {
+                $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+            } else {
+                $form = $obj->getFormCat();
+                $xoopsTpl->assign('form', $form->render());
+            }
         }
         break;
 
@@ -123,6 +127,9 @@ switch ($op) {
         $isProtected = false;
         if ($id > 0) {
             $obj = $menuscategoryHandler->get($id);
+            if (!is_object($obj)) {
+                redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+            }
             $isProtected = (int)$obj->getVar('category_protected') === 1;
         } else {
             $obj = $menuscategoryHandler->create();
@@ -167,6 +174,9 @@ switch ($op) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             /** @var \XoopsMenusCategory $obj */
             $obj = $menuscategoryHandler->get($category_id);
+            if (!is_object($obj)) {
+                redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+            }
             if (is_object($obj) && (int)$obj->getVar('category_protected') === 1) {
                 redirect_header('admin.php?fct=menus', 3, _AM_SYSTEM_MENUS_ERROR_CATPROTECTED);
             }
@@ -223,6 +233,9 @@ switch ($op) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             /** @var \XoopsMenusItems $obj */
             $obj = $menusitemsHandler->get($item_id);
+            if (!is_object($obj)) {
+                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 3, _AM_SYSTEM_MENUS_ERROR_NOITEM);
+            }
             if (is_object($obj) && (int)$obj->getVar('items_protected') === 1) {
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMPROTECTED);
             }
@@ -345,6 +358,10 @@ switch ($op) {
         } else {
             $menuscategoryHandler = xoops_getHandler('menuscategory');
             $category = $menuscategoryHandler->get($category_id);
+            if (!is_object($category)) {
+                $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOCATEGORY);
+                break;
+            }
             $xoopsTpl->assign('category_id', $category->getVar('category_id'));
             $xoopsTpl->assign('cat_title', $category->getAdminTitle());
 
@@ -428,6 +445,10 @@ switch ($op) {
         /** @var \XoopsMenusItems $obj */
         if ($id > 0) {
             $obj = $menusitemsHandler->get($id);
+            if (!is_object($obj)) {
+                $itemsCid = Request::getInt('items_cid', 0);
+                redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $itemsCid, 3, _AM_SYSTEM_MENUS_ERROR_NOITEM);
+            }
             $isProtected = (int)$obj->getVar('items_protected') === 1;
         } else {
             $obj = $menusitemsHandler->create();
@@ -496,6 +517,10 @@ switch ($op) {
             $menusitemsHandler = xoops_getHandler('menusitems');
             /** @var \XoopsMenusItems $obj */
             $obj = $menusitemsHandler->get($item_id);
+            if (!is_object($obj)) {
+                $xoopsTpl->assign('error_message', _AM_SYSTEM_MENUS_ERROR_NOITEM);
+                break;
+            }
             if ($obj->getVar('items_active') == 0){
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $category_id, 5, _AM_SYSTEM_MENUS_ERROR_ITEMEDIT);
             }

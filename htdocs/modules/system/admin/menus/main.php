@@ -172,6 +172,8 @@ switch ($op) {
             xos_opal_Theme::invalidateMenusCache();
             redirect_header('admin.php?fct=menus', 2, _AM_SYSTEM_DBUPDATED);
         } else {
+            $form = $obj->getFormCat();
+            $xoopsTpl->assign('form', $form->render());
             $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
         }
         break;
@@ -555,6 +557,9 @@ switch ($op) {
                 xos_opal_Theme::invalidateMenusCache();
                 redirect_header('admin.php?fct=menus&op=viewcat&category_id=' . $items_cid, 2, _AM_SYSTEM_DBUPDATED);
             } else {
+                /** @var \XoopsMenusItems $obj */
+                $form = $obj->getFormItems($items_cid);
+                $xoopsTpl->assign('form', $form->render());
                 $xoopsTpl->assign('error_message', $obj->getHtmlErrors());
             }
         } else {

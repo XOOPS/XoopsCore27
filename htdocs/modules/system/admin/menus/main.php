@@ -660,36 +660,38 @@ switch ($op) {
             if (!is_object($menusitemsHandler) && class_exists('XoopsMenusItemsHandler')) {
                 $menusitemsHandler = new XoopsMenusItemsHandler($GLOBALS['xoopsDB']);
             }
+            $critCat = new Criteria('items_cid', $category_id);
+            $allItems = $menusitemsHandler->getAll($critCat);
+            $childrenByParent = [];
+            foreach ($allItems as $itm) {
+                $childrenByParent[(int)$itm->getVar('items_pid')][] = $itm;
+            }
+            $visited = [];
             /**
-             * Recursively update items under a parent (same as toggleactiveitem)
+             * Recursively update items under a parent using the in-memory tree.
              */
-            $recursiveUpdate = function ($handler, $parentId, $state, array &$updated) use (&$recursiveUpdate) {
-                $crit = new Criteria('items_pid', (int)$parentId);
-                $children = $handler->getAll($crit);
-                foreach ($children as $child) {
-                    $cid = $child->getVar('items_id');
+            $recursiveUpdate = function ($handler, array $itemsByParent, $parentId, $state, array &$updated, array &$seen) use (&$recursiveUpdate) {
+                foreach ($itemsByParent[(int)$parentId] ?? [] as $child) {
+                    $cid = (int)$child->getVar('items_id');
+                    if (isset($seen[$cid])) {
+                        continue;
+                    }
+                    $seen[$cid] = true;
                     if ((int)$child->getVar('items_active') !== $state) {
                         $child->setVar('items_active', $state);
                         if ($handler->insert($child, true)) {
                             $updated[] = $cid;
                         }
                     }
-                    $recursiveUpdate($handler, $cid, $state, $updated);
+                    $recursiveUpdate($handler, $itemsByParent, $cid, $state, $updated, $seen);
                 }
             };
-            // first update all direct items of category
-            $critCat = new Criteria('items_cid', $category_id);
-            $allItems = $menusitemsHandler->getAll($critCat);
+            $recursiveUpdate($menusitemsHandler, $childrenByParent, 0, $new, $updatedItems, $visited);
             foreach ($allItems as $itm) {
-                $idtmp = $itm->getVar('items_id');
-                if ((int)$itm->getVar('items_active') !== $new) {
-                    $itm->setVar('items_active', $new);
-                    if ($menusitemsHandler->insert($itm, true)) {
-                        $updatedItems[] = $idtmp;
-                    }
+                $idtmp = (int)$itm->getVar('items_id');
+                if (!isset($visited[$idtmp])) {
+                    $recursiveUpdate($menusitemsHandler, $childrenByParent, (int)$itm->getVar('items_pid'), $new, $updatedItems, $visited);
                 }
-                // propagate to children of this item
-                $recursiveUpdate($menusitemsHandler, $idtmp, $new, $updatedItems);
             }
         }
 

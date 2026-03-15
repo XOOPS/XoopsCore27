@@ -31,3 +31,7 @@
 .dropdown-submenu:hover > .dropdown-menu {
     display: block;
 }
+/* show when toggled by javascript (touch/mobile and click users) */
+.dropdown-submenu > .dropdown-menu.show {
+    display: block;
+}

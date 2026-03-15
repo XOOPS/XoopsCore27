@@ -78,7 +78,6 @@ switch ($op) {
                 $category['position']        = $category_arr[$i]->getVar('category_position');
                 $category['active']          = $category_arr[$i]->getVar('category_active');
                 $category['protected']       = $category_arr[$i]->getVar('category_protected');
-                $category_img                = $category_arr[$i]->getVar('category_logo');
                 $xoopsTpl->append('category', $category);
                 unset($category);
             }

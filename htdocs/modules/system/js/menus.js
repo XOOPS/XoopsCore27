@@ -161,8 +161,8 @@ jQuery(function($){
 
                 // if server sent list of updated children, adjust them as well
                 if (response.updated && Array.isArray(response.updated)) {
-                    response.updated.forEach(function(id) {
-                        var $child = $('.item-active-toggle[data-id="' + id + '"]');
+                    response.updated.forEach(function(updatedId) {
+                        var $child = $('.item-active-toggle[data-id="' + updatedId + '"]');
                         if ($child.length) {
                             updateBadge($child, active);
                             updateRowState($child, active);

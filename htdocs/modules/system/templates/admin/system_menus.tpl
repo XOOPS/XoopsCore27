@@ -3,11 +3,11 @@
 /* expose des labels / options Smarty pour le JS externe */
 window.XOOPS_MENUS = window.XOOPS_MENUS || {};
 window.XOOPS_MENUS.labels = {
-    activeYes: "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>",
-    activeNo:  "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>"
+    activeYes: "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES|escape:'javascript'}>",
+    activeNo:  "<{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO|escape:'javascript'}>"
 };
 window.XOOPS_MENUS.messages = {
-    parentInactive: "<{$smarty.const._AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE}>"
+    parentInactive: "<{$smarty.const._AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE|escape:'javascript'}>"
 };
 </script>
 <!-- Buttons -->
@@ -73,13 +73,13 @@ window.XOOPS_MENUS.messages = {
                     <{/if}>
                     <div class="mt-auto">
                     <{if $itemcategory.active}>
-                        <span class="badge badge-success category-active-toggle" data-id="<{$itemcategory.id|escape}>" data-active="1" style="cursor:pointer;">
+                        <button type="button" class="badge badge-success category-active-toggle" data-id="<{$itemcategory.id|escape}>" data-active="1" aria-pressed="true" style="cursor:pointer; border:none;">
                             <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>
-                        </span>
+                        </button>
                     <{else}>
-                        <span class="badge badge-danger category-active-toggle" data-id="<{$itemcategory.id|escape}>" data-active="0" style="cursor:pointer;">
+                        <button type="button" class="badge badge-danger category-active-toggle" data-id="<{$itemcategory.id|escape}>" data-active="0" aria-pressed="false" style="cursor:pointer; border:none;">
                             <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>
-                        </span>
+                        </button>
                     <{/if}>
                     </div>
                 </div>
@@ -139,13 +139,13 @@ window.XOOPS_MENUS.messages = {
                     <!-- center: badge (fixed width, centered) -->
                     <div class="text-center mx-3" style="width:120px; flex:0 0 120px;">
                         <{if $item.active}>
-                            <span class="badge badge-success item-active-toggle" data-id="<{$item.id|escape}>" data-active="1" style="cursor:pointer;">
+                            <button type="button" class="badge badge-success item-active-toggle" data-id="<{$item.id|escape}>" data-active="1" aria-pressed="true" style="cursor:pointer; border:none;">
                                 <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_YES}>
-                            </span>
+                            </button>
                         <{else}>
-                            <span class="badge badge-danger item-active-toggle" data-id="<{$item.id|escape}>" data-active="0" style="cursor:pointer;">
+                            <button type="button" class="badge badge-danger item-active-toggle" data-id="<{$item.id|escape}>" data-active="0" aria-pressed="false" style="cursor:pointer; border:none;">
                                 <{$smarty.const._AM_SYSTEM_MENUS_ACTIVE_NO}>
-                            </span>
+                            </button>
                         <{/if}>
                     </div>
                     <!-- right: actions -->
@@ -155,7 +155,7 @@ window.XOOPS_MENUS.messages = {
                                 <i class="fa fa-edit"></i>
                             </a>
                             <{if $item.protected|default:0 == 0}>
-                            <a class="btn btn-sm btn-outline-danger<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
+                            <a class="btn btn-sm btn-outline-danger<{if !$item.active}> disabled<{/if}>" href="admin.php?fct=menus&amp;op=delitem&amp;item_id=<{$item.id|escape}>" title="<{$smarty.const._AM_SYSTEM_MENUS_DELITEM}>"<{if !$item.active}> aria-disabled="true" tabindex="-1"<{/if}>>
                                 <i class="fa fa-trash"></i>
                             </a>
                             <{/if}>

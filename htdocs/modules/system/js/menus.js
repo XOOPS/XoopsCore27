@@ -180,9 +180,19 @@ jQuery(function($){
                 var active = parseInt(response.active, 10) ? 1 : 0;
                 function updateBadge($badge, state) {
                     if (state) {
-                        $badge.removeClass('badge-danger').addClass('badge-success').attr('data-active', 1).text(LABEL_YES);
+                        $badge
+                            .removeClass('badge-danger')
+                            .addClass('badge-success')
+                            .attr('data-active', 1)
+                            .attr('aria-pressed', 'true')
+                            .text(LABEL_YES);
                     } else {
-                        $badge.removeClass('badge-success').addClass('badge-danger').attr('data-active', 0).text(LABEL_NO);
+                        $badge
+                            .removeClass('badge-success')
+                            .addClass('badge-danger')
+                            .attr('data-active', 0)
+                            .attr('aria-pressed', 'false')
+                            .text(LABEL_NO);
                     }
                 }
 

@@ -699,6 +699,21 @@ switch ($op) {
         $new = $current ? 0 : 1;
         // if we try to activate, ensure the parent/ancestors are active
         if ($new) {
+            $categoryId = (int)$obj->getVar('items_cid');
+            $menuscategoryHandler = xoops_getHandler('menuscategory');
+            if (!is_object($menuscategoryHandler) && class_exists('XoopsMenusCategoryHandler')) {
+                $menuscategoryHandler = new XoopsMenusCategoryHandler($GLOBALS['xoopsDB']);
+            }
+            $categoryObj = $menuscategoryHandler->get($categoryId);
+            if (!is_object($categoryObj) || (int)$categoryObj->getVar('category_active') === 0) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => _AM_SYSTEM_MENUS_ERROR_PARENTINACTIVE,
+                    'token'   => $GLOBALS['xoopsSecurity']->getTokenHTML()
+                ]);
+                exit;
+            }
             $parentId = (int)$obj->getVar('items_pid');
             while ($parentId > 0) {
                 $parentObj = $menusitemsHandler->get($parentId);

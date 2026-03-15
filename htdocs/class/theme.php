@@ -687,7 +687,7 @@ class xos_opal_Theme
         // Values coming from DB can be entity-encoded depending on getVar mode.
         $decodedSuffix = htmlspecialchars_decode($value, ENT_QUOTES | ENT_HTML5);
         if (false === stripos($decodedSuffix, 'xoInboxCount')) {
-            return $value;
+            return $decodedSuffix;
         }
 
         try {

@@ -616,6 +616,8 @@ function xoops_module_uninstall($dirname)
         'tplset',
         'tplsource',
         'xoopsnotifications',
+        'menuscategory',
+        'menusitems',
         'banner',
         'bannerclient',
         'bannerfinish',

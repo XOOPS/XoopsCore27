@@ -491,18 +491,18 @@ switch ($op) {
         } else {
             $obj = $menusitemsHandler->create();
         }
-        $items_cid = Request::getInt('items_cid', 0);
         $oldCid = ($id > 0) ? (int)$obj->getVar('items_cid') : 0;
-        $obj->setVar('items_cid', $items_cid);
+        // On edit, category is immutable: always trust persisted value.
+        $items_cid = ($id > 0) ? $oldCid : Request::getInt('items_cid', 0);
+        if ($id === 0 && !$isProtected) {
+            $obj->setVar('items_cid', $items_cid);
+        }
         $error_message = '';
-        // Validate that the target category exists
-        $menuscategoryHandler = xoops_getHandler('menuscategory');
-        if ($items_cid === 0 || !is_object($menuscategoryHandler->get($items_cid))) {
-            $error_message .= _AM_SYSTEM_MENUS_ERROR_INVALIDCAT;
-        } elseif ($id > 0 && $items_cid !== $oldCid) {
-            // Reject category change if item has child items (would split the subtree)
-            if ($menusitemsHandler->getCount(new Criteria('items_pid', $id)) > 0) {
-                $error_message .= _AM_SYSTEM_MENUS_ERROR_ITEMCIDCHANGE;
+        if (!$isProtected) {
+            // Validate that the target category exists
+            $menuscategoryHandler = xoops_getHandler('menuscategory');
+            if ($items_cid === 0 || !is_object($menuscategoryHandler->get($items_cid))) {
+                $error_message .= _AM_SYSTEM_MENUS_ERROR_INVALIDCAT;
             }
         }
         if (!$isProtected) {

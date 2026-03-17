@@ -40,8 +40,8 @@ class XoopsMenusItems extends XoopsObject
         $this->initVar('items_pid', XOBJ_DTYPE_INT, 0, false);
         $this->initVar('items_cid', XOBJ_DTYPE_INT, null, false);
         $this->initVar('items_title', XOBJ_DTYPE_TXTBOX, null);
-        $this->initVar('items_prefix', XOBJ_DTYPE_TXTAREA);
-        $this->initVar('items_suffix', XOBJ_DTYPE_TXTAREA);
+        $this->initVar('items_prefix', XOBJ_DTYPE_TXTAREA, '', false);
+        $this->initVar('items_suffix', XOBJ_DTYPE_TXTAREA, '', false);
         $this->initVar('items_url', XOBJ_DTYPE_TXTBOX, null);
         $this->initVar('items_target', XOBJ_DTYPE_INT, 0);
         $this->initVar('items_position', XOBJ_DTYPE_INT, null, false);

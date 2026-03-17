@@ -38,8 +38,8 @@ class XoopsMenusCategory extends XoopsObject
         parent::__construct();
         $this->initVar('category_id', XOBJ_DTYPE_INT, null, false);
         $this->initVar('category_title', XOBJ_DTYPE_TXTBOX, null);
-        $this->initVar('category_prefix', XOBJ_DTYPE_TXTAREA);
-        $this->initVar('category_suffix', XOBJ_DTYPE_TXTAREA);
+        $this->initVar('category_prefix', XOBJ_DTYPE_TXTAREA, '', false);
+        $this->initVar('category_suffix', XOBJ_DTYPE_TXTAREA, '', false);
         $this->initVar('category_url', XOBJ_DTYPE_TXTBOX, null);
         $this->initVar('category_target', XOBJ_DTYPE_INT, 0);
         $this->initVar('category_position', XOBJ_DTYPE_INT, null, false);

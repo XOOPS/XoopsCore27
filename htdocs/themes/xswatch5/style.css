@@ -1367,7 +1367,7 @@ img.avatar {
 }
 /* End Creative Commons CC-BY-SA license. */
 
-#xo-pagenav{ display: inline-block;text-align:left } 
+#xo-pagenav{ display: inline-block;text-align:left }
 
 #xo-pagenav a:first-child {
 	margin-right: -4px;
@@ -1381,7 +1381,7 @@ img.avatar {
     border-bottom-right-radius: 5px;
 }
 
-#xo-pagenav a{ 
+#xo-pagenav a{
     color: #999999;
     padding: 4px 8px;
     text-decoration: none;
@@ -1393,22 +1393,22 @@ img.avatar {
 #xo-pagenav .xo-pagact { margin-right: -4px;background-color: lightsteelblue;color: #FFFFFF;padding: 4px 8px; border: 1px solid #dfdfdf;}
 
 /* in-active */
-#xo-pagenav a.xo-counterpage {margin-right: -9px;background-color: #f8f8f8;color: #999999;border: 1px solid #dfdfdf;} 
+#xo-pagenav a.xo-counterpage {margin-right: -9px;background-color: #f8f8f8;color: #999999;border: 1px solid #dfdfdf;}
 
 /* in-active-hover */
 #xo-pagenav a.xo-counterpage:hover { background-color: #9c9c9c; color: #ffffff;}
 
 /* arrow */
-#xo-pagenav a.xo-pagarrow {border: 1px solid #dfdfdf; text-decoration: none;color: #999999;background-color: #dfdfdf} 
-#xo-pagenav a.xo-pagarrow:hover {text-decoration: none;background-color: #9c9c9c; color: #ffffff;} 
+#xo-pagenav a.xo-pagarrow {border: 1px solid #dfdfdf; text-decoration: none;color: #999999;background-color: #dfdfdf}
+#xo-pagenav a.xo-pagarrow:hover {text-decoration: none;background-color: #9c9c9c; color: #ffffff;}
 
 /* arrow-left */
-#xo-pagenav a.xo-pagarrow-left {border: 1px solid #dfdfdf; text-decoration: none;color: #999999;background-color: #dfdfdf} 
-#xo-pagenav a.xo-pagarrow-left:hover {text-decoration: none;background-color: #9c9c9c; color: #ffffff;} 
+#xo-pagenav a.xo-pagarrow-left {border: 1px solid #dfdfdf; text-decoration: none;color: #999999;background-color: #dfdfdf}
+#xo-pagenav a.xo-pagarrow-left:hover {text-decoration: none;background-color: #9c9c9c; color: #ffffff;}
 
 /* arrow-right */
-#xo-pagenav a.xo-pagarrow-right {border: 1px solid #dfdfdf; text-decoration: none;color: #999999;background-color: #dfdfdf} 
-#xo-pagenav a.xo-pagarrow-right:hover {text-decoration: none;background-color: #9c9c9c; color: #ffffff;} 
+#xo-pagenav a.xo-pagarrow-right {border: 1px solid #dfdfdf; text-decoration: none;color: #999999;background-color: #dfdfdf}
+#xo-pagenav a.xo-pagarrow-right:hover {text-decoration: none;background-color: #9c9c9c; color: #ffffff;}
 
 
 

@@ -1,0 +1,25 @@
+#menus-row [data-id] { cursor: move; }
+.card-placeholder { border: 2px dashed #ccc; height: 80px; margin-bottom: .75rem; }
+.submenu-indicator { width:1.2rem; display:inline-flex; justify-content:center; align-items:center; color:#6c757d; margin-right:.5rem; }
+
+/* visually dim inactivated items/cards */
+.list-group-item.inactive,
+.card.inactive {
+    opacity: 0.5;
+}
+
+/* badge in disabled state because parent is off */
+.item-active-toggle.disabled,
+.category-active-toggle.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* action links/buttons disabled when item itself is off */
+.btn-group .btn.disabled,
+.btn-group .btn[aria-disabled="true"] {
+    opacity: 0.65;
+    pointer-events: none;
+}
+

@@ -68,6 +68,8 @@ function xoops_module_install($dirname)
         'banner',
         'bannerclient',
         'bannerfinish',
+        'menuscategory',
+        'menusitems',
     ];
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');
@@ -614,6 +616,8 @@ function xoops_module_uninstall($dirname)
         'tplset',
         'tplsource',
         'xoopsnotifications',
+        'menuscategory',
+        'menusitems',
         'banner',
         'bannerclient',
         'bannerfinish',

@@ -45,6 +45,7 @@ $adminMenuDomain = [
         'icon' => 'fa-solid fa-palette',
         'links' => [
             ['title' => _AM_SYSTEM_TPLSETS, 'url' => 'admin.php?fct=tplsets'],
+            ['title' => _AM_SYSTEM_MENUS, 'url' => 'admin.php?fct=menus'],
             ['title' => _AM_TAG_FOOTER, 'url' => 'admin.php?fct=preferences&op=show&confcat_id=3'],
         ],
     ],
@@ -77,4 +78,3 @@ $adminMenuDomain = [
     ],
 ];
 
- 

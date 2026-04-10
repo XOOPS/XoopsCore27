@@ -4,7 +4,7 @@ LANGUAGE DIFFERENCES
 Below are language differences from a version to next version.
 
 ================================
-2025/03/30: Version 2.5.12-Betas
+2025/03/30: Version 2.7.0-Betas (previously released as 2.5.12-Betas
 ================================
 /htdocs/modules/system/language/english/admin.php
 - added define('_AM_SYSTEM_MENUS', 'Menus');

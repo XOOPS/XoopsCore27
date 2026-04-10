@@ -99,7 +99,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="https://github.com/XOOPS/XoopsCore25" target="_blank" title="<?php echo XOOPS_SOURCE_CODE; ?>">
+                        <a class="nav-link" href="https://github.com/XOOPS/XoopsCore27" target="_blank" title="<?php echo XOOPS_SOURCE_CODE; ?>">
                             <i class="fa-brands fa-github fa-lg"></i>
                         </a>
                     </li>

@@ -1,7 +1,7 @@
 ![alt XOOPS CMS](https://xoops.org/images/logoXoops4GithubRepository.png)
 # XOOPS Core 2.7.x
 
-[![Build Status](https://img.shields.io/travis/XOOPS/XoopsCore/master.svg?style=flat)](https://travis-ci.org/XOOPS/XoopsCore27)
+[![CI](https://github.com/XOOPS/XoopsCore27/actions/workflows/ci.yml/badge.svg)](https://github.com/XOOPS/XoopsCore27/actions/workflows/ci.yml)
 [![Software License](https://img.shields.io/badge/license-GPL-brightgreen.svg?style=flat)](docs/license.txt)
 [![Coverage Status](https://img.shields.io/scrutinizer/coverage/g/XOOPS/XoopsCore27.svg?style=flat)](https://scrutinizer-ci.com/g/XOOPS/XoopsCore27/code-structure)
 [![Quality Score](https://img.shields.io/scrutinizer/g/XOOPS/XoopsCore27.svg?style=flat)](https://scrutinizer-ci.com/g/XOOPS/XoopsCore27)

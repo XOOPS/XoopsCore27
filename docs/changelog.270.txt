@@ -14,6 +14,7 @@ Version and platform:
 - fix PHP 8.4 deprecated implicit nullable parameters across core (mamba)
 - add PHP 8.5 to CI matrix as forward-compatibility check (mamba)
 - drop external xoops/base-requires25 metapackage; all libraries are now listed directly in composer.dist.json (mamba)
+- rename Composer meta-package from xoopscore25/libraries to xoopscore27/libraries — downstream consumers referencing the old name in their own require blocks must update accordingly (mamba)
 
 Security hardening (RC candidate review):
 - add CSRF token to module admin AJAX requests by @mambax7 in #1685

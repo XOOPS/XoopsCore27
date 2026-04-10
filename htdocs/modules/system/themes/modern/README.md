@@ -2,7 +2,7 @@
 
 ![XOOPS CMS](https://xoops.org/images/logoXoops4GithubRepository.png)
 
-A modern, responsive admin theme for XOOPS 2.7.0 with an enhanced dashboard, dark mode, customizer panel, module widget system, and configurable content tracking.
+A modern, responsive admin theme for XOOPS 2.7.0+ with an enhanced dashboard, dark mode, customizer panel, module widget system, and configurable content tracking.
 
 ## Features
 

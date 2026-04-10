@@ -5,7 +5,7 @@
  *
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license          GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
- * @since            2.5.11
+ * @since            2.7.0
  * @author           XOOPS Team
  */
 class Upgrade_270 extends XoopsUpgrade

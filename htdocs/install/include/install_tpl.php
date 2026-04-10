@@ -94,7 +94,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                                 $supports =  include $supportFile;
                             }
                             if (isset($supports) && is_array($supports)) { foreach ($supports as $support): ?>
-                                <li><a class="dropdown-item" href="<?php echo $support['url']; ?>" target="_blank" rel="noopener noreferrer"><?php echo $support['title']; ?></a></li>
+                                <li><a class="dropdown-item" href="<?php echo htmlspecialchars($support['url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer"><?php echo htmlspecialchars($support['title'], ENT_QUOTES, 'UTF-8'); ?></a></li>
                             <?php endforeach; } ?>
                         </ul>
                     </li>

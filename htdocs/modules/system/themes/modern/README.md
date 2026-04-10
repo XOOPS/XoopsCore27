@@ -288,7 +288,7 @@ Key design tokens (all defined in `modern.css :root`): `--primary`, `--bg-primar
 - Warning/error message auto-dismiss
 - Collapsible System Information and Composer Packages sections
 - Chart.js bundled via XOOPS Frameworks pattern
-- PHP 8.1+ compatible (no `strftime()` deprecation warnings)
+- PHP 8.2+ compatible (no `strftime()` deprecation warnings)
 
 ## Support
 

@@ -45,7 +45,6 @@ Admin UI and themes:
 - new "Modern" admin theme based on AdminLTE 3 (mamba)
 - clean-room system menu administration rewrite by @mambax7 in #1666
 - fix system menu table creation and xbootstrap5 dropdown styling (mamba) in #1676
-- add system menu management (downport from XOOPS 2.7.0)
 - add xSwatch5 theme based on Bootstrap 5.3.8 in #1686
 - add files required for Tailwind CSS based themes (xtailwind) in #1687
 - add xTailwind theme: Tailwind CSS + DaisyUI with 35 palettes and Alpine.js interactivity (mamba)
@@ -100,10 +99,10 @@ Libraries and assets:
 - Font Awesome 7.1.0 (mamba)
 - Bootstrap 5.3.8 (mamba)
 - Smarty 4.5.5 — major upgrade from Smarty 2 (mamba)
-- HTML Purifier 4.18 (mamba)
-- PhpMailer 6.9.3 (mamba)
+- HTML Purifier 4.19.0 (mamba)
+- PhpMailer 6.12.0 (mamba)
 - jQuery UI 1.14.1 (mamba)
-- TinyMCE 5.10.9 (mamba)
+- TinyMCE 7.7.2 (new default) and legacy TinyMCE 5.10.9 retained for backward compatibility (mamba)
 - tablesorter 2.32.0 (mamba)
 - jquery.form 4.3.1 (mamba)
 - jGrowl 1.4.10 (mamba)

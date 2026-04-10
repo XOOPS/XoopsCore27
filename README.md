@@ -15,7 +15,7 @@ For more information on building a web site using XOOPS, visit the main [XOOPS W
 
 ## Awesome contributors:
 
-<a href="https://github.com/xoops/XoopsCore27/graphs/contributors"><img src="https://opencollective.com/XoopsCore/contributors.svg?width=890" /></a>
+<a href="https://github.com/xoops/XoopsCore27/graphs/contributors"><img src="https://opencollective.com/XoopsCore/contributors.svg?width=890" alt="XOOPS Core contributors" /></a>
 
 ## Contributing
 

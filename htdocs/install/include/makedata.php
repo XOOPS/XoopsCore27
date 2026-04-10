@@ -76,6 +76,13 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
             . (int) $definition['active']
             . ')'
         );
+        if (!$categoryId) {
+            trigger_error(
+                sprintf('Failed to seed menu category "%s" during install.', $definition['title']),
+                E_USER_WARNING
+            );
+            return;
+        }
         $categoryIds[$key] = (int) $categoryId;
 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
@@ -102,6 +109,13 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
             . (int) $definition['active']
             . ')'
         );
+        if (!$itemId) {
+            trigger_error(
+                sprintf('Failed to seed menu item "%s" during install.', $definition['title']),
+                E_USER_WARNING
+            );
+            return;
+        }
 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
             $dbm->insert(

@@ -17,6 +17,7 @@ final class SystemMenuInstallationTest extends TestCase
     {
         if (!self::$seedLoaded) {
             require_once XOOPS_ROOT_PATH . '/modules/system/include/menu_seed.php';
+            require_once XOOPS_ROOT_PATH . '/install/include/makedata.php';
             self::$seedLoaded = true;
         }
     }
@@ -113,6 +114,33 @@ final class SystemMenuInstallationTest extends TestCase
     }
 
     #[Test]
+    public function updateScriptNormalizesExistingMenuTableTypesForUpgrades(): void
+    {
+        $source = $this->readSourceFile('modules/system/include/update.php');
+
+        $this->assertStringContainsString(
+            "ALTER TABLE `{\$catTable}` MODIFY `category_id` INT UNSIGNED NOT NULL AUTO_INCREMENT",
+            $source
+        );
+        $this->assertStringContainsString(
+            "ALTER TABLE `{\$itemTable}` MODIFY `items_id` INT UNSIGNED NOT NULL AUTO_INCREMENT",
+            $source
+        );
+        $this->assertStringContainsString(
+            "ALTER TABLE `{\$itemTable}` MODIFY `items_cid` INT UNSIGNED NOT NULL DEFAULT 0",
+            $source
+        );
+        $this->assertStringContainsString(
+            "ALTER TABLE `{\$catTable}` MODIFY `category_target` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0",
+            $source
+        );
+        $this->assertStringContainsString(
+            "ALTER TABLE `{\$itemTable}` MODIFY `items_active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1",
+            $source
+        );
+    }
+
+    #[Test]
     public function installerUsesSharedSeedDefinitionsAndSeedsMenusAfterSystemModuleInsert(): void
     {
         $source = $this->readSourceFile('install/include/makedata.php');
@@ -142,5 +170,117 @@ final class SystemMenuInstallationTest extends TestCase
         $this->assertTrue(function_exists('xoops_module_install_system'));
         $this->assertTrue(function_exists('xoops_module_update_system'));
         $this->assertTrue(function_exists('system_menu_seed_defaults'));
+    }
+
+    #[Test]
+    public function installerSeedingStopsWhenCategoryInsertFails(): void
+    {
+        $dbm = new class {
+            public array $calls = [];
+
+            public function insert($table, $values)
+            {
+                $this->calls[] = $table;
+                if ($table === 'menuscategory') {
+                    return false;
+                }
+
+                return count($this->calls);
+            }
+        };
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = [$errno, $errstr];
+            return true;
+        });
+
+        try {
+            system_menu_install_seed_defaults(
+                $dbm,
+                [
+                    'XOOPS_GROUP_ADMIN' => 1,
+                    'XOOPS_GROUP_USERS' => 2,
+                    'XOOPS_GROUP_ANONYMOUS' => 3,
+                ],
+                1
+            );
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame(['menuscategory'], $dbm->calls);
+        $this->assertCount(1, $warnings);
+        $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        $this->assertStringContainsString('Failed to seed menu category', $warnings[0][1]);
+    }
+
+    #[Test]
+    public function installerSeedsExpectedRowsAndRespectsCategoryBeforeItemOrdering(): void
+    {
+        $dbm = new class {
+            public array $inserts = [];
+            /** @var array<string, int> */
+            private array $ids = [];
+
+            public function insert($table, $values)
+            {
+                $nextId = ($this->ids[$table] ?? 0) + 1;
+                $this->ids[$table] = $nextId;
+                $this->inserts[] = [
+                    'table' => $table,
+                    'values' => $values,
+                    'id' => $nextId,
+                ];
+
+                return $nextId;
+            }
+        };
+
+        system_menu_install_seed_defaults(
+            $dbm,
+            [
+                'XOOPS_GROUP_ADMIN' => 1,
+                'XOOPS_GROUP_USERS' => 2,
+                'XOOPS_GROUP_ANONYMOUS' => 3,
+            ],
+            1
+        );
+
+        $byTable = array_count_values(array_column($dbm->inserts, 'table'));
+        $this->assertSame(3, $byTable['menuscategory'] ?? 0);
+        $this->assertSame(7, $byTable['menusitems'] ?? 0);
+        $this->assertGreaterThan(0, $byTable['group_permission'] ?? 0);
+
+        $categoryInsertIndexes = [];
+        $itemInsertIndexes = [];
+        foreach ($dbm->inserts as $index => $insert) {
+            if ($insert['table'] === 'menuscategory') {
+                $categoryInsertIndexes[] = $index;
+            }
+            if ($insert['table'] === 'menusitems') {
+                $itemInsertIndexes[] = $index;
+            }
+        }
+
+        $this->assertNotEmpty($categoryInsertIndexes);
+        $this->assertNotEmpty($itemInsertIndexes);
+        $this->assertLessThan(
+            min($itemInsertIndexes),
+            max($categoryInsertIndexes),
+            'All menu categories should be inserted before the first menu item'
+        );
+
+        $itemInserts = array_values(array_filter(
+            $dbm->inserts,
+            static fn(array $insert): bool => $insert['table'] === 'menusitems'
+        ));
+        foreach ($itemInserts as $insert) {
+            $this->assertMatchesRegularExpression(
+                "/VALUES \\(0, 2, 'MENUS_ACCOUNT_[A-Z_]+'/",
+                $insert['values'],
+                'Each seeded menu item should reference the inserted Account category id'
+            );
+        }
     }
 }

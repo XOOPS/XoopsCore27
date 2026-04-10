@@ -373,6 +373,10 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
 {
     $catTable = $db->prefix('menuscategory');
     $itemTable = $db->prefix('menusitems');
+    $fkName = $db->prefix('fk_items_category');
+
+    // Drop category FKs before changing signedness on the parent/child key columns.
+    system_menu_drop_parent_foreign_keys($db, 'menuscategory');
 
     // Drop self-referencing FK on items_pid (incompatible with 0-as-root convention)
     $result = $db->query(
@@ -392,6 +396,15 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
     system_menu_exec_or_throw($db, "UPDATE `{$itemTable}` SET `items_pid` = 0 WHERE `items_pid` IS NULL");
     system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_pid` INT NOT NULL DEFAULT 0");
 
+    // Keep fresh-install and upgraded schemas aligned.
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_target` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_cid` INT UNSIGNED NOT NULL DEFAULT 0");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_target` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0");
+    system_menu_exec_or_throw($db, "ALTER TABLE `{$itemTable}` MODIFY `items_active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1");
+
     // Enforce NOT NULL on affix columns
     system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_prefix` TEXT NOT NULL");
     system_menu_exec_or_throw($db, "ALTER TABLE `{$catTable}` MODIFY `category_suffix` TEXT NOT NULL");
@@ -404,6 +417,22 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
         "UPDATE `{$catTable}` SET `category_url` = " . $db->quote('index.php')
         . " WHERE `category_protected` = 1 AND `category_url` = " . $db->quote('/')
     );
+
+    // Restore the category FK after type normalization if it is absent.
+    $fkCheck = $db->query(
+        "SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS"
+        . " WHERE CONSTRAINT_NAME = " . $db->quote($fkName)
+        . " AND TABLE_NAME = " . $db->quote($itemTable)
+        . " AND TABLE_SCHEMA = DATABASE()"
+    );
+    if ($db->isResultSet($fkCheck) && ($fkCheck instanceof \mysqli_result) && 0 === $db->getRowsNum($fkCheck)) {
+        system_menu_exec_or_throw(
+            $db,
+            "ALTER TABLE `{$itemTable}` ADD CONSTRAINT `{$fkName}`"
+            . " FOREIGN KEY (`items_cid`) REFERENCES `{$catTable}` (`category_id`)"
+            . " ON DELETE CASCADE"
+        );
+    }
 }
 
 /**

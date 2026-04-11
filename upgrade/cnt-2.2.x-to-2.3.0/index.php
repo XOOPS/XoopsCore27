@@ -397,11 +397,13 @@ class Upgrade_220 extends XoopsUpgrade
         $block_key = null;
         while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['dirname'] != $dirname) {
-                $dirname    = $row['dirname'];
-                $modversion = [];
-                if (!@include XOOPS_ROOT_PATH . '/modules/' . $dirname . '/xoops_version.php') {
+                $dirname     = $row['dirname'];
+                $modversion  = [];
+                $versionFile = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/xoops_version.php';
+                if (!file_exists($versionFile)) {
                     continue;
                 }
+                include $versionFile;
             }
             if (empty($modversion['blocks']) && $dirname !== 'system') {
                 continue;
@@ -438,11 +440,13 @@ class Upgrade_220 extends XoopsUpgrade
         $block_key = null;
         while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['dirname'] != $dirname) {
-                $dirname    = $row['dirname'];
-                $modversion = [];
-                if (!@include XOOPS_ROOT_PATH . '/modules/' . $dirname . '/xoops_version.php') {
+                $dirname     = $row['dirname'];
+                $modversion  = [];
+                $versionFile = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/xoops_version.php';
+                if (!file_exists($versionFile)) {
                     continue;
                 }
+                include $versionFile;
             }
             if (empty($modversion['blocks']) && $dirname !== 'system') {
                 continue;

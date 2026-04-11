@@ -169,16 +169,7 @@ class Upgrade_270 extends XoopsUpgrade
             KEY `idx_issued_at` (`issued_at`)
         ) ENGINE=InnoDB;";
 
-        $result = $this->db->exec($sql);
-        if (!$result) {
-            $this->logs[] = sprintf(
-                'Failed to create tokens table. Error: %s - %s',
-                $this->db->errno(),
-                $this->db->error()
-            );
-            return false;
-        }
-        return true;
+        return $this->execOrFail($sql);
     }
 
     // =========================================================================
@@ -212,18 +203,10 @@ class Upgrade_270 extends XoopsUpgrade
      */
     public function apply_widenbannerclientpasswd(): bool
     {
-        $table  = $this->db->prefix('bannerclient');
-        $sql    = "ALTER TABLE `{$table}` MODIFY `passwd` varchar(255) NOT NULL DEFAULT ''";
-        $result = $this->db->exec($sql);
-        if (!$result) {
-            $this->logs[] = sprintf(
-                'Failed to widen bannerclient.passwd column. Error: %s - %s',
-                $this->db->errno(),
-                $this->db->error()
-            );
-            return false;
-        }
-        return true;
+        $table = $this->db->prefix('bannerclient');
+        $sql   = "ALTER TABLE `{$table}` MODIFY `passwd` varchar(255) NOT NULL DEFAULT ''";
+
+        return $this->execOrFail($sql);
     }
 
     // =========================================================================
@@ -280,45 +263,47 @@ class Upgrade_270 extends XoopsUpgrade
             : false;
 
         if (!$sameSiteRow) {
-            if (!$this->db->exec("INSERT INTO `{$configTable}` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) VALUES (0, 1, 'session_cookie_samesite', '_MD_AM_SESSSAMESITE', 'Lax', '_MD_AM_SESSSAMESITE_DSC', 'select', 'text', 43)")) {
-                $this->logs[] = 'Failed to insert session_cookie_samesite config: ' . $this->db->error();
+            $sql = "INSERT INTO `{$configTable}` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) VALUES (0, 1, 'session_cookie_samesite', '_MD_AM_SESSSAMESITE', 'Lax', '_MD_AM_SESSSAMESITE_DSC', 'select', 'text', 43)";
+            if (!$this->execOrFail($sql)) {
                 return false;
             }
             // Re-fetch the conf_id
+            $sql    = "SELECT conf_id FROM `{$configTable}` WHERE conf_name = 'session_cookie_samesite' AND conf_modid = 0";
             $result = $this->db->query($sql);
-            $sameSiteRow = ($this->db->isResultSet($result) && ($result instanceof \mysqli_result))
-                ? $this->db->fetchRow($result)
-                : false;
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+                return false;
+            }
+            $sameSiteRow = $this->db->fetchRow($result);
             if (!$sameSiteRow) {
                 $this->logs[] = 'Failed to retrieve session_cookie_samesite conf_id after insert';
+
                 return false;
             }
         }
 
         // Insert Secure preference (skip if exists)
-        $sql = "SELECT conf_id FROM `{$configTable}` WHERE conf_name = 'session_cookie_secure' AND conf_modid = 0";
+        $sql    = "SELECT conf_id FROM `{$configTable}` WHERE conf_name = 'session_cookie_secure' AND conf_modid = 0";
         $result = $this->db->query($sql);
         $secureRow = ($this->db->isResultSet($result) && ($result instanceof \mysqli_result))
             ? $this->db->fetchRow($result)
             : false;
 
         if (!$secureRow) {
-            if (!$this->db->exec("INSERT INTO `{$configTable}` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) VALUES (0, 1, 'session_cookie_secure', '_MD_AM_SESSSECURE', '0', '_MD_AM_SESSSECURE_DSC', 'yesno', 'int', 44)")) {
-                $this->logs[] = 'Failed to insert session_cookie_secure config: ' . $this->db->error();
+            $sql = "INSERT INTO `{$configTable}` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) VALUES (0, 1, 'session_cookie_secure', '_MD_AM_SESSSECURE', '0', '_MD_AM_SESSSECURE_DSC', 'yesno', 'int', 44)";
+            if (!$this->execOrFail($sql)) {
                 return false;
             }
         }
 
         // Add select options for SameSite — delete and recreate to avoid duplicates
         $confId = (int) $sameSiteRow[0];
-        if (!$this->db->exec("DELETE FROM `{$optionTable}` WHERE conf_id = {$confId}")) {
-            $this->logs[] = 'Failed to purge SameSite options: ' . $this->db->error();
-
+        if (!$this->execOrFail("DELETE FROM `{$optionTable}` WHERE conf_id = {$confId}")) {
             return false;
         }
         foreach (['Lax', 'Strict', 'None'] as $opt) {
-            if (!$this->db->exec("INSERT INTO `{$optionTable}` (confop_name, confop_value, conf_id) VALUES ('{$opt}', '{$opt}', {$confId})")) {
-                $this->logs[] = "Failed to insert SameSite option '{$opt}': " . $this->db->error();
+            if (!$this->execOrFail("INSERT INTO `{$optionTable}` (confop_name, confop_value, conf_id) VALUES ('{$opt}', '{$opt}', {$confId})")) {
                 return false;
             }
         }
@@ -384,29 +369,16 @@ class Upgrade_270 extends XoopsUpgrade
     {
         // Step 1: Widen the FK child column first
         $optionTable = $this->db->prefix('configoption');
-        $sql = "ALTER TABLE `{$optionTable}` MODIFY `conf_id` int(10) unsigned NOT NULL DEFAULT 0";
-        if (!$this->db->exec($sql)) {
-            $this->logs[] = sprintf(
-                'Failed to widen configoption.conf_id. Error: %s - %s',
-                $this->db->errno(),
-                $this->db->error()
-            );
+        $sql         = "ALTER TABLE `{$optionTable}` MODIFY `conf_id` int(10) unsigned NOT NULL DEFAULT 0";
+        if (!$this->execOrFail($sql)) {
             return false;
         }
 
         // Step 2: Widen the PK parent column
         $configTable = $this->db->prefix('config');
-        $sql = "ALTER TABLE `{$configTable}` MODIFY `conf_id` int(10) unsigned NOT NULL AUTO_INCREMENT";
-        if (!$this->db->exec($sql)) {
-            $this->logs[] = sprintf(
-                'Failed to widen config.conf_id. Error: %s - %s',
-                $this->db->errno(),
-                $this->db->error()
-            );
-            return false;
-        }
+        $sql         = "ALTER TABLE `{$configTable}` MODIFY `conf_id` int(10) unsigned NOT NULL AUTO_INCREMENT";
 
-        return true;
+        return $this->execOrFail($sql);
     }
 
     // =========================================================================
@@ -442,15 +414,8 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('image');
         $sql   = "ALTER TABLE `{$table}` MODIFY `image_name` varchar(191) NOT NULL DEFAULT ''";
-        if (!$this->db->exec($sql)) {
-            $this->logs[] = sprintf(
-                'Failed to widen image.image_name column. Error: %s - %s',
-                $this->db->errno(),
-                $this->db->error()
-            );
-            return false;
-        }
-        return true;
+
+        return $this->execOrFail($sql);
     }
 
     // =========================================================================
@@ -762,6 +727,17 @@ class Upgrade_270 extends XoopsUpgrade
             },
             $message
         );
+    }
+
+    private function execOrFail(string $sql): bool
+    {
+        if ($this->db->exec($sql)) {
+            return true;
+        }
+
+        $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+        return false;
     }
 }
 

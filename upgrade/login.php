@@ -49,7 +49,10 @@ if ('' === $uname || '' === $pass) {
     $member_handler = xoops_getHandler('member');
 
     include_once XOOPS_ROOT_PATH . '/class/auth/authfactory.php';
-    if (!@include_once XOOPS_ROOT_PATH . '/language/' . $upgrade_language . '/auth.php') {
+    $authFile = XOOPS_ROOT_PATH . '/language/' . $upgrade_language . '/auth.php';
+    if (file_exists($authFile)) {
+        include_once $authFile;
+    } else {
         include_once XOOPS_ROOT_PATH . '/language/english/auth.php';
     }
     $xoopsAuth = XoopsAuthFactory::getAuthConnection($uname);

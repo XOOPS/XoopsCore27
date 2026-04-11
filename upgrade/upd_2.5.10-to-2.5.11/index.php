@@ -710,7 +710,11 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $this->db->fetchRow($result);
+        $row = $this->db->fetchRow($result);
+        if (!$row) {
+            return false;
+        }
+        $count = (int) $row[0];
 
         return (0 != $count);
     }
@@ -722,7 +726,11 @@ class Upgrade_2511 extends XoopsUpgrade
     public function apply_templates(): bool
     {
         $modversion = [];
-        include_once XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
+        $versionFile = XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
+        if (!file_exists($versionFile)) {
+            return false;
+        }
+        include $versionFile;
 
         $dbm = new Db_manager();
         $time = time();
@@ -763,7 +771,11 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $this->db->fetchRow($result);
+        $row = $this->db->fetchRow($result);
+        if (!$row) {
+            return false;
+        }
+        $count = (int) $row[0];
 
         return (0 != $count);
     }
@@ -773,7 +785,10 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_templatesadmin(): bool
     {
-        include XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
+        $modversion = [];
+        if (!include XOOPS_ROOT_PATH . '/modules/system/xoops_version.php') {
+            return false;
+        }
         $dbm  = new Db_manager();
         $time = time();
         foreach ($modversion['templates'] as $tplfile) {
@@ -908,7 +923,11 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $this->db->fetchRow($result);
+        $row = $this->db->fetchRow($result);
+        if (!$row) {
+            return false;
+        }
+        $count = (int) $row[0];
 
         return ($count > 0);
     }
@@ -918,12 +937,12 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_notificationmethod(): bool
     {
-        $returnResult = true;
         $notification_method = false;
-        $sql                   = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
-        $result = $this->db->query($sql);
-        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
-            [$count] = $this->db->fetchRow($result);
+        $sql                 = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
+        $result              = $this->db->query($sql);
+        $row = $this->db->fetchRow($result);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result) && $row) {
+            $count = (int) $row[0];
             if (1 == $count) {
                 $notification_method = true;
             }
@@ -932,7 +951,7 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!$notification_method) {
             $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'default_notification', '_MD_AM_DEFAULT_NOTIFICATION_METHOD', '1', '_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'select', 'int', 3)";
 
-            if (!$this->db->exec($sql)) {
+            if (!$this->execOrFail($sql)) {
                 return false;
             }
             $config_id = $this->db->getInsertId();
@@ -941,15 +960,23 @@ class Upgrade_2511 extends XoopsUpgrade
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE', '0', {$config_id}),"
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_PM', '1', {$config_id}),"
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL', '2', {$config_id})";
-            if (!$result = $this->db->exec($sql)) {
-                return false;
-            }
+
+            return $this->execOrFail($sql);
         }
 
-        return $returnResult;
+        return true;
     }
 
+    private function execOrFail(string $sql): bool
+    {
+        if ($this->db->exec($sql)) {
+            return true;
+        }
 
+        $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+        return false;
+    }
 }
 
 return Upgrade_2511::class;

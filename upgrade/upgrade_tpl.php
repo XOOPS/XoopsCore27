@@ -37,7 +37,7 @@ defined('XOOPS_ROOT_PATH') or die();
     <?php
 if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
     echo '<link rel="stylesheet" type="text/css" media="all" href="language/'
-        . $viewModel['upgradeLanguage'] . '/style.css" />';
+        . htmlspecialchars((string) $viewModel['upgradeLanguage'], ENT_QUOTES, 'UTF-8') . '/style.css" />';
 }
 ?>
 

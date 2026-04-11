@@ -91,7 +91,7 @@ class Upgrade_220 extends XoopsUpgrade
      */
     public function apply(): bool
     {
-        if (empty($_GET['upd220'])) {
+        if (0 === \Xmf\Request::getInt('upd220', 0, 'GET')) {
             $this->logs[] = _CONFIRM_UPGRADE_220;
             $res          = false;
         } else {
@@ -278,20 +278,32 @@ class Upgrade_220 extends XoopsUpgrade
      */
     public function apply_block(): bool
     {
-        $this->db->exec('UPDATE ' . $this->db->prefix('block_module_link') . ' SET module_id = -1, pageid = 0 WHERE module_id < 2 AND pageid = 1');
+        if (!$this->execOrFail('UPDATE ' . $this->db->prefix('block_module_link') . ' SET module_id = -1, pageid = 0 WHERE module_id < 2 AND pageid = 1')) {
+            return false;
+        }
 
         //Change block module link to remove pages
         //Remove page links for module subpages
-        $this->db->exec('DELETE FROM ' . $this->db->prefix('block_module_link') . ' WHERE pageid > 0');
+        if (!$this->execOrFail('DELETE FROM ' . $this->db->prefix('block_module_link') . ' WHERE pageid > 0')) {
+            return false;
+        }
 
         $sql = 'ALTER TABLE `' . $this->db->prefix('block_module_link') . '` DROP PRIMARY KEY';
-        $this->db->exec($sql);
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
         $sql = 'ALTER TABLE `' . $this->db->prefix('block_module_link') . '` DROP pageid';
-        $this->db->exec($sql);
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
         $sql = 'ALTER IGNORE TABLE `' . $this->db->prefix('block_module_link') . '` ADD PRIMARY KEY (`block_id` , `module_id`)';
-        $this->db->exec($sql);
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
 
-        $this->db->exec('RENAME TABLE `' . $this->db->prefix('newblocks') . '` TO `' . $this->db->prefix('newblocks_bak') . '`');
+        if (!$this->execOrFail('RENAME TABLE `' . $this->db->prefix('newblocks') . '` TO `' . $this->db->prefix('newblocks_bak') . '`')) {
+            return false;
+        }
 
         // Create new block table
         $sql = 'CREATE TABLE ' . $this->db->prefix('newblocks') . " (
@@ -322,7 +334,9 @@ class Upgrade_220 extends XoopsUpgrade
               KEY mid_funcnum (mid,func_num)
             ) TYPE=MyISAM;
             ";
-        $this->db->exec($sql);
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
 
         $sql    = '   SELECT MAX(instanceid) FROM ' . $this->db->prefix('block_instance');
         $result = $this->db->query($sql);
@@ -337,7 +351,9 @@ class Upgrade_220 extends XoopsUpgrade
 
         // Change custom block mid from 1 to 0
         $sql    = 'UPDATE `' . $this->db->prefix('newblocks_bak') . "` SET mid = 0 WHERE show_func = 'b_system_custom_show'";
-        $result = $this->db->exec($sql);
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
 
         $sql       = '   SELECT b.*, i.instanceid ' . '   FROM ' . $this->db->prefix('block_instance') . ' AS i LEFT JOIN ' . $this->db->prefix('newblocks_bak') . ' AS b ON b.bid = i.bid ' . '   GROUP BY b.dirname, b.bid, i.instanceid';
         $result = $this->db->query($sql);
@@ -375,7 +391,9 @@ class Upgrade_220 extends XoopsUpgrade
 
             // Copy data from block instance table and blocks table
             $sql = '    INSERT INTO ' . $this->db->prefix('newblocks') . '        (bid, mid, options, name, title, side, weight, visible, ' . '            func_num, ' . '            block_type, ' . '           c_type, ' . '            isactive, dirname, func_file,' . '            show_func, edit_func, template, bcachetime, last_modified)' . '    SELECT ' . '        i.instanceid, c.mid, i.options, c.name, i.title, i.side, i.weight, i.visible, ' . "        {$block_key}, " . ($isClone ? " CASE WHEN c.show_func='b_system_custom_show' THEN 'C' ELSE 'D' END," : " CASE WHEN c.show_func='b_system_custom_show' THEN 'C' WHEN c.mid = 1 THEN 'S' ELSE 'M' END,") . "        CASE WHEN c.c_type='' THEN 'H' ELSE c.c_type END," . '        c.isactive, c.dirname, c.func_file,' . '        c.show_func, c.edit_func, c.template, i.bcachetime, c.last_modified' . '    FROM ' . $this->db->prefix('block_instance') . ' AS i,' . '        ' . $this->db->prefix('newblocks_bak') . ' AS c' . '    WHERE i.bid = c.bid' . '        AND i.instanceid = ' . $row['instanceid'];
-            $this->db->exec($sql);
+            if (!$this->execOrFail($sql)) {
+                return false;
+            }
         }
 
         $sql = '   SELECT b.* ' . '   FROM ' . $this->db->prefix('newblocks_bak') . ' AS b LEFT JOIN ' . $this->db->prefix('block_instance') . ' AS i ON b.bid = i.bid ' . '   WHERE i.instanceid IS NULL';
@@ -413,16 +431,24 @@ class Upgrade_220 extends XoopsUpgrade
 
             // Copy data from blocks table
             $sql = '    INSERT INTO ' . $this->db->prefix('newblocks') . '        (bid, mid, options, name, title, side, weight, visible, ' . '            func_num, ' . '            block_type, ' . '           c_type, ' . '            isactive, dirname, func_file,' . '            show_func, edit_func, template, bcachetime, last_modified)' . '    SELECT ' . "        bid + {$MaxInstanceId}, mid, options, name, name, 0, 0, 0, " . "        {$block_key}, " . "        CASE WHEN show_func='b_system_custom_show' THEN 'C' WHEN mid = 1 THEN 'S' ELSE 'M' END," . "        CASE WHEN c_type='' THEN 'H' ELSE c_type END," . '        isactive, dirname, func_file,' . '        show_func, edit_func, template, 0, last_modified' . '    FROM ' . $this->db->prefix('newblocks_bak') . '    WHERE bid = ' . $row['bid'];
-            $this->db->exec($sql);
+            if (!$this->execOrFail($sql)) {
+                return false;
+            }
 
             // Build block-module link
             $sql = '    INSERT INTO ' . $this->db->prefix('block_module_link') . '        (block_id, module_id)' . '    SELECT ' . "        bid + {$MaxInstanceId}, -1" . '    FROM ' . $this->db->prefix('newblocks_bak') . '    WHERE bid = ' . $row['bid'];
-            $this->db->exec($sql);
+            if (!$this->execOrFail($sql)) {
+                return false;
+            }
         }
 
         // Dealing with tables
-        $this->db->exec('DROP TABLE `' . $this->db->prefix('block_instance') . '`;');
-        $this->db->exec('DROP TABLE `' . $this->db->prefix('newblocks_bak') . '`;');
+        if (!$this->execOrFail('DROP TABLE `' . $this->db->prefix('block_instance') . '`;')) {
+            return false;
+        }
+        if (!$this->execOrFail('DROP TABLE `' . $this->db->prefix('newblocks_bak') . '`;')) {
+            return false;
+        }
 
         // Deal with custom blocks, convert options to type and content
         $sql    = 'SELECT bid, options FROM `' . $this->db->prefix('newblocks') . "` WHERE show_func='b_system_custom_show'";
@@ -437,12 +463,16 @@ class Upgrade_220 extends XoopsUpgrade
             $_options = unserialize($options, ['allowed_classes' => false]);
             $content  = $_options[0];
             $type     = $_options[1];
-            $this->db->exec('UPDATE `' . $this->db->prefix('newblocks') . "` SET c_type = '{$type}', options = '', content = " . $this->db->quote($content) . " WHERE bid = {$bid}");
+            if (!$this->execOrFail('UPDATE `' . $this->db->prefix('newblocks') . "` SET c_type = '{$type}', options = '', content = " . $this->db->quote($content) . " WHERE bid = {$bid}")) {
+                return false;
+            }
         }
 
         // Deal with block options, convert array values to "," and "|" delimited
         $sql    = 'UPDATE `' . $this->db->prefix('newblocks') . "` SET options = '' WHERE show_func <> 'b_system_custom_show' AND ( options = 'a:1:{i:0;s:0:\"\";}' OR options = 'a:0:{}' )";
-        $result = $this->db->exec($sql);
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
         $sql    = 'SELECT bid, options FROM `' . $this->db->prefix('newblocks') . "` WHERE show_func <> 'b_system_custom_show' AND options <> ''";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
@@ -465,10 +495,23 @@ class Upgrade_220 extends XoopsUpgrade
             }
             $options = implode('|', $options);
             $sql     = 'UPDATE `' . $this->db->prefix('newblocks') . '` SET options = ' . $this->db->quote($options) . " WHERE bid = {$bid}";
-            $this->db->exec($sql);
+            if (!$this->execOrFail($sql)) {
+                return false;
+            }
         }
 
         return true;
+    }
+
+    private function execOrFail(string $sql): bool
+    {
+        if ($this->db->exec($sql)) {
+            return true;
+        }
+
+        $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+        return false;
     }
 }
 

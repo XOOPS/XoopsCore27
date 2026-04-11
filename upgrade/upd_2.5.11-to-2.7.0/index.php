@@ -21,7 +21,7 @@ use Xoops\Upgrade\UpgradeControl;
  *
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license          GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
- * @since            2.5.11
+ * @since            2.7.0
  * @author           XOOPS Team
  */
 class Upgrade_270 extends XoopsUpgrade
@@ -500,12 +500,12 @@ class Upgrade_270 extends XoopsUpgrade
             $path = $basePath . $item;
             if (is_dir($path)) {
                 if (!self::deleteFolder($path)) {
-                    $this->logs[] = sprintf('Failed to delete directory: %s', $path);
+                    $this->logs[] = sprintf('Failed to delete directory: %s', $this->relativePath($path));
                     $success = false;
                 }
             } elseif (is_file($path)) {
                 if (!unlink($path)) {
-                    $this->logs[] = sprintf('Failed to delete file: %s', $path);
+                    $this->logs[] = sprintf('Failed to delete file: %s', $this->relativePath($path));
                     $success = false;
                 }
             }
@@ -517,12 +517,12 @@ class Upgrade_270 extends XoopsUpgrade
             $path = $vendorPath . $item;
             if (is_dir($path)) {
                 if (!self::deleteFolder($path)) {
-                    $this->logs[] = sprintf('Failed to delete vendor directory: %s', $path);
+                    $this->logs[] = sprintf('Failed to delete vendor directory: %s', $this->relativePath($path));
                     $success = false;
                 }
             } elseif (is_file($path)) {
                 if (!unlink($path)) {
-                    $this->logs[] = sprintf('Failed to delete vendor file: %s', $path);
+                    $this->logs[] = sprintf('Failed to delete vendor file: %s', $this->relativePath($path));
                     $success = false;
                 }
             }
@@ -557,7 +557,7 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $path = XOOPS_ROOT_PATH . '/class/xoopseditor/tinymce5/tinymce5/';
         if (!self::deleteFolder($path)) {
-            $this->logs[] = sprintf('Failed to delete nested tinymce5 directory: %s', $path);
+            $this->logs[] = sprintf('Failed to delete nested tinymce5 directory: %s', $this->relativePath($path));
             return false;
         }
         return true;
@@ -589,7 +589,7 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $path = XOOPS_ROOT_PATH . '/class/textsanitizer/flash/';
         if (!self::deleteFolder($path)) {
-            $this->logs[] = sprintf('Failed to delete Flash sanitizer directory: %s', $path);
+            $this->logs[] = sprintf('Failed to delete Flash sanitizer directory: %s', $this->relativePath($path));
             return false;
         }
         return true;
@@ -621,12 +621,18 @@ class Upgrade_270 extends XoopsUpgrade
     public function apply_cleancache(): bool
     {
         require_once XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
-        $maintenance = new \SystemMaintenance();
-        $result = $maintenance->CleanCache([1, 2, 3]);
-        if (true === $result) {
-            $_SESSION[$this->cleanCacheKey] = true;
+        try {
+            $maintenance = new \SystemMaintenance();
+            $result = $maintenance->CleanCache([1, 2, 3]);
+            if (true === $result) {
+                $_SESSION[$this->cleanCacheKey] = true;
+            }
+            return $result;
+        } catch (\Throwable $e) {
+            $this->logs[] = 'Failed to clean cache: ' . $e->getMessage();
+
+            return false;
         }
-        return $result;
     }
 
     // =========================================================================
@@ -667,6 +673,22 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         return rmdir($folderPath);
+    }
+
+    private function relativePath(string $path): string
+    {
+        $rootWithSeparator = rtrim(XOOPS_ROOT_PATH, '\\/') . DIRECTORY_SEPARATOR;
+        $trustWithSeparator = rtrim(XOOPS_TRUST_PATH, '\\/') . DIRECTORY_SEPARATOR;
+
+        if (str_starts_with($path, $rootWithSeparator)) {
+            return str_replace('\\', '/', substr($path, strlen($rootWithSeparator)));
+        }
+
+        if (str_starts_with($path, $trustWithSeparator)) {
+            return 'xoops_trust_path/' . str_replace('\\', '/', substr($path, strlen($trustWithSeparator)));
+        }
+
+        return basename($path);
     }
 }
 

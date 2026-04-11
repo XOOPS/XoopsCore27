@@ -47,7 +47,6 @@ class Upgrade_241 extends XoopsUpgrade
     public function apply_license(): bool|string
     {
         set_time_limit(120);
-        chmod('../include/license.php', 0644);
         if (!is_writable('../include/license.php')) {
             echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php - is not writeable</span> - Windows Read Only (Off) / UNIX chmod 0644</p>";
 
@@ -71,9 +70,14 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_upgradeLicenseKey($public_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        chmod($licensefile, 0644);
         $fver        = fopen($licensefile, 'w');
         $fver_buf    = file($license_file_dist);
+        if (false === $fver || false === $fver_buf) {
+            if (false !== $fver) {
+                fclose($fver);
+            }
+            return false;
+        }
         $license_key = $public_key . substr(XOOPS_LICENSE_KEY, 13, strlen(XOOPS_LICENSE_KEY) - 13);
         foreach ($fver_buf as $line => $value) {
             if (strpos($value, 'XOOPS_LICENSE_KEY') > 0) {
@@ -81,7 +85,10 @@ class Upgrade_241 extends XoopsUpgrade
             } else {
                 $ret = $value;
             }
-            fwrite($fver, $ret, strlen($ret));
+            if (false === fwrite($fver, $ret, strlen($ret))) {
+                fclose($fver);
+                return false;
+            }
         }
         fclose($fver);
         chmod($licensefile, 0444);
@@ -95,16 +102,24 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_putLicenseKey($system_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        chmod($licensefile, 0644);
         $fver     = fopen($licensefile, 'w');
         $fver_buf = file($license_file_dist);
+        if (false === $fver || false === $fver_buf) {
+            if (false !== $fver) {
+                fclose($fver);
+            }
+            return false;
+        }
         foreach ($fver_buf as $line => $value) {
             if (strpos($value, 'XOOPS_LICENSE_KEY') > 0) {
                 $ret = 'define(\'XOOPS_LICENSE_KEY\', \'' . $system_key . "');";
             } else {
                 $ret = $value;
             }
-            fwrite($fver, $ret, strlen($ret));
+            if (false === fwrite($fver, $ret, strlen($ret))) {
+                fclose($fver);
+                return false;
+            }
         }
         fclose($fver);
         chmod($licensefile, 0444);

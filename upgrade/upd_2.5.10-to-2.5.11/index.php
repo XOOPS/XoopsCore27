@@ -16,6 +16,8 @@ use Xoops\Upgrade\UpgradeControl;
 
 class Upgrade_2511 extends XoopsUpgrade
 {
+    private string $mailMethodConfigName = 'mailmethod';
+
     /**
      * __construct
      *
@@ -170,11 +172,16 @@ class Upgrade_2511 extends XoopsUpgrade
     public function check_qmail(): bool
     {
         $table = $this->db->prefix('configoption');
+        $confId = $this->getMailerMethodConfigId();
+        if (null === $confId) {
+            return false;
+        }
 
         $sql = sprintf(
             'SELECT count(*) FROM `%s` '
-            . "WHERE `conf_id` = 64 AND `confop_name` = 'qmail'",
+            . "WHERE `conf_id` = %d AND `confop_name` = 'qmail'",
             $this->db->escape($table),
+            $confId,
         );
 
         /** @var mysqli_result $result */
@@ -199,13 +206,38 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_qmail(): bool
     {
+        $confId = $this->getMailerMethodConfigId();
+        if (null === $confId) {
+            $this->logs[] = 'Unable to locate the mailmethod configuration row for qmail option insertion.';
+
+            return false;
+        }
+
         $migrate = new Tables();
         $migrate->useTable('configoption');
         $migrate->insert(
             'configoption',
-            ['confop_name' => 'qmail', 'confop_value' => 'qmail', 'conf_id' => 64],
+            ['confop_name' => 'qmail', 'confop_value' => 'qmail', 'conf_id' => $confId],
         );
         return $migrate->executeQueue(true);
+    }
+
+    private function getMailerMethodConfigId(): ?int
+    {
+        $table = $this->db->prefix('config');
+        $sql = sprintf(
+            'SELECT `conf_id` FROM `%s` WHERE `conf_name` = %s LIMIT 1',
+            $this->db->escape($table),
+            $this->db->quote($this->mailMethodConfigName),
+        );
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+
+        $row = $this->db->fetchRow($result);
+
+        return $row ? (int) $row[0] : null;
     }
 
     /**
@@ -802,10 +834,20 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!is_dir($folderPath)) {
             return true;
         }
-        $files = array_diff(scandir($folderPath), ['.', '..']);
+
+        $scanned = scandir($folderPath);
+        if (false === $scanned) {
+            return false;
+        }
+
+        $files = array_diff($scanned, ['.', '..']);
         foreach ($files as $file) {
             $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
-            if (is_dir($filePath)) {
+            if (is_link($filePath)) {
+                if (!unlink($filePath)) {
+                    return false;
+                }
+            } elseif (is_dir($filePath)) {
                 if (!self::deleteFolder($filePath)) {
                     return false;
                 }

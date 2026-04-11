@@ -21,11 +21,15 @@ class Upgrade_2016 extends XoopsUpgrade
     /**
      * @param string $sql
      */
-    protected function query(string $sql): void
+    protected function query(string $sql): bool
     {
-        if (!$this->db->exec($sql)) {
-            $this->logs[] = $this->db->error();
+        if ($this->db->exec($sql)) {
+            return true;
         }
+
+        $this->logs[] = $this->db->error();
+
+        return false;
     }
 
     /**
@@ -40,7 +44,14 @@ class Upgrade_2016 extends XoopsUpgrade
         ];
         foreach ($data as $name => $values) {
             if (!$this->getDbValue('config', 'conf_id', "`conf_modid`=0 AND `conf_catid`=7 AND `conf_name`='$name'")) {
-                $this->query("INSERT INTO `$table` (conf_modid,conf_catid,conf_name,conf_title,conf_value,conf_desc,conf_formtype,conf_valuetype,conf_order) " . "VALUES ( 0,7,'$name',$values)");
+                if (
+                    !$this->query(
+                        "INSERT INTO `$table` (conf_modid,conf_catid,conf_name,conf_title,conf_value,conf_desc,conf_formtype,conf_valuetype,conf_order) "
+                        . "VALUES ( 0,7,'$name',$values)"
+                    )
+                ) {
+                    return false;
+                }
             }
         }
 

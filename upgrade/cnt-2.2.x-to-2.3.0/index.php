@@ -362,7 +362,7 @@ class Upgrade_220 extends XoopsUpgrade
               KEY visible (visible),
               KEY isactive_visible_mid (isactive,visible,mid),
               KEY mid_funcnum (mid,func_num)
-            ) TYPE=MyISAM;
+            ) ENGINE=MyISAM;
             ";
         if (!$this->execOrFail($sql)) {
             return false;

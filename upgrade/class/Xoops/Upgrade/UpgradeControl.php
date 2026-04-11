@@ -41,7 +41,7 @@ class UpgradeControl
     /** @var bool $needUpgrade true if at least one patch has not been applied */
     public bool $needUpgrade = false;
 
-    /** @var array<string, string> $supportSites support site URLs pulled from language files */
+    /** @var array<string, array{url: string, title: string}> $supportSites support site metadata pulled from language files */
     public array $supportSites = [];
 
     /** @var bool $needMainfileRewrite true if mainfile.php must be rewritten */

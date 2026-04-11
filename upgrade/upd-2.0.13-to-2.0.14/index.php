@@ -79,7 +79,7 @@ class Upgrade_2014 extends XoopsUpgrade
 
                     return false;
                 } else {
-                    $newline = defined(PHP_EOL) ? PHP_EOL : (strpos(php_uname(), 'Windows') ? "\r\n" : "\n");
+                    $newline = PHP_EOL;
                     $prepend = implode('', array_slice($lines, 0, $insert));
                     $append  = implode('', array_slice($lines, $insert));
 
@@ -109,11 +109,15 @@ class Upgrade_2014 extends XoopsUpgrade
     /**
      * @param string $sql
      */
-    protected function query(string $sql): void
+    protected function query(string $sql): bool
     {
-        if (!$this->db->exec($sql)) {
-            $this->logs[] = $this->db->error();
+        if ($this->db->exec($sql)) {
+            return true;
         }
+
+        $this->logs[] = $this->db->error();
+
+        return false;
     }
 
     /**
@@ -124,13 +128,19 @@ class Upgrade_2014 extends XoopsUpgrade
         $cat = $this->getDbValue('configcategory', 'confcat_id', "`confcat_name` ='_MD_AM_AUTHENTICATION'");
         if ($cat !== false && $cat != XOOPS_CONF_AUTH) {
             // 2.2 downgrade bug: LDAP cat is here but has a catid of 0
-            $this->db->exec('DELETE FROM ' . $this->db->prefix('configcategory') . " WHERE `confcat_name` ='_MD_AM_AUTHENTICATION' ");
-            $this->db->exec('DELETE FROM ' . $this->db->prefix('config') . " WHERE `conf_modid`=0 AND `conf_catid` = $cat");
+            if (
+                !$this->query('DELETE FROM ' . $this->db->prefix('configcategory') . " WHERE `confcat_name` ='_MD_AM_AUTHENTICATION' ")
+                || !$this->query('DELETE FROM ' . $this->db->prefix('config') . " WHERE `conf_modid`=0 AND `conf_catid` = $cat")
+            ) {
+                return false;
+            }
             $cat = false;
         }
         if (empty($cat)) {
             // Insert config category ( always XOOPS_CONF_AUTH = 7 )
-            $this->db->exec(' INSERT INTO ' . $this->db->prefix('configcategory') . " (confcat_id,confcat_name) VALUES (7,'_MD_AM_AUTHENTICATION')");
+            if (!$this->query(' INSERT INTO ' . $this->db->prefix('configcategory') . " (confcat_id,confcat_name) VALUES (7,'_MD_AM_AUTHENTICATION')")) {
+                return false;
+            }
         }
         // Insert config values
         $table = $this->db->prefix('config');
@@ -154,20 +164,36 @@ class Upgrade_2014 extends XoopsUpgrade
         ];
         foreach ($data as $name => $values) {
             if (!$this->getDbValue('config', 'conf_id', "`conf_modid`=0 AND `conf_catid`=7 AND `conf_name`='$name'")) {
-                $this->query("INSERT INTO `$table` (conf_modid,conf_catid,conf_name,conf_title,conf_value,conf_desc,conf_formtype,conf_valuetype,conf_order) " . "VALUES ( 0,7,'$name',$values)");
+                if (
+                    !$this->query(
+                        "INSERT INTO `$table` (conf_modid,conf_catid,conf_name,conf_title,conf_value,conf_desc,conf_formtype,conf_valuetype,conf_order) "
+                        . "VALUES ( 0,7,'$name',$values)"
+                    )
+                ) {
+                    return false;
+                }
             }
         }
         // Insert auth_method config options
         $id    = $this->getDbValue('config', 'conf_id', "`conf_modid`=0 AND `conf_catid`=7 AND `conf_name`='auth_method'");
+        if (false === $id) {
+            $this->logs[] = 'Unable to locate auth_method configuration row.';
+
+            return false;
+        }
         $table = $this->db->prefix('configoption');
         $data  = [
             '_MD_AM_AUTH_CONFOPTION_XOOPS' => 'xoops',
             '_MD_AM_AUTH_CONFOPTION_LDAP'  => 'ldap',
             '_MD_AM_AUTH_CONFOPTION_AD'    => 'ad',
         ];
-        $this->query("DELETE FROM `$table` WHERE `conf_id`=$id");
+        if (!$this->query("DELETE FROM `$table` WHERE `conf_id`=$id")) {
+            return false;
+        }
         foreach ($data as $name => $value) {
-            $this->query("INSERT INTO `$table` (confop_name, confop_value, conf_id) VALUES ('$name', '$value', $id)");
+            if (!$this->query("INSERT INTO `$table` (confop_name, confop_value, conf_id) VALUES ('$name', '$value', $id)")) {
+                return false;
+            }
         }
 
         return true;

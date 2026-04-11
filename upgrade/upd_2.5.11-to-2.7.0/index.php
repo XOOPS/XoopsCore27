@@ -1,5 +1,15 @@
 <?php
 
+/*
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ */
+
 use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;
 
@@ -480,7 +490,21 @@ class Upgrade_270 extends XoopsUpgrade
      */
     public function check_cleanuplibraries(): bool
     {
-        return !file_exists(XOOPS_ROOT_PATH . '/class/libraries/README.md');
+        $basePath = XOOPS_ROOT_PATH . '/class/libraries/';
+        foreach ($this->librariesTopLevel as $item) {
+            if (file_exists($basePath . $item)) {
+                return false;
+            }
+        }
+
+        $vendorPath = $basePath . 'vendor/';
+        foreach ($this->librariesObsoleteVendors as $item) {
+            if (file_exists($vendorPath . $item)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -662,7 +686,11 @@ class Upgrade_270 extends XoopsUpgrade
 
         foreach ($files as $file) {
             $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
-            if (is_dir($filePath)) {
+            if (is_link($filePath)) {
+                if (!unlink($filePath)) {
+                    return false;
+                }
+            } elseif (is_dir($filePath)) {
                 if (!self::deleteFolder($filePath)) {
                     return false;
                 }

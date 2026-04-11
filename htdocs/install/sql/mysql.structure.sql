@@ -267,10 +267,7 @@ CREATE TABLE menusitems (
   items_active tinyint(1) unsigned NOT NULL default '1',
   PRIMARY KEY  (items_id),
   KEY idx_items_cid (items_cid),
-  KEY idx_items_pid (items_pid),
-  FOREIGN KEY (items_cid)
-    REFERENCES menuscategory (category_id)
-    ON DELETE CASCADE
+  KEY idx_items_pid (items_pid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 # --------------------------------------------------------
 

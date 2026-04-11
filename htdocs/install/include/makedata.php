@@ -51,8 +51,10 @@ function make_groups($dbm)
  * @param Db_manager         $dbm
  * @param array<string, int> $groups
  * @param int                $moduleId
+ *
+ * @return bool
  */
-function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): void
+function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): bool
 {
     $seed = system_menu_get_seed_definitions();
     $groupMap = [
@@ -81,15 +83,21 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
                 sprintf('Failed to seed menu category "%s" during install.', $definition['title']),
                 E_USER_WARNING
             );
-            return;
+            return false;
         }
         $categoryIds[$key] = (int) $categoryId;
 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
-            $dbm->insert(
+            if (!$dbm->insert(
                 'group_permission',
                 ' VALUES (0, ' . $groupId . ', ' . (int) $categoryId . ', ' . $moduleId . ", 'menus_category_view')"
-            );
+            )) {
+                trigger_error(
+                    sprintf('Failed to seed menu category permissions for "%s" during install.', $definition['title']),
+                    E_USER_WARNING
+                );
+                return false;
+            }
         }
     }
 
@@ -114,16 +122,24 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
                 sprintf('Failed to seed menu item "%s" during install.', $definition['title']),
                 E_USER_WARNING
             );
-            return;
+            return false;
         }
 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
-            $dbm->insert(
+            if (!$dbm->insert(
                 'group_permission',
                 ' VALUES (0, ' . $groupId . ', ' . (int) $itemId . ', ' . $moduleId . ", 'menus_items_view')"
-            );
+            )) {
+                trigger_error(
+                    sprintf('Failed to seed menu item permissions for "%s" during install.', $definition['title']),
+                    E_USER_WARNING
+                );
+                return false;
+            }
         }
     }
+
+    return true;
 }
 
 /**
@@ -188,7 +204,9 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $time = time();
     // RMV-NOTIFY (updated for extra column in table)
     $dbm->insert('modules', " VALUES (1, '" . _MI_SYSTEM_NAME . "', '" . $modversion['version'] . "', " . $time . ", 0, 1, 'system', 0, 1, 0, 0, 0, 0)");
-    system_menu_install_seed_defaults($dbm, $groups, 1);
+    if (!system_menu_install_seed_defaults($dbm, $groups, 1)) {
+        return false;
+    }
 
     foreach ($modversion['templates'] as $tplfile) {
         $templateType = isset($tplfile['type']) && 'admin' === $tplfile['type'] ? 'admin' : 'module';

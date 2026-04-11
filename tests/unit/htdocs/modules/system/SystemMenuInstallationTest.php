@@ -1,4 +1,13 @@
 <?php
+/*
+ * You may not change or alter any portion of this comment or credits
+ * of supporting developers from this source code or any supporting source code
+ * which is considered copyrighted (c) material of the original comment or credit authors.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ */
 
 declare(strict_types=1);
 
@@ -8,6 +17,16 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Verifies system menu install wiring and schema expectations.
+ *
+ * @category  Xoops
+ * @package   System
+ * @author    XOOPS Development Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
 #[CoversNothing]
 final class SystemMenuInstallationTest extends TestCase
 {
@@ -88,10 +107,7 @@ final class SystemMenuInstallationTest extends TestCase
             '/CREATE TABLE menusitems \\(.*?items_id int unsigned NOT NULL auto_increment.*?items_cid int unsigned NOT NULL default \\\'0\\\'/s',
             $source
         );
-        $this->assertMatchesRegularExpression(
-            '/FOREIGN KEY \(items_cid\)\s+REFERENCES menuscategory \(category_id\)\s+ON DELETE CASCADE/s',
-            $source
-        );
+        $this->assertStringNotContainsString('FOREIGN KEY', $source);
     }
 
     #[Test]
@@ -138,6 +154,10 @@ final class SystemMenuInstallationTest extends TestCase
             "ALTER TABLE `{\$itemTable}` MODIFY `items_active` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1",
             $source
         );
+        $this->assertStringContainsString(
+            'FOREIGN KEY (`items_cid`) REFERENCES `{$catTable}` (`category_id`)',
+            $source
+        );
     }
 
     #[Test]
@@ -146,7 +166,7 @@ final class SystemMenuInstallationTest extends TestCase
         $source = $this->readSourceFile('install/include/makedata.php');
 
         $this->assertStringContainsString(
-            'system_menu_install_seed_defaults($dbm, $groups, 1);',
+            'if (!system_menu_install_seed_defaults($dbm, $groups, 1)) {',
             $source
         );
     }
@@ -196,7 +216,7 @@ final class SystemMenuInstallationTest extends TestCase
         });
 
         try {
-            system_menu_install_seed_defaults(
+            $result = system_menu_install_seed_defaults(
                 $dbm,
                 [
                     'XOOPS_GROUP_ADMIN' => 1,
@@ -209,6 +229,7 @@ final class SystemMenuInstallationTest extends TestCase
             restore_error_handler();
         }
 
+        $this->assertFalse($result);
         $this->assertSame(['menuscategory'], $dbm->calls);
         $this->assertCount(1, $warnings);
         $this->assertSame(E_USER_WARNING, $warnings[0][0]);
@@ -237,7 +258,7 @@ final class SystemMenuInstallationTest extends TestCase
             }
         };
 
-        system_menu_install_seed_defaults(
+        $result = system_menu_install_seed_defaults(
             $dbm,
             [
                 'XOOPS_GROUP_ADMIN' => 1,
@@ -247,6 +268,7 @@ final class SystemMenuInstallationTest extends TestCase
             1
         );
 
+        $this->assertTrue($result);
         $byTable = array_count_values(array_column($dbm->inserts, 'table'));
         $this->assertSame(3, $byTable['menuscategory'] ?? 0);
         $this->assertSame(7, $byTable['menusitems'] ?? 0);
@@ -271,13 +293,27 @@ final class SystemMenuInstallationTest extends TestCase
             'All menu categories should be inserted before the first menu item'
         );
 
+        $categoryInserts = array_values(array_filter(
+            $dbm->inserts,
+            static fn(array $insert): bool => $insert['table'] === 'menuscategory'
+        ));
+        $accountCategoryId = null;
+        foreach ($categoryInserts as $insert) {
+            if (str_contains($insert['values'], "'MENUS_ACCOUNT'")) {
+                $accountCategoryId = $insert['id'];
+                break;
+            }
+        }
+
+        $this->assertNotNull($accountCategoryId, 'Expected to find the Account category insert');
+
         $itemInserts = array_values(array_filter(
             $dbm->inserts,
             static fn(array $insert): bool => $insert['table'] === 'menusitems'
         ));
         foreach ($itemInserts as $insert) {
             $this->assertMatchesRegularExpression(
-                "/VALUES \\(0, 2, 'MENUS_ACCOUNT_[A-Z_]+'/",
+                "/VALUES \\(0, {$accountCategoryId}, 'MENUS_ACCOUNT_[A-Z_]+'/",
                 $insert['values'],
                 'Each seeded menu item should reference the inserted Account category id'
             );

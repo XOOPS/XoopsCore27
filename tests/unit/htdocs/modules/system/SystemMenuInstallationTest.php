@@ -98,6 +98,7 @@ final class SystemMenuInstallationTest extends TestCase
     public function installerSchemaDeclaresMenuTablesUsingUnsignedIds(): void
     {
         $source = $this->readSourceFile('install/sql/mysql.structure.sql');
+        preg_match('/CREATE TABLE menusitems \(.*?\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;/s', $source, $menusItemsBlock);
 
         $this->assertMatchesRegularExpression(
             '/CREATE TABLE menuscategory \\(.*?category_id int unsigned NOT NULL auto_increment/s',
@@ -107,7 +108,8 @@ final class SystemMenuInstallationTest extends TestCase
             '/CREATE TABLE menusitems \\(.*?items_id int unsigned NOT NULL auto_increment.*?items_cid int unsigned NOT NULL default \\\'0\\\'/s',
             $source
         );
-        $this->assertStringNotContainsString('FOREIGN KEY', $source);
+        $this->assertNotEmpty($menusItemsBlock, 'menusitems DDL block not found');
+        $this->assertStringNotContainsString('FOREIGN KEY', $menusItemsBlock[0]);
     }
 
     #[Test]

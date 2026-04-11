@@ -646,7 +646,12 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        $files = array_diff(scandir($folderPath), ['.', '..']);
+        $scanned = scandir($folderPath);
+        if (false === $scanned) {
+            return false;
+        }
+
+        $files = array_diff($scanned, ['.', '..']);
 
         foreach ($files as $file) {
             $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;

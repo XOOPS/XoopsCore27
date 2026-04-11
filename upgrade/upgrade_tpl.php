@@ -66,7 +66,8 @@ if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
                     <?php
                 $languages = $viewModel['languages'];
 foreach ($languages as $lang) {
-    echo '<li><a href="?lang=' . $lang . '">' . $lang . '</a></li>';
+    echo '<li><a href="?lang=' . rawurlencode((string) $lang) . '">'
+        . htmlspecialchars((string) $lang, ENT_QUOTES, 'UTF-8') . '</a></li>';
 }
 ?>
                 </ul>
@@ -82,13 +83,15 @@ foreach ($viewModel['supportSites'] as $sites) {
     }
 }
 foreach ($allSupport as $support) {
-    echo '<li><a href="' . $support['url'] . '" target="_blank" rel="noopener noreferrer">' . $support['title'] . '</a></li>';
+    echo '<li><a href="' . htmlspecialchars((string) $support['url'], ENT_QUOTES, 'UTF-8')
+        . '" target="_blank" rel="noopener noreferrer">'
+        . htmlspecialchars((string) $support['title'], ENT_QUOTES, 'UTF-8') . '</a></li>';
 }
 ?>
                 </ul>
             </li>
             <li>
-                <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer" title="<?php echo _XOOPS_SOURCE_CODE; ?>"><i class="fa-brands fa-lg fa-github"></i></a>
+                <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer" title="<?php echo htmlspecialchars(_XOOPS_SOURCE_CODE, ENT_QUOTES, 'UTF-8'); ?>"><i class="fa-brands fa-lg fa-github"></i></a>
             </li>
         </ul>
         <!-- Sidebar Menu Items - These collapse to the responsive navigation menu on small screens -->
@@ -99,14 +102,14 @@ foreach ($allSupport as $support) {
 foreach ($viewModel['upgradeQueue'] as $stepName => $info) {
     if (!$info->applied && $firstNeeded) {
         echo'<li class="active"><a><span class="fa-solid fa-exclamation-triangle"></span> '
-            . $stepName . '</a></li>';
+            . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</a></li>';
         $firstNeeded = false;
     } elseif (!$info->applied) {
         echo'<li><a><span class="fa-solid fa-exclamation-triangle text-warning"></span> '
-            . $stepName . '</a></li>';
+            . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</a></li>';
     } else {
         echo'<li><a><span class="fa-solid fa-check text-success"></span> '
-            . $stepName . '</a></li>';
+            . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</a></li>';
     }
 }
 ?>

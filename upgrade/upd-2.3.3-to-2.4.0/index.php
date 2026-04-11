@@ -49,7 +49,7 @@ class Upgrade_240 extends XoopsUpgrade
         set_time_limit(120);
         chmod('../include/license.php', 0644);
         if (!is_writable('../include/license.php')) {
-            echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php - is not writeable</span> - Windows Read Only (Off) / UNIX chmod 0777</p>";
+            echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php - is not writeable</span> - Windows Read Only (Off) / UNIX chmod 0644</p>";
 
             return false;
         }

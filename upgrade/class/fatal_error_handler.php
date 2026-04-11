@@ -11,14 +11,27 @@ function fatalPhpErrorHandler($e = null)
     $messageFormat = '<br><div>Fatal %s %s file: %s : %d </div>';
     $exceptionClass = '\Exception';
     $throwableClass = '\Throwable';
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
     if ($e === null) {
         $lastError = error_get_last();
-        if (null !== $lastError && $lastError['type'] === E_ERROR) {
-            printf($messageFormat, 'Error', $lastError['message'], basename($lastError['file']), $lastError['line']);
+        if (null !== $lastError && in_array($lastError['type'], $fatalTypes, true)) {
+            printf(
+                $messageFormat,
+                'Error',
+                htmlspecialchars((string) $lastError['message'], ENT_QUOTES, 'UTF-8'),
+                htmlspecialchars(basename((string) $lastError['file']), ENT_QUOTES, 'UTF-8'),
+                (int) $lastError['line']
+            );
         }
     } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
         /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), basename($e->getFile()), $e->getLine());
+        printf(
+            $messageFormat,
+            htmlspecialchars(get_class($e), ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars(basename($e->getFile()), ENT_QUOTES, 'UTF-8'),
+            (int) $e->getLine()
+        );
     }
 }
 register_shutdown_function('fatalPhpErrorHandler');

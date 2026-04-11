@@ -72,8 +72,17 @@ $upgradeControl = new UpgradeControl($GLOBALS['xoopsDB']);
 
 $upgradeControl->determineLanguage();
 
-if (file_exists(__DIR__ . "/language/{$upgradeControl->upgradeLanguage}/user.php")) {
-    include_once __DIR__ . "/language/{$upgradeControl->upgradeLanguage}/user.php";
+$languageRoot = realpath(__DIR__ . '/language');
+$language = $upgradeControl->normalizeLanguage($upgradeControl->upgradeLanguage);
+$userFile = false !== $languageRoot
+    ? realpath($languageRoot . DIRECTORY_SEPARATOR . $language . DIRECTORY_SEPARATOR . 'user.php')
+    : false;
+if (
+    false !== $languageRoot
+    && false !== $userFile
+    && str_starts_with($userFile, $languageRoot . DIRECTORY_SEPARATOR)
+) {
+    include_once $userFile;
 } else {
     include_once XOOPS_ROOT_PATH . "/language/english/user.php";
 }

@@ -112,6 +112,21 @@ class UpgradeControl
     }
 
     /**
+     * Normalize a requested upgrade language to a known language directory.
+     *
+     * @param string|null $language requested language code
+     *
+     * @return string validated language code, falling back to english
+     */
+    public function normalizeLanguage(?string $language): string
+    {
+        $language = (string) ($language ?? '');
+        $availableLanguages = $this->availableLanguages();
+
+        return in_array($language, $availableLanguages, true) ? $language : 'english';
+    }
+
+    /**
      * Load a language file for the upgrade process.
      *
      * Falls back to english if the requested language file does not exist.
@@ -127,13 +142,21 @@ class UpgradeControl
     {
         $supports = null;
 
-        $language   = $language ?? $this->upgradeLanguage;
+        $language   = $this->normalizeLanguage($language ?? $this->upgradeLanguage);
         $upgradeDir = dirname(__DIR__, 3); // class/Xoops/Upgrade/ -> upgrade/
+        $languageRoot = realpath("{$upgradeDir}/language");
 
-        if (file_exists("{$upgradeDir}/language/{$language}/{$domain}.php")) {
-            include_once "{$upgradeDir}/language/{$language}/{$domain}.php";
-        } elseif (file_exists("{$upgradeDir}/language/english/{$domain}.php")) {
-            include_once "{$upgradeDir}/language/english/{$domain}.php";
+        $candidate = false !== $languageRoot
+            ? realpath($languageRoot . DIRECTORY_SEPARATOR . $language . DIRECTORY_SEPARATOR . "{$domain}.php")
+            : false;
+        $fallback = false !== $languageRoot
+            ? realpath($languageRoot . DIRECTORY_SEPARATOR . 'english' . DIRECTORY_SEPARATOR . "{$domain}.php")
+            : false;
+
+        if (false !== $languageRoot && false !== $candidate && str_starts_with($candidate, $languageRoot . DIRECTORY_SEPARATOR)) {
+            include_once $candidate;
+        } elseif (false !== $languageRoot && false !== $fallback && str_starts_with($fallback, $languageRoot . DIRECTORY_SEPARATOR)) {
+            include_once $fallback;
         }
 
         if (null !== $supports) {
@@ -161,7 +184,7 @@ class UpgradeControl
         $upgrade_language = $xoopsConfig['language'] ?? null;
         $upgrade_language = !empty($_COOKIE['xo_upgrade_lang']) ? $_COOKIE['xo_upgrade_lang'] : $upgrade_language;
         $upgrade_language = \Xmf\Request::getString('lang', $upgrade_language);
-        $upgrade_language = empty($upgrade_language) ? 'english' : $upgrade_language;
+        $upgrade_language = $this->normalizeLanguage($upgrade_language);
         xoops_setcookie('xo_upgrade_lang', $upgrade_language, 0, null, null);
 
         $this->upgradeLanguage = $upgrade_language;
@@ -271,11 +294,14 @@ class UpgradeControl
      */
     public function oneButtonContinueForm(string $action = 'index.php', array $parameters = ['action' => 'next']): string
     {
-        $form  = '<form action="' . $action . '" method="post">';
+        $actionAttr = htmlspecialchars($action, ENT_QUOTES, 'UTF-8');
+        $form  = '<form action="' . $actionAttr . '" method="post">';
         $form .= '<button class="btn btn-lg btn-success" type="submit">' . _CONTINUE;
         $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
         foreach ($parameters as $name => $value) {
-            $form .= '<input type="hidden" name="' . $name . '" value="' . $value . '">';
+            $nameAttr = htmlspecialchars((string) $name, ENT_QUOTES, 'UTF-8');
+            $valueAttr = htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+            $form .= '<input type="hidden" name="' . $nameAttr . '" value="' . $valueAttr . '">';
         }
         $form .= '</form>';
 

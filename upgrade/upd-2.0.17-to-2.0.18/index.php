@@ -1,22 +1,26 @@
 <?php
 
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
+
 /**
  * Class upgrade_2018
  */
 class Upgrade_2018 extends XoopsUpgrade
 {
+    protected array $fields = [];
+
     /**
      * @return bool
      */
-    public function check_config_type()
+    public function check_config_type(): bool
     {
-        $db     = $GLOBALS['xoopsDB'];
-        $sql    = 'SHOW COLUMNS FROM ' . $db->prefix('config') . " LIKE 'conf_title'";
-        $result = $db->query($sql);
-        if (!$db->isResultSet($result)) {
+        $sql    = 'SHOW COLUMNS FROM ' . $this->db->prefix('config') . " LIKE 'conf_title'";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return true; // table or column not found, skip this upgrade step
         }
-        while (false !== ($row = $db->fetchArray($result))) {
+        while (false !== ($row = $this->db->fetchArray($result))) {
             if (strtolower(trim($row['Type'])) === 'varchar(255)') {
                 return true;
             }
@@ -31,18 +35,16 @@ class Upgrade_2018 extends XoopsUpgrade
     protected function query($sql)
     {
         //echo $sql . "<br>";
-        $db = $GLOBALS['xoopsDB'];
-        if (!$db->exec($sql)) {
-            echo $db->error();
+        if (!$this->db->exec($sql)) {
+            $this->logs[] = $this->db->error();
         }
     }
 
     /**
      * @return bool
      */
-    public function apply_config_type()
+    public function apply_config_type(): bool
     {
-        $db           = $GLOBALS['xoopsDB'];
         $this->fields = [
             'config' => [
                 'conf_title' => "varchar(255) NOT NULL default ''",
@@ -53,7 +55,7 @@ class Upgrade_2018 extends XoopsUpgrade
 
         foreach ($this->fields as $table => $data) {
             foreach ($data as $field => $property) {
-                $sql = 'ALTER TABLE ' . $db->prefix($table) . " CHANGE `$field` `$field` $property";
+                $sql = 'ALTER TABLE ' . $this->db->prefix($table) . " CHANGE `$field` `$field` $property";
                 $this->query($sql);
             }
         }
@@ -61,12 +63,11 @@ class Upgrade_2018 extends XoopsUpgrade
         return true;
     }
 
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['config_type'];
     }
 }
 
-$upg = new Upgrade_2018();
-return $upg;
+return Upgrade_2018::class;

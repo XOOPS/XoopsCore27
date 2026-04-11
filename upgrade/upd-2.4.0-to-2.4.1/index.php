@@ -9,6 +9,9 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
+
 /**
  * Upgrader from 2.4.0 to 2.4.1
  *
@@ -27,41 +30,33 @@ class Upgrade_241 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_license()
+    public function check_license(): bool
     {
-        if (defined('XOOPS_LICENSE_KEY')) {
-            return true; // skip setup if license.php was included
-        }
-        if (defined('XOOPS_LICENSE_KEY') == false) {
-            if (substr(XOOPS_LICENSE_KEY, 0, 13) != $this->xoops_getPublicLicenceKey()) {
-                return false;
-            } else {
-                return true;
-            }
-        } elseif (XOOPS_LICENSE_KEY == '000000-000000-000000-000000-000000') {
-            return false;
-        } else {
-            return true;
-        }
+        return defined('XOOPS_LICENSE_KEY');
     }
 
     /**
      * @return bool|string
      */
-    public function apply_license()
+    public function apply_license(): bool|string
     {
         set_time_limit(120);
-        chmod('../include/license.php', 0777);
+        chmod('../include/license.php', 0644);
         if (!is_writable('../include/license.php')) {
             echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php - is not writeable</span> - Windows Read Only (Off) / UNIX chmod 0777</p>";
 
             return false;
         }
         if (XOOPS_LICENSE_KEY == '000000-000000-000000-000000-000000') {
-            return @$this->xoops_putLicenseKey($this->xoops_buildLicenceKey(), XOOPS_ROOT_PATH . '/include/license.php', __DIR__ . '/license.dist.php');
+            $result = $this->xoops_putLicenseKey($this->xoops_buildLicenceKey(), XOOPS_ROOT_PATH . '/include/license.php', __DIR__ . '/license.dist.php');
         } else {
-            return @$this->xoops_upgradeLicenseKey($this->xoops_getPublicLicenceKey(), XOOPS_ROOT_PATH . '/include/license.php', __DIR__ . '/license.dist.php');
+            $result = $this->xoops_upgradeLicenseKey($this->xoops_getPublicLicenceKey(), XOOPS_ROOT_PATH . '/include/license.php', __DIR__ . '/license.dist.php');
         }
+        if (false === $result) {
+            $this->logs[] = 'License key write failed';
+            return false;
+        }
+        return (bool) $result;
     }
 
     /**
@@ -70,7 +65,7 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_upgradeLicenseKey($public_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        chmod($licensefile, 0777);
+        chmod($licensefile, 0644);
         $fver        = fopen($licensefile, 'w');
         $fver_buf    = file($license_file_dist);
         $license_key = $public_key . substr(XOOPS_LICENSE_KEY, 13, strlen(XOOPS_LICENSE_KEY) - 13);
@@ -94,7 +89,7 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_putLicenseKey($system_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        chmod($licensefile, 0777);
+        chmod($licensefile, 0644);
         $fver     = fopen($licensefile, 'w');
         $fver_buf = file($license_file_dist);
         foreach ($fver_buf as $line => $value) {
@@ -208,7 +203,7 @@ class Upgrade_241 extends XoopsUpgrade
     public function xoops_stripeKey($xoops_key, $num = 6, $length = 30, $uu = 0)
     {
         $strip = floor(strlen($xoops_key) / 6);
-        $ret   = 0;
+        $ret   = '';
         for ($i = 0; $i < strlen($xoops_key); ++$i) {
             if ($i < $length) {
                 ++$uu;
@@ -235,12 +230,11 @@ class Upgrade_241 extends XoopsUpgrade
         return $ret;
     }
 
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['license'];
     }
 }
 
-$upg = new Upgrade_241();
-return $upg;
+return Upgrade_241::class;

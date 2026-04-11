@@ -1,6 +1,8 @@
 <?php
 
 use Xmf\Database\Tables;
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
 
 /**
  * Upgrade from 2.5.10 to 2.5.11
@@ -16,10 +18,13 @@ class Upgrade_2511 extends XoopsUpgrade
 {
     /**
      * __construct
+     *
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
      */
-    public function __construct()
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = [
             'cleancache',
             'bannerintsize',
@@ -67,7 +72,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_cleancache()
+    public function check_cleancache(): bool
     {
         if (!array_key_exists($this->cleanCacheKey, $_SESSION)
             || false === $_SESSION[$this->cleanCacheKey]) {
@@ -81,7 +86,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if applied, false if failed
      */
-    public function apply_cleancache()
+    public function apply_cleancache(): bool
     {
         require_once XOOPS_ROOT_PATH . '/modules/system/class/maintenance.php';
         $maintenance = new SystemMaintenance();
@@ -124,7 +129,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_bannerintsize()
+    public function check_bannerintsize(): bool
     {
         $migrate = new Tables();
         $count = $this->fromMediumToInt($migrate, $this->bannerTableName, $this->bannerColumnNames);
@@ -137,7 +142,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if applied, false if failed
      */
-    public function apply_bannerintsize()
+    public function apply_bannerintsize(): bool
     {
         $migrate = new Tables();
 
@@ -162,23 +167,20 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_qmail()
+    public function check_qmail(): bool
     {
-        /** @var XoopsMySQLDatabase $db */
-        $db = XoopsDatabaseFactory::getDatabaseConnection();
-
-        $table = $db->prefix('configoption');
+        $table = $this->db->prefix('configoption');
 
         $sql = sprintf(
             'SELECT count(*) FROM `%s` '
             . "WHERE `conf_id` = 64 AND `confop_name` = 'qmail'",
-            $db->escape($table),
+            $this->db->escape($table),
         );
 
         /** @var mysqli_result $result */
-        $result = $db->query($sql);
-        if ($db->isResultSet($result)) {
-            $row = $db->fetchRow($result);
+        $result = $this->db->query($sql);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
+            $row = $this->db->fetchRow($result);
             if ($row) {
                 $count = $row[0];
                 return (0 === (int) $count) ? false : true;
@@ -195,7 +197,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_qmail()
+    public function apply_qmail(): bool
     {
         $migrate = new Tables();
         $migrate->useTable('configoption');
@@ -211,7 +213,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_captchadata()
+    public function check_captchadata(): bool
     {
         $captchaConfigFile = XOOPS_VAR_PATH . '/configs/captcha/config.php';
         $oldCaptchaConfigFile = XOOPS_ROOT_PATH . '/class/captcha/config.php';
@@ -262,9 +264,9 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_captchadata()
+    public function apply_captchadata(): bool
     {
-        $returnResult = false;
+        $returnResult = true;
         $sourcePath = XOOPS_ROOT_PATH . '/class/captcha/';
         $destinationPath = XOOPS_VAR_PATH . '/configs/captcha/';
 
@@ -299,7 +301,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_configkey()
+    public function check_configkey(): bool
     {
         $tableName = 'config';
         $columnName = 'conf_id';
@@ -321,7 +323,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if applied, false if failed
      */
-    public function apply_configkey()
+    public function apply_configkey(): bool
     {
         $tableName = 'config';
         $columnName = 'conf_id';
@@ -355,7 +357,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_xoopsconfig()
+    public function check_xoopsconfig(): bool
     {
         $xoopsConfigFile = XOOPS_VAR_PATH . '/configs/xoopsconfig.php';
         return file_exists($xoopsConfigFile);
@@ -366,7 +368,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if applied, false if failed
      */
-    public function apply_xoopsconfig()
+    public function apply_xoopsconfig(): bool
     {
         $source = XOOPS_VAR_PATH . '/configs/xoopsconfig.dist.php';
         $destination = XOOPS_VAR_PATH . '/configs/xoopsconfig.php';
@@ -434,7 +436,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_textsanitizer()
+    public function check_textsanitizer(): bool
     {
         $this->buildListTSConfigs();
         foreach ($this->textsanitizerConfigFiles as $source => $destination) {
@@ -452,7 +454,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if applied, false if failed
      */
-    public function apply_textsanitizer()
+    public function apply_textsanitizer(): bool
     {
         $this->buildListTSConfigs();
         $return = true;
@@ -486,7 +488,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_rmindexhtml()
+    public function check_rmindexhtml(): bool
     {
         /**
          * If we find an index.html that is writable, we know there is work to do
@@ -510,7 +512,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch applied, false if failed
      */
-    public function apply_rmindexhtml()
+    public function apply_rmindexhtml(): bool
     {
         /**
          * Do unlink() on file
@@ -620,7 +622,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if patch IS applied, false if NOT applied
      */
-    public function check_modulesvarchar()
+    public function check_modulesvarchar(): bool
     {
         $migrate = new Tables();
         $count = $this->fromSmallintToVarchar($migrate, $this->modulesTableName, $this->modulesColumnNames);
@@ -632,7 +634,7 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool true if applied, false if failed
      */
-    public function apply_modulesvarchar()
+    public function apply_modulesvarchar(): bool
     {
         $migrate = new Tables();
 
@@ -655,14 +657,14 @@ class Upgrade_2511 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_templates()
+    public function check_templates(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_confirm.tpl') AND `tpl_type` = 'module'";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_confirm.tpl') AND `tpl_type` = 'module'";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (0 != $count);
     }
@@ -671,7 +673,7 @@ class Upgrade_2511 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_templates()
+    public function apply_templates(): bool
     {
         $modversion = [];
         include_once XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
@@ -697,14 +699,14 @@ class Upgrade_2511 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_templatesadmin()
+    public function check_templatesadmin(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_modules.tpl') AND `tpl_type` = 'admin'";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_modules.tpl') AND `tpl_type` = 'admin'";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return (0 != $count);
     }
@@ -712,7 +714,7 @@ class Upgrade_2511 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_templatesadmin()
+    public function apply_templatesadmin(): bool
     {
         include XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
         $dbm  = new Db_manager();
@@ -736,9 +738,9 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function check_zapsmarty()
+    public function check_zapsmarty(): bool
     {
-        return !file_exists('../class/smarty/smarty.class.php');
+        return !file_exists(XOOPS_ROOT_PATH . '/class/smarty/smarty.class.php');
     }
 
     /**
@@ -746,10 +748,10 @@ class Upgrade_2511 extends XoopsUpgrade
      *
      * @return bool
      */
-    public function apply_zapsmarty()
+    public function apply_zapsmarty(): bool
     {
         // Define the base directory
-        $baseDir = '../class/smarty/';
+        $baseDir = XOOPS_ROOT_PATH . '/class/smarty/';
 
         // List of sub-folders and files to delete
         $itemsToDelete = [
@@ -768,9 +770,7 @@ class Upgrade_2511 extends XoopsUpgrade
 
             // Check if it's a directory or a file
             if (is_dir($path)) {
-                // Delete directory and its contents
-                array_map('unlink', glob("$path/*.*"));
-                rmdir($path);
+                self::deleteFolder($path);
             } elseif (is_file($path)) {
                 // Delete file
                 if (is_writable($path)) {
@@ -783,17 +783,45 @@ class Upgrade_2511 extends XoopsUpgrade
     }
 
     /**
+     * Recursively delete a folder and all its contents
+     *
+     * @param string $folderPath path to the folder to delete
+     *
+     * @return bool true on success, false on failure
+     */
+    private static function deleteFolder(string $folderPath): bool
+    {
+        if (!is_dir($folderPath)) {
+            return true;
+        }
+        $files = array_diff(scandir($folderPath), ['.', '..']);
+        foreach ($files as $file) {
+            $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($filePath)) {
+                if (!self::deleteFolder($filePath)) {
+                    return false;
+                }
+            } else {
+                if (!unlink($filePath)) {
+                    return false;
+                }
+            }
+        }
+        return rmdir($folderPath);
+    }
+
+    /**
      * Check if default notification method already exists
      *
      */
-    public function check_notificationmethod()
+    public function check_notificationmethod(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` IN ('default_notification')";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` IN ('default_notification')";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return ($count > 0);
     }
@@ -801,31 +829,31 @@ class Upgrade_2511 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_notificationmethod()
+    public function apply_notificationmethod(): bool
     {
         $returnResult = true;
         $notification_method = false;
-        $sql                   = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
-        if ($result = $GLOBALS['xoopsDB']->query($sql)) {
-            [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        $sql                   = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
+        if ($result = $this->db->query($sql)) {
+            [$count] = $this->db->fetchRow($result);
             if (1 == $count) {
                 $notification_method = true;
             }
         }
 
         if (!$notification_method) {
-            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'default_notification', '_MD_AM_DEFAULT_NOTIFICATION_METHOD', '1', '_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'select', 'int', 3)";
+            $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'default_notification', '_MD_AM_DEFAULT_NOTIFICATION_METHOD', '1', '_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'select', 'int', 3)";
 
-            if (!$GLOBALS['xoopsDB']->exec($sql)) {
+            if (!$this->db->exec($sql)) {
                 return false;
             }
-            $config_id = $GLOBALS['xoopsDB']->getInsertId();
+            $config_id = $this->db->getInsertId();
 
-            $sql = 'INSERT INTO ' . $GLOBALS['xoopsDB']->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES'
+            $sql = 'INSERT INTO ' . $this->db->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES'
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE', '0', {$config_id}),"
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_PM', '1', {$config_id}),"
                 . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL', '2', {$config_id})";
-            if (!$result = $GLOBALS['xoopsDB']->exec($sql)) {
+            if (!$result = $this->db->exec($sql)) {
                 return false;
             }
         }
@@ -836,4 +864,4 @@ class Upgrade_2511 extends XoopsUpgrade
 
 }
 
-return new Upgrade_2511();
+return Upgrade_2511::class;

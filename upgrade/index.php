@@ -18,24 +18,7 @@
  */
 /** @var  XoopsUser $xoopsUser */
 
-function fatalPhpErrorHandler($e = null)
-{
-    $messageFormat = '<br><div>Fatal %s %s file: %s : %d </div>';
-    $exceptionClass = '\Exception';
-    $throwableClass = '\Throwable';
-    if ($e === null) {
-        $lastError = error_get_last();
-        if ($lastError['type'] === E_ERROR) {
-            // fatal error
-            printf($messageFormat, 'Error', $lastError['message'], $lastError['file'], $lastError['line']);
-        }
-    } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
-        /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
-    }
-}
-register_shutdown_function('fatalPhpErrorHandler');
-set_exception_handler('fatalPhpErrorHandler');
+require_once __DIR__ . '/class/fatal_error_handler.php';
 
 /*
  * Before xoops 2.5.8 the table 'sess_ip' was of type varchar (15). This is a problem for IPv6
@@ -70,28 +53,24 @@ $xoopsLogger->enableRendering();
 xoops_loadLanguage('logger');
 set_exception_handler('fatalPhpErrorHandler'); // should have been changed by now, reset to ours
 
-require __DIR__ . '/class/abstract.php';
-require __DIR__ . '/class/patchstatus.php';
-require __DIR__ . '/class/control.php';
+require_once __DIR__ . '/class/autoload.php';
+use Xoops\Upgrade\UpgradeControl;
 
-$GLOBALS['error'] = false;
-$GLOBALS['upgradeControl'] = new UpgradeControl();
+$error = false;
+$upgradeControl = new UpgradeControl($GLOBALS['xoopsDB']);
 
-if (file_exists(__DIR__ . "../language/{$upgradeControl->upgradeLanguage}/user.php")) {
-    include_once __DIR__ . "../language/{$upgradeControl->upgradeLanguage}/user.php";
+// Determine language FIRST (loads 'upgrade' language internally)
+$upgradeControl->determineLanguage();
+
+// Then load additional language files
+if (file_exists(__DIR__ . "/language/{$upgradeControl->upgradeLanguage}/user.php")) {
+    include_once __DIR__ . "/language/{$upgradeControl->upgradeLanguage}/user.php";
 } else {
     include_once XOOPS_ROOT_PATH . '/language/english/user.php';
 }
-
-if (file_exists(__DIR__ . "/language/{$upgradeControl->upgradeLanguage}/smarty4.php")) {
-    include_once __DIR__ . "/language/{$upgradeControl->upgradeLanguage}/smarty4.php";
-} else {
-    include_once __DIR__ . "/language/english/smarty4.php";
-}
-
+$upgradeControl->loadLanguage('smarty4');
 
 $upgradeControl->storeMainfileCheck($needMainfileRewrite, $mainfileKeys);
-$upgradeControl->determineLanguage();
 $upgradeControl->buildUpgradeQueue();
 
 ob_start();
@@ -113,15 +92,14 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
                 . '<div class="panel-body"><ul class="fa-ul">';
             foreach ($upgradeControl->needWriteFiles as $file) {
                 echo '<li><i class="fa-li fa-solid fa-ban text-danger"></i>' . $file . '</li>';
-                $GLOBALS['error'] = true;
+                $error = true;
             }
             echo '</ul></div></div>';
         } else {
             $next = $upgradeControl->getNextPatch();
             printf('<h2>' . _PERFORMING_UPGRADE . '</h2>', $next);
             /** @var XoopsUpgrade $upgrader */
-            $upgradeClass = $upgradeControl->upgradeQueue[$next]->patchClass;
-            $upgrader = new $upgradeClass();
+            $upgrader = $upgradeControl->upgradeQueue[$next]->getPatch();
             $res = $upgrader->apply();
             if ($message = $upgrader->message()) {
                 echo '<div class="well">' . $message . '</div>';
@@ -143,5 +121,23 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
 }
 $content = ob_get_contents();
 ob_end_clean();
+
+// Pre-compute support data for all languages
+$allSupportSites = [];
+foreach ($upgradeControl->availableLanguages() as $lang) {
+    $upgradeControl->loadLanguage('support', $lang);
+    $allSupportSites[$lang] = $upgradeControl->supportSites;
+}
+
+$viewModel = [
+    'content'         => $content,
+    'upgradeQueue'    => $upgradeControl->upgradeQueue,
+    'upgradeLanguage' => $upgradeControl->upgradeLanguage,
+    'patchCount'      => $upgradeControl->countUpgradeQueue(),
+    'hasError'        => $error,
+    'preflightDone'   => ($_SESSION['preflight'] ?? '') === 'complete',
+    'languages'       => $upgradeControl->availableLanguages(),
+    'supportSites'    => $allSupportSites,
+];
 
 include_once __DIR__ . '/upgrade_tpl.php';

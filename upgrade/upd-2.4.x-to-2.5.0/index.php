@@ -16,6 +16,9 @@
  * @author              Andricq Nicolas (AKA MusS)
  */
 
+use Xoops\Upgrade\XoopsUpgrade;
+use Xoops\Upgrade\UpgradeControl;
+
 require_once __DIR__ . '/dbmanager.php';
 
 /**
@@ -26,15 +29,16 @@ class Upgrade_250 extends XoopsUpgrade
     /**
      * Check if cpanel config already exists
      *
+     * @return bool
      */
-    public function check_config()
+    public function check_config(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` IN ('break1', 'usetips')";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` IN ('break1', 'usetips')";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return ($count != 0);
     }
@@ -42,14 +46,14 @@ class Upgrade_250 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_templates()
+    public function check_templates(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $GLOBALS['xoopsDB']->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_header.html', 'system_header.tpl') AND `tpl_type` = 'admin'";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_header.html', 'system_header.tpl') AND `tpl_type` = 'admin'";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        [$count] = $GLOBALS['xoopsDB']->fetchRow($result);
+        [$count] = $this->db->fetchRow($result);
 
         return ($count != 0);
     }
@@ -57,19 +61,19 @@ class Upgrade_250 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_config()
+    public function apply_config(): bool
     {
         $dbm = new Db_manager();
 
-        $sql = 'SELECT conf_id FROM `' . $GLOBALS['xoopsDB']->prefix('config') . "` WHERE `conf_name` IN ('cpanel')";
-        $result = $GLOBALS['xoopsDB']->query($sql);
-        if (!$GLOBALS['xoopsDB']->isResultSet($result)) {
+        $sql = 'SELECT conf_id FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` IN ('cpanel')";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
         }
-        $count = $GLOBALS['xoopsDB']->fetchRow($result);
+        $count = $this->db->fetchRow($result);
 
-        $sql = 'UPDATE `' . $GLOBALS['xoopsDB']->prefix('config') . "` SET `conf_value` = 'default' WHERE `conf_id` = " . $count[0];
-        if (!$result = $GLOBALS['xoopsDB']->exec($sql)) {
+        $sql = 'UPDATE `' . $this->db->prefix('config') . "` SET `conf_value` = 'default' WHERE `conf_id` = " . $count[0];
+        if (!$result = $this->db->exec($sql)) {
             return false;
         }
 
@@ -142,7 +146,7 @@ class Upgrade_250 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_templates()
+    public function apply_templates(): bool
     {
         include_once XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
 
@@ -185,7 +189,7 @@ class Upgrade_250 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function check_strayblock()
+    public function check_strayblock(): bool
     {
         $criteria = $this->strayblockCriteria();
         $count = Xmf\Database\TableLoad::countRows('newblocks', $criteria);
@@ -196,7 +200,7 @@ class Upgrade_250 extends XoopsUpgrade
     /**
      * @return bool
      */
-    public function apply_strayblock()
+    public function apply_strayblock(): bool
     {
         $criteria = $this->strayblockCriteria();
         $tables = new Xmf\Database\Tables();
@@ -206,12 +210,15 @@ class Upgrade_250 extends XoopsUpgrade
         return $tables->executeQueue(true);
     }
 
-    public function __construct()
+    /**
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
+     */
+    public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
-        parent::__construct(basename(__DIR__));
+        parent::__construct($db, $control, basename(__DIR__));
         $this->tasks = ['config', 'templates', 'strayblock'];
     }
 }
 
-$upg = new Upgrade_250();
-return $upg;
+return Upgrade_250::class;

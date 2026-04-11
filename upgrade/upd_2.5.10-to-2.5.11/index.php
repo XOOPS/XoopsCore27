@@ -770,11 +770,19 @@ class Upgrade_2511 extends XoopsUpgrade
 
             // Check if it's a directory or a file
             if (is_dir($path)) {
-                self::deleteFolder($path);
+                if (!self::deleteFolder($path)) {
+                    $this->logs[] = 'Failed to delete Smarty directory: ' . basename($path);
+
+                    return false;
+                }
             } elseif (is_file($path)) {
                 // Delete file
                 if (is_writable($path)) {
-                    unlink($path);
+                    if (!unlink($path)) {
+                        $this->logs[] = 'Failed to delete Smarty file: ' . basename($path);
+
+                        return false;
+                    }
                 }
             }
         }

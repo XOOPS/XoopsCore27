@@ -21,7 +21,7 @@ class Upgrade_2016 extends XoopsUpgrade
     /**
      * @param string $sql
      */
-    protected function query($sql): void
+    protected function query(string $sql): void
     {
         if (!$this->db->exec($sql)) {
             $this->logs[] = $this->db->error();

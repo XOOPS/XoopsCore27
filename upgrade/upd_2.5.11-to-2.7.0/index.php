@@ -59,6 +59,7 @@ class Upgrade_270 extends XoopsUpgrade
             XOOPS_ROOT_PATH . '/class/mail/phpmailer',
             XOOPS_TRUST_PATH . '/modules/protector/library',
         ];
+        $this->usedFiles = array_merge($this->usedFiles, $this->pathsToCheck);
     }
 
     // =========================================================================
@@ -614,7 +615,7 @@ class Upgrade_270 extends XoopsUpgrade
      * Clear compiled Smarty templates and module caches.
      *
      * Uses SystemMaintenance::CleanCache() with folder IDs:
-     *   1 = compiled templates, 2 = xoops_cache, 3 = Smarty cache
+     *   1 = Smarty cache, 2 = compiled templates, 3 = xoops_cache
      *
      * @return bool true on success
      */
@@ -629,7 +630,7 @@ class Upgrade_270 extends XoopsUpgrade
             }
             return $result;
         } catch (\Throwable $e) {
-            $this->logs[] = 'Failed to clean cache: ' . $e->getMessage();
+            $this->logs[] = 'Failed to clean cache: ' . $this->sanitizeLogMessage($e->getMessage());
 
             return false;
         }
@@ -689,6 +690,17 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         return basename($path);
+    }
+
+    private function sanitizeLogMessage(string $message): string
+    {
+        return (string) preg_replace_callback(
+            '/([A-Za-z]:)?[\\\\\\/][^\\s]*/',
+            static function (array $matches): string {
+                return basename(str_replace('\\', '/', $matches[0]));
+            },
+            $message
+        );
     }
 }
 

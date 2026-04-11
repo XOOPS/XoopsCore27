@@ -43,7 +43,9 @@ class Upgrade_220 extends XoopsUpgrade
         $sql    = 'SHOW COLUMNS FROM `' . $this->db->prefix('configcategory') . "` LIKE 'confcat_modid'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return true;
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
 
         return !($this->db->getRowsNum($result) > 0);
@@ -80,7 +82,9 @@ class Upgrade_220 extends XoopsUpgrade
         $sql    = "SHOW TABLES LIKE '" . $this->db->prefix('block_instance') . "'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return true;
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
 
         return !($this->db->getRowsNum($result) > 0);
@@ -106,28 +110,40 @@ class Upgrade_220 extends XoopsUpgrade
      */
     public function apply_config(): bool
     {
-        $result = true;
-
         //Set core configuration back to zero for system module
-        $this->db->exec('UPDATE `' . $this->db->prefix('config') . '` SET conf_modid = 0 WHERE conf_modid = 1');
+        if (!$this->execOrFail('UPDATE `' . $this->db->prefix('config') . '` SET conf_modid = 0 WHERE conf_modid = 1')) {
+            return false;
+        }
 
         //Change debug modes so there can only be one active at any one time
-        $this->db->exec('UPDATE `' . $this->db->prefix('config') . "` SET conf_formtype = 'select', conf_valuetype = 'int' WHERE conf_name = 'debug_mode'");
+        if (!$this->execOrFail('UPDATE `' . $this->db->prefix('config') . "` SET conf_formtype = 'select', conf_valuetype = 'int' WHERE conf_name = 'debug_mode'")) {
+            return false;
+        }
 
         //Reset category ID for non-system configs
-        $this->db->exec('UPDATE `' . $this->db->prefix('config') . '` SET conf_catid = 0 WHERE conf_modid > 1 AND conf_catid > 0');
+        if (!$this->execOrFail('UPDATE `' . $this->db->prefix('config') . '` SET conf_catid = 0 WHERE conf_modid > 1 AND conf_catid > 0')) {
+            return false;
+        }
 
         // remove admin theme configuration item
-        $this->db->exec('DELETE FROM `' . $this->db->prefix('config') . "` WHERE conf_name='theme_set_admin'");
+        if (!$this->execOrFail('DELETE FROM `' . $this->db->prefix('config') . "` WHERE conf_name='theme_set_admin'")) {
+            return false;
+        }
 
         //Drop non-System config categories
-        $this->db->exec('DELETE FROM `' . $this->db->prefix('configcategory') . '` WHERE confcat_modid > 1');
+        if (!$this->execOrFail('DELETE FROM `' . $this->db->prefix('configcategory') . '` WHERE confcat_modid > 1')) {
+            return false;
+        }
 
         //Drop category information fields added in 2.2
-        $this->db->exec('ALTER TABLE `' . $this->db->prefix('configcategory') . '` DROP `confcat_nameid`, DROP `confcat_description`, DROP `confcat_modid`');
+        if (!$this->execOrFail('ALTER TABLE `' . $this->db->prefix('configcategory') . '` DROP `confcat_nameid`, DROP `confcat_description`, DROP `confcat_modid`')) {
+            return false;
+        }
 
         // Re-add user configuration category
-        $this->db->exec('INSERT INTO `' . $this->db->prefix('configcategory') . "` (confcat_id, confcat_name, confcat_order) VALUES (2, '_MD_AM_USERSETTINGS', 2)");
+        if (!$this->execOrFail('INSERT INTO `' . $this->db->prefix('configcategory') . "` (confcat_id, confcat_name, confcat_order) VALUES (2, '_MD_AM_USERSETTINGS', 2)")) {
+            return false;
+        }
 
         //Rebuild user configuration items
         //Get values from Profile module
@@ -165,7 +181,9 @@ class Upgrade_220 extends XoopsUpgrade
             }
         }
 
-        $this->db->exec('INSERT INTO `' . $this->db->prefix('config') . '` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) VALUES ' . " (0, 2, 'minpass', '_MD_AM_MINPASS', " . $this->db->quote($profile_config_arr['minpass']) . ", '_MD_AM_MINPASSDSC', 'textbox', 'int', 1)," . " (0, 2, 'minuname', '_MD_AM_MINUNAME', " . $this->db->quote($profile_config_arr['minuname']) . ", '_MD_AM_MINUNAMEDSC', 'textbox', 'int', 2)," . " (0, 2, 'new_user_notify', '_MD_AM_NEWUNOTIFY', " . $this->db->quote($profile_config_arr['new_user_notify']) . ", '_MD_AM_NEWUNOTIFYDSC', 'yesno', 'int', 4)," . " (0, 2, 'new_user_notify_group', '_MD_AM_NOTIFYTO', " . $this->db->quote($profile_config_arr['new_user_notify_group']) . ", '_MD_AM_NOTIFYTODSC', 'group', 'int', 6)," . " (0, 2, 'activation_type', '_MD_AM_ACTVTYPE', " . $this->db->quote($profile_config_arr['activation_type']) . ", '_MD_AM_ACTVTYPEDSC', 'select', 'int', 8)," . " (0, 2, 'activation_group', '_MD_AM_ACTVGROUP', " . $this->db->quote($profile_config_arr['activation_group']) . ", '_MD_AM_ACTVGROUPDSC', 'group', 'int', 10)," . " (0, 2, 'uname_test_level', '_MD_AM_UNAMELVL', " . $this->db->quote($profile_config_arr['uname_test_level']) . ", '_MD_AM_UNAMELVLDSC', 'select', 'int', 12)," . " (0, 2, 'avatar_allow_upload', '_MD_AM_AVATARALLOW', " . $this->db->quote($profile_config_arr['avatar_allow_upload']) . ", '_MD_AM_AVATARALWDSC', 'yesno', 'int', 14)," . " (0, 2, 'avatar_width', '_MD_AM_AVATARW', " . $this->db->quote($profile_config_arr['avatar_width']) . ", '_MD_AM_AVATARWDSC', 'textbox', 'int', 16)," . " (0, 2, 'avatar_height', '_MD_AM_AVATARH', " . $this->db->quote($profile_config_arr['avatar_height']) . ", '_MD_AM_AVATARHDSC', 'textbox', 'int', 18)," . " (0, 2, 'avatar_maxsize', '_MD_AM_AVATARMAX', " . $this->db->quote($profile_config_arr['avatar_maxsize']) . ", '_MD_AM_AVATARMAXDSC', 'textbox', 'int', 20)," . " (0, 2, 'self_delete', '_MD_AM_SELFDELETE', " . $this->db->quote($profile_config_arr['self_delete']) . ", '_MD_AM_SELFDELETEDSC', 'yesno', 'int', 22)," . " (0, 2, 'bad_unames', '_MD_AM_BADUNAMES', " . $this->db->quote($profile_config_arr['bad_unames']) . ", '_MD_AM_BADUNAMESDSC', 'textarea', 'array', 24)," . " (0, 2, 'bad_emails', '_MD_AM_BADEMAILS', " . $this->db->quote($profile_config_arr['bad_emails']) . ", '_MD_AM_BADEMAILSDSC', 'textarea', 'array', 26)," . " (0, 2, 'maxuname', '_MD_AM_MAXUNAME', " . $this->db->quote($profile_config_arr['maxuname']) . ", '_MD_AM_MAXUNAMEDSC', 'textbox', 'int', 3)," . " (0, 2, 'avatar_minposts', '_MD_AM_AVATARMP', " . $this->db->quote($profile_config_arr['avatar_minposts']) . ", '_MD_AM_AVATARMPDSC', 'textbox', 'int', 15)," . " (0, 2, 'allow_chgmail', '_MD_AM_ALLWCHGMAIL', " . $this->db->quote($profile_config_arr['allow_chgmail']) . ", '_MD_AM_ALLWCHGMAILDSC', 'yesno', 'int', 3)," . " (0, 2, 'reg_dispdsclmr', '_MD_AM_DSPDSCLMR', " . $this->db->quote($profile_config_arr['reg_dispdsclmr']) . ", '_MD_AM_DSPDSCLMRDSC', 'yesno', 'int', 30)," . " (0, 2, 'reg_disclaimer', '_MD_AM_REGDSCLMR', " . $this->db->quote($profile_config_arr['reg_disclaimer']) . ", '_MD_AM_REGDSCLMRDSC', 'textarea', 'text', 32)," . " (0, 2, 'allow_register', '_MD_AM_ALLOWREG', " . $this->db->quote($profile_config_arr['allow_register']) . ", '_MD_AM_ALLOWREGDSC', 'yesno', 'int', 0)");
+        if (!$this->execOrFail('INSERT INTO `' . $this->db->prefix('config') . '` (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) VALUES ' . " (0, 2, 'minpass', '_MD_AM_MINPASS', " . $this->db->quote($profile_config_arr['minpass']) . ", '_MD_AM_MINPASSDSC', 'textbox', 'int', 1)," . " (0, 2, 'minuname', '_MD_AM_MINUNAME', " . $this->db->quote($profile_config_arr['minuname']) . ", '_MD_AM_MINUNAMEDSC', 'textbox', 'int', 2)," . " (0, 2, 'new_user_notify', '_MD_AM_NEWUNOTIFY', " . $this->db->quote($profile_config_arr['new_user_notify']) . ", '_MD_AM_NEWUNOTIFYDSC', 'yesno', 'int', 4)," . " (0, 2, 'new_user_notify_group', '_MD_AM_NOTIFYTO', " . $this->db->quote($profile_config_arr['new_user_notify_group']) . ", '_MD_AM_NOTIFYTODSC', 'group', 'int', 6)," . " (0, 2, 'activation_type', '_MD_AM_ACTVTYPE', " . $this->db->quote($profile_config_arr['activation_type']) . ", '_MD_AM_ACTVTYPEDSC', 'select', 'int', 8)," . " (0, 2, 'activation_group', '_MD_AM_ACTVGROUP', " . $this->db->quote($profile_config_arr['activation_group']) . ", '_MD_AM_ACTVGROUPDSC', 'group', 'int', 10)," . " (0, 2, 'uname_test_level', '_MD_AM_UNAMELVL', " . $this->db->quote($profile_config_arr['uname_test_level']) . ", '_MD_AM_UNAMELVLDSC', 'select', 'int', 12)," . " (0, 2, 'avatar_allow_upload', '_MD_AM_AVATARALLOW', " . $this->db->quote($profile_config_arr['avatar_allow_upload']) . ", '_MD_AM_AVATARALWDSC', 'yesno', 'int', 14)," . " (0, 2, 'avatar_width', '_MD_AM_AVATARW', " . $this->db->quote($profile_config_arr['avatar_width']) . ", '_MD_AM_AVATARWDSC', 'textbox', 'int', 16)," . " (0, 2, 'avatar_height', '_MD_AM_AVATARH', " . $this->db->quote($profile_config_arr['avatar_height']) . ", '_MD_AM_AVATARHDSC', 'textbox', 'int', 18)," . " (0, 2, 'avatar_maxsize', '_MD_AM_AVATARMAX', " . $this->db->quote($profile_config_arr['avatar_maxsize']) . ", '_MD_AM_AVATARMAXDSC', 'textbox', 'int', 20)," . " (0, 2, 'self_delete', '_MD_AM_SELFDELETE', " . $this->db->quote($profile_config_arr['self_delete']) . ", '_MD_AM_SELFDELETEDSC', 'yesno', 'int', 22)," . " (0, 2, 'bad_unames', '_MD_AM_BADUNAMES', " . $this->db->quote($profile_config_arr['bad_unames']) . ", '_MD_AM_BADUNAMESDSC', 'textarea', 'array', 24)," . " (0, 2, 'bad_emails', '_MD_AM_BADEMAILS', " . $this->db->quote($profile_config_arr['bad_emails']) . ", '_MD_AM_BADEMAILSDSC', 'textarea', 'array', 26)," . " (0, 2, 'maxuname', '_MD_AM_MAXUNAME', " . $this->db->quote($profile_config_arr['maxuname']) . ", '_MD_AM_MAXUNAMEDSC', 'textbox', 'int', 3)," . " (0, 2, 'avatar_minposts', '_MD_AM_AVATARMP', " . $this->db->quote($profile_config_arr['avatar_minposts']) . ", '_MD_AM_AVATARMPDSC', 'textbox', 'int', 15)," . " (0, 2, 'allow_chgmail', '_MD_AM_ALLWCHGMAIL', " . $this->db->quote($profile_config_arr['allow_chgmail']) . ", '_MD_AM_ALLWCHGMAILDSC', 'yesno', 'int', 3)," . " (0, 2, 'reg_dispdsclmr', '_MD_AM_DSPDSCLMR', " . $this->db->quote($profile_config_arr['reg_dispdsclmr']) . ", '_MD_AM_DSPDSCLMRDSC', 'yesno', 'int', 30)," . " (0, 2, 'reg_disclaimer', '_MD_AM_REGDSCLMR', " . $this->db->quote($profile_config_arr['reg_disclaimer']) . ", '_MD_AM_REGDSCLMRDSC', 'textarea', 'text', 32)," . " (0, 2, 'allow_register', '_MD_AM_ALLOWREG', " . $this->db->quote($profile_config_arr['allow_register']) . ", '_MD_AM_ALLOWREGDSC', 'yesno', 'int', 0)")) {
+            return false;
+        }
 
         //Rebuild user configuration options
         $criteria = new CriteriaCompo(new Criteria('conf_name', "('activation_type', 'uname_test_level')", 'IN'));
@@ -175,9 +193,11 @@ class Upgrade_220 extends XoopsUpgrade
         $configs             = $config_handler->getConfigs($criteria);
         $id_activation_type  = $configs[0]->getVar('conf_id');
         $id_uname_test_level = $configs[1]->getVar('conf_id');
-        $this->db->exec('INSERT INTO `' . $this->db->prefix('configoption') . '` (confop_name, confop_value, conf_id) VALUES ' . " ('_MD_AM_USERACTV', '0', {$id_activation_type})," . " ('_MD_AM_AUTOACTV', '1', {$id_activation_type})," . " ('_MD_AM_ADMINACTV', '2', {$id_activation_type})," . " ('_MD_AM_STRICT', '0', {$id_uname_test_level})," . " ('_MD_AM_MEDIUM', '1', {$id_uname_test_level})," . " ('_MD_AM_LIGHT', '2', {$id_uname_test_level})");
+        if (!$this->execOrFail('INSERT INTO `' . $this->db->prefix('configoption') . '` (confop_name, confop_value, conf_id) VALUES ' . " ('_MD_AM_USERACTV', '0', {$id_activation_type})," . " ('_MD_AM_AUTOACTV', '1', {$id_activation_type})," . " ('_MD_AM_ADMINACTV', '2', {$id_activation_type})," . " ('_MD_AM_STRICT', '0', {$id_uname_test_level})," . " ('_MD_AM_MEDIUM', '1', {$id_uname_test_level})," . " ('_MD_AM_LIGHT', '2', {$id_uname_test_level})")) {
+            return false;
+        }
 
-        return $result;
+        return true;
     }
 
     /**
@@ -186,7 +206,7 @@ class Upgrade_220 extends XoopsUpgrade
     public function apply_profile(): bool
     {
         // Restore users table
-        $this->db->exec('ALTER TABLE `' . $this->db->prefix('users') . "`
+        if (!$this->execOrFail('ALTER TABLE `' . $this->db->prefix('users') . "`
               ADD url varchar(100) NOT NULL default '',
               ADD user_regdate int(10) unsigned NOT NULL default '0',
               ADD user_icq varchar(15) NOT NULL default '',
@@ -210,7 +230,9 @@ class Upgrade_220 extends XoopsUpgrade
               ADD bio tinytext,
               ADD user_intrest varchar(150) NOT NULL default '',
               ADD user_mailok tinyint(1) unsigned NOT NULL default '1'
-              ");
+              ")) {
+            return false;
+        }
 
         // Copy data from profile table
         $profile_fields = [
@@ -239,15 +261,23 @@ class Upgrade_220 extends XoopsUpgrade
             'user_mailok',
         ];
         foreach ($profile_fields as $field) {
-            $this->db->exec('UPDATE `' . $this->db->prefix('users') . '` u, `' . $this->db->prefix('user_profile') . "` p SET u.{$field} = p.{$field} WHERE u.uid=p.profileid");
+            if (!$this->execOrFail('UPDATE `' . $this->db->prefix('users') . '` u, `' . $this->db->prefix('user_profile') . "` p SET u.{$field} = p.{$field} WHERE u.uid=p.profileid")) {
+                return false;
+            }
         }
 
         //Set display name as real name
-        $this->db->exec('UPDATE `' . $this->db->prefix('users') . "` SET name=uname WHERE name=''");
+        if (!$this->execOrFail('UPDATE `' . $this->db->prefix('users') . "` SET name=uname WHERE name=''")) {
+            return false;
+        }
         //Set loginname as uname
-        $this->db->exec('UPDATE `' . $this->db->prefix('users') . '` SET uname=loginname');
+        if (!$this->execOrFail('UPDATE `' . $this->db->prefix('users') . '` SET uname=loginname')) {
+            return false;
+        }
         //Drop loginname
-        $this->db->exec('ALTER TABLE `' . $this->db->prefix('users') . '` DROP loginname');
+        if (!$this->execOrFail('ALTER TABLE `' . $this->db->prefix('users') . '` DROP loginname')) {
+            return false;
+        }
 
         return true;
     }
@@ -338,7 +368,7 @@ class Upgrade_220 extends XoopsUpgrade
             return false;
         }
 
-        $sql    = '   SELECT MAX(instanceid) FROM ' . $this->db->prefix('block_instance');
+        $sql    = '   SELECT COALESCE(MAX(instanceid), 0) FROM ' . $this->db->prefix('block_instance');
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             throw new \RuntimeException(
@@ -348,6 +378,7 @@ class Upgrade_220 extends XoopsUpgrade
         }
 
         [$MaxInstanceId] = $this->db->fetchRow($result);
+        $MaxInstanceId = (int) $MaxInstanceId;
 
         // Change custom block mid from 1 to 0
         $sql    = 'UPDATE `' . $this->db->prefix('newblocks_bak') . "` SET mid = 0 WHERE show_func = 'b_system_custom_show'";

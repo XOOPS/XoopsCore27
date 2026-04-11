@@ -70,27 +70,48 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_upgradeLicenseKey($public_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        $fver        = fopen($licensefile, 'w');
-        $fver_buf    = file($license_file_dist);
-        if (false === $fver || false === $fver_buf) {
-            if (false !== $fver) {
-                fclose($fver);
-            }
+        $fver_buf = file($license_file_dist);
+        if (false === $fver_buf) {
             return false;
         }
         $license_key = $public_key . substr(XOOPS_LICENSE_KEY, 13, strlen(XOOPS_LICENSE_KEY) - 13);
+        $content = '';
         foreach ($fver_buf as $line => $value) {
             if (strpos($value, 'XOOPS_LICENSE_KEY') > 0) {
-                $ret = 'define(\'XOOPS_LICENSE_KEY\', \'' . $license_key . "');";
+                $content .= 'define(\'XOOPS_LICENSE_KEY\', \'' . $license_key . "');";
             } else {
-                $ret = $value;
-            }
-            if (false === fwrite($fver, $ret, strlen($ret))) {
-                fclose($fver);
-                return false;
+                $content .= $value;
             }
         }
+
+        $tmpFile = tempnam(dirname($licensefile), 'tmp_license_');
+        if (false === $tmpFile) {
+            return false;
+        }
+
+        $fver = fopen($tmpFile, 'wb');
+        if (false === $fver) {
+            @unlink($tmpFile);
+
+            return false;
+        }
+
+        $written = fwrite($fver, $content);
+        if ($written !== strlen($content)) {
+            fclose($fver);
+            @unlink($tmpFile);
+
+            return false;
+        }
+        fflush($fver);
         fclose($fver);
+
+        if (!@rename($tmpFile, $licensefile)) {
+            @unlink($tmpFile);
+
+            return false;
+        }
+
         chmod($licensefile, 0444);
 
         return 'Written License Key: ' . $license_key;
@@ -102,26 +123,47 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function xoops_putLicenseKey($system_key, $licensefile, $license_file_dist = 'license.dist.php')
     {
-        $fver     = fopen($licensefile, 'w');
         $fver_buf = file($license_file_dist);
-        if (false === $fver || false === $fver_buf) {
-            if (false !== $fver) {
-                fclose($fver);
-            }
+        if (false === $fver_buf) {
             return false;
         }
+        $content = '';
         foreach ($fver_buf as $line => $value) {
             if (strpos($value, 'XOOPS_LICENSE_KEY') > 0) {
-                $ret = 'define(\'XOOPS_LICENSE_KEY\', \'' . $system_key . "');";
+                $content .= 'define(\'XOOPS_LICENSE_KEY\', \'' . $system_key . "');";
             } else {
-                $ret = $value;
-            }
-            if (false === fwrite($fver, $ret, strlen($ret))) {
-                fclose($fver);
-                return false;
+                $content .= $value;
             }
         }
+
+        $tmpFile = tempnam(dirname($licensefile), 'tmp_license_');
+        if (false === $tmpFile) {
+            return false;
+        }
+
+        $fver = fopen($tmpFile, 'wb');
+        if (false === $fver) {
+            @unlink($tmpFile);
+
+            return false;
+        }
+
+        $written = fwrite($fver, $content);
+        if ($written !== strlen($content)) {
+            fclose($fver);
+            @unlink($tmpFile);
+
+            return false;
+        }
+        fflush($fver);
         fclose($fver);
+
+        if (!@rename($tmpFile, $licensefile)) {
+            @unlink($tmpFile);
+
+            return false;
+        }
+
         chmod($licensefile, 0444);
 
         return 'Written License Key: ' . $system_key;

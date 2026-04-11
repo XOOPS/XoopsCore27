@@ -204,7 +204,8 @@ class UpgradeControl
      */
     public function buildUpgradeQueue(): bool
     {
-        $dirs = $this->getDirList('.');
+        $upgradeRoot = dirname(__DIR__, 3);
+        $dirs = $this->getDirList($upgradeRoot);
 
         /** @var PatchStatus[] $results */
         $results           = [];
@@ -213,7 +214,7 @@ class UpgradeControl
 
         foreach ($dirs as $dir) {
             if (str_contains($dir, '-to-')) {
-                $className = include "{$dir}/index.php";
+                $className = include $upgradeRoot . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . 'index.php';
                 if (is_string($className) && class_exists($className)) {
                     $upg           = $this->createPatch($className);
                     $results[$dir] = $upg->isApplied();
@@ -319,9 +320,6 @@ class UpgradeControl
     public function storeMainfileCheck(bool $needMainfileRewrite, array $mainfileKeys): void
     {
         $this->needMainfileRewrite = $needMainfileRewrite;
-
-        if ($needMainfileRewrite) {
-            $this->mainfileKeys = $mainfileKeys;
-        }
+        $this->mainfileKeys = $needMainfileRewrite ? $mainfileKeys : [];
     }
 }

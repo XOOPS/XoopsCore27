@@ -29,8 +29,11 @@ use Xoops\Upgrade\UpgradeControl;
  * 10. deleteflashsanitizer   — Delete obsolete Flash text sanitizer plugin
  * 11. cleancache             — Clear compiled templates and cache files
  *
+ * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license          GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @package      XOOPS
+ * @link         https://xoops.org
  * @since            2.7.0
  * @author           XOOPS Team
  */
@@ -308,7 +311,11 @@ class Upgrade_270 extends XoopsUpgrade
 
         // Add select options for SameSite — delete and recreate to avoid duplicates
         $confId = (int) $sameSiteRow[0];
-        $this->db->exec("DELETE FROM `{$optionTable}` WHERE conf_id = {$confId}");
+        if (!$this->db->exec("DELETE FROM `{$optionTable}` WHERE conf_id = {$confId}")) {
+            $this->logs[] = 'Failed to purge SameSite options: ' . $this->db->error();
+
+            return false;
+        }
         foreach (['Lax', 'Strict', 'None'] as $opt) {
             if (!$this->db->exec("INSERT INTO `{$optionTable}` (confop_name, confop_value, conf_id) VALUES ('{$opt}', '{$opt}', {$confId})")) {
                 $this->logs[] = "Failed to insert SameSite option '{$opt}': " . $this->db->error();
@@ -677,7 +684,12 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        $scanned = scandir($folderPath);
+        $resolvedRoot = realpath($folderPath);
+        if (false === $resolvedRoot || is_link($folderPath) || !self::isAllowedDeleteRoot($resolvedRoot)) {
+            return false;
+        }
+
+        $scanned = scandir($resolvedRoot);
         if (false === $scanned) {
             return false;
         }
@@ -685,7 +697,7 @@ class Upgrade_270 extends XoopsUpgrade
         $files = array_diff($scanned, ['.', '..']);
 
         foreach ($files as $file) {
-            $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
+            $filePath = $resolvedRoot . DIRECTORY_SEPARATOR . $file;
             if (is_link($filePath)) {
                 if (!unlink($filePath)) {
                     return false;
@@ -701,7 +713,24 @@ class Upgrade_270 extends XoopsUpgrade
             }
         }
 
-        return rmdir($folderPath);
+        return rmdir($resolvedRoot);
+    }
+
+    private static function isAllowedDeleteRoot(string $path): bool
+    {
+        foreach ([XOOPS_ROOT_PATH, XOOPS_TRUST_PATH] as $basePath) {
+            $resolvedBase = realpath($basePath);
+            if (false === $resolvedBase) {
+                continue;
+            }
+
+            $prefix = rtrim($resolvedBase, '\\/') . DIRECTORY_SEPARATOR;
+            if ($path === $resolvedBase || str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function relativePath(string $path): string

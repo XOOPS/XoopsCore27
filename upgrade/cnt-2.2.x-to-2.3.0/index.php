@@ -371,10 +371,9 @@ class Upgrade_220 extends XoopsUpgrade
         $sql    = '   SELECT COALESCE(MAX(instanceid), 0) FROM ' . $this->db->prefix('block_instance');
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
-                E_USER_ERROR,
-            );
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
 
         [$MaxInstanceId] = $this->db->fetchRow($result);
@@ -389,10 +388,9 @@ class Upgrade_220 extends XoopsUpgrade
         $sql       = '   SELECT b.*, i.instanceid ' . '   FROM ' . $this->db->prefix('block_instance') . ' AS i LEFT JOIN ' . $this->db->prefix('newblocks_bak') . ' AS b ON b.bid = i.bid ' . '   GROUP BY b.dirname, b.bid, i.instanceid';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
-                E_USER_ERROR,
-            );
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
         $dirname   = '';
         $bid       = 0;
@@ -431,10 +429,9 @@ class Upgrade_220 extends XoopsUpgrade
         '   GROUP BY b.dirname, b.bid';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
-                E_USER_ERROR,
-            );
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
         $dirname   = '';
         $bid       = 0;
@@ -485,10 +482,9 @@ class Upgrade_220 extends XoopsUpgrade
         $sql    = 'SELECT bid, options FROM `' . $this->db->prefix('newblocks') . "` WHERE show_func='b_system_custom_show'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
-                E_USER_ERROR,
-            );
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
         while (false !== (list($bid, $options) = $this->db->fetchRow($result))) {
             $_options = unserialize($options, ['allowed_classes' => false]);
@@ -507,10 +503,9 @@ class Upgrade_220 extends XoopsUpgrade
         $sql    = 'SELECT bid, options FROM `' . $this->db->prefix('newblocks') . "` WHERE show_func <> 'b_system_custom_show' AND options <> ''";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            throw new \RuntimeException(
-                \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error(),
-                E_USER_ERROR,
-            );
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
         while (false !== (list($bid, $_options) = $this->db->fetchRow($result))) {
             $options = unserialize($_options, ['allowed_classes' => false]);

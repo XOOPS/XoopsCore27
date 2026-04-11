@@ -12,7 +12,10 @@
 
 defined('XOOPS_ROOT_PATH') or exit();
 
-if (empty($_POST['uname']) || empty($_POST['pass'])) {
+$uname = trim(\Xmf\Request::getString('uname', '', 'POST'));
+$pass = trim((string) \Xmf\Request::getVar('pass', '', 'POST'));
+
+if ('' === $uname || '' === $pass) {
     ?>
     <h2><?php echo _USER_LOGIN; ?></h2>
 
@@ -35,10 +38,6 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
     </form>
     <?php
 } else {
-    $myts  = \MyTextSanitizer::getInstance();
-    $uname = !isset($_POST['uname']) ? '' : $myts->addSlashes(trim($_POST['uname']));
-    $pass  = !isset($_POST['pass']) ? '' : $myts->addSlashes(trim($_POST['pass']));
-
     $member_handler = xoops_getHandler('member');
 
     include_once XOOPS_ROOT_PATH . '/class/auth/authfactory.php';
@@ -54,7 +53,7 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
             $criteria = new CriteriaCompo(new Criteria('loginname', $uname));
             $criteria->add(new Criteria('pass', md5($pass)));
             [$user] = $member_handler->getUsers($criteria);
-        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
             $user = false;
         }
     }
@@ -74,6 +73,16 @@ if (empty($_POST['uname']) || empty($_POST['pass'])) {
     if ($isAllowed) {
         $user->setVar('last_login', time());
         if (!$member_handler->insertUser($user)) {
+            $errors = method_exists($user, 'getErrors') ? $user->getErrors() : [];
+            $errorText = is_array($errors) ? implode('; ', $errors) : (string) $errors;
+            trigger_error(
+                sprintf(
+                    'insertUser failed for uid %d during upgrade login%s',
+                    (int) $user->getVar('uid'),
+                    '' !== $errorText ? ': ' . $errorText : ''
+                ),
+                E_USER_WARNING
+            );
         }
         // Regenerate a new session id and destroy old session
         $GLOBALS['sess_handler']->regenerate_id(true);

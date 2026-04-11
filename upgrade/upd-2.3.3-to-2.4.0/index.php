@@ -216,6 +216,8 @@ class Upgrade_240 extends XoopsUpgrade
             $sql = 'SHOW KEYS FROM `' . $this->db->prefix($table) . '`';
             $result = $this->db->query($sql);
             if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
                 return false;
             }
             $existing_keys = [];
@@ -248,6 +250,8 @@ class Upgrade_240 extends XoopsUpgrade
             $sql = 'SHOW KEYS FROM `' . $this->db->prefix($table) . '`';
             $result = $this->db->query($sql);
             if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
                 return false;
             }
             $existing_keys = [];
@@ -258,6 +262,8 @@ class Upgrade_240 extends XoopsUpgrade
                 if (!in_array($key, $existing_keys)) {
                     $sql = 'ALTER TABLE `' . $this->db->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
                     if (!$result = $this->db->exec($sql)) {
+                        $this->logs[] = sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
                         return false;
                     }
                 }

@@ -153,7 +153,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $result = $migrate->executeQueue(true);
         if (false === $result) {
             $this->logs[] = sprintf(
-                'Migration of %s table failed. Error: %s - %s' .
+                'Migration of %s table failed. Error: %s - %s',
                 $this->bannerTableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
@@ -222,6 +222,11 @@ class Upgrade_2511 extends XoopsUpgrade
         return $migrate->executeQueue(true);
     }
 
+    /**
+     * Return the config row id for the mailer method preference.
+     *
+     * @return int|null
+     */
     private function getMailerMethodConfigId(): ?int
     {
         $table = $this->db->prefix('config');
@@ -372,7 +377,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $result = $migrate->executeQueue(true);
         if (false === $result) {
             $this->logs[] = sprintf(
-                'Migration of %s table failed. Error: %s - %s' .
+                'Migration of %s table failed. Error: %s - %s',
                 $tableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
@@ -675,7 +680,7 @@ class Upgrade_2511 extends XoopsUpgrade
         $result = $migrate->executeQueue(true);
         if (false === $result) {
             $this->logs[] = sprintf(
-                'Migration of %s table failed. Error: %s - %s' .
+                'Migration of %s table failed. Error: %s - %s',
                 $this->modulesTableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
@@ -717,10 +722,21 @@ class Upgrade_2511 extends XoopsUpgrade
 
                 $filePath = XOOPS_ROOT_PATH . '/modules/system/templates/' . $tplfile['file'];
                 if ($fp = fopen($filePath, 'r')) {
-                    $newtplid = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", 'module')");
+                    $newtplid = $dbm->insert(
+                        'tplfile',
+                        " VALUES (0, 1, 'system', 'default', "
+                        . $this->db->quote($tplfile['file'])
+                        . ', '
+                        . $this->db->quote($tplfile['description'])
+                        . ', '
+                        . $time
+                        . ', '
+                        . $time
+                        . ", 'module')"
+                    );
                     $tplsource = fread($fp, filesize($filePath));
                     fclose($fp);
-                    $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");
+                    $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ', ' . $this->db->quote($tplsource) . ')');
                 }
             }
         }
@@ -752,12 +768,24 @@ class Upgrade_2511 extends XoopsUpgrade
         $dbm  = new Db_manager();
         $time = time();
         foreach ($modversion['templates'] as $tplfile) {
+            $adminTemplatePath = XOOPS_ROOT_PATH . '/modules/system/templates/admin/' . $tplfile['file'];
             // Admin templates
-            if (isset($tplfile['type']) && 'admin' === $tplfile['type'] && $fp = fopen('../modules/system/templates/admin/' . $tplfile['file'], 'r')) {
-                $newtplid  = $dbm->insert('tplfile', " VALUES (0, 1, 'system', 'default', '" . addslashes($tplfile['file']) . "', '" . addslashes($tplfile['description']) . "', " . $time . ', ' . $time . ", 'admin')");
-                $tplsource = fread($fp, filesize('../modules/system/templates/admin/' . $tplfile['file']));
+            if (isset($tplfile['type']) && 'admin' === $tplfile['type'] && $fp = fopen($adminTemplatePath, 'r')) {
+                $newtplid  = $dbm->insert(
+                    'tplfile',
+                    " VALUES (0, 1, 'system', 'default', "
+                    . $this->db->quote($tplfile['file'])
+                    . ', '
+                    . $this->db->quote($tplfile['description'])
+                    . ', '
+                    . $time
+                    . ', '
+                    . $time
+                    . ", 'admin')"
+                );
+                $tplsource = fread($fp, filesize($adminTemplatePath));
                 fclose($fp);
-                $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");
+                $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ', ' . $this->db->quote($tplsource) . ')');
             }
         }
 
@@ -884,7 +912,8 @@ class Upgrade_2511 extends XoopsUpgrade
         $returnResult = true;
         $notification_method = false;
         $sql                   = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
-        if ($result = $this->db->query($sql)) {
+        $result = $this->db->query($sql);
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
             [$count] = $this->db->fetchRow($result);
             if (1 == $count) {
                 $notification_method = true;

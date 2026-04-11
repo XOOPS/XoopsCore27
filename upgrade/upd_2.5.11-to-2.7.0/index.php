@@ -684,8 +684,12 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
+        if (is_link($folderPath)) {
+            return unlink($folderPath);
+        }
+
         $resolvedRoot = realpath($folderPath);
-        if (false === $resolvedRoot || is_link($folderPath) || !self::isAllowedDeleteRoot($resolvedRoot)) {
+        if (false === $resolvedRoot || !self::isAllowedDeleteRoot($resolvedRoot)) {
             return false;
         }
 

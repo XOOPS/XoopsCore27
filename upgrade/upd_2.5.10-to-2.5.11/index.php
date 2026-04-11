@@ -1,4 +1,13 @@
 <?php
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
 
 use Xmf\Database\Tables;
 use Xoops\Upgrade\XoopsUpgrade;
@@ -7,11 +16,10 @@ use Xoops\Upgrade\UpgradeControl;
 /**
  * Upgrade from 2.5.10 to 2.5.11
  *
- * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
- * @license          GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package          Upgrade
- * @since            2.5.11
- * @author           XOOPS Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.5.11
+ * @author    XOOPS Team
  */
 
 class Upgrade_2511 extends XoopsUpgrade
@@ -65,6 +73,7 @@ class Upgrade_2511 extends XoopsUpgrade
             XOOPS_VAR_PATH,
             XOOPS_PATH,
         ];
+        $this->usedFiles = array_merge($this->usedFiles, $this->pathsToCheck);
     }
 
     protected $cleanCacheKey = 'cache-cleaned';
@@ -800,7 +809,7 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function check_zapsmarty(): bool
     {
-        return !file_exists(XOOPS_ROOT_PATH . '/class/smarty/smarty.class.php');
+        return !file_exists(XOOPS_ROOT_PATH . '/class/smarty/Smarty.class.php');
     }
 
     /**

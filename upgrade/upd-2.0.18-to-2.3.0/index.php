@@ -14,33 +14,31 @@ use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;
 
 /**
- * Upgrader from 2.0.18 to 2.3.0
+ * Upgrade from 2.0.18 to 2.3.0
  *
- * See the enclosed file license.txt for licensing information.
- * If you did not receive this file, get it at https://www.gnu.org/licenses/gpl-2.0.html
- *
- * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
- * @license          GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
- * @package          upgrader
- * @since            2.3.0
- * @author           Taiwen Jiang <phppp@users.sourceforge.net>
- */
-
-include_once __DIR__ . '/pathcontroller.php';
-
-/**
- * Class upgrade_230
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.3.0
+ * @author    Taiwen Jiang <phppp@users.sourceforge.net>
+ * @author    XOOPS Development Team
  */
 class Upgrade_230 extends XoopsUpgrade
 {
-    /*
-     *  __construct()
+    /**
+     * @var string
+     */
+    protected $pathControllerFile;
+
+    /**
+     * @param XoopsMySQLDatabase $db      database connection
+     * @param UpgradeControl     $control upgrade control instance
      */
     public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
         parent::__construct($db, $control, basename(__DIR__));
-        $this->usedFiles = ['mainfile.php'];
-        $this->tasks     = ['config', 'cache', 'path', 'db', 'bmlink'];
+        $this->usedFiles          = ['mainfile.php'];
+        $this->tasks              = ['config', 'cache', 'path', 'db', 'bmlink'];
+        $this->pathControllerFile = __DIR__ . '/pathcontroller.php';
     }
 
     /**
@@ -207,6 +205,13 @@ class Upgrade_230 extends XoopsUpgrade
         if (!(defined('XOOPS_PATH') && defined('XOOPS_VAR_PATH') && defined('XOOPS_TRUST_PATH'))) {
             return false;
         }
+
+        if (!file_exists($this->pathControllerFile)) {
+            $this->logs[] = 'Path controller file not found: ' . $this->pathControllerFile;
+            return false;
+        }
+        require_once $this->pathControllerFile;
+
         $ctrl = new PathController();
         if (!$ctrl->checkPath()) {
             return false;

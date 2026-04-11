@@ -47,13 +47,15 @@ class Upgrade_240 extends XoopsUpgrade
     public function apply_version(): bool|string
     {
         set_time_limit(120);
-        if (!is_writable('../include/license.php')) {
-            echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php - is not writeable</span> - Windows Read Only (Off) / UNIX chmod 0644</p>";
+        $licenseFile = XOOPS_ROOT_PATH . '/include/license.php';
+        $licenseDir  = dirname($licenseFile);
+        if (!is_writable($licenseFile) || !is_writable($licenseDir)) {
+            echo "<p><span style='color:#ff0000;'>&nbsp;include/license.php and its parent directory must be writable by the web server.</span></p>";
 
             return false;
         }
 
-        $result = $this->xoops_putLicenseKey($this->xoops_buildLicenceKey(), XOOPS_ROOT_PATH . '/include/license.php', __DIR__ . '/license.dist.php');
+        $result = $this->xoops_putLicenseKey($this->xoops_buildLicenceKey(), $licenseFile, __DIR__ . '/license.dist.php');
         if (false === $result) {
             $this->logs[] = 'License key write failed';
             return false;

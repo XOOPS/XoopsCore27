@@ -68,9 +68,22 @@ class UpgradeControl
      * @param string $className fully-qualified patch class name returned by a patch index.php
      *
      * @return XoopsUpgrade
+     *
+     * @throws \InvalidArgumentException if the class does not exist or does not extend XoopsUpgrade
      */
     public function createPatch(string $className): XoopsUpgrade
     {
+        if (!class_exists($className)) {
+            throw new \InvalidArgumentException(
+                sprintf('Upgrade patch class "%s" does not exist.', $className)
+            );
+        }
+        if ($className !== XoopsUpgrade::class && !is_subclass_of($className, XoopsUpgrade::class)) {
+            throw new \InvalidArgumentException(
+                sprintf('Upgrade patch class "%s" must extend %s.', $className, XoopsUpgrade::class)
+            );
+        }
+
         return new $className($this->db, $this);
     }
 
@@ -140,6 +153,7 @@ class UpgradeControl
      */
     public function loadLanguage(string $domain, ?string $language = null): void
     {
+        // Upgrade language files populate $supports in local scope for the controller to merge.
         $supports = null;
 
         $language   = $this->normalizeLanguage($language ?? $this->upgradeLanguage);
@@ -221,7 +235,7 @@ class UpgradeControl
                     if (!($results[$dir]->applied)) {
                         $this->needUpgrade = true;
                         if (!empty($results[$dir]->files)) {
-                            $files = array_merge($files, $upg->usedFiles);
+                            $files = array_merge($files, $results[$dir]->files);
                         }
                     }
                 }

@@ -1,10 +1,24 @@
 <?php
+/*
+ You may not change or alter any portion of this comment or credits
+ of supporting developers from this source code or any supporting source code
+ which is considered copyrighted (c) material of the original comment or credit authors.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*/
 
 use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;
 
 /**
- * Class upgrade_2014
+ * Upgrade from 2.0.13 to 2.0.14
+ *
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @since     2.0.14
+ * @author    XOOPS Team
  */
 class Upgrade_2014 extends XoopsUpgrade
 {
@@ -13,7 +27,11 @@ class Upgrade_2014 extends XoopsUpgrade
      */
     public function check_0523patch(): bool
     {
-        $lines = file('../mainfile.php');
+        $mainfile = XOOPS_ROOT_PATH . '/mainfile.php';
+        $lines    = @file($mainfile);
+        if (false === $lines) {
+            return false;
+        }
         foreach ($lines as $line) {
             if (strpos($line, "\$_REQUEST[\$bad_global]") !== false) {
                 // Patch found: do not apply again
@@ -43,7 +61,14 @@ class Upgrade_2014 extends XoopsUpgrade
         include XOOPS_ROOT_PATH.\"/include/common.php\";
     }
 </pre>";
-        $lines     = file('../mainfile.php');
+        $mainfile  = XOOPS_ROOT_PATH . '/mainfile.php';
+        $lines     = @file($mainfile);
+        if (false === $lines) {
+            printf(_FAILED_PATCH . '<br>', 'mainfile.php');
+            echo $manual;
+
+            return false;
+        }
 
         $insert         = -1;
         $matchProtector = '/modules/protector/include/precheck.inc.php';
@@ -66,13 +91,13 @@ class Upgrade_2014 extends XoopsUpgrade
 
             return false;
         } elseif ($insert != -2) {
-            if (!is_writable('../mainfile.php')) {
+            if (!is_writable($mainfile)) {
                 echo 'mainfile.php is read-only. Please allow the server to write to this file, or apply the patch manually';
                 echo $manual;
 
                 return false;
             } else {
-                $fp = fopen('../mainfile.php', 'wt');
+                $fp = fopen($mainfile, 'wt');
                 if (!$fp) {
                     echo 'Error opening mainfile.php, please apply the patch manually.';
                     echo $manual;

@@ -32,7 +32,13 @@ class Upgrade_241 extends XoopsUpgrade
      */
     public function check_license(): bool
     {
-        return defined('XOOPS_LICENSE_KEY');
+        if (!defined('XOOPS_LICENSE_KEY')) {
+            return false;
+        }
+
+        $licenseKey = trim((string) constant('XOOPS_LICENSE_KEY'));
+
+        return '' !== $licenseKey && '000000-000000-000000-000000-000000' !== $licenseKey;
     }
 
     /**

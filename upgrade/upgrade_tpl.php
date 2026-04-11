@@ -82,13 +82,13 @@ foreach ($viewModel['supportSites'] as $sites) {
     }
 }
 foreach ($allSupport as $support) {
-    echo '<li><a href="' . $support['url'] . '" target="_blank">' . $support['title'] . '</a></li>';
+    echo '<li><a href="' . $support['url'] . '" target="_blank" rel="noopener noreferrer">' . $support['title'] . '</a></li>';
 }
 ?>
                 </ul>
             </li>
             <li>
-                <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" title="<?php echo _XOOPS_SOURCE_CODE; ?>"><i class="fa-brands fa-lg fa-github"></i></a>
+                <a href="https://github.com/XOOPS/XoopsCore27" target="_blank" rel="noopener noreferrer" title="<?php echo _XOOPS_SOURCE_CODE; ?>"><i class="fa-brands fa-lg fa-github"></i></a>
             </li>
         </ul>
         <!-- Sidebar Menu Items - These collapse to the responsive navigation menu on small screens -->

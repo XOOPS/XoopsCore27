@@ -177,6 +177,13 @@ ob_end_clean();
 
 //echo $content;
 
+$allSupportSites = [];
+foreach ($upgradeControl->availableLanguages() as $lang) {
+    $upgradeControl->supportSites = [];
+    $upgradeControl->loadLanguage('support', $lang);
+    $allSupportSites[$lang] = $upgradeControl->supportSites;
+}
+
 $viewModel = [
     'content'         => $content,
     'upgradeQueue'    => [],
@@ -185,7 +192,7 @@ $viewModel = [
     'hasError'        => $error,
     'preflightDone'   => false,
     'languages'       => $upgradeControl->availableLanguages(),
-    'supportSites'    => [],
+    'supportSites'    => $allSupportSites,
 ];
 
 include_once __DIR__ . '/upgrade_tpl.php';

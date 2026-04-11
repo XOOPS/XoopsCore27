@@ -54,10 +54,9 @@ xoops_loadLanguage('logger');
 set_exception_handler('fatalPhpErrorHandler'); // should have been changed by now, reset to ours
 
 require_once __DIR__ . '/class/autoload.php';
-use Xoops\Upgrade\UpgradeControl;
 
 $error = false;
-$upgradeControl = new UpgradeControl($GLOBALS['xoopsDB']);
+$upgradeControl = new \Xoops\Upgrade\UpgradeControl($GLOBALS['xoopsDB']);
 
 // Determine language FIRST (loads 'upgrade' language internally)
 $upgradeControl->determineLanguage();
@@ -125,6 +124,7 @@ ob_end_clean();
 // Pre-compute support data for all languages
 $allSupportSites = [];
 foreach ($upgradeControl->availableLanguages() as $lang) {
+    $upgradeControl->supportSites = [];
     $upgradeControl->loadLanguage('support', $lang);
     $allSupportSites[$lang] = $upgradeControl->supportSites;
 }

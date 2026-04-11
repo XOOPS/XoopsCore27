@@ -14,11 +14,11 @@ function fatalPhpErrorHandler($e = null)
     if ($e === null) {
         $lastError = error_get_last();
         if (null !== $lastError && $lastError['type'] === E_ERROR) {
-            printf($messageFormat, 'Error', $lastError['message'], $lastError['file'], $lastError['line']);
+            printf($messageFormat, 'Error', $lastError['message'], basename($lastError['file']), $lastError['line']);
         }
     } elseif ($e instanceof $exceptionClass || $e instanceof $throwableClass) {
         /** @var \Exception $e */
-        printf($messageFormat, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+        printf($messageFormat, get_class($e), $e->getMessage(), basename($e->getFile()), $e->getLine());
     }
 }
 register_shutdown_function('fatalPhpErrorHandler');

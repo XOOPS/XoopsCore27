@@ -484,7 +484,9 @@ class Upgrade_270 extends XoopsUpgrade
     /**
      * Delete obsolete files and directories from class/libraries/.
      *
-     * Retains vendor/composer/ and vendor/firebase/.
+     * All vendor packages have been relocated to xoops_lib/vendor/.
+     * The entire class/libraries/ tree is removed, including vendor/composer/
+     * and vendor/firebase/ which are now redundant.
      *
      * @return bool true on success (best-effort — continues on individual item failure)
      */

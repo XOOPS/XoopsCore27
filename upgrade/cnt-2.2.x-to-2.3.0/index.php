@@ -331,10 +331,7 @@ class Upgrade_220 extends XoopsUpgrade
         if (!$this->execOrFail($sql)) {
             return false;
         }
-        $sql = 'ALTER TABLE `' . $this->db->prefix('block_module_link') . '` DROP pageid';
-        if (!$this->execOrFail($sql)) {
-            return false;
-        }
+        // Deduplicate BEFORE dropping pageid — the join needs all three columns
         $table = $this->db->prefix('block_module_link');
         $sql = 'DELETE duplicate_link'
             . " FROM `{$table}` AS duplicate_link"
@@ -343,6 +340,10 @@ class Upgrade_220 extends XoopsUpgrade
             . ' AND duplicate_link.module_id = kept_link.module_id'
             . ' AND duplicate_link.pageid = kept_link.pageid'
             . ' AND duplicate_link.linkid > kept_link.linkid';
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
+        $sql = 'ALTER TABLE `' . $table . '` DROP pageid';
         if (!$this->execOrFail($sql)) {
             return false;
         }

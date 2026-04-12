@@ -9,6 +9,8 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
+require_once XOOPS_ROOT_PATH . '/install/class/dbmanager.php';
+
 use Xmf\Database\Tables;
 use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;

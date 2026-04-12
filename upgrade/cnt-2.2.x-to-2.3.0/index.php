@@ -310,6 +310,13 @@ class Upgrade_220 extends XoopsUpgrade
      */
     public function apply_block(): bool
     {
+        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
+        if (false === $modulesRoot) {
+            $this->logs[] = 'Unable to resolve modules root before migrating blocks.';
+
+            return false;
+        }
+
         if (!$this->execOrFail('UPDATE ' . $this->db->prefix('block_module_link') . ' SET module_id = -1, pageid = 0 WHERE module_id < 2 AND pageid = 1')) {
             return false;
         }
@@ -328,7 +335,18 @@ class Upgrade_220 extends XoopsUpgrade
         if (!$this->execOrFail($sql)) {
             return false;
         }
-        $sql = 'ALTER IGNORE TABLE `' . $this->db->prefix('block_module_link') . '` ADD PRIMARY KEY (`block_id` , `module_id`)';
+        $table = $this->db->prefix('block_module_link');
+        $sql = 'DELETE duplicate_link'
+            . " FROM `{$table}` AS duplicate_link"
+            . " INNER JOIN `{$table}` AS kept_link"
+            . ' ON duplicate_link.block_id = kept_link.block_id'
+            . ' AND duplicate_link.module_id = kept_link.module_id'
+            . ' AND duplicate_link.pageid = kept_link.pageid'
+            . ' AND duplicate_link.linkid > kept_link.linkid';
+        if (!$this->execOrFail($sql)) {
+            return false;
+        }
+        $sql = 'ALTER TABLE `' . $table . '` ADD PRIMARY KEY (`block_id`, `module_id`)';
         if (!$this->execOrFail($sql)) {
             return false;
         }
@@ -397,7 +415,6 @@ class Upgrade_220 extends XoopsUpgrade
         $dirname   = '';
         $bid       = 0;
         $block_key = null;
-        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
         while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['dirname'] != $dirname) {
                 $dirname     = (string) $row['dirname'];
@@ -427,7 +444,7 @@ class Upgrade_220 extends XoopsUpgrade
                 $bid       = $row['bid'];
                 $isClone   = false;
                 $block_key = null;
-                $block_key = @$this->_block_lookup($row, $modversion['blocks']);
+                $block_key = $this->_block_lookup($row, $modversion['blocks']);
             }
             if ($block_key === null) {
                 continue;
@@ -453,7 +470,6 @@ class Upgrade_220 extends XoopsUpgrade
         $dirname   = '';
         $bid       = 0;
         $block_key = null;
-        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
         while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['dirname'] != $dirname) {
                 $dirname     = (string) $row['dirname'];
@@ -524,7 +540,7 @@ class Upgrade_220 extends XoopsUpgrade
             }
             $content = (string) $_options[0];
             $type    = (string) $_options[1];
-            if (!$this->execOrFail('UPDATE `' . $this->db->prefix('newblocks') . "` SET c_type = '{$type}', options = '', content = " . $this->db->quote($content) . " WHERE bid = {$bid}")) {
+            if (!$this->execOrFail('UPDATE `' . $this->db->prefix('newblocks') . '` SET c_type = ' . $this->db->quote($type) . ", options = '', content = " . $this->db->quote($content) . ' WHERE bid = ' . (int) $bid)) {
                 return false;
             }
         }

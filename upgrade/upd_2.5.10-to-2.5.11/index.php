@@ -708,7 +708,16 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function check_templates(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_confirm.tpl') AND `tpl_type` = 'module'";
+        $templates = $this->getSystemTemplatesByType('module');
+        if ([] === $templates) {
+            return false;
+        }
+
+        $quotedTemplates = array_map([$this->db, 'quote'], array_column($templates, 'file'));
+        $sql = 'SELECT COUNT(DISTINCT tf.`tpl_file`)'
+            . ' FROM `' . $this->db->prefix('tplfile') . '` tf'
+            . ' INNER JOIN `' . $this->db->prefix('tplsource') . '` ts ON ts.`tpl_id` = tf.`tpl_id`'
+            . ' WHERE tf.`tpl_file` IN (' . implode(', ', $quotedTemplates) . ") AND tf.`tpl_type` = 'module'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -719,7 +728,7 @@ class Upgrade_2511 extends XoopsUpgrade
         }
         $count = (int) $row[0];
 
-        return (0 != $count);
+        return count($templates) === $count;
     }
 
 
@@ -728,40 +737,7 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_templates(): bool
     {
-        $modversion = [];
-        $versionFile = XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
-        if (!file_exists($versionFile)) {
-            return false;
-        }
-        include $versionFile;
-
-        $dbm = new Db_manager();
-        $time = time();
-        foreach ($modversion['templates'] as $tplfile) {
-            if ((isset($tplfile['type']) && 'module' === $tplfile['type']) || !isset($tplfile['type'])) {
-
-                $filePath = XOOPS_ROOT_PATH . '/modules/system/templates/' . $tplfile['file'];
-                if ($fp = fopen($filePath, 'r')) {
-                    $newtplid = $dbm->insert(
-                        'tplfile',
-                        " VALUES (0, 1, 'system', 'default', "
-                        . $this->db->quote($tplfile['file'])
-                        . ', '
-                        . $this->db->quote($tplfile['description'])
-                        . ', '
-                        . $time
-                        . ', '
-                        . $time
-                        . ", 'module')"
-                    );
-                    $tplsource = fread($fp, filesize($filePath));
-                    fclose($fp);
-                    $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ', ' . $this->db->quote($tplsource) . ')');
-                }
-            }
-        }
-
-        return true;
+        return $this->applyTemplateSet('module', XOOPS_ROOT_PATH . '/modules/system/templates');
     }
 
     /**
@@ -769,7 +745,16 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function check_templatesadmin(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('tplfile') . "` WHERE `tpl_file` IN ('system_modules.tpl') AND `tpl_type` = 'admin'";
+        $templates = $this->getSystemTemplatesByType('admin');
+        if ([] === $templates) {
+            return false;
+        }
+
+        $quotedTemplates = array_map([$this->db, 'quote'], array_column($templates, 'file'));
+        $sql = 'SELECT COUNT(DISTINCT tf.`tpl_file`)'
+            . ' FROM `' . $this->db->prefix('tplfile') . '` tf'
+            . ' INNER JOIN `' . $this->db->prefix('tplsource') . '` ts ON ts.`tpl_id` = tf.`tpl_id`'
+            . ' WHERE tf.`tpl_file` IN (' . implode(', ', $quotedTemplates) . ") AND tf.`tpl_type` = 'admin'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -780,7 +765,7 @@ class Upgrade_2511 extends XoopsUpgrade
         }
         $count = (int) $row[0];
 
-        return (0 != $count);
+        return count($templates) === $count;
     }
 
     /**
@@ -788,35 +773,7 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_templatesadmin(): bool
     {
-        $modversion = [];
-        if (!include XOOPS_ROOT_PATH . '/modules/system/xoops_version.php') {
-            return false;
-        }
-        $dbm  = new Db_manager();
-        $time = time();
-        foreach ($modversion['templates'] as $tplfile) {
-            $adminTemplatePath = XOOPS_ROOT_PATH . '/modules/system/templates/admin/' . $tplfile['file'];
-            // Admin templates
-            if (isset($tplfile['type']) && 'admin' === $tplfile['type'] && $fp = fopen($adminTemplatePath, 'r')) {
-                $newtplid  = $dbm->insert(
-                    'tplfile',
-                    " VALUES (0, 1, 'system', 'default', "
-                    . $this->db->quote($tplfile['file'])
-                    . ', '
-                    . $this->db->quote($tplfile['description'])
-                    . ', '
-                    . $time
-                    . ', '
-                    . $time
-                    . ", 'admin')"
-                );
-                $tplsource = fread($fp, filesize($adminTemplatePath));
-                fclose($fp);
-                $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ', ' . $this->db->quote($tplsource) . ')');
-            }
-        }
-
-        return true;
+        return $this->applyTemplateSet('admin', XOOPS_ROOT_PATH . '/modules/system/templates/admin');
     }
 
     //modules/system/themes/legacy/legacy.php
@@ -868,13 +825,10 @@ class Upgrade_2511 extends XoopsUpgrade
                     return false;
                 }
             } elseif (is_file($path)) {
-                // Delete file
-                if (is_writable($path)) {
-                    if (!unlink($path)) {
-                        $this->logs[] = 'Failed to delete Smarty file: ' . basename($path);
+                if (!unlink($path)) {
+                    $this->logs[] = 'Failed to delete Smarty file: ' . basename($path);
 
-                        return false;
-                    }
+                    return false;
                 }
             }
         }
@@ -941,7 +895,7 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function check_notificationmethod(): bool
     {
-        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` IN ('default_notification')";
+        $sql = 'SELECT `conf_id` FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -950,9 +904,36 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!$row) {
             return false;
         }
-        $count = (int) $row[0];
 
-        return ($count > 0);
+        $configId = (int) $row[0];
+        $expectedOptions = [
+            '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE' => '0',
+            '_MI_DEFAULT_NOTIFICATION_METHOD_PM'      => '1',
+            '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL'   => '2',
+        ];
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('configoption') . '`'
+            . ' WHERE `conf_id` = ' . $configId
+            . ' AND ('
+            . implode(
+                ' OR ',
+                array_map(
+                    fn(string $name, string $value): string => sprintf(
+                        '(`confop_name` = %s AND `confop_value` = %s)',
+                        $this->db->quote($name),
+                        $this->db->quote($value)
+                    ),
+                    array_keys($expectedOptions),
+                    $expectedOptions
+                )
+            )
+            . ')';
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+        $row = $this->db->fetchRow($result);
+
+        return $row && count($expectedOptions) === (int) $row[0];
     }
 
     /**
@@ -960,33 +941,171 @@ class Upgrade_2511 extends XoopsUpgrade
      */
     public function apply_notificationmethod(): bool
     {
-        $notification_method = false;
-        $sql                 = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
-        $result              = $this->db->query($sql);
-        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
-            $row = $this->db->fetchRow($result);
-            if ($row) {
-                $count = (int) $row[0];
-                if (1 == $count) {
-                    $notification_method = true;
-                }
-            }
-        }
+        $expectedOptions = [
+            '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE' => '0',
+            '_MI_DEFAULT_NOTIFICATION_METHOD_PM'      => '1',
+            '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL'   => '2',
+        ];
+        $sql    = 'SELECT `conf_id` FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification' LIMIT 1";
+        $result = $this->db->query($sql);
+        $row    = ($this->db->isResultSet($result) && ($result instanceof \mysqli_result))
+            ? $this->db->fetchRow($result)
+            : false;
 
-        if (!$notification_method) {
+        if (!$row) {
             $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 2, 'default_notification', '_MD_AM_DEFAULT_NOTIFICATION_METHOD', '1', '_MD_AM_DEFAULT_NOTIFICATION_METHOD_DESC', 'select', 'int', 3)";
 
             if (!$this->execOrFail($sql)) {
                 return false;
             }
-            $config_id = $this->db->getInsertId();
+            $configId = (int) $this->db->getInsertId();
+        } else {
+            $configId = (int) $row[0];
+        }
 
-            $sql = 'INSERT INTO ' . $this->db->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES'
-                . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE', '0', {$config_id}),"
-                . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_PM', '1', {$config_id}),"
-                . " (NULL, '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL', '2', {$config_id})";
+        foreach ($expectedOptions as $name => $value) {
+            $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('configoption') . '`'
+                . ' WHERE `conf_id` = ' . $configId
+                . ' AND `confop_name` = ' . $this->db->quote($name)
+                . ' AND `confop_value` = ' . $this->db->quote($value);
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                return false;
+            }
+            $row = $this->db->fetchRow($result);
+            if (!$row || 0 === (int) $row[0]) {
+                $sql = 'INSERT INTO ' . $this->db->prefix('configoption')
+                    . ' (confop_id, confop_name, confop_value, conf_id) VALUES'
+                    . ' (NULL, ' . $this->db->quote($name) . ', ' . $this->db->quote($value) . ', ' . $configId . ')';
+                if (!$this->execOrFail($sql)) {
+                    return false;
+                }
+            }
+        }
 
-            return $this->execOrFail($sql);
+        return true;
+    }
+
+    /**
+     * @param string $type template type to filter (`module` or `admin`)
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getSystemTemplatesByType(string $type): array
+    {
+        $modversion  = [];
+        $versionFile = XOOPS_ROOT_PATH . '/modules/system/xoops_version.php';
+        if (!file_exists($versionFile)) {
+            return [];
+        }
+
+        include $versionFile;
+        if (!isset($modversion['templates']) || !is_array($modversion['templates'])) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $modversion['templates'],
+            static function (array $tplfile) use ($type): bool {
+                $tplType = $tplfile['type'] ?? 'module';
+
+                return $tplType === $type;
+            }
+        ));
+    }
+
+    private function applyTemplateSet(string $type, string $templateBasePath): bool
+    {
+        $templates = $this->getSystemTemplatesByType($type);
+        if ([] === $templates) {
+            return false;
+        }
+
+        $dbm  = new Db_manager();
+        $time = time();
+        foreach ($templates as $tplfile) {
+            $fileName = (string) ($tplfile['file'] ?? '');
+            if ('' === $fileName) {
+                $this->logs[] = sprintf('Missing template file name in system template metadata for %s templates.', $type);
+
+                return false;
+            }
+
+            $filePath = $templateBasePath . '/' . $fileName;
+            if (!is_readable($filePath)) {
+                $this->logs[] = sprintf('Template file is not readable: %s', $fileName);
+
+                return false;
+            }
+
+            $tplsource = file_get_contents($filePath);
+            if (false === $tplsource) {
+                $this->logs[] = sprintf('Failed to read template file: %s', $fileName);
+
+                return false;
+            }
+
+            $sql = 'SELECT tf.`tpl_id`, COUNT(ts.`tpl_id`) AS source_count'
+                . ' FROM `' . $this->db->prefix('tplfile') . '` tf'
+                . ' LEFT JOIN `' . $this->db->prefix('tplsource') . '` ts ON ts.`tpl_id` = tf.`tpl_id`'
+                . ' WHERE tf.`tpl_file` = ' . $this->db->quote($fileName)
+                . ' AND tf.`tpl_type` = ' . $this->db->quote($type)
+                . ' GROUP BY tf.`tpl_id`'
+                . ' ORDER BY tf.`tpl_id` ASC LIMIT 1';
+            $result = $this->db->query($sql);
+            if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+                $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+                return false;
+            }
+
+            $existingTemplate = $this->db->fetchRow($result);
+            if ($existingTemplate) {
+                $tplId = (int) $existingTemplate[0];
+                if ((int) $existingTemplate[1] > 0) {
+                    continue;
+                }
+
+                if (!$dbm->insert(
+                    'tplsource',
+                    ' (tpl_id, tpl_source) VALUES (' . $tplId . ', ' . $this->db->quote($tplsource) . ')'
+                )) {
+                    $this->logs[] = sprintf('Failed to backfill tplsource row for %s', $fileName);
+
+                    return false;
+                }
+
+                continue;
+            }
+
+            $newtplid = $dbm->insert(
+                'tplfile',
+                " VALUES (0, 1, 'system', 'default', "
+                . $this->db->quote($fileName)
+                . ', '
+                . $this->db->quote((string) ($tplfile['description'] ?? ''))
+                . ', '
+                . $time
+                . ', '
+                . $time
+                . ', '
+                . $this->db->quote($type)
+                . ')'
+            );
+            if (!$newtplid) {
+                $this->logs[] = sprintf('Failed to insert tplfile row for %s', $fileName);
+
+                return false;
+            }
+
+            if (!$dbm->insert(
+                'tplsource',
+                ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')'
+            )) {
+                $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
+
+                return false;
+            }
         }
 
         return true;

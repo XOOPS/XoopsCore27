@@ -118,6 +118,8 @@ class Upgrade_255 extends XoopsUpgrade
     {
         $sql = 'ALTER TABLE `' . $this->db->prefix('banner') . "` CHANGE `imptotal` `imptotal` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0'";
         if (!$this->db->exec($sql)) {
+            $this->logs[] = 'apply_imptotal: ALTER TABLE failed: ' . $this->db->error();
+
             return false;
         }
 

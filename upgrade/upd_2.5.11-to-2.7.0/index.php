@@ -422,8 +422,8 @@ class Upgrade_270 extends XoopsUpgrade
     // Task 8: cleanuplibraries — Delete obsolete build artifacts from class/libraries/
     //
     // In 2.5.11, class/libraries/ contained build tooling and vendor packages
-    // that have been removed or relocated in 2.7.0. Only vendor/composer/ and
-    // vendor/firebase/ are retained.
+    // that have been relocated to xoops_lib/ in 2.7.0. The entire
+    // class/libraries/ tree is now obsolete and should be removed.
     // =========================================================================
 
     /** @var string[] Top-level items under class/libraries/ to delete */
@@ -441,6 +441,8 @@ class Upgrade_270 extends XoopsUpgrade
         'autoload.php',
         'bin',
         'boenrobot',
+        'composer',
+        'firebase',
         'geekwright',
         'ircmaxell',
         'kint-php',
@@ -522,6 +524,16 @@ class Upgrade_270 extends XoopsUpgrade
                     $this->logs[] = sprintf('Failed to delete vendor file: %s', $this->relativePath($path));
                     $success = false;
                 }
+            }
+        }
+
+        // Remove the now-empty vendor/ and class/libraries/ directories
+        if ($success) {
+            if (is_dir($vendorPath)) {
+                @rmdir($vendorPath);
+            }
+            if (is_dir($basePath)) {
+                @rmdir($basePath);
             }
         }
 

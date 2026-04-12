@@ -32,7 +32,9 @@ class Upgrade_2018 extends XoopsUpgrade
         $sql    = 'SHOW COLUMNS FROM ' . $this->db->prefix('config') . " LIKE 'conf_title'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return true; // table or column not found, skip this upgrade step
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
+            return false;
         }
         while (false !== ($row = $this->db->fetchArray($result))) {
             if (strtolower(trim($row['Type'])) === 'varchar(255)') {

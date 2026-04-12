@@ -72,7 +72,9 @@ class Upgrade_255 extends XoopsUpgrade
             foreach ($keys as $key) {
                 if (!in_array($key, $existing_keys)) {
                     $sql = 'ALTER TABLE `' . $this->db->prefix($table) . "` ADD INDEX `{$key}` (`{$key}`)";
-                    if (!$result = $this->db->exec($sql)) {
+                    if (!$this->db->exec($sql)) {
+                        $this->logs[] = sprintf('apply_keys: ALTER TABLE failed for key %s on %s: %s', $key, $table, $this->db->error());
+
                         return false;
                     }
                 }
@@ -89,14 +91,22 @@ class Upgrade_255 extends XoopsUpgrade
      */
     public function check_imptotal(): bool
     {
-        $sql = 'SELECT `imptotal` FROM `' . $this->db->prefix('banner') . '` WHERE `bid` = 1';
-        if ($result = $this->db->query($sql)) {
-            $fieldInfo = mysqli_fetch_field_direct($result, 0);
-            $length = $fieldInfo->length;
+        $sql    = 'SELECT `imptotal` FROM `' . $this->db->prefix('banner') . '` WHERE `bid` = 1';
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logs[] = 'check_imptotal: query failed: ' . $this->db->error();
 
-            return ($length != 8);
+            return false;
         }
-        return false;
+
+        $fieldInfo = mysqli_fetch_field_direct($result, 0);
+        if (false === $fieldInfo) {
+            $this->logs[] = 'check_imptotal: unable to read imptotal column metadata';
+
+            return false;
+        }
+
+        return ($fieldInfo->length != 8);
     }
 
     /**

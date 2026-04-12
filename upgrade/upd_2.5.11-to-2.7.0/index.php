@@ -369,14 +369,14 @@ class Upgrade_270 extends XoopsUpgrade
     {
         // Step 1: Widen the FK child column first
         $optionTable = $this->db->prefix('configoption');
-        $sql         = "ALTER TABLE `{$optionTable}` MODIFY `conf_id` int(10) unsigned NOT NULL DEFAULT 0";
+        $sql         = "ALTER TABLE `{$optionTable}` MODIFY `conf_id` int unsigned NOT NULL DEFAULT 0";
         if (!$this->execOrFail($sql)) {
             return false;
         }
 
         // Step 2: Widen the PK parent column
         $configTable = $this->db->prefix('config');
-        $sql         = "ALTER TABLE `{$configTable}` MODIFY `conf_id` int(10) unsigned NOT NULL AUTO_INCREMENT";
+        $sql         = "ALTER TABLE `{$configTable}` MODIFY `conf_id` int unsigned NOT NULL AUTO_INCREMENT";
 
         return $this->execOrFail($sql);
     }

@@ -66,6 +66,8 @@ class Upgrade_220 extends XoopsUpgrade
         $sql    = 'SHOW COLUMNS FROM ' . $this->db->prefix('users') . " LIKE 'posts'";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+
             return false;
         }
 
@@ -395,12 +397,23 @@ class Upgrade_220 extends XoopsUpgrade
         $dirname   = '';
         $bid       = 0;
         $block_key = null;
+        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
         while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['dirname'] != $dirname) {
-                $dirname     = $row['dirname'];
+                $dirname     = (string) $row['dirname'];
                 $modversion  = [];
-                $versionFile = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/xoops_version.php';
-                if (!file_exists($versionFile)) {
+                // Reject traversal attempts and slashes in the DB-sourced dirname
+                if ('' === $dirname || !preg_match('/^[A-Za-z0-9_-]+$/', $dirname)) {
+                    continue;
+                }
+                $versionFile = false !== $modulesRoot
+                    ? realpath($modulesRoot . DIRECTORY_SEPARATOR . $dirname . DIRECTORY_SEPARATOR . 'xoops_version.php')
+                    : false;
+                if (false === $versionFile
+                    || false === $modulesRoot
+                    || !str_starts_with($versionFile, $modulesRoot . DIRECTORY_SEPARATOR)
+                    || !is_file($versionFile)
+                ) {
                     continue;
                 }
                 include $versionFile;
@@ -427,8 +440,10 @@ class Upgrade_220 extends XoopsUpgrade
             }
         }
 
-        $sql = '   SELECT b.* ' . '   FROM ' . $this->db->prefix('newblocks_bak') . ' AS b LEFT JOIN ' . $this->db->prefix('block_instance') . ' AS i ON b.bid = i.bid ' . '   WHERE i.instanceid IS NULL';
-        '   GROUP BY b.dirname, b.bid';
+        $sql = '   SELECT b.* '
+            . '   FROM ' . $this->db->prefix('newblocks_bak') . ' AS b LEFT JOIN ' . $this->db->prefix('block_instance') . ' AS i ON b.bid = i.bid '
+            . '   WHERE i.instanceid IS NULL'
+            . '   GROUP BY b.dirname, b.bid';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
@@ -438,12 +453,23 @@ class Upgrade_220 extends XoopsUpgrade
         $dirname   = '';
         $bid       = 0;
         $block_key = null;
+        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
         while (false !== ($row = $this->db->fetchArray($result))) {
             if ($row['dirname'] != $dirname) {
-                $dirname     = $row['dirname'];
+                $dirname     = (string) $row['dirname'];
                 $modversion  = [];
-                $versionFile = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/xoops_version.php';
-                if (!file_exists($versionFile)) {
+                // Reject traversal attempts and slashes in the DB-sourced dirname
+                if ('' === $dirname || !preg_match('/^[A-Za-z0-9_-]+$/', $dirname)) {
+                    continue;
+                }
+                $versionFile = false !== $modulesRoot
+                    ? realpath($modulesRoot . DIRECTORY_SEPARATOR . $dirname . DIRECTORY_SEPARATOR . 'xoops_version.php')
+                    : false;
+                if (false === $versionFile
+                    || false === $modulesRoot
+                    || !str_starts_with($versionFile, $modulesRoot . DIRECTORY_SEPARATOR)
+                    || !is_file($versionFile)
+                ) {
                     continue;
                 }
                 include $versionFile;
@@ -455,7 +481,7 @@ class Upgrade_220 extends XoopsUpgrade
             if ($row['bid'] != $bid) {
                 $bid       = $row['bid'];
                 $block_key = null;
-                $block_key = @$this->_block_lookup($row, $modversion['blocks']);
+                $block_key = $this->_block_lookup($row, $modversion['blocks']);
             }
             if ($block_key === null) {
                 continue;

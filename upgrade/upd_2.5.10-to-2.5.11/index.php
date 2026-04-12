@@ -16,8 +16,11 @@ use Xoops\Upgrade\UpgradeControl;
 /**
  * Upgrade from 2.5.10 to 2.5.11
  *
+ * @category  XOOPS
+ * @package   upgrade
  * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  * @since     2.5.11
  * @author    XOOPS Team
  */
@@ -852,8 +855,13 @@ class Upgrade_2511 extends XoopsUpgrade
         foreach ($itemsToDelete as $item) {
             $path = $baseDir . $item;
 
-            // Check if it's a directory or a file
-            if (is_dir($path)) {
+            if (is_link($path)) {
+                if (!unlink($path)) {
+                    $this->logs[] = 'Failed to delete Smarty symlink: ' . basename($path);
+
+                    return false;
+                }
+            } elseif (is_dir($path)) {
                 if (!self::deleteFolder($path)) {
                     $this->logs[] = 'Failed to delete Smarty directory: ' . basename($path);
 
@@ -887,14 +895,29 @@ class Upgrade_2511 extends XoopsUpgrade
             return true;
         }
 
-        $scanned = scandir($folderPath);
+        if (is_link($folderPath)) {
+            return unlink($folderPath);
+        }
+
+        $resolvedRoot = realpath($folderPath);
+        $allowedBase  = realpath(XOOPS_ROOT_PATH . '/class/smarty');
+        if (false === $resolvedRoot || false === $allowedBase) {
+            return false;
+        }
+
+        $allowedPrefix = rtrim($allowedBase, '\\/') . DIRECTORY_SEPARATOR;
+        if ($resolvedRoot !== $allowedBase && !str_starts_with($resolvedRoot, $allowedPrefix)) {
+            return false;
+        }
+
+        $scanned = scandir($resolvedRoot);
         if (false === $scanned) {
             return false;
         }
 
         $files = array_diff($scanned, ['.', '..']);
         foreach ($files as $file) {
-            $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
+            $filePath = $resolvedRoot . DIRECTORY_SEPARATOR . $file;
             if (is_link($filePath)) {
                 if (!unlink($filePath)) {
                     return false;
@@ -909,7 +932,7 @@ class Upgrade_2511 extends XoopsUpgrade
                 }
             }
         }
-        return rmdir($folderPath);
+        return rmdir($resolvedRoot);
     }
 
     /**
@@ -940,11 +963,13 @@ class Upgrade_2511 extends XoopsUpgrade
         $notification_method = false;
         $sql                 = 'SELECT COUNT(*) FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` = 'default_notification'";
         $result              = $this->db->query($sql);
-        $row = $this->db->fetchRow($result);
-        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result) && $row) {
-            $count = (int) $row[0];
-            if (1 == $count) {
-                $notification_method = true;
+        if ($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) {
+            $row = $this->db->fetchRow($result);
+            if ($row) {
+                $count = (int) $row[0];
+                if (1 == $count) {
+                    $notification_method = true;
+                }
             }
         }
 

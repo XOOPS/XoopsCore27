@@ -44,14 +44,18 @@ class Upgrade_2018 extends XoopsUpgrade
     }
 
     /**
-     * @param $sql
+     * @param string $sql
+     *
+     * @return bool true on success, false on failure (error logged)
      */
-    protected function query($sql)
+    protected function query(string $sql): bool
     {
-        //echo $sql . "<br>";
-        if (!$this->db->exec($sql)) {
-            $this->logs[] = $this->db->error();
+        if ($this->db->exec($sql)) {
+            return true;
         }
+        $this->logs[] = $this->db->error();
+
+        return false;
     }
 
     /**
@@ -70,7 +74,9 @@ class Upgrade_2018 extends XoopsUpgrade
         foreach ($this->fields as $table => $data) {
             foreach ($data as $field => $property) {
                 $sql = 'ALTER TABLE ' . $this->db->prefix($table) . " CHANGE `$field` `$field` $property";
-                $this->query($sql);
+                if (!$this->query($sql)) {
+                    return false;
+                }
             }
         }
 

@@ -20,8 +20,8 @@
 
 defined('XOOPS_ROOT_PATH') or exit();
 
-$uname = trim(\Xmf\Request::getString('uname', '', 'POST'));
-$pass  = trim(\Xmf\Request::getString('pass', '', 'POST'));
+$uname = \Xmf\Request::getString('uname', '', 'POST');
+$pass  = \Xmf\Request::getString('pass', '', 'POST');
 
 if ('' === $uname || '' === $pass) {
     ?>
@@ -49,8 +49,15 @@ if ('' === $uname || '' === $pass) {
     $member_handler = xoops_getHandler('member');
 
     include_once XOOPS_ROOT_PATH . '/class/auth/authfactory.php';
-    $authFile = XOOPS_ROOT_PATH . '/language/' . $upgrade_language . '/auth.php';
-    if (file_exists($authFile)) {
+    $language = isset($upgradeControl) && $upgradeControl instanceof \Xoops\Upgrade\UpgradeControl
+        ? $upgradeControl->normalizeLanguage($upgradeControl->upgradeLanguage)
+        : 'english';
+    $languageRoot = realpath(XOOPS_ROOT_PATH . '/language');
+    $authFile = false !== $languageRoot
+        ? realpath($languageRoot . DIRECTORY_SEPARATOR . $language . DIRECTORY_SEPARATOR . 'auth.php')
+        : false;
+
+    if (false !== $languageRoot && false !== $authFile && str_starts_with($authFile, $languageRoot . DIRECTORY_SEPARATOR)) {
         include_once $authFile;
     } else {
         include_once XOOPS_ROOT_PATH . '/language/english/auth.php';

@@ -16,7 +16,8 @@
             <div class="kpi-label"><{$smarty.const._MODERN_ACTIVE_MODULES}></div>
             <div class="kpi-value"><{$active_modules}></div>
             <div class="kpi-change">
-                <span><{$inactive_modules}> <{$smarty.const._MODERN_INACTIVE}></span>
+                <span><{$smarty.const._MODERN_ACTIVE_MODULES_USERS}>: <{$active_modules_user}><br>
+                <{$smarty.const._MODERN_ACTIVE_MODULES_ADMINS}>: <{$active_modules_admin}></span>
             </div>
         </div>
 

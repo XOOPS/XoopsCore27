@@ -243,18 +243,18 @@ class XoopsGuiModern extends XoopsSystemGui
     {
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
+
         $criteria = new CriteriaCompo();
-        $criteria->add(new Criteria('hasmain', 1));
+        // active modules
         $criteria->add(new Criteria('isactive', 1));
-
         $active_modules = $module_handler->getCount($criteria);
-
-        $criteria_all = new Criteria('dirname', '', '!=');
-        $total_modules = $module_handler->getCount($criteria_all);
+        // active modules for user side
+        $criteria->add(new Criteria('hasmain', 1));
+        $active_modules_user = $module_handler->getCount($criteria);
 
         $tpl->assign('active_modules', $active_modules);
-        $tpl->assign('total_modules', $total_modules);
-        $tpl->assign('inactive_modules', $total_modules - $active_modules);
+        $tpl->assign('active_modules_user', $active_modules_user);
+        $tpl->assign('active_modules_admin', $active_modules - $active_modules_user);
     }
 
     /**

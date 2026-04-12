@@ -1,5 +1,5 @@
 <{* Dashboard shown only on admin.php homepage *}>
-<{if $xoops_dirname == 'system' && !isset($smarty.get.fct)}>
+<{if $xoops_page == 'admin'}>
 <section class="dashboard-section">
     <!-- KPI Cards -->
     <div class="kpis">

@@ -707,8 +707,9 @@ class Upgrade_270 extends XoopsUpgrade
                 continue;
             }
 
+            // Only allow subpaths — never the base directory itself
             $prefix = rtrim($resolvedBase, '\\/') . DIRECTORY_SEPARATOR;
-            if ($path === $resolvedBase || str_starts_with($path, $prefix)) {
+            if (str_starts_with($path, $prefix)) {
                 return true;
             }
         }

@@ -571,7 +571,7 @@ class Upgrade_220 extends XoopsUpgrade
                 }
             }
             $options = implode('|', $options);
-            $sql     = 'UPDATE `' . $this->db->prefix('newblocks') . '` SET options = ' . $this->db->quote($options) . " WHERE bid = {$bid}";
+            $sql     = 'UPDATE `' . $this->db->prefix('newblocks') . '` SET options = ' . $this->db->quote($options) . ' WHERE bid = ' . (int) $bid;
             if (!$this->execOrFail($sql)) {
                 return false;
             }

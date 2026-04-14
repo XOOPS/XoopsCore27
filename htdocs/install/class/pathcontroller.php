@@ -334,10 +334,13 @@ class PathController
             if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
                 $versionFile = "{$this->xoopsPath[$path]}/include/version.php";
                 if (file_exists($versionFile)) {
-                    include_once $versionFile;
-                }
-                if (defined('XOOPS_VERSION') && file_exists("{$this->xoopsPath[$path]}/mainfile.dist.php")) {
-                    $this->validPath[$path] = 1;
+                    $versionContents = file_get_contents($versionFile);
+                    if (false !== $versionContents) {
+                        $versionPattern = "/define\\s*\\(\\s*['\"]XOOPS_VERSION['\"]\\s*,\\s*['\"][^'\"]+['\"]\\s*\\)/";
+                        if (preg_match($versionPattern, $versionContents) && file_exists("{$this->xoopsPath[$path]}/mainfile.dist.php")) {
+                            $this->validPath[$path] = 1;
+                        }
+                    }
                 }
             }
             $ret *= $this->validPath[$path];

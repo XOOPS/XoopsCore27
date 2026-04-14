@@ -91,7 +91,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
             if (!$dbm->insert(
                 'group_permission',
-                ' VALUES (0, ' . $groupId . ', ' . (int) $categoryId . ', ' . $moduleId . ", 'menus_category_view')"
+                ' (gperm_id, gperm_groupid, gperm_itemid, gperm_modid, gperm_name) VALUES (0, ' . $groupId . ', ' . (int) $categoryId . ', ' . $moduleId . ", 'menus_category_view')"
             )) {
                 trigger_error(
                     sprintf('Failed to seed menu category permissions for "%s" during install.', $definition['title']),
@@ -129,7 +129,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
         foreach (system_menu_map_group_keys($definition['group_keys'], $groupMap) as $groupId) {
             if (!$dbm->insert(
                 'group_permission',
-                ' VALUES (0, ' . $groupId . ', ' . (int) $itemId . ', ' . $moduleId . ", 'menus_items_view')"
+                ' (gperm_id, gperm_groupid, gperm_itemid, gperm_modid, gperm_name) VALUES (0, ' . $groupId . ', ' . (int) $itemId . ', ' . $moduleId . ", 'menus_items_view')"
             )) {
                 trigger_error(
                     sprintf('Failed to seed menu item permissions for "%s" during install.', $definition['title']),

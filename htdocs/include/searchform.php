@@ -49,6 +49,7 @@ if (empty($modules)) {
     $module_handler = xoops_getHandler('module');
     $mods_checkbox->addOptionArray($module_handler->getList($criteria));
 } else {
+    $module_array = [];
     foreach ($modules as $mid => $module) {
         if ('system' === $module->getVar('dirname')) {
             continue;

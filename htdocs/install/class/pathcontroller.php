@@ -245,9 +245,25 @@ class PathController
     {
         $tokens = token_get_all($source);
         $count  = count($tokens);
+        $depth  = 0;
 
         for ($i = 0; $i < $count; ++$i) {
+            if (is_string($tokens[$i])) {
+                if ('{' === $tokens[$i]) {
+                    ++$depth;
+                } elseif ('}' === $tokens[$i] && $depth > 0) {
+                    --$depth;
+                }
+                continue;
+            }
             if (!is_array($tokens[$i]) || $tokens[$i][0] !== T_STRING || strtolower($tokens[$i][1]) !== 'define') {
+                continue;
+            }
+            if ($depth > 0) {
+                continue;
+            }
+            $previousIndex = $this->nextSignificantTokenIndexReverse($tokens, $i - 1);
+            if (null !== $previousIndex && is_array($tokens[$previousIndex]) && in_array($tokens[$previousIndex][0], [T_OBJECT_OPERATOR, T_DOUBLE_COLON], true)) {
                 continue;
             }
             $openParenIndex = $this->nextSignificantTokenIndex($tokens, $i + 1);
@@ -278,6 +294,28 @@ class PathController
     {
         $count = count($tokens);
         for ($i = $startIndex; $i < $count; ++$i) {
+            if (!is_array($tokens[$i])) {
+                return $i;
+            }
+            if (!in_array($tokens[$i][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find the previous non-whitespace/comment token.
+     *
+     * @param array<int, mixed> $tokens
+     * @param int               $startIndex
+     *
+     * @return int|null
+     */
+    private function nextSignificantTokenIndexReverse(array $tokens, $startIndex)
+    {
+        for ($i = $startIndex; $i >= 0; --$i) {
             if (!is_array($tokens[$i])) {
                 return $i;
             }
@@ -333,7 +371,7 @@ class PathController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $request = $_POST;
             foreach ($this->path_lookup as $req => $sess) {
-                if (isset($request[$req])) {
+                if (isset($request[$req]) && is_string($request[$req])) {
                     $request[$req] = str_replace("\\", '/', trim($request[$req]));
                     if (substr($request[$req], -1) === '/') {
                         $request[$req] = substr($request[$req], 0, -1);
@@ -341,14 +379,14 @@ class PathController
                     $this->xoopsPath[$req] = $request[$req];
                 }
             }
-            if (isset($request['URL'])) {
+            if (isset($request['URL']) && is_string($request['URL'])) {
                 $request['URL'] = trim($request['URL']);
                 if (substr($request['URL'], -1) === '/') {
                     $request['URL'] = substr($request['URL'], 0, -1);
                 }
                 $this->xoopsUrl = $request['URL'];
             }
-            if (isset($request['COOKIE_DOMAIN'])) {
+            if (isset($request['COOKIE_DOMAIN']) && is_string($request['COOKIE_DOMAIN'])) {
                 $tempCookieDomain = trim($request['COOKIE_DOMAIN']);
                 $tempParts        = parse_url($tempCookieDomain);
                 if (!empty($tempParts['host'])) {

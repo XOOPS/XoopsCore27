@@ -60,13 +60,14 @@ function xoops_setcookie(
         $domain = ''; // Auto-correct to a safe, host-only cookie
 
         if (defined('XOOPS_DEBUG_MODE') && XOOPS_DEBUG_MODE) {
-            error_log(
+            trigger_error(
                 sprintf(
                     '[XOOPS Cookie] Invalid domain "%s" for host "%s" (cookie: %s) - using host-only.',
                     $originalDomain,
                     $host,
                     $name
-                )
+                ),
+                E_USER_WARNING
             );
         }
     }

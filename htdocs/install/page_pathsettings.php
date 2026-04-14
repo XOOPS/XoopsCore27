@@ -194,13 +194,13 @@ ob_start();
             <div class="form-group">
                 <label class="xolabel" for="url"><?php echo XOOPS_URL_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_URL_HELP; ?></div>
-                <input type="text" class="form-control" name="URL" id="url" value="<?php echo $pathController->xoopsUrl; ?>" onchange="removeTrailing('url', this.value)"/>
+                <input type="text" class="form-control" name="URL" id="url" value="<?php echo installerHtmlSpecialChars($pathController->xoopsUrl); ?>" onchange="removeTrailing('url', this.value)"/>
             </div>
 
             <div class="form-group">
                 <label class="xolabel" for="cookie_domain"><?php echo XOOPS_COOKIE_DOMAIN_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_COOKIE_DOMAIN_HELP; ?></div>
-                <input type="text" class="form-control" name="COOKIE_DOMAIN" id="cookie_domain" value="<?php echo $pathController->xoopsCookieDomain; ?>" onchange="removeTrailing('url', this.value)"/>
+                <input type="text" class="form-control" name="COOKIE_DOMAIN" id="cookie_domain" value="<?php echo installerHtmlSpecialChars($pathController->xoopsCookieDomain); ?>" onchange="removeTrailing('url', this.value)"/>
             </div>
         </div>
     </div>

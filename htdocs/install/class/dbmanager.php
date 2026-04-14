@@ -156,7 +156,7 @@ class Db_manager
                         }
                     } else {
                         $allSucceeded = false;
-                        if (!isset($this->s_tables['drop'][$table])) {
+                        if (!isset($this->f_tables['drop'][$table])) {
                             $this->f_tables['drop'][$table] = 1;
                         }
                     }

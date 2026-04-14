@@ -331,13 +331,15 @@ class PathController
         $ret = 1;
         if ($PATH === 'root' || empty($PATH)) {
             $path = 'root';
+            $this->validPath[$path] = 0;
             if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
                 $versionFile = "{$this->xoopsPath[$path]}/include/version.php";
-                if (file_exists($versionFile)) {
+                $distFile    = "{$this->xoopsPath[$path]}/mainfile.dist.php";
+                if (file_exists($versionFile) && is_readable($versionFile)) {
                     $versionContents = file_get_contents($versionFile);
                     if (false !== $versionContents) {
                         $versionPattern = "/define\\s*\\(\\s*['\"]XOOPS_VERSION['\"]\\s*,\\s*['\"][^'\"]+['\"]\\s*\\)/";
-                        if (preg_match($versionPattern, $versionContents) && file_exists("{$this->xoopsPath[$path]}/mainfile.dist.php")) {
+                        if (preg_match($versionPattern, $versionContents) && file_exists($distFile) && is_readable($distFile)) {
                             $this->validPath[$path] = 1;
                         }
                     }
@@ -348,10 +350,12 @@ class PathController
         if ($PATH === 'lib' || empty($PATH)) {
             $path = 'lib';
             $autoloader = $this->xoopsPath[$path] . '/vendor/autoload.php';
+            $xmfMarker = $this->xoopsPath[$path] . '/vendor/xoops/xmf/src/Request.php';
             if (is_dir($this->xoopsPath[$path])
                 && is_readable($this->xoopsPath[$path])
                 && is_file($autoloader)
                 && is_readable($autoloader)
+                && is_file($xmfMarker)
             ) {
                 $this->validPath[$path] = 1;
             } else {
@@ -363,6 +367,8 @@ class PathController
             $path = 'data';
             if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
                 $this->validPath[$path] = 1;
+            } else {
+                $this->validPath[$path] = 0;
             }
             $ret *= $this->validPath[$path];
         }

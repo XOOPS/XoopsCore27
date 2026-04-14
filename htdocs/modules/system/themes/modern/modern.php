@@ -254,6 +254,9 @@ class XoopsGuiModern extends XoopsSystemGui
 
         $tpl->assign('active_modules', $active_modules);
         $tpl->assign('active_modules_user', $active_modules_user);
+        // Modules without a frontend entry (hasmain=0) are admin-only by XOOPS design.
+        // Every active module has at least hasmain=1 or hasadmin=1, so this subtraction
+        // equals querying isactive=1 AND hasmain=0 without an extra DB round-trip.     
         $tpl->assign('active_modules_admin', $active_modules - $active_modules_user);
     }
 

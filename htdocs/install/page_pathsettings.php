@@ -36,10 +36,11 @@ $pageHasHelp = true;
 
 $pathController = new PathController($wizard->configs['xoopsPathDefault'], $wizard->configs['dataPath']);
 
-// Handle GET request for AJAX path checking (read-only validation).
+// Handle GET request for AJAX path checking (validation only).
 // Raw $_GET — XMF autoloader is not available until the user enters the
-// xoops_lib path on THIS page. This handler only validates; it does NOT
-// write session state or include PHP files from the submitted path.
+// xoops_lib path on THIS page. This handler validates and returns HTML
+// status. It does not write session state. Note: checkPath('root') does
+// include version.php from the validated root path to verify XOOPS_VERSION.
 $allowedPathKeys = ['root', 'data', 'lib'];
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action']) && $_GET['action'] === 'checkpath') {
     $pathKey = trim((string) ($_GET['var'] ?? ''));
@@ -58,9 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action'])
         exit();
     }
 
-    // For the library path, verify the Composer autoloader is present
-    if ($pathKey === 'lib' && !is_file($newPath . '/vendor/autoload.php')) {
-        echo 'Error: Could not find vendor/autoload.php in the specified library path.';
+    // For the library path, verify the Composer autoloader is present and readable
+    $autoloader = $newPath . '/vendor/autoload.php';
+    if ($pathKey === 'lib' && (!is_file($autoloader) || !is_readable($autoloader))) {
+        echo 'Error: Could not find or read vendor/autoload.php in the specified library path.';
         exit();
     }
 
@@ -74,6 +76,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action'])
 // exist inside the lib directory. If it's missing, execute() will redirect
 // back to this page instead of advancing to page 5.
 $pathController->execute();
+
+// execute() stores the lib path in $_SESSION['settings']['PATH'] (via
+// path_lookup), but common.inc.php loads the autoloader from TRUST_PATH.
+// Sync them so pages 5+ can find the autoloader.
+if (!empty($pathController->xoopsPath['lib'])) {
+    if (!isset($_SESSION['settings']['TRUST_PATH']) || $_SESSION['settings']['TRUST_PATH'] !== $pathController->xoopsPath['lib']) {
+        $_SESSION['settings']['TRUST_PATH'] = $pathController->xoopsPath['lib'];
+    }
+}
 
 ob_start();
 ?>

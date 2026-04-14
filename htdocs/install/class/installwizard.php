@@ -189,6 +189,7 @@ class XoopsInstallWizard
 
         if ($this->pageIndex > 0 && empty($_COOKIE['xo_install_lang'])) {
             header('Location: index.php');
+            exit;
         }
 
         return $this->pageIndex;

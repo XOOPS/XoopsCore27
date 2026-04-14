@@ -235,12 +235,14 @@ class UpgradeControl
                 try {
                     $className = include $patchFile;
                 } catch (\Throwable $e) {
-                    // Skip patches that fail to load (e.g. stale directories
-                    // from a previous version with incompatible class references).
-                    $this->logs[] = sprintf(
-                        'Skipped patch %s: %s',
-                        $dir,
-                        $e->getMessage()
+                    // Stale directories from a previous version (e.g.
+                    // upd_2.5.11-to-2.5.12 from the pre-rename beta cycle) can
+                    // fail to load because they reference classes that no longer
+                    // exist. Emit a visible warning and skip — crashing the
+                    // entire upgrade is worse than skipping one broken patch.
+                    trigger_error(
+                        sprintf('Upgrade patch %s could not be loaded: %s', $dir, $e->getMessage()),
+                        E_USER_WARNING
                     );
                     continue;
                 }

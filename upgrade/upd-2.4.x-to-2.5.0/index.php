@@ -81,11 +81,13 @@ class Upgrade_250 extends XoopsUpgrade
      */
     public function apply_config(): bool
     {
-        if (!file_exists($this->dbmanagerFile)) {
-            $this->logs[] = 'Database manager file not found: ' . $this->dbmanagerFile;
-            return false;
+        if (!class_exists('Db_manager', false)) {
+            if (!file_exists($this->dbmanagerFile)) {
+                $this->logs[] = 'Database manager file not found: ' . $this->dbmanagerFile;
+                return false;
+            }
+            require_once $this->dbmanagerFile;
         }
-        require_once $this->dbmanagerFile;
         $dbm = new Db_manager();
 
         $sql    = 'SELECT conf_id FROM `' . $this->db->prefix('config') . "` WHERE `conf_name` IN ('cpanel')";
@@ -199,11 +201,13 @@ class Upgrade_250 extends XoopsUpgrade
             return false;
         }
 
-        if (!file_exists($this->dbmanagerFile)) {
-            $this->logs[] = 'Database manager file not found: ' . $this->dbmanagerFile;
-            return false;
+        if (!class_exists('Db_manager', false)) {
+            if (!file_exists($this->dbmanagerFile)) {
+                $this->logs[] = 'Database manager file not found: ' . $this->dbmanagerFile;
+                return false;
+            }
+            require_once $this->dbmanagerFile;
         }
-        require_once $this->dbmanagerFile;
         $dbm  = new Db_manager();
         $time = time();
         foreach ($modversion['templates'] as $tplfile) {

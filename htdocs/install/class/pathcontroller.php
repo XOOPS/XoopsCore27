@@ -335,8 +335,13 @@ class PathController
         }
         if ($PATH === 'lib' || empty($PATH)) {
             $path = 'lib';
-            if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
+            if (is_dir($this->xoopsPath[$path])
+                && is_readable($this->xoopsPath[$path])
+                && is_file($this->xoopsPath[$path] . '/vendor/autoload.php')
+            ) {
                 $this->validPath[$path] = 1;
+            } else {
+                $this->validPath[$path] = 0;
             }
             $ret *= $this->validPath[$path];
         }

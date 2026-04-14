@@ -33,7 +33,12 @@ xoops_setcookie('xo_install_lang', 'english', 0, '', '');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lang'])) {
     // Raw $_POST here — XMF autoloader is not available until the user
     // configures the xoops_lib path on the pathsettings page (page 4).
-    $lang = trim((string) $_POST['lang']);
+    // Validate using the same pattern as initLanguage() — strip invalid
+    // characters and verify the language directory exists.
+    $lang = preg_replace('/[^a-z0-9_\-]/i', '', trim((string) $_POST['lang']));
+    if (!file_exists(XOOPS_INSTALL_PATH . "/language/{$lang}/install.php")) {
+        $lang = 'english';
+    }
     xoops_setcookie('xo_install_lang', $lang, 0, '', '');
 
     $wizard->redirectToPage('+1');

@@ -70,33 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action'])
     exit();
 }
 
+// PathController::checkPath('lib') now requires vendor/autoload.php to
+// exist inside the lib directory. If it's missing, execute() will redirect
+// back to this page instead of advancing to page 5.
 $pathController->execute();
-
-// Handle POST request for updating paths.
-// Only accept the lib path if it contains vendor/autoload.php — otherwise
-// pages 5+ will fail with the same missing-autoloader problem.
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $libPost = isset($_POST['lib']) ? trim((string) $_POST['lib']) : '';
-    if ('' !== $libPost && $libPost !== $pathController->xoopsPath['lib']) {
-        $newTrustPath = $pathController->sanitizePath($libPost);
-
-        if ($newTrustPath && is_dir($newTrustPath) && is_file($newTrustPath . '/vendor/autoload.php')) {
-            $_SESSION['settings']['TRUST_PATH'] = $newTrustPath;
-
-            try {
-                $pathController->updateXoopsTrustPath($newTrustPath);
-            } catch (RuntimeException $e) {
-                $pathController->validPath['lib'] = false;
-                $pathController->errorMessage = $e->getMessage();
-            }
-        } else {
-            $pathController->validPath['lib'] = false;
-            $pathController->errorMessage = !$newTrustPath || !is_dir($newTrustPath)
-                ? 'Invalid XOOPS library directory. Please check the path.'
-                : 'The specified library directory does not contain vendor/autoload.php. Please verify the path points to the relocated xoops_lib folder.';
-        }
-    }
-}
 
 ob_start();
 ?>

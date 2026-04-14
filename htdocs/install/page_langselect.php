@@ -68,7 +68,8 @@ EOT;
 $languages = getDirList(XOOPS_INSTALL_PATH . '/language/');
 foreach ($languages as $lang) {
     $sel = ($lang == $wizard->language) ? ' selected' : '';
-    $content .= "<option value=\"{$lang}\"{$sel}>{$lang}</option>\n";
+    $escapedLang = installerHtmlSpecialChars($lang);
+    $content .= "<option value=\"{$escapedLang}\"{$sel}>{$escapedLang}</option>\n";
 }
 $content .=<<<EOB
     </select>

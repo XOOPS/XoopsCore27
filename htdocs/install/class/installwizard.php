@@ -185,7 +185,8 @@ class XoopsInstallWizard
             return false;
         }
 
-        if ($this->pageIndex > 0 && empty($_COOKIE['xo_install_lang'])) {
+        $installLanguageCookie = $_COOKIE['xo_install_lang'] ?? null;
+        if ($this->pageIndex > 0 && (!is_string($installLanguageCookie) || '' === $installLanguageCookie)) {
             header('Location: index.php');
             exit;
         }

@@ -453,7 +453,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     }
     $jqueryui = XoopsLists::getDirListAsArray(XOOPS_ROOT_PATH . '/modules/system/css/ui');
     foreach ($jqueryui as $dir) {
-        $dbm->insert('configoption', ' (confop_id, confop_name, confop_value, conf_id) VALUES (' . $conf . ", '" . $dir . "', '" . $dir . "', 133)");
+        $dbm->insert('configoption', ' (confop_id, confop_name, confop_value, conf_id) VALUES (' . $conf . ", '" . $dir . "', '" . $dir . "', 131)");
         ++$conf;
     }
     //notification method

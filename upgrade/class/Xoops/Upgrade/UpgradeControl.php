@@ -228,7 +228,22 @@ class UpgradeControl
 
         foreach ($dirs as $dir) {
             if (str_contains($dir, '-to-')) {
-                $className = include $upgradeRoot . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . 'index.php';
+                $patchFile = $upgradeRoot . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . 'index.php';
+                if (!file_exists($patchFile)) {
+                    continue;
+                }
+                try {
+                    $className = include $patchFile;
+                } catch (\Throwable $e) {
+                    // Skip patches that fail to load (e.g. stale directories
+                    // from a previous version with incompatible class references).
+                    $this->logs[] = sprintf(
+                        'Skipped patch %s: %s',
+                        $dir,
+                        $e->getMessage()
+                    );
+                    continue;
+                }
                 if (is_string($className) && class_exists($className)) {
                     $upg           = $this->createPatch($className);
                     $results[$dir] = $upg->isApplied();

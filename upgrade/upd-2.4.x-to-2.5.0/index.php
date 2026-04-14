@@ -12,7 +12,9 @@
 use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;
 
-require_once __DIR__ . '/dbmanager.php';
+if (!class_exists('Db_manager', false)) {
+    require_once __DIR__ . '/dbmanager.php';
+}
 
 /**
  * Upgrade from 2.4.x to 2.5.0

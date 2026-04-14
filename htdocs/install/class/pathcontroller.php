@@ -239,14 +239,17 @@ class PathController
         $this->readRequest();
         $valid = $this->validate();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Always persist submitted paths so the form repopulates on
+            // validation failure (redirect back to this page).
+            foreach ($this->path_lookup as $req => $sess) {
+                $_SESSION['settings'][$sess] = $this->xoopsPath[$req];
+            }
+            $_SESSION['settings']['URL']           = $this->xoopsUrl;
+            $_SESSION['settings']['COOKIE_DOMAIN'] = $this->xoopsCookieDomain;
             if ($valid) {
-                foreach ($this->path_lookup as $req => $sess) {
-                    $_SESSION['settings'][$sess] = $this->xoopsPath[$req];
-                }
-                $_SESSION['settings']['URL']           = $this->xoopsUrl;
-                $_SESSION['settings']['COOKIE_DOMAIN'] = $this->xoopsCookieDomain;
-                // Sync TRUST_PATH from lib — common.inc.php loads the Composer
-                // autoloader from TRUST_PATH, not PATH.
+                // Sync TRUST_PATH only on valid POST — common.inc.php loads
+                // the Composer autoloader from TRUST_PATH, not PATH. A bad
+                // lib path must not poison TRUST_PATH.
                 if (!empty($this->xoopsPath['lib'])) {
                     $_SESSION['settings']['TRUST_PATH'] = $this->xoopsPath['lib'];
                 }

@@ -233,6 +233,62 @@ class PathController
         return false; // Return false for invalid paths
     }
 
+    /**
+     * Determine whether the given PHP source contains an executable
+     * XOOPS_VERSION definition.
+     *
+     * @param string $source
+     *
+     * @return bool
+     */
+    private function hasXoopsVersionDefinition($source)
+    {
+        $tokens = token_get_all($source);
+        $count  = count($tokens);
+
+        for ($i = 0; $i < $count; ++$i) {
+            if (!is_array($tokens[$i]) || $tokens[$i][0] !== T_STRING || strtolower($tokens[$i][1]) !== 'define') {
+                continue;
+            }
+            $openParenIndex = $this->nextSignificantTokenIndex($tokens, $i + 1);
+            if (null === $openParenIndex || '(' !== $tokens[$openParenIndex]) {
+                continue;
+            }
+            $nameIndex = $this->nextSignificantTokenIndex($tokens, $openParenIndex + 1);
+            if (null === $nameIndex || !is_array($tokens[$nameIndex]) || $tokens[$nameIndex][0] !== T_CONSTANT_ENCAPSED_STRING) {
+                continue;
+            }
+            if ('XOOPS_VERSION' === trim($tokens[$nameIndex][1], "\"'")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Find the next non-whitespace/comment token.
+     *
+     * @param array<int, mixed> $tokens
+     * @param int               $startIndex
+     *
+     * @return int|null
+     */
+    private function nextSignificantTokenIndex(array $tokens, $startIndex)
+    {
+        $count = count($tokens);
+        for ($i = $startIndex; $i < $count; ++$i) {
+            if (!is_array($tokens[$i])) {
+                return $i;
+            }
+            if (!in_array($tokens[$i][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
     //========================================
     public function execute()
     {
@@ -339,13 +395,10 @@ class PathController
             if (is_dir($this->xoopsPath[$path]) && is_readable($this->xoopsPath[$path])) {
                 $versionFile = "{$this->xoopsPath[$path]}/include/version.php";
                 $distFile    = "{$this->xoopsPath[$path]}/mainfile.dist.php";
-                if (file_exists($versionFile) && is_readable($versionFile)) {
+                if (is_file($versionFile) && is_readable($versionFile)) {
                     $versionContents = file_get_contents($versionFile);
-                    if (false !== $versionContents) {
-                        $versionPattern = "/define\\s*\\(\\s*['\"]XOOPS_VERSION['\"]\\s*,\\s*['\"][^'\"]+['\"]\\s*\\)/";
-                        if (preg_match($versionPattern, $versionContents) && file_exists($distFile) && is_readable($distFile)) {
-                            $this->validPath[$path] = 1;
-                        }
+                    if (false !== $versionContents && $this->hasXoopsVersionDefinition($versionContents) && is_file($distFile) && is_readable($distFile)) {
+                        $this->validPath[$path] = 1;
                     }
                 }
             }
@@ -360,6 +413,7 @@ class PathController
                 && is_file($autoloader)
                 && is_readable($autoloader)
                 && is_file($xmfMarker)
+                && is_readable($xmfMarker)
             ) {
                 $this->validPath[$path] = 1;
             } else {

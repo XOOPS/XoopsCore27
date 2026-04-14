@@ -42,9 +42,12 @@ $pathController = new PathController($wizard->configs['xoopsPathDefault'], $wiza
 // status. It does not write session state. Note: checkPath('root') reads
 // version.php from the validated root path to verify XOOPS_VERSION.
 $allowedPathKeys = ['root', 'data', 'lib'];
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action']) && $_GET['action'] === 'checkpath') {
-    $pathKey = trim((string) ($_GET['var'] ?? ''));
-    $newPath = trim((string) ($_GET['path'] ?? ''));
+$rawAction      = $_GET['action'] ?? '';
+$rawPathKey     = $_GET['var'] ?? '';
+$rawNewPath     = $_GET['path'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && is_string($rawAction) && $rawAction === 'checkpath') {
+    $pathKey = is_string($rawPathKey) ? trim($rawPathKey) : '';
+    $newPath = is_string($rawNewPath) ? trim($rawNewPath) : '';
 
     // Whitelist the path key — reject unknown values
     if (!in_array($pathKey, $allowedPathKeys, true)) {

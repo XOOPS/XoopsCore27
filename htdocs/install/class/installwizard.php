@@ -128,7 +128,8 @@ class XoopsInstallWizard
             return true;
         }
 
-        if (empty($GLOBALS['xoopsUser']) && !empty($_COOKIE['xo_install_user'])) {
+        $installUserCookie = $_COOKIE['xo_install_user'] ?? '';
+        if (empty($GLOBALS['xoopsUser']) && is_string($installUserCookie) && $installUserCookie !== '') {
             return install_acceptUser();
         }
         if (empty($GLOBALS['xoopsUser'])) {

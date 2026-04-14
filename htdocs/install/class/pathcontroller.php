@@ -245,10 +245,17 @@ class PathController
             $_SESSION['settings']['URL']           = $this->xoopsUrl;
             $_SESSION['settings']['COOKIE_DOMAIN'] = $this->xoopsCookieDomain;
             if ($valid) {
+                // Sync TRUST_PATH from lib — common.inc.php loads the Composer
+                // autoloader from TRUST_PATH, not PATH. Only set on valid POST
+                // so a bad submission doesn't poison the session.
+                if (!empty($this->xoopsPath['lib'])) {
+                    $_SESSION['settings']['TRUST_PATH'] = $this->xoopsPath['lib'];
+                }
                 $GLOBALS['wizard']->redirectToPage('+1');
             } else {
                 $GLOBALS['wizard']->redirectToPage('+0');
             }
+            exit;
         }
     }
 

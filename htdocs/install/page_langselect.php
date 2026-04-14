@@ -57,7 +57,8 @@ $content =<<<EOT
     <select name="lang" id="lang" class="form-control">
 EOT;
 
-$languages = getDirList(__DIR__ . '/../language/');
+// List installer languages (not site languages) to match initLanguage() validation
+$languages = getDirList(XOOPS_INSTALL_PATH . '/language/');
 foreach ($languages as $lang) {
     $sel = ($lang == $wizard->language) ? ' selected' : '';
     $content .= "<option value=\"{$lang}\"{$sel}>{$lang}</option>\n";

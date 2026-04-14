@@ -72,19 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action'])
     exit();
 }
 
-// PathController::checkPath('lib') now requires vendor/autoload.php to
-// exist inside the lib directory. If it's missing, execute() will redirect
-// back to this page instead of advancing to page 5.
+// PathController::checkPath('lib') requires vendor/autoload.php to exist.
+// execute() syncs TRUST_PATH into the session and exits after redirect.
 $pathController->execute();
-
-// execute() stores the lib path in $_SESSION['settings']['PATH'] (via
-// path_lookup), but common.inc.php loads the autoloader from TRUST_PATH.
-// Sync them so pages 5+ can find the autoloader.
-if (!empty($pathController->xoopsPath['lib'])) {
-    if (!isset($_SESSION['settings']['TRUST_PATH']) || $_SESSION['settings']['TRUST_PATH'] !== $pathController->xoopsPath['lib']) {
-        $_SESSION['settings']['TRUST_PATH'] = $pathController->xoopsPath['lib'];
-    }
-}
 
 ob_start();
 ?>

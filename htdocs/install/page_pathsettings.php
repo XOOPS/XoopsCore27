@@ -112,10 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var']) && isset($_GET['
 
 
 // Handle GET request for path checking
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && \Xmf\Request::hasVar('var', 'GET') && \Xmf\Request::hasVar('action', 'GET') && \Xmf\Request::getCmd('action', '', 'GET') === 'checkpath') {
+// Raw $_GET here — XMF autoloader is not available until the user
+// enters the xoops_lib path on THIS page (chicken-and-egg).
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action']) && $_GET['action'] === 'checkpath') {
     // Sanitize input
-    $pathKey = htmlspecialchars(trim(\Xmf\Request::getString('var', '', 'GET')), ENT_QUOTES | ENT_HTML5);
-    $newPath = htmlspecialchars(trim(\Xmf\Request::getString('path', '', 'GET')), ENT_QUOTES | ENT_HTML5);
+    $pathKey = htmlspecialchars(trim((string) ($_GET['var'] ?? '')), ENT_QUOTES | ENT_HTML5);
+    $newPath = htmlspecialchars(trim((string) ($_GET['path'] ?? '')), ENT_QUOTES | ENT_HTML5);
 
     // Validate directory
     if (!is_dir($newPath)) {
@@ -180,8 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Handle POST request for updating paths
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (\Xmf\Request::hasVar('lib', 'POST') && \Xmf\Request::getString('lib', '', 'POST') !== $pathController->xoopsPath['lib']) {
-        $newTrustPath = $pathController->sanitizePath(trim(\Xmf\Request::getString('lib', '', 'POST')));
+    $libPost = isset($_POST['lib']) ? trim((string) $_POST['lib']) : '';
+    if ('' !== $libPost && $libPost !== $pathController->xoopsPath['lib']) {
+        $newTrustPath = $pathController->sanitizePath($libPost);
 
         if ($newTrustPath && is_dir($newTrustPath)) {
             $xoopsTrustPath = $newTrustPath;

@@ -128,7 +128,9 @@ class XoopsInstallWizard
             return true;
         }
 
-        $installUser = \Xmf\Request::getString('xo_install_user', '', 'COOKIE');
+        // Raw $_COOKIE — XMF autoloader may not be available on early
+        // install pages when xoops_lib has been relocated.
+        $installUser = isset($_COOKIE['xo_install_user']) ? trim((string) $_COOKIE['xo_install_user']) : '';
         if (empty($GLOBALS['xoopsUser']) && !empty($installUser)) {
             return install_acceptUser($installUser);
         }
@@ -185,7 +187,7 @@ class XoopsInstallWizard
             return false;
         }
 
-        if ($this->pageIndex > 0 && !\Xmf\Request::hasVar('xo_install_lang', 'COOKIE')) {
+        if ($this->pageIndex > 0 && empty($_COOKIE['xo_install_lang'])) {
             header('Location: index.php');
         }
 

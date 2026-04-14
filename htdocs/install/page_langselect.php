@@ -30,8 +30,10 @@ require_once __DIR__ . '/include/common.inc.php';
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
 xoops_setcookie('xo_install_lang', 'english', 0, '', '');
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && \Xmf\Request::hasVar('lang', 'POST')) {
-    $lang = \Xmf\Request::getString('lang', '', 'POST');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['lang'])) {
+    // Raw $_POST here — XMF autoloader is not available until the user
+    // configures the xoops_lib path on the pathsettings page (page 4).
+    $lang = trim((string) $_POST['lang']);
     xoops_setcookie('xo_install_lang', $lang, 0, '', '');
 
     $wizard->redirectToPage('+1');

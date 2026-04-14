@@ -128,11 +128,8 @@ class XoopsInstallWizard
             return true;
         }
 
-        // Raw $_COOKIE — XMF autoloader may not be available on early
-        // install pages when xoops_lib has been relocated.
-        $installUser = isset($_COOKIE['xo_install_user']) ? trim((string) $_COOKIE['xo_install_user']) : '';
-        if (empty($GLOBALS['xoopsUser']) && !empty($installUser)) {
-            return install_acceptUser($installUser);
+        if (empty($GLOBALS['xoopsUser']) && !empty($_COOKIE['xo_install_user'])) {
+            return install_acceptUser();
         }
         if (empty($GLOBALS['xoopsUser'])) {
             redirect_header('../user.php');

@@ -26,7 +26,7 @@ function installerHtmlSpecialChars($value = '')
     return htmlspecialchars($value, ENT_QUOTES, _INSTALL_CHARSET, true);
 }
 
-function install_acceptUser($hash = '')
+function install_acceptUser()
 {
     $GLOBALS['xoopsUser'] = null;
     $assertClaims = [

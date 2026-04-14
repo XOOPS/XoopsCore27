@@ -41,6 +41,7 @@ if (empty($modules)) {
     $criteria = new CriteriaCompo();
     $criteria->add(new Criteria('hassearch', 1));
     $criteria->add(new Criteria('isactive', 1));
+    $criteria->add(new Criteria('dirname', 'system', '<>'));
     if (!empty($available_modules)) {
         $criteria->add(new Criteria('mid', '(' . implode(',', $available_modules) . ')', 'IN'));
     }
@@ -49,6 +50,9 @@ if (empty($modules)) {
     $mods_checkbox->addOptionArray($module_handler->getList($criteria));
 } else {
     foreach ($modules as $mid => $module) {
+        if ('system' === $module->getVar('dirname')) {
+            continue;
+        }
         $module_array[$mid] = $module->getVar('name');
     }
     $mods_checkbox->addOptionArray($module_array);

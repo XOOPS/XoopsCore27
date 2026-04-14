@@ -39,8 +39,8 @@ $pathController = new PathController($wizard->configs['xoopsPathDefault'], $wiza
 // Handle GET request for AJAX path checking (validation only).
 // Raw $_GET — XMF autoloader is not available until the user enters the
 // xoops_lib path on THIS page. This handler validates and returns HTML
-// status. It does not write session state. Note: checkPath('root') does
-// include version.php from the validated root path to verify XOOPS_VERSION.
+// status. It does not write session state. Note: checkPath('root') reads
+// version.php from the validated root path to verify XOOPS_VERSION.
 $allowedPathKeys = ['root', 'data', 'lib'];
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['var'], $_GET['action']) && $_GET['action'] === 'checkpath') {
     $pathKey = trim((string) ($_GET['var'] ?? ''));
@@ -119,7 +119,7 @@ ob_start();
             <div class="form-group">
                 <label class="xolabel" for="root"><?php echo XOOPS_ROOT_PATH_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_ROOT_PATH_HELP; ?></div>
-                <input type="text" class="form-control" name="root" id="root" value="<?php echo htmlspecialchars($pathController->xoopsPath['root'], ENT_QUOTES, 'UTF-8'); ?>" onchange="updPath('root', this.value)"/>
+                <input type="text" class="form-control" name="root" id="root" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['root']); ?>" onchange="updPath('root', this.value)"/>
                 <span id="rootpathimg"><?php echo genPathCheckHtml('root', $pathController->validPath['root']); ?></span>
             </div>
 
@@ -144,7 +144,7 @@ ob_start();
             <div class="form-group">
                 <label for="data"><?php echo XOOPS_DATA_PATH_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_DATA_PATH_HELP; ?></div>
-                <input type="text" class="form-control" name="data" id="data" value="<?php echo htmlspecialchars($pathController->xoopsPath['data'], ENT_QUOTES, 'UTF-8'); ?>" onchange="updPath('data', this.value)"/>
+                <input type="text" class="form-control" name="data" id="data" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['data']); ?>" onchange="updPath('data', this.value)"/>
                 <span id="datapathimg"><?php echo genPathCheckHtml('data', $pathController->validPath['data']); ?></span>
             </div>
             <?php
@@ -168,7 +168,7 @@ ob_start();
             <div class="form-group">
                 <label class="xolabel" for="lib"><?php echo XOOPS_LIB_PATH_LABEL; ?></label>
                 <div class="xoform-help alert alert-info"><?php echo XOOPS_LIB_PATH_HELP; ?></div>
-                <input type="text" class="form-control" name="lib" id="lib" value="<?php echo htmlspecialchars($pathController->xoopsPath['lib'], ENT_QUOTES, 'UTF-8'); ?>" onchange="updPath('lib', this.value)"/>
+                <input type="text" class="form-control" name="lib" id="lib" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['lib']); ?>" onchange="updPath('lib', this.value)"/>
                 <span id="libpathimg"><?php echo genPathCheckHtml('lib', $pathController->validPath['lib']); ?></span>
             </div>
 

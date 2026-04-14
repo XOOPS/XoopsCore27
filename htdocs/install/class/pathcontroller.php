@@ -249,9 +249,13 @@ class PathController
             if ($valid) {
                 // Sync TRUST_PATH only on valid POST — common.inc.php loads
                 // the Composer autoloader from TRUST_PATH, not PATH. A bad
-                // lib path must not poison TRUST_PATH.
-                if (!empty($this->xoopsPath['lib'])) {
-                    $_SESSION['settings']['TRUST_PATH'] = $this->xoopsPath['lib'];
+                // lib path must not poison TRUST_PATH. Canonicalize it before
+                // storing it so later bootstrap code gets an absolute path.
+                $trustPath = $this->sanitizePath($this->xoopsPath['lib']);
+                if (false !== $trustPath) {
+                    $this->xoopsPath['lib']             = $trustPath;
+                    $_SESSION['settings']['PATH']       = $trustPath;
+                    $_SESSION['settings']['TRUST_PATH'] = $trustPath;
                 }
                 $GLOBALS['wizard']->redirectToPage('+1');
             } else {

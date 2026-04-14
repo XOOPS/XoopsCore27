@@ -98,10 +98,11 @@ $error = false;
 $hashedAdminPass = password_hash($adminpass, PASSWORD_DEFAULT);
 
 if ($process) {
-    $dbm->queryFromFile('./sql/' . XOOPS_DB_TYPE . '.data.sql');
-    $dbm->queryFromFile('./language/' . $wizard->language . '/' . XOOPS_DB_TYPE . '.lang.data.sql');
+    $schemaSqlOk     = $dbm->queryFromFile('./sql/' . XOOPS_DB_TYPE . '.data.sql');
+    $schemaLangSqlOk = $dbm->queryFromFile('./language/' . $wizard->language . '/' . XOOPS_DB_TYPE . '.lang.data.sql');
     $group = make_groups($dbm);
-    if (false === $group || false === make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $wizard->language, $group)) {
+    $data = false !== $group ? make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $wizard->language, $group) : false;
+    if (false === $schemaSqlOk || false === $schemaLangSqlOk || false === $group || false === $data) {
         $error = true;
         $content = '<div class="alert alert-danger"><span class="fa-solid fa-ban text-danger"></span> '
             . FAILED . '</div><div class="alert alert-warning">'

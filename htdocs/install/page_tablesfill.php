@@ -98,12 +98,18 @@ $error = false;
 $hashedAdminPass = password_hash($adminpass, PASSWORD_DEFAULT);
 
 if ($process) {
-    $result  = $dbm->queryFromFile('./sql/' . XOOPS_DB_TYPE . '.data.sql');
-    $result  = $dbm->queryFromFile('./language/' . $wizard->language . '/' . XOOPS_DB_TYPE . '.lang.data.sql');
-    $group   = make_groups($dbm);
-    $result  = make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $wizard->language, $group);
-    $content = '<div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> '
-        . DATA_INSERTED . '</div><div class="well">' . $dbm->report() . '</div>';
+    $dbm->queryFromFile('./sql/' . XOOPS_DB_TYPE . '.data.sql');
+    $dbm->queryFromFile('./language/' . $wizard->language . '/' . XOOPS_DB_TYPE . '.lang.data.sql');
+    $group = make_groups($dbm);
+    if (false === $group || false === make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $wizard->language, $group)) {
+        $error = true;
+        $content = '<div class="alert alert-danger"><span class="fa-solid fa-ban text-danger"></span> '
+            . FAILED . '</div><div class="alert alert-warning">'
+            . XOOPS_ERROR_SEE_BELOW . '</div><div class="well">' . $dbm->report() . '</div>';
+    } else {
+        $content = '<div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> '
+            . DATA_INSERTED . '</div><div class="well">' . $dbm->report() . '</div>';
+    }
 } else {
     $content = '<div class="alert alert-info"><span class="fa-solid fa-circle-info text-info"></span> '
         . DATA_ALREADY_INSERTED . '</div>';

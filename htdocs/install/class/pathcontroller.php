@@ -303,6 +303,13 @@ class PathController
             $_SESSION['settings']['URL']           = $this->xoopsUrl;
             $_SESSION['settings']['COOKIE_DOMAIN'] = $this->xoopsCookieDomain;
             if ($valid) {
+                foreach ($this->path_lookup as $req => $sess) {
+                    $canonicalPath = $this->sanitizePath($this->xoopsPath[$req]);
+                    if (false !== $canonicalPath) {
+                        $this->xoopsPath[$req] = $canonicalPath;
+                        $_SESSION['settings'][$sess] = $canonicalPath;
+                    }
+                }
                 // Sync TRUST_PATH only on valid POST — common.inc.php loads
                 // the Composer autoloader from TRUST_PATH, not PATH. A bad
                 // lib path must not poison TRUST_PATH. Canonicalize it before

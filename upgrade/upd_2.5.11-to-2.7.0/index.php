@@ -48,6 +48,14 @@ class Upgrade_270 extends XoopsUpgrade
     protected string $cleanCacheKey = 'cache-cleaned-270';
 
     /**
+     * @var string Session key set when apply_normalizeprofilefieldname has
+     *             already taken the skip-with-warning path for a widened
+     *             column this session. Read by check_ so the patch doesn't
+     *             stay permanently "not applied" on widened-column installs.
+     */
+    protected string $widenedFieldNameSkipKey = 'normalize-profilefield-widened-270';
+
+    /**
      * @param XoopsMySQLDatabase $db      database connection
      * @param UpgradeControl     $control upgrade control instance
      */
@@ -657,6 +665,14 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
+        // Skip-with-warning path was already taken this session for a widened
+        // column. apply_ logged the advisory and deferred to manual action —
+        // treat the task as settled so the overall patch can complete rather
+        // than looping forever on check_ returning false.
+        if (!empty($_SESSION[$this->widenedFieldNameSkipKey])) {
+            return true;
+        }
+
         // Column must be varchar(64) NOT NULL DEFAULT ''
         $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
                 . " FROM `information_schema`.`COLUMNS`"
@@ -776,14 +792,18 @@ class Upgrade_270 extends XoopsUpgrade
         // STRICT_ALL_TABLES); recreating the UNIQUE index with prefix(64)
         // on a wider column would weaken uniqueness from "full width" to
         // "first 64 chars". Either outcome is worse than leaving the
-        // customised column alone, so the task logs a warning and returns
-        // true so the rest of the 2.7.0 upgrade is not blocked.
+        // customised column alone, so the task logs a warning, sets a
+        // session flag so check_ treats the task as resolved on subsequent
+        // isApplied() calls (otherwise the patch would remain permanently
+        // "not applied"), and returns true so the rest of the 2.7.0
+        // upgrade is not blocked.
         if ($currentLen > 64) {
             $this->logs[] = sprintf(
                 'profile_field.field_name is %s(%d); skipping index normalisation — column is wider than 64 chars. Reduce the column manually after verifying no values exceed 64 chars, then re-run the upgrade.',
                 $dataType,
                 $currentLen
             );
+            $_SESSION[$this->widenedFieldNameSkipKey] = true;
             return true;
         }
 

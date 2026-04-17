@@ -672,7 +672,7 @@ class Upgrade_270 extends XoopsUpgrade
             || 'varchar' !== strtolower((string) $row[0])
             || 64 !== (int) $row[1]
             || 'NO' !== strtoupper((string) $row[2])
-            || '' !== $row[3]                  // strict: reject NULL default
+            || '' !== self::normaliseColumnDefault($row[3])  // reject NULL default
         ) {
             return false;
         }
@@ -754,10 +754,10 @@ class Upgrade_270 extends XoopsUpgrade
             $this->logs[] = 'Unable to read profile_field.field_name column metadata';
             return false;
         }
-        $dataType      = strtolower((string) $row[0]);
-        $currentLen    = (int) $row[1];
-        $isNullable    = 'YES' === strtoupper((string) $row[2]);
-        $currentDefault = $row[3];
+        $dataType       = strtolower((string) $row[0]);
+        $currentLen     = (int) $row[1];
+        $isNullable     = 'YES' === strtoupper((string) $row[2]);
+        $currentDefault = self::normaliseColumnDefault($row[3]);
 
         // Guard 1: reject unexpected types outright — admin must intervene.
         // Checked before the length guard so a `text` column (length 65535)
@@ -794,16 +794,44 @@ class Upgrade_270 extends XoopsUpgrade
                       || $isNullable
                       || ('' !== $currentDefault);
         if ($columnDiverges) {
+            // Guard 3: when the column is nullable and the UNIQUE index still
+            // exists, multiple rows may legally share NULL (SQL treats NULL !=
+            // NULL for uniqueness). Coercing NULL → '' via MODIFY NOT NULL
+            // would collapse them into duplicate '' values and either the
+            // MODIFY itself or the later ADD UNIQUE would fail with a low-
+            // signal duplicate-key error. Pre-flight a COUNT and refuse with
+            // an actionable message when > 1 row would collide.
+            if ($isNullable) {
+                $countSql = "SELECT COUNT(*) FROM `{$table}`"
+                          . " WHERE `field_name` IS NULL OR `field_name` = ''";
+                $countResult = $this->db->query($countSql);
+                if ($this->db->isResultSet($countResult) && $countResult instanceof \mysqli_result) {
+                    $countRow = $this->db->fetchRow($countResult);
+                    $conflictCount = $countRow ? (int) $countRow[0] : 0;
+                    if ($conflictCount > 1) {
+                        $this->logs[] = sprintf(
+                            'profile_field has %d rows where field_name is NULL or empty; coercing them via MODIFY ... NOT NULL DEFAULT \'\' would violate the UNIQUE index on field_name. Resolve these rows manually (assign distinct values or delete duplicates) and re-run the upgrade.',
+                            $conflictCount
+                        );
+                        return false;
+                    }
+                }
+            }
+
             // Log the specific divergence so admins can audit what changed —
             // especially important when nullability or default is being
             // rewritten (NULL values are coerced to '' by the MODIFY).
+            // Log values are htmlspecialchars-escaped because the upgrader
+            // renders $this->logs entries as HTML (joined with <br>).
             if ($isNullable || '' !== $currentDefault) {
                 $this->logs[] = sprintf(
                     'profile_field.field_name is %s(%d) %s DEFAULT %s — rewriting to varchar(64) NOT NULL DEFAULT \'\'. Any existing NULL values will be coerced to empty strings.',
-                    $dataType,
+                    htmlspecialchars($dataType, ENT_QUOTES, 'UTF-8'),
                     $currentLen,
                     $isNullable ? 'NULL' : 'NOT NULL',
-                    null === $currentDefault ? 'NULL' : "'{$currentDefault}'"
+                    null === $currentDefault
+                        ? 'NULL'
+                        : "'" . htmlspecialchars($currentDefault, ENT_QUOTES, 'UTF-8') . "'"
                 );
             }
             $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
@@ -1088,6 +1116,34 @@ class Upgrade_270 extends XoopsUpgrade
         $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
 
         return false;
+    }
+
+    /**
+     * Normalise an information_schema.COLUMNS.COLUMN_DEFAULT value.
+     *
+     * MariaDB 10.2.7+ wraps string-literal defaults in single quotes, so a
+     * column `DEFAULT ''` comes back as the 2-char string "''". MySQL (all
+     * versions) and MariaDB ≤10.2.6 return the bare literal (the empty
+     * string). This helper returns the unwrapped literal, or null when no
+     * default is set, so downstream callers can compare against the raw
+     * target value consistently across MySQL and MariaDB.
+     *
+     * @param mixed $default raw COLUMN_DEFAULT value as returned by mysqli
+     * @return string|null   unwrapped literal, or null when no default set
+     */
+    private static function normaliseColumnDefault(mixed $default): ?string
+    {
+        if (null === $default) {
+            return null;
+        }
+        $value = (string) $default;
+        if (strlen($value) >= 2
+            && str_starts_with($value, "'")
+            && str_ends_with($value, "'")
+        ) {
+            return substr($value, 1, -1);
+        }
+        return $value;
     }
 
     /**

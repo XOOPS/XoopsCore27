@@ -705,10 +705,11 @@ class Upgrade_270 extends XoopsUpgrade
      * uses an explicit (64) prefix.
      *
      * Skipped silently when the table is absent (Profile module not
-     * installed). Refuses to silently narrow a column that has been widened
-     * beyond 64 chars locally — the admin must resolve that manually.
+     * installed). Skipped with a warning in the log when the column has
+     * been widened beyond 64 chars locally — the admin must resolve that
+     * manually, but the rest of the 2.7.0 upgrade is not blocked.
      *
-     * @return bool true on success (or table absent)
+     * @return bool true on success, table absent, or skipped with warning
      */
     public function apply_normalizeprofilefieldname(): bool
     {
@@ -756,16 +757,20 @@ class Upgrade_270 extends XoopsUpgrade
             return false;
         }
 
-        // Guard 2: refuse to narrow a legitimate wide varchar/char column —
-        // values could be truncated if the server's sql_mode does not
-        // include STRICT_ALL_TABLES.
+        // Guard 2: skip-with-warning when the column has been widened.
+        // Narrowing could silently truncate data (if sql_mode lacks
+        // STRICT_ALL_TABLES); recreating the UNIQUE index with prefix(64)
+        // on a wider column would weaken uniqueness from "full width" to
+        // "first 64 chars". Either outcome is worse than leaving the
+        // customised column alone, so the task logs a warning and returns
+        // true so the rest of the 2.7.0 upgrade is not blocked.
         if ($currentLen > 64) {
             $this->logs[] = sprintf(
-                'profile_field.field_name is %s(%d); refusing to narrow to varchar(64) automatically. Reduce the column manually after verifying no values exceed 64 chars.',
+                'profile_field.field_name is %s(%d); skipping index normalisation — column is wider than 64 chars. Reduce the column manually after verifying no values exceed 64 chars, then re-run the upgrade.',
                 $dataType,
                 $currentLen
             );
-            return false;
+            return true;
         }
 
         if ('varchar' !== $dataType || $currentLen !== 64) {
@@ -1176,37 +1181,6 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         return (bool) $this->db->fetchArray($result);
-    }
-
-    /**
-     * Return the explicit prefix length for an index column, or null if the
-     * index/column pair does not exist or indexes the full column width.
-     *
-     * SUB_PART is NULL in information_schema.STATISTICS when no prefix was
-     * supplied at index-creation time — callers treat NULL as "not normalised".
-     *
-     * @param string $table      fully prefixed table name
-     * @param string $indexName  index name (use 'PRIMARY' for the primary key)
-     * @param string $columnName column name within the index
-     */
-    private function indexPrefixLength(string $table, string $indexName, string $columnName): ?int
-    {
-        $sql    = "SELECT `SUB_PART` FROM `information_schema`.`STATISTICS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `INDEX_NAME` = " . $this->db->quote($indexName)
-                . " AND `COLUMN_NAME` = " . $this->db->quote($columnName)
-                . " LIMIT 1";
-        $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return null;
-        }
-        $row = $this->db->fetchRow($result);
-        if (!$row || null === $row[0]) {
-            return null;
-        }
-
-        return (int) $row[0];
     }
 }
 

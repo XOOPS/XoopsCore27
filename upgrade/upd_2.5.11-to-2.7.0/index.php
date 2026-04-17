@@ -633,9 +633,13 @@ class Upgrade_270 extends XoopsUpgrade
 
     /**
      * Check if profile_field.field_name is varchar(64) AND the unique index
-     * has an explicit prefix of 64.
+     * matches the canonical layout:
+     *   UNIQUE `field_name` (`field_name`(64)).
      *
-     * Skipped silently when the table is absent (Profile module not installed).
+     * Verifies the full index shape — not just the prefix length — so a
+     * non-UNIQUE or composite index that happens to be named `field_name`
+     * does not incorrectly pass the normalise check. Skipped silently when
+     * the table is absent (Profile module not installed).
      *
      * @return bool true if already normalised (no action needed)
      */
@@ -667,8 +671,33 @@ class Upgrade_270 extends XoopsUpgrade
             return false;
         }
 
-        // Unique index `field_name` must have SUB_PART = 64
-        return 64 === $this->indexPrefixLength($table, 'field_name', 'field_name');
+        // Unique index `field_name` must be the sole, single-column entry
+        // with SUB_PART = 64 and NON_UNIQUE = 0.
+        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`"
+                . " FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = 'field_name'"
+                . " ORDER BY `SEQ_IN_INDEX`";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        $rows = [];
+        while ($row = $this->db->fetchRow($result)) {
+            $rows[] = $row;
+        }
+
+        // Expect exactly: [('field_name', 1, 64, 0)]
+        if (1 !== count($rows)) {
+            return false;
+        }
+
+        return 'field_name' === $rows[0][0]
+            && 1 === (int) $rows[0][1]
+            && 64 === (int) $rows[0][2]
+            && 0 === (int) $rows[0][3];
     }
 
     /**
@@ -876,7 +905,12 @@ class Upgrade_270 extends XoopsUpgrade
     // =========================================================================
 
     /**
-     * Check if the session PRIMARY KEY already uses a 200-char prefix on sess_id.
+     * Check if the session PRIMARY KEY matches the canonical layout:
+     *   PRIMARY KEY (`sess_id`(200)).
+     *
+     * Verifies the full PK shape — not just the prefix length on sess_id —
+     * so a composite PRIMARY KEY that happens to include `sess_id` with
+     * SUB_PART=200 does not incorrectly pass the normalise check.
      *
      * @return bool true if already normalised (no action needed)
      */
@@ -884,7 +918,30 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('session');
 
-        return 200 === $this->indexPrefixLength($table, 'PRIMARY', 'sess_id');
+        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`"
+                . " FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = 'PRIMARY'"
+                . " ORDER BY `SEQ_IN_INDEX`";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        $rows = [];
+        while ($row = $this->db->fetchRow($result)) {
+            $rows[] = $row;
+        }
+
+        // Expect exactly: [('sess_id', 1, 200)]
+        if (1 !== count($rows)) {
+            return false;
+        }
+
+        return 'sess_id' === $rows[0][0]
+            && 1 === (int) $rows[0][1]
+            && 200 === (int) $rows[0][2];
     }
 
     /**

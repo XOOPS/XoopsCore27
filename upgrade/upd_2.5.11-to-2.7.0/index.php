@@ -665,14 +665,6 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        // Skip-with-warning path was already taken this session for a widened
-        // column. apply_ logged the advisory and deferred to manual action —
-        // treat the task as settled so the overall patch can complete rather
-        // than looping forever on check_ returning false.
-        if (!empty($_SESSION[$this->widenedFieldNameSkipKey])) {
-            return true;
-        }
-
         // Column must be varchar(64) NOT NULL DEFAULT ''
         $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
                 . " FROM `information_schema`.`COLUMNS`"
@@ -684,6 +676,20 @@ class Upgrade_270 extends XoopsUpgrade
             return false;
         }
         $row = $this->db->fetchRow($result);
+
+        // Skip-with-warning flag is honoured only while the column is STILL
+        // widened (the condition that originally triggered the skip).
+        // If the admin followed the logged advice and narrowed the column
+        // in the same session, the flag is stale — clear it and fall
+        // through to the normal canonical-shape check so the index can
+        // still be normalised without waiting for a new session.
+        if (!empty($_SESSION[$this->widenedFieldNameSkipKey])) {
+            if ($row && (int) $row[1] > 64) {
+                return true;  // still widened — defer to manual action
+            }
+            unset($_SESSION[$this->widenedFieldNameSkipKey]);
+        }
+
         if (!$row
             || 'varchar' !== strtolower((string) $row[0])
             || 64 !== (int) $row[1]

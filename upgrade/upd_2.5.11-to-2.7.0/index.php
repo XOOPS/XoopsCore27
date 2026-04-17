@@ -616,9 +616,17 @@ class Upgrade_270 extends XoopsUpgrade
     // Task 11: normalizeprofilefieldname — Normalize profile_field.field_name
     //
     // Older installations have profile_field.field_name as varchar(64) with a
-    // plain UNIQUE index on the full column (no explicit prefix). We want:
-    //   - column:  varchar(64) NOT NULL DEFAULT ''
-    //   - index:   UNIQUE `field_name` (`field_name`(64)) USING BTREE
+    // plain UNIQUE index on the full column (no explicit prefix). The
+    // normalize task enforces two invariants:
+    //   - column data type + length: varchar(64)
+    //   - index:                     UNIQUE `field_name` (`field_name`(64))
+    //                                USING BTREE
+    // Nullability and column default are not part of the checked invariant.
+    // When the MODIFY runs it sets NOT NULL DEFAULT '' to match the module's
+    // own install SQL, but a site that has intentionally made the column
+    // nullable or changed its default is left alone as long as type + length
+    // match — admin intervention required for those cases.
+    //
     // The explicit (64) prefix standardises DDL across installs so index
     // definitions read identically whether captured from schema dump or ALTER.
     // =========================================================================

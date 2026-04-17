@@ -27,7 +27,10 @@ use Xoops\Upgrade\UpgradeControl;
  *  8. cleanuplibraries       — Delete obsolete build artifacts from class/libraries/
  *  9. deletetinymce5nested   — Delete duplicate nested tinymce5/tinymce5/ directory
  * 10. deleteflashsanitizer   — Delete obsolete Flash text sanitizer plugin
- * 11. cleancache             — Clear compiled templates and cache files
+ * 11. normalizeprofilefieldname   — Normalize profile_field.field_name column + unique index (prefix 64)
+ * 12. normalizeprofileregstepsort — Normalize profile_regstep.sort index (step_name prefix 100)
+ * 13. normalizesessionpk          — Normalize session PRIMARY KEY (sess_id prefix 200)
+ * 14. cleancache             — Clear compiled templates and cache files
  *
  * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -65,6 +68,9 @@ class Upgrade_270 extends XoopsUpgrade
             'cleanuplibraries',
             'deletetinymce5nested',
             'deleteflashsanitizer',
+            'normalizeprofilefieldname',
+            'normalizeprofileregstepsort',
+            'normalizesessionpk',
             'cleancache',
         ];
         $this->usedFiles = [];
@@ -607,7 +613,164 @@ class Upgrade_270 extends XoopsUpgrade
     }
 
     // =========================================================================
-    // Task 11: cleancache — Clear compiled templates and cache files
+    // Task 11: normalizeprofilefieldname — Normalize profile_field.field_name
+    //
+    // Older installations have profile_field.field_name as varchar(64) with a
+    // plain UNIQUE index on the full column (no explicit prefix). We want:
+    //   - column:  varchar(64) NOT NULL DEFAULT ''
+    //   - index:   UNIQUE `field_name` (`field_name`(64)) USING BTREE
+    // The explicit (64) prefix standardises DDL across installs so index
+    // definitions read identically whether captured from schema dump or ALTER.
+    // =========================================================================
+
+    /**
+     * Check if profile_field.field_name is varchar(64) AND the unique index
+     * has an explicit prefix of 64.
+     *
+     * @return bool true if already normalised (no action needed)
+     */
+    public function check_normalizeprofilefieldname(): bool
+    {
+        $table = $this->db->prefix('profile_field');
+
+        // Column width must be 64
+        $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+        $row = $this->db->fetchRow($result);
+        if (!$row || 64 !== (int) $row[0]) {
+            return false;
+        }
+
+        // Unique index `field_name` must have SUB_PART = 64
+        return 64 === $this->indexPrefixLength($table, 'field_name', 'field_name');
+    }
+
+    /**
+     * Ensure profile_field.field_name is varchar(64) and its unique index
+     * uses an explicit (64) prefix.
+     *
+     * @return bool true on success
+     */
+    public function apply_normalizeprofilefieldname(): bool
+    {
+        $table = $this->db->prefix('profile_field');
+
+        // Step 1: Ensure the column is varchar(64) — widen or narrow as needed.
+        $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+            return false;
+        }
+        $row = $this->db->fetchRow($result);
+        if (!$row) {
+            $this->logs[] = 'Unable to read profile_field.field_name column metadata';
+            return false;
+        }
+        if (64 !== (int) $row[0]) {
+            $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
+            if (!$this->execOrFail($alter)) {
+                return false;
+            }
+        }
+
+        // Step 2: Recreate the unique index with an explicit prefix of 64.
+        if ($this->indexExists($table, 'field_name')) {
+            if (!$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `field_name`")) {
+                return false;
+            }
+        }
+        $addIndex = "ALTER TABLE `{$table}` ADD UNIQUE `field_name` (`field_name`(64)) USING BTREE";
+
+        return $this->execOrFail($addIndex);
+    }
+
+    // =========================================================================
+    // Task 12: normalizeprofileregstepsort — Normalize profile_regstep.sort index
+    //
+    // The historical prefix (100) on step_name is the canonical form. Target:
+    //   KEY `sort` (`step_order`, `step_name`(100)) USING BTREE
+    // Composite size under utf8mb4: 2 (smallint) + 100*4 = 402 bytes — safe
+    // on MyISAM (1000), default InnoDB 5.7 (767), and modern InnoDB (3072).
+    // =========================================================================
+
+    /**
+     * Check if the `sort` index already uses a 100-char prefix on step_name.
+     *
+     * @return bool true if already normalised (no action needed)
+     */
+    public function check_normalizeprofileregstepsort(): bool
+    {
+        $table = $this->db->prefix('profile_regstep');
+
+        return 100 === $this->indexPrefixLength($table, 'sort', 'step_name');
+    }
+
+    /**
+     * Recreate the `sort` index with an explicit (100) prefix on step_name.
+     *
+     * @return bool true on success
+     */
+    public function apply_normalizeprofileregstepsort(): bool
+    {
+        $table = $this->db->prefix('profile_regstep');
+
+        if ($this->indexExists($table, 'sort')) {
+            if (!$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `sort`")) {
+                return false;
+            }
+        }
+        $sql = "ALTER TABLE `{$table}` ADD KEY `sort` (`step_order`, `step_name`(100)) USING BTREE";
+
+        return $this->execOrFail($sql);
+    }
+
+    // =========================================================================
+    // Task 13: normalizesessionpk — Normalize session PRIMARY KEY
+    //
+    // Older installations used PRIMARY KEY (sess_id) indexing the full
+    // varchar(256) column. Target:
+    //   PRIMARY KEY (`sess_id`(200)) USING BTREE
+    // A 200-byte prefix keeps the PK inside InnoDB's 767-byte default limit
+    // if the table is ever migrated from MyISAM.
+    // =========================================================================
+
+    /**
+     * Check if the session PRIMARY KEY already uses a 200-char prefix on sess_id.
+     *
+     * @return bool true if already normalised (no action needed)
+     */
+    public function check_normalizesessionpk(): bool
+    {
+        $table = $this->db->prefix('session');
+
+        return 200 === $this->indexPrefixLength($table, 'PRIMARY', 'sess_id');
+    }
+
+    /**
+     * Recreate the session PRIMARY KEY with an explicit (200) prefix.
+     *
+     * @return bool true on success
+     */
+    public function apply_normalizesessionpk(): bool
+    {
+        $table = $this->db->prefix('session');
+        $sql   = "ALTER TABLE `{$table}` DROP PRIMARY KEY, ADD PRIMARY KEY (`sess_id`(200)) USING BTREE";
+
+        return $this->execOrFail($sql);
+    }
+
+    // =========================================================================
+    // Task 14: cleancache — Clear compiled templates and cache files
     // =========================================================================
 
     /**
@@ -753,6 +916,58 @@ class Upgrade_270 extends XoopsUpgrade
         $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
 
         return false;
+    }
+
+    /**
+     * Check whether an index exists on a table.
+     *
+     * @param string $table     fully prefixed table name
+     * @param string $indexName index name (use 'PRIMARY' for the primary key)
+     */
+    private function indexExists(string $table, string $indexName): bool
+    {
+        $sql    = "SELECT 1 FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = " . $this->db->quote($indexName)
+                . " LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        return (bool) $this->db->fetchArray($result);
+    }
+
+    /**
+     * Return the explicit prefix length for an index column, or null if the
+     * index/column pair does not exist or indexes the full column width.
+     *
+     * SUB_PART is NULL in information_schema.STATISTICS when no prefix was
+     * supplied at index-creation time — callers treat NULL as "not normalised".
+     *
+     * @param string $table      fully prefixed table name
+     * @param string $indexName  index name (use 'PRIMARY' for the primary key)
+     * @param string $columnName column name within the index
+     */
+    private function indexPrefixLength(string $table, string $indexName, string $columnName): ?int
+    {
+        $sql    = "SELECT `SUB_PART` FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = " . $this->db->quote($indexName)
+                . " AND `COLUMN_NAME` = " . $this->db->quote($columnName)
+                . " LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+        $row = $this->db->fetchRow($result);
+        if (!$row || null === $row[0]) {
+            return null;
+        }
+
+        return (int) $row[0];
     }
 }
 

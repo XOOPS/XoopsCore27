@@ -707,9 +707,22 @@ class Upgrade_270 extends XoopsUpgrade
         $dataType   = strtolower((string) $row[0]);
         $currentLen = (int) $row[1];
 
+        // Guard 1: reject unexpected types outright — admin must intervene.
+        // Checked before the length guard so a `text` column (length 65535)
+        // produces a "type mismatch" diagnostic instead of a misleading
+        // "refusing to narrow" message.
+        if (!in_array($dataType, ['varchar', 'char'], true)) {
+            $this->logs[] = sprintf(
+                'profile_field.field_name has unexpected data type `%s`; refusing to convert to varchar(64) automatically.',
+                $dataType
+            );
+            return false;
+        }
+
+        // Guard 2: refuse to narrow a legitimate wide varchar/char column —
+        // values could be truncated if the server's sql_mode does not
+        // include STRICT_ALL_TABLES.
         if ($currentLen > 64) {
-            // Refuse to shrink silently — values could be truncated if the
-            // server's sql_mode does not include STRICT_ALL_TABLES.
             $this->logs[] = sprintf(
                 'profile_field.field_name is %s(%d); refusing to narrow to varchar(64) automatically. Reduce the column manually after verifying no values exceed 64 chars.',
                 $dataType,
@@ -717,14 +730,7 @@ class Upgrade_270 extends XoopsUpgrade
             );
             return false;
         }
-        if (!in_array($dataType, ['varchar', 'char'], true)) {
-            // Unexpected type (e.g. enum, text) — admin intervention required.
-            $this->logs[] = sprintf(
-                'profile_field.field_name has unexpected data type `%s`; refusing to convert to varchar(64) automatically.',
-                $dataType
-            );
-            return false;
-        }
+
         if ('varchar' !== $dataType || $currentLen !== 64) {
             $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
             if (!$this->execOrFail($alter)) {

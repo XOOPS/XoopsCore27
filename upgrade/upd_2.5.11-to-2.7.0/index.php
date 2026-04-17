@@ -840,12 +840,13 @@ class Upgrade_270 extends XoopsUpgrade
 
     /**
      * Check if the `sort` index already uses the canonical layout:
-     *   (step_order, step_name(100)).
+     *   KEY `sort` (`step_order`, `step_name`(100)) — non-UNIQUE.
      *
-     * Verifies the full layout (column order and prefixes), not just the
-     * prefix length on step_name — a partial hand-patch that left step_order
-     * out of the index must still be rebuilt. Skipped silently when the
-     * table is absent (Profile module not installed).
+     * Verifies the full layout (column order, prefix lengths, AND that the
+     * index is non-UNIQUE), not just the prefix length on step_name — a
+     * partial hand-patch that left step_order out, or upgraded the index
+     * to UNIQUE, must still be rebuilt. Skipped silently when the table is
+     * absent (Profile module not installed).
      *
      * @return bool true if already normalised (no action needed)
      */
@@ -861,7 +862,7 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`"
+        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`"
                 . " FROM `information_schema`.`STATISTICS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
                 . " AND `TABLE_NAME` = " . $this->db->quote($table)
@@ -877,14 +878,23 @@ class Upgrade_270 extends XoopsUpgrade
             $rows[] = $row;
         }
 
-        // Expect exactly: [('step_order', 1, NULL), ('step_name', 2, 100)]
+        // Expect exactly two non-UNIQUE rows:
+        //   [('step_order', 1, NULL, 1), ('step_name', 2, 100, 1)]
         if (2 !== count($rows)) {
             return false;
         }
-        if ('step_order' !== $rows[0][0] || 1 !== (int) $rows[0][1] || null !== $rows[0][2]) {
+        if ('step_order' !== $rows[0][0]
+            || 1 !== (int) $rows[0][1]
+            || null !== $rows[0][2]
+            || 1 !== (int) $rows[0][3]
+        ) {
             return false;
         }
-        if ('step_name' !== $rows[1][0] || 2 !== (int) $rows[1][1] || 100 !== (int) $rows[1][2]) {
+        if ('step_name' !== $rows[1][0]
+            || 2 !== (int) $rows[1][1]
+            || 100 !== (int) $rows[1][2]
+            || 1 !== (int) $rows[1][3]
+        ) {
             return false;
         }
 

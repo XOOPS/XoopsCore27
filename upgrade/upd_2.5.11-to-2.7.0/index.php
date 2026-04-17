@@ -635,13 +635,18 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('profile_field');
 
-        // Profile module not installed → nothing to normalise; treat as done.
-        if (!$this->tableExists($table)) {
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            // Don't silently skip — the DB is in an indeterminate state.
+            return false;
+        }
+        if (!$exists) {
+            // Profile module not installed → nothing to normalise; treat as done.
             return true;
         }
 
-        // Column width must be 64
-        $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
+        // Column must be varchar(64)
+        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH` FROM `information_schema`.`COLUMNS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
                 . " AND `TABLE_NAME` = " . $this->db->quote($table)
                 . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
@@ -650,7 +655,7 @@ class Upgrade_270 extends XoopsUpgrade
             return false;
         }
         $row = $this->db->fetchRow($result);
-        if (!$row || 64 !== (int) $row[0]) {
+        if (!$row || 'varchar' !== strtolower((string) $row[0]) || 64 !== (int) $row[1]) {
             return false;
         }
 
@@ -672,12 +677,20 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('profile_field');
 
-        if (!$this->tableExists($table)) {
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if (!$exists) {
             return true;
         }
 
         // Step 1: Ensure the column is varchar(64) — widen if narrower.
-        $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
+        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH` FROM `information_schema`.`COLUMNS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
                 . " AND `TABLE_NAME` = " . $this->db->quote($table)
                 . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
@@ -691,17 +704,28 @@ class Upgrade_270 extends XoopsUpgrade
             $this->logs[] = 'Unable to read profile_field.field_name column metadata';
             return false;
         }
-        $currentLen = (int) $row[0];
+        $dataType   = strtolower((string) $row[0]);
+        $currentLen = (int) $row[1];
+
         if ($currentLen > 64) {
             // Refuse to shrink silently — values could be truncated if the
             // server's sql_mode does not include STRICT_ALL_TABLES.
             $this->logs[] = sprintf(
-                'profile_field.field_name is varchar(%d); refusing to narrow to varchar(64) automatically. Reduce the column manually after verifying no values exceed 64 chars.',
+                'profile_field.field_name is %s(%d); refusing to narrow to varchar(64) automatically. Reduce the column manually after verifying no values exceed 64 chars.',
+                $dataType,
                 $currentLen
             );
             return false;
         }
-        if ($currentLen !== 64) {
+        if (!in_array($dataType, ['varchar', 'char'], true)) {
+            // Unexpected type (e.g. enum, text) — admin intervention required.
+            $this->logs[] = sprintf(
+                'profile_field.field_name has unexpected data type `%s`; refusing to convert to varchar(64) automatically.',
+                $dataType
+            );
+            return false;
+        }
+        if ('varchar' !== $dataType || $currentLen !== 64) {
             $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
             if (!$this->execOrFail($alter)) {
                 return false;
@@ -743,7 +767,11 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('profile_regstep');
 
-        if (!$this->tableExists($table)) {
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            return false;
+        }
+        if (!$exists) {
             return true;
         }
 
@@ -789,7 +817,15 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('profile_regstep');
 
-        if (!$this->tableExists($table)) {
+        $exists = $this->tableExists($table);
+        if (null === $exists) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if (!$exists) {
             return true;
         }
 
@@ -1002,9 +1038,16 @@ class Upgrade_270 extends XoopsUpgrade
     /**
      * Check whether a table exists in the current database.
      *
+     * Tri-state so callers can distinguish "module not installed" from
+     * "we don't know":
+     *   true  → table exists
+     *   false → table is absent (caller should skip)
+     *   null  → information_schema query failed (caller should log + fail,
+     *           never silently skip a possibly-present table)
+     *
      * @param string $table fully prefixed table name
      */
-    private function tableExists(string $table): bool
+    private function tableExists(string $table): ?bool
     {
         $sql    = "SELECT 1 FROM `information_schema`.`TABLES`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
@@ -1012,7 +1055,7 @@ class Upgrade_270 extends XoopsUpgrade
                 . " LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return false;
+            return null;
         }
 
         return (bool) $this->db->fetchArray($result);

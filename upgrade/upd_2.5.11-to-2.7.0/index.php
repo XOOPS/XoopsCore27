@@ -831,16 +831,22 @@ class Upgrade_270 extends XoopsUpgrade
                 $countSql = "SELECT COUNT(*) FROM `{$table}`"
                           . " WHERE `field_name` IS NULL OR `field_name` = ''";
                 $countResult = $this->db->query($countSql);
-                if ($this->db->isResultSet($countResult) && $countResult instanceof \mysqli_result) {
-                    $countRow = $this->db->fetchRow($countResult);
-                    $conflictCount = $countRow ? (int) $countRow[0] : 0;
-                    if ($conflictCount > 1) {
-                        $this->logs[] = sprintf(
-                            'profile_field has %d rows where field_name is NULL or empty; coercing them via MODIFY ... NOT NULL DEFAULT \'\' would violate the UNIQUE index on field_name. Resolve these rows manually (assign distinct values or delete duplicates) and re-run the upgrade.',
-                            $conflictCount
-                        );
-                        return false;
-                    }
+                // Treat query failure as a hard error — falling through here
+                // would defeat the whole purpose of the pre-flight and let
+                // the subsequent MODIFY abort with a low-signal duplicate-key
+                // error instead of the actionable message below.
+                if (!$this->db->isResultSet($countResult) || !($countResult instanceof \mysqli_result)) {
+                    $this->logs[] = \sprintf(_DB_QUERY_ERROR, $countSql) . $this->db->error();
+                    return false;
+                }
+                $countRow = $this->db->fetchRow($countResult);
+                $conflictCount = $countRow ? (int) $countRow[0] : 0;
+                if ($conflictCount > 1) {
+                    $this->logs[] = sprintf(
+                        'profile_field has %d rows where field_name is NULL or empty; coercing them via MODIFY ... NOT NULL DEFAULT \'\' would violate the UNIQUE index on field_name. Resolve these rows manually (assign distinct values or delete duplicates) and re-run the upgrade.',
+                        $conflictCount
+                    );
+                    return false;
                 }
             }
 

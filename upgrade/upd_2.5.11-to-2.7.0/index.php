@@ -627,11 +627,18 @@ class Upgrade_270 extends XoopsUpgrade
      * Check if profile_field.field_name is varchar(64) AND the unique index
      * has an explicit prefix of 64.
      *
+     * Skipped silently when the table is absent (Profile module not installed).
+     *
      * @return bool true if already normalised (no action needed)
      */
     public function check_normalizeprofilefieldname(): bool
     {
         $table = $this->db->prefix('profile_field');
+
+        // Profile module not installed → nothing to normalise; treat as done.
+        if (!$this->tableExists($table)) {
+            return true;
+        }
 
         // Column width must be 64
         $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
@@ -655,13 +662,21 @@ class Upgrade_270 extends XoopsUpgrade
      * Ensure profile_field.field_name is varchar(64) and its unique index
      * uses an explicit (64) prefix.
      *
-     * @return bool true on success
+     * Skipped silently when the table is absent (Profile module not
+     * installed). Refuses to silently narrow a column that has been widened
+     * beyond 64 chars locally — the admin must resolve that manually.
+     *
+     * @return bool true on success (or table absent)
      */
     public function apply_normalizeprofilefieldname(): bool
     {
         $table = $this->db->prefix('profile_field');
 
-        // Step 1: Ensure the column is varchar(64) — widen or narrow as needed.
+        if (!$this->tableExists($table)) {
+            return true;
+        }
+
+        // Step 1: Ensure the column is varchar(64) — widen if narrower.
         $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
                 . " AND `TABLE_NAME` = " . $this->db->quote($table)
@@ -676,7 +691,17 @@ class Upgrade_270 extends XoopsUpgrade
             $this->logs[] = 'Unable to read profile_field.field_name column metadata';
             return false;
         }
-        if (64 !== (int) $row[0]) {
+        $currentLen = (int) $row[0];
+        if ($currentLen > 64) {
+            // Refuse to shrink silently — values could be truncated if the
+            // server's sql_mode does not include STRICT_ALL_TABLES.
+            $this->logs[] = sprintf(
+                'profile_field.field_name is varchar(%d); refusing to narrow to varchar(64) automatically. Reduce the column manually after verifying no values exceed 64 chars.',
+                $currentLen
+            );
+            return false;
+        }
+        if ($currentLen !== 64) {
             $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
             if (!$this->execOrFail($alter)) {
                 return false;
@@ -704,7 +729,13 @@ class Upgrade_270 extends XoopsUpgrade
     // =========================================================================
 
     /**
-     * Check if the `sort` index already uses a 100-char prefix on step_name.
+     * Check if the `sort` index already uses the canonical layout:
+     *   (step_order, step_name(100)).
+     *
+     * Verifies the full layout (column order and prefixes), not just the
+     * prefix length on step_name — a partial hand-patch that left step_order
+     * out of the index must still be rebuilt. Skipped silently when the
+     * table is absent (Profile module not installed).
      *
      * @return bool true if already normalised (no action needed)
      */
@@ -712,17 +743,55 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('profile_regstep');
 
-        return 100 === $this->indexPrefixLength($table, 'sort', 'step_name');
+        if (!$this->tableExists($table)) {
+            return true;
+        }
+
+        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`"
+                . " FROM `information_schema`.`STATISTICS`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " AND `INDEX_NAME` = 'sort'"
+                . " ORDER BY `SEQ_IN_INDEX`";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        $rows = [];
+        while ($row = $this->db->fetchRow($result)) {
+            $rows[] = $row;
+        }
+
+        // Expect exactly: [('step_order', 1, NULL), ('step_name', 2, 100)]
+        if (2 !== count($rows)) {
+            return false;
+        }
+        if ('step_order' !== $rows[0][0] || 1 !== (int) $rows[0][1] || null !== $rows[0][2]) {
+            return false;
+        }
+        if ('step_name' !== $rows[1][0] || 2 !== (int) $rows[1][1] || 100 !== (int) $rows[1][2]) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
-     * Recreate the `sort` index with an explicit (100) prefix on step_name.
+     * Recreate the `sort` index with the canonical layout
+     *   (step_order, step_name(100)) USING BTREE.
      *
-     * @return bool true on success
+     * Skipped silently when the table is absent (Profile module not installed).
+     *
+     * @return bool true on success (or table absent)
      */
     public function apply_normalizeprofileregstepsort(): bool
     {
         $table = $this->db->prefix('profile_regstep');
+
+        if (!$this->tableExists($table)) {
+            return true;
+        }
 
         if ($this->indexExists($table, 'sort')) {
             if (!$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `sort`")) {
@@ -759,14 +828,26 @@ class Upgrade_270 extends XoopsUpgrade
     /**
      * Recreate the session PRIMARY KEY with an explicit (200) prefix.
      *
+     * DROP and ADD are issued as separate statements so a session table
+     * that somehow lost its PRIMARY KEY (manual intervention, earlier
+     * failed migration) can still be normalised — a combined
+     * "DROP PRIMARY KEY, ADD PRIMARY KEY ..." would abort on the DROP.
+     *
      * @return bool true on success
      */
     public function apply_normalizesessionpk(): bool
     {
         $table = $this->db->prefix('session');
-        $sql   = "ALTER TABLE `{$table}` DROP PRIMARY KEY, ADD PRIMARY KEY (`sess_id`(200)) USING BTREE";
 
-        return $this->execOrFail($sql);
+        if ($this->indexExists($table, 'PRIMARY')) {
+            if (!$this->execOrFail("ALTER TABLE `{$table}` DROP PRIMARY KEY")) {
+                return false;
+            }
+        }
+
+        return $this->execOrFail(
+            "ALTER TABLE `{$table}` ADD PRIMARY KEY (`sess_id`(200)) USING BTREE"
+        );
     }
 
     // =========================================================================
@@ -916,6 +997,25 @@ class Upgrade_270 extends XoopsUpgrade
         $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
 
         return false;
+    }
+
+    /**
+     * Check whether a table exists in the current database.
+     *
+     * @param string $table fully prefixed table name
+     */
+    private function tableExists(string $table): bool
+    {
+        $sql    = "SELECT 1 FROM `information_schema`.`TABLES`"
+                . " WHERE `TABLE_SCHEMA` = DATABASE()"
+                . " AND `TABLE_NAME` = " . $this->db->quote($table)
+                . " LIMIT 1";
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return false;
+        }
+
+        return (bool) $this->db->fetchArray($result);
     }
 
     /**

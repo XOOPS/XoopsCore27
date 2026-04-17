@@ -615,29 +615,31 @@ class Upgrade_270 extends XoopsUpgrade
     //
     // Older installations have profile_field.field_name as varchar(64) with a
     // plain UNIQUE index on the full column (no explicit prefix). The
-    // normalize task enforces two invariants:
-    //   - column data type + length: varchar(64)
-    //   - index:                     UNIQUE `field_name` (`field_name`(64))
-    //                                USING BTREE
-    // Nullability and column default are not part of the checked invariant.
-    // When the MODIFY runs it sets NOT NULL DEFAULT '' to match the module's
-    // own install SQL, but a site that has intentionally made the column
-    // nullable or changed its default is left alone as long as type + length
-    // match — admin intervention required for those cases.
+    // normalize task enforces the full column and index shape defined by the
+    // module's own install SQL:
+    //   - column:  varchar(64) NOT NULL DEFAULT ''
+    //   - index:   UNIQUE `field_name` (`field_name`(64)) USING BTREE
+    // All four column attributes (type, length, nullability, default) are
+    // checked and rewritten when any diverge, so the task is truly idempotent
+    // and genuinely converges sites to the documented target. A site that has
+    // intentionally made the column nullable or changed its default will have
+    // those properties reset; existing NULL values would be coerced to '' by
+    // the MODIFY and a warning is logged so admins can audit.
     //
     // The explicit (64) prefix standardises DDL across installs so index
     // definitions read identically whether captured from schema dump or ALTER.
     // =========================================================================
 
     /**
-     * Check if profile_field.field_name is varchar(64) AND the unique index
-     * matches the canonical layout:
+     * Check if profile_field.field_name matches the full canonical shape:
+     *   varchar(64) NOT NULL DEFAULT '' AND
      *   UNIQUE `field_name` (`field_name`(64)).
      *
-     * Verifies the full index shape — not just the prefix length — so a
-     * non-UNIQUE or composite index that happens to be named `field_name`
-     * does not incorrectly pass the normalise check. Skipped silently when
-     * the table is absent (Profile module not installed).
+     * Verifies data type, length, nullability, default, and full index
+     * layout — not just prefix length — so a non-UNIQUE index, composite
+     * index, nullable column, or different default does not incorrectly
+     * pass the normalise check. Skipped silently when the table is absent
+     * (Profile module not installed).
      *
      * @return bool true if already normalised (no action needed)
      */
@@ -655,8 +657,9 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        // Column must be varchar(64)
-        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH` FROM `information_schema`.`COLUMNS`"
+        // Column must be varchar(64) NOT NULL DEFAULT ''
+        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
+                . " FROM `information_schema`.`COLUMNS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
                 . " AND `TABLE_NAME` = " . $this->db->quote($table)
                 . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
@@ -665,7 +668,12 @@ class Upgrade_270 extends XoopsUpgrade
             return false;
         }
         $row = $this->db->fetchRow($result);
-        if (!$row || 'varchar' !== strtolower((string) $row[0]) || 64 !== (int) $row[1]) {
+        if (!$row
+            || 'varchar' !== strtolower((string) $row[0])
+            || 64 !== (int) $row[1]
+            || 'NO' !== strtoupper((string) $row[2])
+            || '' !== $row[3]                  // strict: reject NULL default
+        ) {
             return false;
         }
 
@@ -699,8 +707,13 @@ class Upgrade_270 extends XoopsUpgrade
     }
 
     /**
-     * Ensure profile_field.field_name is varchar(64) and its unique index
-     * uses an explicit (64) prefix.
+     * Ensure profile_field.field_name is varchar(64) NOT NULL DEFAULT ''
+     * and its unique index uses an explicit (64) prefix.
+     *
+     * Rewrites the column when any of type/length/nullability/default
+     * diverge from the target. A divergence on nullability or default is
+     * logged explicitly so admins can audit — NULL values are coerced to
+     * empty strings by the MODIFY.
      *
      * Skipped silently when the table is absent (Profile module not
      * installed). Skipped with a warning in the log when the column has
@@ -725,8 +738,9 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        // Step 1: Ensure the column is varchar(64) — widen if narrower.
-        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH` FROM `information_schema`.`COLUMNS`"
+        // Step 1: Ensure the column is varchar(64) NOT NULL DEFAULT ''.
+        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
+                . " FROM `information_schema`.`COLUMNS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
                 . " AND `TABLE_NAME` = " . $this->db->quote($table)
                 . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
@@ -740,8 +754,10 @@ class Upgrade_270 extends XoopsUpgrade
             $this->logs[] = 'Unable to read profile_field.field_name column metadata';
             return false;
         }
-        $dataType   = strtolower((string) $row[0]);
-        $currentLen = (int) $row[1];
+        $dataType      = strtolower((string) $row[0]);
+        $currentLen    = (int) $row[1];
+        $isNullable    = 'YES' === strtoupper((string) $row[2]);
+        $currentDefault = $row[3];
 
         // Guard 1: reject unexpected types outright — admin must intervene.
         // Checked before the length guard so a `text` column (length 65535)
@@ -771,7 +787,25 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        if ('varchar' !== $dataType || $currentLen !== 64) {
+        // MODIFY if any of the four column attributes diverge from the target:
+        //   type = varchar, length = 64, NOT NULL, DEFAULT ''
+        $columnDiverges = ('varchar' !== $dataType)
+                      || (64 !== $currentLen)
+                      || $isNullable
+                      || ('' !== $currentDefault);
+        if ($columnDiverges) {
+            // Log the specific divergence so admins can audit what changed —
+            // especially important when nullability or default is being
+            // rewritten (NULL values are coerced to '' by the MODIFY).
+            if ($isNullable || '' !== $currentDefault) {
+                $this->logs[] = sprintf(
+                    'profile_field.field_name is %s(%d) %s DEFAULT %s — rewriting to varchar(64) NOT NULL DEFAULT \'\'. Any existing NULL values will be coerced to empty strings.',
+                    $dataType,
+                    $currentLen,
+                    $isNullable ? 'NULL' : 'NOT NULL',
+                    null === $currentDefault ? 'NULL' : "'{$currentDefault}'"
+                );
+            }
             $alter = "ALTER TABLE `{$table}` MODIFY `field_name` varchar(64) NOT NULL DEFAULT ''";
             if (!$this->execOrFail($alter)) {
                 return false;

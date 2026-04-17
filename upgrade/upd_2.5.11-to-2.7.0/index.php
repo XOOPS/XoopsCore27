@@ -747,10 +747,16 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         // Step 2: Recreate the unique index with an explicit prefix of 64.
-        if ($this->indexExists($table, 'field_name')) {
-            if (!$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `field_name`")) {
-                return false;
-            }
+        $hasIndex = $this->indexExists($table, 'field_name');
+        if (null === $hasIndex) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of index `field_name` on `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if ($hasIndex && !$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `field_name`")) {
+            return false;
         }
         $addIndex = "ALTER TABLE `{$table}` ADD UNIQUE `field_name` (`field_name`(64)) USING BTREE";
 
@@ -843,10 +849,16 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        if ($this->indexExists($table, 'sort')) {
-            if (!$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `sort`")) {
-                return false;
-            }
+        $hasIndex = $this->indexExists($table, 'sort');
+        if (null === $hasIndex) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of index `sort` on `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if ($hasIndex && !$this->execOrFail("ALTER TABLE `{$table}` DROP INDEX `sort`")) {
+            return false;
         }
         $sql = "ALTER TABLE `{$table}` ADD KEY `sort` (`step_order`, `step_name`(100)) USING BTREE";
 
@@ -889,10 +901,16 @@ class Upgrade_270 extends XoopsUpgrade
     {
         $table = $this->db->prefix('session');
 
-        if ($this->indexExists($table, 'PRIMARY')) {
-            if (!$this->execOrFail("ALTER TABLE `{$table}` DROP PRIMARY KEY")) {
-                return false;
-            }
+        $hasPrimary = $this->indexExists($table, 'PRIMARY');
+        if (null === $hasPrimary) {
+            $this->logs[] = sprintf(
+                'Cannot verify existence of PRIMARY KEY on `%s`; information_schema query failed.',
+                $table
+            );
+            return false;
+        }
+        if ($hasPrimary && !$this->execOrFail("ALTER TABLE `{$table}` DROP PRIMARY KEY")) {
+            return false;
         }
 
         return $this->execOrFail(
@@ -1078,10 +1096,17 @@ class Upgrade_270 extends XoopsUpgrade
     /**
      * Check whether an index exists on a table.
      *
+     * Tri-state so callers can distinguish "index genuinely absent" from
+     * "we don't know" — mirrors tableExists():
+     *   true  → index exists
+     *   false → index is absent (caller can safely skip a DROP)
+     *   null  → information_schema query failed (caller should log + fail
+     *           rather than risk an ADD against an index that actually exists)
+     *
      * @param string $table     fully prefixed table name
      * @param string $indexName index name (use 'PRIMARY' for the primary key)
      */
-    private function indexExists(string $table, string $indexName): bool
+    private function indexExists(string $table, string $indexName): ?bool
     {
         $sql    = "SELECT 1 FROM `information_schema`.`STATISTICS`"
                 . " WHERE `TABLE_SCHEMA` = DATABASE()"
@@ -1090,7 +1115,7 @@ class Upgrade_270 extends XoopsUpgrade
                 . " LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return false;
+            return null;
         }
 
         return (bool) $this->db->fetchArray($result);

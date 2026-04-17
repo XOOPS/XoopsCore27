@@ -29,8 +29,7 @@ use Xoops\Upgrade\UpgradeControl;
  * 10. deleteflashsanitizer   — Delete obsolete Flash text sanitizer plugin
  * 11. normalizeprofilefieldname   — Normalize profile_field.field_name column + unique index (prefix 64)
  * 12. normalizeprofileregstepsort — Normalize profile_regstep.sort index (step_name prefix 100)
- * 13. normalizesessionpk          — Normalize session PRIMARY KEY (sess_id prefix 200)
- * 14. cleancache             — Clear compiled templates and cache files
+ * 13. cleancache             — Clear compiled templates and cache files
  *
  * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)
@@ -70,7 +69,6 @@ class Upgrade_270 extends XoopsUpgrade
             'deleteflashsanitizer',
             'normalizeprofilefieldname',
             'normalizeprofileregstepsort',
-            'normalizesessionpk',
             'cleancache',
         ];
         $this->usedFiles = [];
@@ -900,88 +898,7 @@ class Upgrade_270 extends XoopsUpgrade
     }
 
     // =========================================================================
-    // Task 13: normalizesessionpk — Normalize session PRIMARY KEY
-    //
-    // Older installations used PRIMARY KEY (sess_id) indexing the full
-    // varchar(256) column. Target:
-    //   PRIMARY KEY (`sess_id`(200)) USING BTREE
-    // A 200-byte prefix keeps the PK inside InnoDB's 767-byte default limit
-    // if the table is ever migrated from MyISAM.
-    // =========================================================================
-
-    /**
-     * Check if the session PRIMARY KEY matches the canonical layout:
-     *   PRIMARY KEY (`sess_id`(200)).
-     *
-     * Verifies the full PK shape — not just the prefix length on sess_id —
-     * so a composite PRIMARY KEY that happens to include `sess_id` with
-     * SUB_PART=200 does not incorrectly pass the normalise check.
-     *
-     * @return bool true if already normalised (no action needed)
-     */
-    public function check_normalizesessionpk(): bool
-    {
-        $table = $this->db->prefix('session');
-
-        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`"
-                . " FROM `information_schema`.`STATISTICS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `INDEX_NAME` = 'PRIMARY'"
-                . " ORDER BY `SEQ_IN_INDEX`";
-        $result = $this->db->query($sql);
-        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            return false;
-        }
-
-        $rows = [];
-        while ($row = $this->db->fetchRow($result)) {
-            $rows[] = $row;
-        }
-
-        // Expect exactly: [('sess_id', 1, 200)]
-        if (1 !== count($rows)) {
-            return false;
-        }
-
-        return 'sess_id' === $rows[0][0]
-            && 1 === (int) $rows[0][1]
-            && 200 === (int) $rows[0][2];
-    }
-
-    /**
-     * Recreate the session PRIMARY KEY with an explicit (200) prefix.
-     *
-     * DROP and ADD are issued as separate statements so a session table
-     * that somehow lost its PRIMARY KEY (manual intervention, earlier
-     * failed migration) can still be normalised — a combined
-     * "DROP PRIMARY KEY, ADD PRIMARY KEY ..." would abort on the DROP.
-     *
-     * @return bool true on success
-     */
-    public function apply_normalizesessionpk(): bool
-    {
-        $table = $this->db->prefix('session');
-
-        $hasPrimary = $this->indexExists($table, 'PRIMARY');
-        if (null === $hasPrimary) {
-            $this->logs[] = sprintf(
-                'Cannot verify existence of PRIMARY KEY on `%s`; information_schema query failed.',
-                $table
-            );
-            return false;
-        }
-        if ($hasPrimary && !$this->execOrFail("ALTER TABLE `{$table}` DROP PRIMARY KEY")) {
-            return false;
-        }
-
-        return $this->execOrFail(
-            "ALTER TABLE `{$table}` ADD PRIMARY KEY (`sess_id`(200)) USING BTREE"
-        );
-    }
-
-    // =========================================================================
-    // Task 14: cleancache — Clear compiled templates and cache files
+    // Task 13: cleancache — Clear compiled templates and cache files
     // =========================================================================
 
     /**

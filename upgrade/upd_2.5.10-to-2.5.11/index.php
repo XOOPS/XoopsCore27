@@ -1079,7 +1079,8 @@ class Upgrade_2511 extends XoopsUpgrade
             }
 
             $sql = 'INSERT INTO ' . $this->db->prefix('tplfile')
-                . " VALUES (0, 1, 'system', 'default', "
+                . ' (tpl_id, tpl_refid, tpl_module, tpl_tplset, tpl_file, tpl_desc, tpl_lastmodified, tpl_lastimported, tpl_type)'
+                . " VALUES (NULL, 1, 'system', 'default', "
                 . $this->db->quote($fileName)
                 . ', '
                 . $this->db->quote((string) ($tplfile['description'] ?? ''))
@@ -1096,6 +1097,11 @@ class Upgrade_2511 extends XoopsUpgrade
                 return false;
             }
             $newtplid = $this->db->getInsertId();
+            if ($newtplid <= 0) {
+                $this->logs[] = sprintf('Failed to resolve tplfile id after insert for %s', $fileName);
+
+                return false;
+            }
 
             $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                 . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')';

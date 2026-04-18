@@ -9,10 +9,6 @@
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 
-if (!class_exists('Db_manager', false)) {
-    require_once XOOPS_ROOT_PATH . '/install/class/dbmanager.php';
-}
-
 use Xmf\Database\Tables;
 use Xoops\Upgrade\XoopsUpgrade;
 use Xoops\Upgrade\UpgradeControl;
@@ -1025,7 +1021,6 @@ class Upgrade_2511 extends XoopsUpgrade
             return false;
         }
 
-        $dbm  = new Db_manager();
         $time = time();
         foreach ($templates as $tplfile) {
             $fileName = (string) ($tplfile['file'] ?? '');
@@ -1070,10 +1065,9 @@ class Upgrade_2511 extends XoopsUpgrade
                     continue;
                 }
 
-                if (!$dbm->insert(
-                    'tplsource',
-                    ' (tpl_id, tpl_source) VALUES (' . $tplId . ', ' . $this->db->quote($tplsource) . ')'
-                )) {
+                $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                    . ' (tpl_id, tpl_source) VALUES (' . $tplId . ', ' . $this->db->quote($tplsource) . ')';
+                if (!$this->db->exec($sql)) {
                     $this->logs[] = sprintf('Failed to backfill tplsource row for %s', $fileName);
 
                     return false;
@@ -1082,9 +1076,8 @@ class Upgrade_2511 extends XoopsUpgrade
                 continue;
             }
 
-            $newtplid = $dbm->insert(
-                'tplfile',
-                " VALUES (0, 1, 'system', 'default', "
+            $sql = 'INSERT INTO ' . $this->db->prefix('tplfile')
+                . " VALUES (0, 1, 'system', 'default', "
                 . $this->db->quote($fileName)
                 . ', '
                 . $this->db->quote((string) ($tplfile['description'] ?? ''))
@@ -1094,18 +1087,17 @@ class Upgrade_2511 extends XoopsUpgrade
                 . $time
                 . ', '
                 . $this->db->quote($type)
-                . ')'
-            );
-            if (!$newtplid) {
+                . ')';
+            if (!$this->db->exec($sql)) {
                 $this->logs[] = sprintf('Failed to insert tplfile row for %s', $fileName);
 
                 return false;
             }
+            $newtplid = $this->db->getInsertId();
 
-            if (!$dbm->insert(
-                'tplsource',
-                ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')'
-            )) {
+            $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')';
+            if (!$this->db->exec($sql)) {
                 $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
 
                 return false;

@@ -1067,7 +1067,9 @@ class Upgrade_2511 extends XoopsUpgrade
 
                 $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                     . ' (tpl_id, tpl_source) VALUES (' . $tplId . ', ' . $this->db->quote($tplsource) . ')';
-                if (!$this->execOrFail($sql)) {
+                $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                    . ' (tpl_id, tpl_source) VALUES (' . $tplId . ', [tpl_source omitted])';
+                if (!$this->execOrFail($sql, $logSql)) {
                     $this->logs[] = sprintf('Failed to backfill tplsource row for %s', $fileName);
 
                     return false;
@@ -1097,7 +1099,9 @@ class Upgrade_2511 extends XoopsUpgrade
 
             $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                 . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')';
-            if (!$this->execOrFail($sql)) {
+            $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
+                . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', [tpl_source omitted])';
+            if (!$this->execOrFail($sql, $logSql)) {
                 $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
 
                 return false;
@@ -1107,13 +1111,13 @@ class Upgrade_2511 extends XoopsUpgrade
         return true;
     }
 
-    private function execOrFail(string $sql): bool
+    private function execOrFail(string $sql, ?string $logSql = null): bool
     {
         if ($this->db->exec($sql)) {
             return true;
         }
 
-        $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+        $this->logs[] = \sprintf(_DB_QUERY_ERROR, $logSql ?? $sql) . $this->db->error();
 
         return false;
     }

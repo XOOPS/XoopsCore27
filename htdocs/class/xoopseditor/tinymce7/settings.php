@@ -23,7 +23,7 @@
 return [
 	'theme' => 'silver',
 	'selector' => 'textarea#summary, textarea#body, textarea#message', // keep if targeting multiple fields
-	'plugins' => 'advlist,anchor,autolink,charmap,code,hr,image,imagetools,lists,link,media,preview,searchreplace,table,xoopsimagemanager,xoopsemoticons,xoopscode',
+	'plugins' => 'advlist,anchor,autolink,charmap,code,hr,image,lists,link,media,preview,searchreplace,table,xoopsimagemanager,xoopsemoticons,xoopscode',
 	'toolbar' => 'undo redo | styles | bold italic | forecolor backcolor removeformat | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table tabledelete | image media link | hr | xoopsimagemanager xoopsemoticons xoopscode | code',
 	'image_title' => true,
 	'table_use_colgroups' => true,

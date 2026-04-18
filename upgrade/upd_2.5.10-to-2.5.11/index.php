@@ -1109,6 +1109,16 @@ class Upgrade_2511 extends XoopsUpgrade
                 . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', [tpl_source omitted])';
             if (!$this->execOrFail($sql, $logSql)) {
                 $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
+                // Best-effort cleanup so re-running the upgrade is not blocked by an orphan tplfile row.
+                $cleanupSql = 'DELETE FROM ' . $this->db->prefix('tplfile')
+                    . ' WHERE `tpl_id` = ' . (int) $newtplid . ' LIMIT 1';
+                if (!$this->db->exec($cleanupSql)) {
+                    $this->logs[] = sprintf(
+                        'Failed to remove orphan tplfile row %d for %s',
+                        (int) $newtplid,
+                        $fileName
+                    );
+                }
 
                 return false;
             }
@@ -1117,6 +1127,18 @@ class Upgrade_2511 extends XoopsUpgrade
         return true;
     }
 
+    /**
+     * Execute a SQL statement and append an HTML-safe failure message when it fails.
+     *
+     * Callers may pass a redacted SQL string for logging when the executed statement
+     * contains large or sensitive payloads such as tpl_source. Pass raw, unescaped
+     * text here; this method performs the final HTML escaping before writing to logs.
+     *
+     * @param string      $sql    SQL statement to execute.
+     * @param string|null $logSql Optional redacted SQL used only in the logged message.
+     *
+     * @return bool True on success, false on failure.
+     */
     private function execOrFail(string $sql, ?string $logSql = null): bool
     {
         if ($this->db->exec($sql)) {

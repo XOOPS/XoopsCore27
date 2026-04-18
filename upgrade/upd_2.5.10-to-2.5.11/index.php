@@ -1067,7 +1067,7 @@ class Upgrade_2511 extends XoopsUpgrade
 
                 $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                     . ' (tpl_id, tpl_source) VALUES (' . $tplId . ', ' . $this->db->quote($tplsource) . ')';
-                if (!$this->db->exec($sql)) {
+                if (!$this->execOrFail($sql)) {
                     $this->logs[] = sprintf('Failed to backfill tplsource row for %s', $fileName);
 
                     return false;
@@ -1088,7 +1088,7 @@ class Upgrade_2511 extends XoopsUpgrade
                 . ', '
                 . $this->db->quote($type)
                 . ')';
-            if (!$this->db->exec($sql)) {
+            if (!$this->execOrFail($sql)) {
                 $this->logs[] = sprintf('Failed to insert tplfile row for %s', $fileName);
 
                 return false;
@@ -1097,7 +1097,7 @@ class Upgrade_2511 extends XoopsUpgrade
 
             $sql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                 . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', ' . $this->db->quote($tplsource) . ')';
-            if (!$this->db->exec($sql)) {
+            if (!$this->execOrFail($sql)) {
                 $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
 
                 return false;

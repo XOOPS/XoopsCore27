@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace modulesprotector;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
-use PHPUnit\Framework\Attributes\PreserveGlobalState;
-use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -265,17 +263,17 @@ final class Protector364RcFixesTest extends TestCase
     }
 
     #[Test]
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
     public function fix15_behaviouralRequestMetadataDoesNotPoisonDoubtfuls(): void
     {
-        // Isolate this method in a forked process. dblayertrap_init() can
-        // @define('XOOPS_DB_ALTERNATIVE', ...) as a side effect if any poisoning
-        // value were to leak through (i.e. if Fix 1.5 regresses). On regression
-        // the assertion below fails — but without process isolation the constant
-        // would remain defined for the rest of the PHPUnit run and cascade into
-        // unrelated failures (notably ProtectorCorePreloadTest, which define()s
-        // the same constant itself). Forking keeps the failure local.
+        // Failure-locality note: dblayertrap_init() can @define('XOOPS_DB_ALTERNATIVE', ...)
+        // as a side effect when _dblayertrap_doubtfuls is non-empty. On the happy path this
+        // test is deterministic (doubtfuls stay empty after the scan, so the define is
+        // skipped), but on a Fix 1.5 REGRESSION the define would fire before the assertion
+        // reports the failure — leaving the constant defined for the rest of the PHPUnit
+        // run. Process isolation via #[RunInSeparateProcess] would contain that, but hangs
+        // on Windows under PHPUnit 11's IPC stack with the XOOPS bootstrap. The accepted
+        // tradeoff: on regression, this test AND ProtectorCorePreloadTest fail loudly —
+        // the overall CI signal is still "fix needed", not a silent pass.
         // Behavioural test for the whole attacker-controlled metadata surface.
         // Each of these can legitimately carry an SQL-keyword substring in a
         // crafted request:
@@ -289,18 +287,27 @@ final class Protector364RcFixesTest extends TestCase
         //   - REQUEST_URI       (URL path + query)
         //   - PATH_INFO         (URL segment)
         // None of them must appear in _dblayertrap_doubtfuls after the scan.
+
+        // Snapshot and sanitise superglobals BEFORE getInstance(), not after.
+        // Protector::__construct() calls _initial_recursive($_GET/$_POST/$_COOKIE)
+        // during its first invocation in the process, so any inherited state
+        // from the runner or from a sibling test's mutations would be captured
+        // into $_doubtful_requests and survive the per-test cleanup below. In
+        // this suite Protector364RcFixesTest runs first alphabetically, so this
+        // behavioural test may be the first call to getInstance() in the whole
+        // PHPUnit process.
+        $priorServer = $_SERVER;
+        $priorGet    = $_GET;
+        $priorPost   = $_POST;
+        $priorCookie = $_COOKIE;
+
+        $_GET    = [];
+        $_POST   = [];
+        $_COOKIE = [];
+
         require_once XOOPS_PATH . '/modules/protector/class/protector.php';
-        $protector = \Protector::getInstance();
-
-        $priorServer   = $_SERVER;
-        $priorGet      = $_GET;
-        $priorPost     = $_POST;
-        $priorCookie   = $_COOKIE;
+        $protector     = \Protector::getInstance();
         $priorWoServer = $protector->_conf['dblayertrap_wo_server'] ?? null;
-
-        $_GET                                      = [];
-        $_POST                                     = [];
-        $_COOKIE                                   = [];
         $protector->_conf['dblayertrap_wo_server'] = 0;
 
         // Replace $_SERVER with a minimal deterministic fixture. Without this

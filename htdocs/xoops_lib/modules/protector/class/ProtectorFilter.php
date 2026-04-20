@@ -129,6 +129,14 @@ class ProtectorFilterHandler
                 || !str_starts_with($realPath, $baseReal . DIRECTORY_SEPARATOR)) {
                 continue;
             }
+            // Only include regular, readable files. realpath() succeeds for
+            // directories too, so an entry like "precommon_something.php/"
+            // (a directory that happens to end in .php) would otherwise reach
+            // include_once and emit a "failed to open stream: Is a directory"
+            // warning on every request. Same for permission-denied files.
+            if (!is_file($realPath) || !is_readable($realPath)) {
+                continue;
+            }
 
             include_once $realPath;
             $plugin_name = 'protector_' . substr($file, 0, -4);

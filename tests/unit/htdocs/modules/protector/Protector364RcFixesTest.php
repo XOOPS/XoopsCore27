@@ -454,9 +454,27 @@ final class Protector364RcFixesTest extends TestCase
         );
         $this->assertNotFalse($phtmlBytes, 'Failed to write non-PHP filter fixture');
 
+        // A DIRECTORY that matches the {type}_*.php pattern must be skipped silently.
+        // realpath() succeeds on directories, so without the is_file() guard the loader
+        // would reach include_once() on a directory path and emit a PHP warning on
+        // every request. This covers the silent-continue guard at ProtectorFilter.php.
+        $directoryTrapPath = $tempDir . '/precommon_directory_trap.php';
+        $this->assertTrue(
+            @mkdir($directoryTrapPath, 0700),
+            'Failed to create directory-trap fixture'
+        );
+
         $handler = \ProtectorFilterHandler::getInstance();
         $priorBase = $handler->filters_base;
         $handler->filters_base = $tempDir;
+
+        // Capture any PHP warnings emitted during execute() — the directory-trap
+        // guard means there must be none.
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = [$errno, $errstr];
+            return true;
+        });
 
         try {
             $result = $handler->execute('precommon');
@@ -470,10 +488,19 @@ final class Protector364RcFixesTest extends TestCase
             );
             // Return value reflects the bitwise-OR of loaded filter returns.
             $this->assertSame(42, $result, 'execute() should return the loaded filter result');
+            // No warnings should have been emitted — the directory trap must be
+            // skipped silently, not trigger an include_once() warning.
+            $this->assertSame(
+                [],
+                $warnings,
+                'Directory matching {type}_*.php must not cause include warnings'
+            );
         } finally {
+            restore_error_handler();
             $handler->filters_base = $priorBase;
             @unlink($mixedCasePath);
             @unlink($phtmlPath);
+            @rmdir($directoryTrapPath);
             @rmdir($tempDir);
         }
     }

@@ -1053,7 +1053,7 @@ class Upgrade_2511 extends XoopsUpgrade
                 . ' ORDER BY tf.`tpl_id` ASC LIMIT 1';
             $result = $this->db->query($sql);
             if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-                $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
+                $this->logDbError($sql);
 
                 return false;
             }
@@ -1108,15 +1108,21 @@ class Upgrade_2511 extends XoopsUpgrade
             $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                 . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', [tpl_source omitted])';
             if (!$this->execOrFail($sql, $logSql)) {
-                $this->logs[] = sprintf('Failed to insert tplsource row for %s', $fileName);
+                $this->logs[] = \htmlspecialchars(
+                    sprintf('Failed to insert tplsource row for %s', $fileName),
+                    \ENT_QUOTES,
+                    _UPGRADE_CHARSET
+                );
                 // Best-effort cleanup so re-running the upgrade is not blocked by an orphan tplfile row.
                 $cleanupSql = 'DELETE FROM ' . $this->db->prefix('tplfile')
                     . ' WHERE `tpl_id` = ' . (int) $newtplid . ' LIMIT 1';
                 if (!$this->db->exec($cleanupSql)) {
-                    $this->logs[] = sprintf(
-                        'Failed to remove orphan tplfile row %d for %s',
-                        (int) $newtplid,
-                        $fileName
+                    $this->logEscaped(
+                        sprintf(
+                            'Failed to remove orphan tplfile row %d for %s',
+                            (int) $newtplid,
+                            $fileName
+                        )
                     );
                 }
 
@@ -1145,10 +1151,19 @@ class Upgrade_2511 extends XoopsUpgrade
             return true;
         }
 
-        $message      = \sprintf(_DB_QUERY_ERROR, $logSql ?? $sql) . $this->db->error();
-        $this->logs[] = \htmlspecialchars($message, \ENT_QUOTES, 'UTF-8');
+        $this->logDbError($sql, $logSql);
 
         return false;
+    }
+
+    private function logDbError(string $sql, ?string $logSql = null): void
+    {
+        $this->logEscaped(\sprintf(_DB_QUERY_ERROR, $logSql ?? $sql) . $this->db->error());
+    }
+
+    private function logEscaped(string $message): void
+    {
+        $this->logs[] = \htmlspecialchars($message, \ENT_QUOTES, _UPGRADE_CHARSET);
     }
 }
 

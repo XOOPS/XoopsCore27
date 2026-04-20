@@ -234,6 +234,10 @@ final class Protector364RcFixesTest extends TestCase
         // SERVER_NAME is excluded because it reflects the Host header when
         // UseCanonicalName is Off, which is common on Apache and default on
         // many reverse-proxied setups.
+        // Extract the allowlist block once, then assert via regex that catches
+        // both quote styles. A plain substring check against "'KEY'" would miss
+        // a regression written as "KEY" => true.
+        $allowlistSource = self::readBetween($source, 'serverScanAllowlist = [', '];');
         foreach (
             [
                 'CONTENT_TYPE',
@@ -254,9 +258,9 @@ final class Protector364RcFixesTest extends TestCase
                 'SERVER_PROTOCOL',
             ] as $attackerControlledKey
         ) {
-            $this->assertStringNotContainsString(
-                "'" . $attackerControlledKey . "'",
-                self::readBetween($source, 'serverScanAllowlist = [', '];'),
+            $this->assertDoesNotMatchRegularExpression(
+                '/[\'"]' . preg_quote($attackerControlledKey, '/') . '[\'"]\s*=>/',
+                $allowlistSource,
                 "Allowlist must not include request-influenced key {$attackerControlledKey}"
             );
         }

@@ -256,6 +256,9 @@ final class SystemMenuInstallationTest extends TestCase
             public object $db;
             public function __construct()
             {
+                // Stubs declare no parameters; PHP accepts extra positional args silently.
+                // This keeps the helper's $db->query($sql) etc. call sites working while
+                // not declaring (therefore not leaving unused) the args the stub ignores.
                 $this->db = new class {
                     public array $execCalls = [];
                     public function prefix(string $name): string
@@ -266,17 +269,17 @@ final class SystemMenuInstallationTest extends TestCase
                     {
                         return "'" . addslashes($value) . "'";
                     }
-                    public function query(string $sql): bool
+                    public function query(): bool
                     {
-                        // Return a non-mysqli_result so the existence-short-circuit falls through
+                        // Returning false makes the existence-short-circuit fall through
                         // to the ALTER branch (the path being tested).
                         return false;
                     }
-                    public function isResultSet($r): bool
+                    public function isResultSet(): bool
                     {
                         return false;
                     }
-                    public function getRowsNum($r): int
+                    public function getRowsNum(): int
                     {
                         return 0;
                     }
@@ -318,19 +321,19 @@ final class SystemMenuInstallationTest extends TestCase
                     {
                         return "'" . addslashes($value) . "'";
                     }
-                    public function query(string $sql): bool
+                    public function query(): bool
                     {
                         return false;
                     }
-                    public function isResultSet($r): bool
+                    public function isResultSet(): bool
                     {
                         return false;
                     }
-                    public function getRowsNum($r): int
+                    public function getRowsNum(): int
                     {
                         return 0;
                     }
-                    public function exec(string $sql): bool
+                    public function exec(): bool
                     {
                         $this->execCallCount++;
                         return false;

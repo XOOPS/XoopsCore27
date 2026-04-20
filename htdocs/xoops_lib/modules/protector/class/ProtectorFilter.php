@@ -91,18 +91,49 @@ class ProtectorFilterHandler
         $ret = 0;
 
         $dh = opendir($this->filters_base);
+        if (false === $dh) {
+            return $ret;
+        }
+
+        // Fix 9.1: resolve the filters_enabled base path once so every candidate
+        // filter can be verified to live inside it. The previous loader included
+        // every file readdir() returned, which allowed a writable filters_enabled
+        // directory to achieve RCE if an attacker could place or symlink a file
+        // whose name happened to start with the requested type prefix.
+        $baseReal = realpath($this->filters_base);
+
         while (($file = readdir($dh)) !== false) {
-            if (strncmp($file, $type . '_', strlen($type) + 1) === 0) {
-                include_once $this->filters_base . '/' . $file;
-                $plugin_name = 'protector_' . substr($file, 0, -4);
-                if (function_exists($plugin_name)) {
-                    // old way
-                    $ret |= call_user_func($plugin_name);
-                } elseif (class_exists($plugin_name)) {
-                    // newer way
-                    $plugin_obj = new $plugin_name(); //old code is -> $plugin_obj =& new $plugin_name() ; //hack by Trabis
-                    $ret |= $plugin_obj->execute();
-                }
+            if (strncmp($file, $type . '_', strlen($type) + 1) !== 0) {
+                continue;
+            }
+            // Require .php suffix — blocks .phtml, .inc, .phar and other executable
+            // extensions that may be interpreted as PHP by misconfigured servers.
+            // Case-insensitive: Windows NTFS and macOS HFS+ resolve case-variant
+            // filenames as the same file, and pre-existing custom filters may use
+            // .PHP / .Php. strcasecmp lets those continue to load on case-sensitive
+            // filesystems too.
+            if (0 !== strcasecmp(substr($file, -4), '.php')) {
+                continue;
+            }
+            // Resolve the real path and ensure it stays inside filters_enabled.
+            // Blocks symlinks pointing outside the directory and any crafted name
+            // whose canonical path escapes the base.
+            $realPath = realpath($this->filters_base . '/' . $file);
+            if (false === $realPath
+                || false === $baseReal
+                || !str_starts_with($realPath, $baseReal . DIRECTORY_SEPARATOR)) {
+                continue;
+            }
+
+            include_once $realPath;
+            $plugin_name = 'protector_' . substr($file, 0, -4);
+            if (function_exists($plugin_name)) {
+                // old way
+                $ret |= call_user_func($plugin_name);
+            } elseif (class_exists($plugin_name)) {
+                // newer way
+                $plugin_obj = new $plugin_name(); //old code is -> $plugin_obj =& new $plugin_name() ; //hack by Trabis
+                $ret |= $plugin_obj->execute();
             }
         }
         closedir($dh);

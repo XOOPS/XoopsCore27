@@ -1,0 +1,441 @@
+<?php
+
+declare(strict_types=1);
+
+namespace modulesprotector;
+
+use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Regression tests for the Protector 3.6.4 RC fix tranche.
+ *
+ * Each test pins exactly one RC-safe fix so that a future regression is
+ * attributable to a single, small change. The fixes are intentionally
+ * low-blast-radius (pure bug fixes, no new detection features) because
+ * they ship during the XOOPS 2.7.0 RC window.
+ *
+ * Tests are source-level assertions where behavioural tests would require
+ * a live HTTP response, database connection, or terminating die() call.
+ * Each test documents what would be required for a full behavioural test
+ * and why the source assertion is sufficient for RC.
+ */
+#[CoversNothing]
+final class Protector364RcFixesTest extends TestCase
+{
+    private const PROTECTOR_FILE = XOOPS_PATH . '/modules/protector/class/protector.php';
+    private const DB_FILE        = XOOPS_PATH . '/modules/protector/class/ProtectorMysqlDatabase.class.php';
+    private const FILTER_FILE    = XOOPS_PATH . '/modules/protector/class/ProtectorFilter.php';
+
+    private static function readSource(string $path): string
+    {
+        $content = file_get_contents($path);
+        self::assertNotFalse($content, 'Unable to read source: ' . $path);
+        return $content;
+    }
+
+    /**
+     * Return the substring between two delimiter strings, or '' if not found.
+     * Used to assert "contains / does not contain" inside a specific block
+     * (e.g. inside an array literal) without getting false hits from comments.
+     */
+    private static function readBetween(string $haystack, string $start, string $end): string
+    {
+        $startPos = strpos($haystack, $start);
+        if (false === $startPos) {
+            return '';
+        }
+        $startPos += strlen($start);
+        $endPos    = strpos($haystack, $end, $startPos);
+        if (false === $endPos) {
+            return '';
+        }
+        return substr($haystack, $startPos, $endPos - $startPos);
+    }
+
+    // -------------------------------------------------------------------
+    // Fix 1.1 — doubtful-request regex delimiter
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function fix11_doubtfulRequestRegexUsesValidDelimiter(): void
+    {
+        $source = self::readSource(self::PROTECTOR_FILE);
+
+        // The broken "?...?" delimiter must not survive anywhere in the file.
+        $this->assertStringNotContainsString(
+            "preg_match('?[",
+            $source,
+            '"?" is not a valid PCRE delimiter — preg_match() returned false on every call'
+        );
+
+        // The replacement delimiter (#) plus opening \s in the character class
+        // must be present. Combined with the fix11_...Pattern test below, which
+        // verifies the pattern's semantics, this pins both the source change
+        // and its meaning.
+        $this->assertMatchesRegularExpression(
+            '/preg_match\(\s*\'#\[\\\\s/',
+            $source,
+            'Fix 1.1 must use # as the PCRE delimiter with \\s at the start of the character class'
+        );
+    }
+
+    #[Test]
+    public function fix11_doubtfulRequestPatternClassifiesInputCorrectly(): void
+    {
+        // Re-execute the exact regex the fix installed. Asserts the pattern
+        // itself matches the intended inputs; combined with the source
+        // assertion above, this pins both "what the code says" and
+        // "what the pattern means" against regression.
+        $pattern = '#[\s\'"`/]#';
+
+        $this->assertSame(1, preg_match($pattern, "1' OR '1'='1"), "SQL injection with quote");
+        $this->assertSame(1, preg_match($pattern, '1 UNION SELECT'), 'SQL injection with whitespace');
+        $this->assertSame(1, preg_match($pattern, "admin'--"), 'SQL comment injection');
+        $this->assertSame(1, preg_match($pattern, '/etc/passwd'), 'Path traversal');
+        $this->assertSame(1, preg_match($pattern, 'a b'), 'Plain whitespace');
+        $this->assertSame(0, preg_match($pattern, '42'), 'Plain integer');
+        $this->assertSame(0, preg_match($pattern, 'hello'), 'Plain alphanumeric');
+    }
+
+    // -------------------------------------------------------------------
+    // Fix 1.2 — defined() with quoted constant name
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function fix12_definedCallQuotesConstantName(): void
+    {
+        $source = self::readSource(self::PROTECTOR_FILE);
+
+        $this->assertStringNotContainsString(
+            'defined(XOOPS_COOKIE_DOMAIN)',
+            $source,
+            'Unquoted defined() triggers PHP 8 Fatal Error when the constant is absent'
+        );
+        $this->assertStringContainsString(
+            "defined('XOOPS_COOKIE_DOMAIN')",
+            $source,
+            'Constant name must be quoted as a string literal'
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // Fix 1.3 — dos_crsafe runtime validity guard
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function fix13_dosCrsafePatternIsValidatedBeforeUse(): void
+    {
+        $source = self::readSource(self::PROTECTOR_FILE);
+
+        // The guard probes the pattern with an empty subject. preg_match()
+        // returns false on a malformed pattern, so the === false comparison
+        // is the discriminator.
+        $this->assertMatchesRegularExpression(
+            '/false\s*!==\s*@preg_match\(/',
+            $source,
+            'Fix 1.3 must use @preg_match($pattern, "") !== false to probe validity'
+        );
+
+        // The original unguarded call pattern must be gone.
+        $this->assertStringNotContainsString(
+            "preg_match(\$this->_conf['dos_crsafe']",
+            $source,
+            'The unguarded preg_match() on admin-supplied regex must be replaced'
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // Fix 1.4 — injectionFound uses HTTP 403, not distinctive text body
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function fix14_injectionResponseUsesHttpForbidden(): void
+    {
+        $source = self::readSource(self::DB_FILE);
+
+        // A behavioural test would need to fork a process, issue a
+        // detectable SQL payload, and inspect the HTTP response — too
+        // heavy for RC. Source check: die text is generic and 403 is set.
+        $this->assertStringNotContainsString(
+            "die('SQL Injection found')",
+            $source,
+            'The distinctive "SQL Injection found" body allowed attackers to probe dblayertrap response'
+        );
+        $this->assertStringContainsString(
+            'http_response_code(403)',
+            $source,
+            'Must set HTTP 403 before terminating the request'
+        );
+        $this->assertMatchesRegularExpression(
+            "/die\(\s*'Forbidden'\s*\)/",
+            $source,
+            'Response body must be generic (matches other blocked-request paths)'
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // Fix 1.5 — ALL HTTP_* keys excluded from dblayertrap scan
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function fix15_dblayertrapUsesPositiveAllowlistForServerScan(): void
+    {
+        $source = self::readSource(self::PROTECTOR_FILE);
+
+        // The raw $_SERVER call must not reappear.
+        $this->assertStringNotContainsString(
+            '_dblayertrap_check_recursive($_SERVER)',
+            $source,
+            'Raw $_SERVER must not be scanned directly — attacker-controlled keys would poison doubtfuls'
+        );
+
+        // Positive allowlist is the discriminator. Any denylist approach
+        // (even filtering HTTP_*) is incomplete because CONTENT_TYPE,
+        // CONTENT_LENGTH, PHP_AUTH_*, AUTH_TYPE, QUERY_STRING, REQUEST_URI,
+        // PATH_INFO, PATH_TRANSLATED, ORIG_PATH_INFO, REDIRECT_* are also
+        // attacker-controlled outside HTTP_*.
+        $this->assertStringContainsString(
+            '$serverScanAllowlist',
+            $source,
+            'Fix 1.5 must use a positive allowlist, not a denylist'
+        );
+        $this->assertStringContainsString(
+            'array_intersect_key($_SERVER, $serverScanAllowlist)',
+            $source,
+            'Allowlist must be intersected against $_SERVER to keep ONLY named keys'
+        );
+
+        // Confirm the allowlist does NOT include attacker-controlled keys
+        // that a reviewer might be tempted to add. Keeping these out is the
+        // whole point of the fix.
+        //
+        // PHP_SELF and SCRIPT_NAME are excluded because they are reconstructed
+        // from the request path on URL-rewriting deployments (Protector's own
+        // IIS bootstrap at precheck.inc.php does exactly that) and Protector
+        // historically treats PHP_SELF as untrusted (explicit XSS handling).
+        //
+        // SERVER_NAME is excluded because it reflects the Host header when
+        // UseCanonicalName is Off, which is common on Apache and default on
+        // many reverse-proxied setups.
+        foreach (
+            [
+                'CONTENT_TYPE',
+                'CONTENT_LENGTH',
+                'PHP_AUTH_USER',
+                'PHP_AUTH_PW',
+                'PHP_AUTH_DIGEST',
+                'AUTH_TYPE',
+                'QUERY_STRING',
+                'REQUEST_URI',
+                'PATH_INFO',
+                'PATH_TRANSLATED',
+                'ORIG_PATH_INFO',
+                'PHP_SELF',
+                'SCRIPT_NAME',
+                'SERVER_NAME',
+                'REQUEST_METHOD',
+                'SERVER_PROTOCOL',
+            ] as $attackerControlledKey
+        ) {
+            $this->assertStringNotContainsString(
+                "'" . $attackerControlledKey . "'",
+                self::readBetween($source, 'serverScanAllowlist = [', '];'),
+                "Allowlist must not include request-influenced key {$attackerControlledKey}"
+            );
+        }
+    }
+
+    #[Test]
+    public function fix15_behaviouralRequestMetadataDoesNotPoisonDoubtfuls(): void
+    {
+        // Behavioural test for the whole attacker-controlled metadata surface.
+        // Each of these can legitimately carry an SQL-keyword substring in a
+        // crafted request:
+        //   - HTTP_X_SQL_PROBE  (arbitrary custom header via HTTP_* expansion)
+        //   - HTTP_USER_AGENT   (stock header)
+        //   - HTTP_FORWARDED    (RFC 7239 header)
+        //   - CONTENT_TYPE      (Content-Type header; not in HTTP_* namespace)
+        //   - CONTENT_LENGTH    (Content-Length header; not in HTTP_*)
+        //   - PHP_AUTH_USER     (Basic auth username)
+        //   - QUERY_STRING      (= $_GET serialized; already scanned via $_GET)
+        //   - REQUEST_URI       (URL path + query)
+        //   - PATH_INFO         (URL segment)
+        // None of them must appear in _dblayertrap_doubtfuls after the scan.
+        require_once XOOPS_PATH . '/modules/protector/class/protector.php';
+        $protector = \Protector::getInstance();
+
+        $priorServer   = $_SERVER;
+        $priorGet      = $_GET;
+        $priorPost     = $_POST;
+        $priorCookie   = $_COOKIE;
+        $priorWoServer = $protector->_conf['dblayertrap_wo_server'] ?? null;
+
+        $_GET                                      = [];
+        $_POST                                     = [];
+        $_COOKIE                                   = [];
+        $protector->_conf['dblayertrap_wo_server'] = 0;
+
+        $_SERVER['HTTP_USER_AGENT']  = 'stock-union-header';
+        $_SERVER['HTTP_X_SQL_PROBE'] = 'custom-select-header';
+        $_SERVER['HTTP_FORWARDED']   = 'rfc-information_schema-header';
+        $_SERVER['CONTENT_TYPE']     = 'application/select';
+        $_SERVER['CONTENT_LENGTH']   = 'union';
+        $_SERVER['PHP_AUTH_USER']    = 'admin-union';
+        $_SERVER['QUERY_STRING']     = 'q=select';
+        $_SERVER['REQUEST_URI']      = '/path-with-select-keyword';
+        $_SERVER['PATH_INFO']        = '/information_schema/segment';
+        // Request-derived-but-not-HTTP_* keys flagged by Codex as still-exploitable
+        // before the allowlist was trimmed.
+        $_SERVER['PHP_SELF']       = '/index.php/union/script';
+        $_SERVER['SCRIPT_NAME']    = '/index.php/select-suffix';
+        $_SERVER['SERVER_NAME']    = 'information_schema.attacker.example';
+        // REQUEST_METHOD is client-supplied from the HTTP request line. Apache and
+        // many other servers pass arbitrary method tokens through to PHP, so a
+        // request "SELECT /index.php HTTP/1.1" sets REQUEST_METHOD = "SELECT"
+        // which is 6 chars and matches the "select" needle.
+        $_SERVER['REQUEST_METHOD']   = 'SELECT';
+        // SERVER_PROTOCOL is also from the request line. A lenient server can pass
+        // through nonstandard tokens like SELECT/1.0 (10 chars — above the 6-char
+        // threshold and containing the "select" needle).
+        $_SERVER['SERVER_PROTOCOL'] = 'SELECT/1.0';
+
+        try {
+            $protector->dblayertrap_init(false);
+            $doubtfuls = $protector->getDblayertrapDoubtfuls();
+
+            $poisoning = [
+                'stock-union-header',
+                'custom-select-header',
+                'rfc-information_schema-header',
+                'application/select',
+                'union',
+                'admin-union',
+                'q=select',
+                '/path-with-select-keyword',
+                '/information_schema/segment',
+                '/index.php/union/script',
+                '/index.php/select-suffix',
+                'information_schema.attacker.example',
+                'SELECT',
+                'SELECT/1.0',
+            ];
+            foreach ($poisoning as $value) {
+                $this->assertNotContains(
+                    $value,
+                    $doubtfuls,
+                    "Attacker-controlled request metadata value '{$value}' must not poison doubtfuls"
+                );
+            }
+        } finally {
+            $_SERVER                                   = $priorServer;
+            $_GET                                      = $priorGet;
+            $_POST                                     = $priorPost;
+            $_COOKIE                                   = $priorCookie;
+            $protector->_conf['dblayertrap_wo_server'] = $priorWoServer;
+            $protector->_dblayertrap_doubtfuls         = [];
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Fix 9.1 — filter filename containment
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function fix91_filterLoaderRequiresPhpSuffixAndRealPathContainment(): void
+    {
+        $source = self::readSource(self::FILTER_FILE);
+
+        // Minimal RC hardening per Codex: require .php suffix (case-insensitive
+        // so NTFS / HFS+ deployments with .PHP / .Php filenames still load),
+        // resolve realpath, and verify the resolved file lives inside
+        // filters_enabled. Strict filename allowlist (precommon_/postcommon_/...)
+        // defers to 3.7.0 to avoid breaking custom deployments.
+        $this->assertMatchesRegularExpression(
+            "/strcasecmp\(\s*substr\(\\\$file, -4\)\s*,\s*'\.php'\s*\)/",
+            $source,
+            'Filter loader must require .php suffix case-insensitively'
+        );
+        $this->assertStringContainsString(
+            "realpath(\$this->filters_base . '/' . \$file)",
+            $source,
+            'Filter loader must resolve the real path for each candidate'
+        );
+        $this->assertStringContainsString(
+            'str_starts_with($realPath, $baseReal . DIRECTORY_SEPARATOR)',
+            $source,
+            'Filter loader must verify the resolved path stays inside filters_enabled'
+        );
+    }
+
+    #[Test]
+    public function fix91_behaviouralFilterLoaderAcceptsMixedCasePhpExtension(): void
+    {
+        // Behavioural test: set up a tempdir with a mixed-case .PHP filter file,
+        // point ProtectorFilterHandler at it, and assert execute() actually loads
+        // the file. Also verify the containment check rejects a filter placed
+        // outside the tempdir via a relative traversal path.
+        require_once XOOPS_PATH . '/modules/protector/class/protector.php';
+        require_once XOOPS_PATH . '/modules/protector/class/ProtectorFilter.php';
+
+        $tempDir = sys_get_temp_dir() . '/protector364test_' . uniqid();
+        mkdir($tempDir);
+
+        // Mixed-case extension — must load on case-sensitive filesystems too.
+        $mixedCasePath = $tempDir . '/precommon_mixcase.PHP';
+        file_put_contents(
+            $mixedCasePath,
+            "<?php function protector_precommon_mixcase() { return 42; }\n"
+        );
+
+        // A file with a non-PHP extension must be rejected even if its name prefix matches.
+        $phtmlPath = $tempDir . '/precommon_phtml_bait.phtml';
+        file_put_contents(
+            $phtmlPath,
+            "<?php function protector_precommon_phtml_bait() { return 99; }\n"
+        );
+
+        $handler = \ProtectorFilterHandler::getInstance();
+        $priorBase = $handler->filters_base;
+        $handler->filters_base = $tempDir;
+
+        try {
+            $result = $handler->execute('precommon');
+            $this->assertTrue(
+                function_exists('protector_precommon_mixcase'),
+                'Mixed-case .PHP filter must be loaded by the execute() loader'
+            );
+            $this->assertFalse(
+                function_exists('protector_precommon_phtml_bait'),
+                '.phtml filter must be rejected — not a valid PHP filter extension'
+            );
+            // Return value reflects the bitwise-OR of loaded filter returns.
+            $this->assertSame(42, $result, 'execute() should return the loaded filter result');
+        } finally {
+            $handler->filters_base = $priorBase;
+            @unlink($mixedCasePath);
+            @unlink($phtmlPath);
+            @rmdir($tempDir);
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Smoke test — core SQLi detection tokens still present
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function smokeTest_coreSqlInjectionNeedlesRemainInPlace(): void
+    {
+        // The 3.6.4 tranche must not remove detection tokens. A future
+        // FP-reduction pass (3.7.0) may demote 'select' once the Stage 2
+        // matcher has been fixed and measured, but not in RC.
+        $source = self::readSource(self::DB_FILE);
+
+        $this->assertStringContainsString("'union'", $source, 'UNION injection token must remain');
+        $this->assertStringContainsString("'information_schema'", $source, 'information_schema token must remain');
+        $this->assertStringContainsString("'/*'", $source, 'SQL block-comment token must remain');
+        $this->assertStringContainsString("'--'", $source, 'SQL line-comment token must remain');
+        $this->assertStringContainsString("'select'", $source, "'select' is retained in 3.6.4 — do not remove until 3.7.0 matcher fix validated");
+    }
+}

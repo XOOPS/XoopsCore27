@@ -164,12 +164,12 @@ class Upgrade_2511 extends XoopsUpgrade
 
         $result = $migrate->executeQueue(true);
         if (false === $result) {
-            $this->logs[] = sprintf(
+            $this->logEscaped(sprintf(
                 'Migration of %s table failed. Error: %s - %s',
                 $this->bannerTableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
-            );
+            ));
             return false;
         }
 
@@ -220,7 +220,7 @@ class Upgrade_2511 extends XoopsUpgrade
     {
         $confId = $this->getMailerMethodConfigId();
         if (null === $confId) {
-            $this->logs[] = 'Unable to locate the mailmethod configuration row for qmail option insertion.';
+            $this->logEscaped('Unable to locate the mailmethod configuration row for qmail option insertion.');
 
             return false;
         }
@@ -282,7 +282,7 @@ class Upgrade_2511 extends XoopsUpgrade
     private function makeDirectory($newPath)
     {
         if (!mkdir($newPath) && !is_dir($newPath)) {
-            $this->logs[] = sprintf('Captcha config directory %s was not created', $newPath);
+            $this->logEscaped(sprintf('Captcha config directory %s was not created', $newPath));
             return false;
         }
         return true;
@@ -301,7 +301,7 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!file_exists($destination)) { // don't overwrite anything
             $result = copy($source, $destination);
             if (false === $result) {
-                $this->logs[] = sprintf('Captcha config file copy %s failed', basename($source));
+                $this->logEscaped(sprintf('Captcha config file copy %s failed', basename($source)));
                 return false;
             }
         }
@@ -324,7 +324,7 @@ class Upgrade_2511 extends XoopsUpgrade
         }
         $directory = dir($sourcePath);
         if (false === $directory) {
-            $this->logs[] = sprintf('Failed to read source %s', $sourcePath);
+            $this->logEscaped(sprintf('Failed to read source %s', $sourcePath));
             return false;
         }
         while (false !== ($entry = $directory->read())) {
@@ -388,12 +388,12 @@ class Upgrade_2511 extends XoopsUpgrade
 
         $result = $migrate->executeQueue(true);
         if (false === $result) {
-            $this->logs[] = sprintf(
+            $this->logEscaped(sprintf(
                 'Migration of %s table failed. Error: %s - %s',
                 $tableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
-            );
+            ));
             return false;
         }
 
@@ -424,7 +424,7 @@ class Upgrade_2511 extends XoopsUpgrade
         if (!file_exists($destination)) { // don't overwrite anything
             $result = copy($source, $destination);
             if (false === $result) {
-                $this->logs[] = 'xoopsconfig.php file copy failed';
+                $this->logEscaped('xoopsconfig.php file copy failed');
                 return false;
             }
         }
@@ -513,7 +513,7 @@ class Upgrade_2511 extends XoopsUpgrade
             if (!file_exists($dest) && file_exists($src)) {
                 $result = copy($src, $dest);
                 if (false === $result) {
-                    $this->logs[] = sprintf('textsanitizer file copy to %s failed', $destination);
+                    $this->logEscaped(sprintf('textsanitizer file copy to %s failed', $destination));
                     $return = false;
                 }
             }
@@ -691,12 +691,12 @@ class Upgrade_2511 extends XoopsUpgrade
 
         $result = $migrate->executeQueue(true);
         if (false === $result) {
-            $this->logs[] = sprintf(
+            $this->logEscaped(sprintf(
                 'Migration of %s table failed. Error: %s - %s',
                 $this->modulesTableName,
                 $migrate->getLastErrNo(),
                 $migrate->getLastError(),
-            );
+            ));
             return false;
         }
 
@@ -814,19 +814,19 @@ class Upgrade_2511 extends XoopsUpgrade
 
             if (is_link($path)) {
                 if (!unlink($path)) {
-                    $this->logs[] = 'Failed to delete Smarty symlink: ' . basename($path);
+                    $this->logEscaped('Failed to delete Smarty symlink: ' . basename($path));
 
                     return false;
                 }
             } elseif (is_dir($path)) {
                 if (!self::deleteFolder($path)) {
-                    $this->logs[] = 'Failed to delete Smarty directory: ' . basename($path);
+                    $this->logEscaped('Failed to delete Smarty directory: ' . basename($path));
 
                     return false;
                 }
             } elseif (is_file($path)) {
                 if (!unlink($path)) {
-                    $this->logs[] = 'Failed to delete Smarty file: ' . basename($path);
+                    $this->logEscaped('Failed to delete Smarty file: ' . basename($path));
 
                     return false;
                 }
@@ -1025,21 +1025,21 @@ class Upgrade_2511 extends XoopsUpgrade
         foreach ($templates as $tplfile) {
             $fileName = (string) ($tplfile['file'] ?? '');
             if ('' === $fileName) {
-                $this->logs[] = sprintf('Missing template file name in system template metadata for %s templates.', $type);
+                $this->logEscaped(sprintf('Missing template file name in system template metadata for %s templates.', $type));
 
                 return false;
             }
 
             $filePath = $templateBasePath . '/' . $fileName;
             if (!is_readable($filePath)) {
-                $this->logs[] = sprintf('Template file is not readable: %s', $fileName);
+                $this->logEscaped(sprintf('Template file is not readable: %s', $fileName));
 
                 return false;
             }
 
             $tplsource = file_get_contents($filePath);
             if (false === $tplsource) {
-                $this->logs[] = sprintf('Failed to read template file: %s', $fileName);
+                $this->logEscaped(sprintf('Failed to read template file: %s', $fileName));
 
                 return false;
             }

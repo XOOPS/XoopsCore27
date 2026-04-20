@@ -1070,7 +1070,7 @@ class Upgrade_2511 extends XoopsUpgrade
                 $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                     . ' (tpl_id, tpl_source) VALUES (' . (int) $tplId . ', [tpl_source omitted])';
                 if (!$this->execOrFail($sql, $logSql)) {
-                    $this->logs[] = sprintf('Failed to backfill tplsource row for %s', $fileName);
+                    $this->logEscaped(sprintf('Failed to backfill tplsource row for %s', $fileName));
 
                     return false;
                 }
@@ -1092,13 +1092,13 @@ class Upgrade_2511 extends XoopsUpgrade
                 . $this->db->quote($type)
                 . ')';
             if (!$this->execOrFail($sql)) {
-                $this->logs[] = sprintf('Failed to insert tplfile row for %s', $fileName);
+                $this->logEscaped(sprintf('Failed to insert tplfile row for %s', $fileName));
 
                 return false;
             }
             $newtplid = $this->db->getInsertId();
             if ($newtplid <= 0) {
-                $this->logs[] = sprintf('Failed to resolve tplfile id after insert for %s', $fileName);
+                $this->logEscaped(sprintf('Failed to resolve tplfile id after insert for %s', $fileName));
 
                 return false;
             }
@@ -1108,15 +1108,11 @@ class Upgrade_2511 extends XoopsUpgrade
             $logSql = 'INSERT INTO ' . $this->db->prefix('tplsource')
                 . ' (tpl_id, tpl_source) VALUES (' . (int) $newtplid . ', [tpl_source omitted])';
             if (!$this->execOrFail($sql, $logSql)) {
-                $this->logs[] = \htmlspecialchars(
-                    sprintf('Failed to insert tplsource row for %s', $fileName),
-                    \ENT_QUOTES,
-                    _UPGRADE_CHARSET
-                );
+                $this->logEscaped(sprintf('Failed to insert tplsource row for %s', $fileName));
                 // Best-effort cleanup so re-running the upgrade is not blocked by an orphan tplfile row.
                 $cleanupSql = 'DELETE FROM ' . $this->db->prefix('tplfile')
                     . ' WHERE `tpl_id` = ' . (int) $newtplid . ' LIMIT 1';
-                if (!$this->db->exec($cleanupSql)) {
+                if (!$this->execOrFail($cleanupSql)) {
                     $this->logEscaped(
                         sprintf(
                             'Failed to remove orphan tplfile row %d for %s',
@@ -1156,11 +1152,33 @@ class Upgrade_2511 extends XoopsUpgrade
         return false;
     }
 
+    /**
+     * Append an HTML-safe DB error entry to $this->logs.
+     *
+     * Formats _DB_QUERY_ERROR with $logSql (or $sql if null) and appends
+     * $this->db->error(), then HTML-escapes the full line for safe UI rendering.
+     *
+     * @param string      $sql    SQL statement that failed.
+     * @param string|null $logSql Optional redacted SQL used only in the logged message
+     *                            (e.g. to omit large blobs such as tpl_source).
+     *
+     * @return void
+     */
     private function logDbError(string $sql, ?string $logSql = null): void
     {
         $this->logEscaped(\sprintf(_DB_QUERY_ERROR, $logSql ?? $sql) . $this->db->error());
     }
 
+    /**
+     * HTML-escape $message and append it to $this->logs.
+     *
+     * Callers must pass raw, unescaped text to avoid double-encoding when the
+     * upgrade UI renders $this->logs as raw HTML.
+     *
+     * @param string $message Raw log message.
+     *
+     * @return void
+     */
     private function logEscaped(string $message): void
     {
         $this->logs[] = \htmlspecialchars($message, \ENT_QUOTES, _UPGRADE_CHARSET);

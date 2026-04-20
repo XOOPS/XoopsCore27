@@ -292,29 +292,45 @@ final class Protector364RcFixesTest extends TestCase
         $_COOKIE                                   = [];
         $protector->_conf['dblayertrap_wo_server'] = 0;
 
-        $_SERVER['HTTP_USER_AGENT']  = 'stock-union-header';
-        $_SERVER['HTTP_X_SQL_PROBE'] = 'custom-select-header';
-        $_SERVER['HTTP_FORWARDED']   = 'rfc-information_schema-header';
-        $_SERVER['CONTENT_TYPE']     = 'application/select';
-        $_SERVER['CONTENT_LENGTH']   = 'union';
-        $_SERVER['PHP_AUTH_USER']    = 'admin-union';
-        $_SERVER['QUERY_STRING']     = 'q=select';
-        $_SERVER['REQUEST_URI']      = '/path-with-select-keyword';
-        $_SERVER['PATH_INFO']        = '/information_schema/segment';
-        // Request-derived-but-not-HTTP_* keys flagged by Codex as still-exploitable
-        // before the allowlist was trimmed.
-        $_SERVER['PHP_SELF']       = '/index.php/union/script';
-        $_SERVER['SCRIPT_NAME']    = '/index.php/select-suffix';
-        $_SERVER['SERVER_NAME']    = 'information_schema.attacker.example';
-        // REQUEST_METHOD is client-supplied from the HTTP request line. Apache and
-        // many other servers pass arbitrary method tokens through to PHP, so a
-        // request "SELECT /index.php HTTP/1.1" sets REQUEST_METHOD = "SELECT"
-        // which is 6 chars and matches the "select" needle.
-        $_SERVER['REQUEST_METHOD']   = 'SELECT';
-        // SERVER_PROTOCOL is also from the request line. A lenient server can pass
-        // through nonstandard tokens like SELECT/1.0 (10 chars — above the 6-char
-        // threshold and containing the "select" needle).
-        $_SERVER['SERVER_PROTOCOL'] = 'SELECT/1.0';
+        // Replace $_SERVER with a minimal deterministic fixture. Without this
+        // the runner-provided values for allowlisted keys (DOCUMENT_ROOT,
+        // SCRIPT_FILENAME, REMOTE_ADDR, etc.) could happen to contain an SQL
+        // keyword substring from the CI environment and populate doubtfuls,
+        // triggering unrelated define(XOOPS_DB_ALTERNATIVE) side effects.
+        $_SERVER = [
+            // Poisoning payloads — each contains an SQL-keyword substring in
+            // a key that the allowlist MUST exclude (HTTP_*, CONTENT_*,
+            // PHP_AUTH_*, URL-derived, PHP_SELF/SCRIPT_NAME/SERVER_NAME,
+            // REQUEST_METHOD, SERVER_PROTOCOL).
+            'HTTP_USER_AGENT'  => 'stock-union-header',
+            'HTTP_X_SQL_PROBE' => 'custom-select-header',
+            'HTTP_FORWARDED'   => 'rfc-information_schema-header',
+            'CONTENT_TYPE'     => 'application/select',
+            'CONTENT_LENGTH'   => 'union',
+            'PHP_AUTH_USER'    => 'admin-union',
+            'QUERY_STRING'     => 'q=select',
+            'REQUEST_URI'      => '/path-with-select-keyword',
+            'PATH_INFO'        => '/information_schema/segment',
+            // Request-derived-but-not-HTTP_* keys that were still exploitable
+            // before the allowlist was trimmed.
+            'PHP_SELF'         => '/index.php/union/script',
+            'SCRIPT_NAME'      => '/index.php/select-suffix',
+            'SERVER_NAME'      => 'information_schema.attacker.example',
+            'REQUEST_METHOD'   => 'SELECT',
+            'SERVER_PROTOCOL'  => 'SELECT/1.0',
+            // Explicit safe values for every key in the production allowlist
+            // so CI environment values cannot seed doubtfuls independently of
+            // the attack surface under test.
+            'SERVER_ADDR'       => '127.0.0.1',
+            'SERVER_PORT'       => '80',
+            'SERVER_SOFTWARE'   => 'test-runner',
+            'GATEWAY_INTERFACE' => 'CGI/1.1',
+            'DOCUMENT_ROOT'     => '/tmp',
+            'REQUEST_SCHEME'    => 'http',
+            'REMOTE_ADDR'       => '192.0.2.1',
+            'REMOTE_PORT'       => '12345',
+            'SCRIPT_FILENAME'   => '/tmp/test.php',
+        ];
 
         try {
             $protector->dblayertrap_init(false);
@@ -394,22 +410,31 @@ final class Protector364RcFixesTest extends TestCase
         require_once XOOPS_PATH . '/modules/protector/class/protector.php';
         require_once XOOPS_PATH . '/modules/protector/class/ProtectorFilter.php';
 
-        $tempDir = sys_get_temp_dir() . '/protector364test_' . uniqid();
-        mkdir($tempDir);
+        // Allocate a unique, collision-resistant path via tempnam(), then swap
+        // the placeholder file for a directory of the same name. This is safer
+        // than sys_get_temp_dir() + uniqid() under parallel test runs, and any
+        // failure along the way fails the test with a clear message instead
+        // of propagating as a later "file not found" from execute().
+        $tempDir = tempnam(sys_get_temp_dir(), 'protector364test_');
+        $this->assertNotFalse($tempDir, 'Failed to allocate a unique temporary path for the filter loader test');
+        $this->assertTrue(@unlink($tempDir), 'Failed to clear temporary placeholder before creating test directory');
+        $this->assertTrue(@mkdir($tempDir, 0700), 'Failed to create temporary filter test directory');
 
         // Mixed-case extension — must load on case-sensitive filesystems too.
-        $mixedCasePath = $tempDir . '/precommon_mixcase.PHP';
-        file_put_contents(
+        $mixedCasePath  = $tempDir . '/precommon_mixcase.PHP';
+        $mixedCaseBytes = file_put_contents(
             $mixedCasePath,
             "<?php function protector_precommon_mixcase() { return 42; }\n"
         );
+        $this->assertNotFalse($mixedCaseBytes, 'Failed to write mixed-case PHP filter fixture');
 
         // A file with a non-PHP extension must be rejected even if its name prefix matches.
-        $phtmlPath = $tempDir . '/precommon_phtml_bait.phtml';
-        file_put_contents(
+        $phtmlPath  = $tempDir . '/precommon_phtml_bait.phtml';
+        $phtmlBytes = file_put_contents(
             $phtmlPath,
             "<?php function protector_precommon_phtml_bait() { return 99; }\n"
         );
+        $this->assertNotFalse($phtmlBytes, 'Failed to write non-PHP filter fixture');
 
         $handler = \ProtectorFilterHandler::getInstance();
         $priorBase = $handler->filters_base;

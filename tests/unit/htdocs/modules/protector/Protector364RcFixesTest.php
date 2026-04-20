@@ -36,44 +36,59 @@ final class Protector364RcFixesTest extends TestCase
     }
 
     /**
-     * Return the substring between two delimiter strings, or '' if not found.
+     * Return the substring between two delimiter strings, failing the test
+     * loudly if either delimiter is missing or the extracted block is empty.
+     *
      * Used to assert "contains / does not contain" inside a specific block
      * (e.g. inside an array literal) without getting false hits from comments.
+     * Fails-loud so that a future variable rename or formatting tweak that
+     * causes delimiter drift does NOT silently make "not-contains" assertions
+     * vacuous.
      */
     private static function readBetween(string $haystack, string $start, string $end): string
     {
         $startPos = strpos($haystack, $start);
-        if (false === $startPos) {
-            return '';
-        }
+        self::assertNotFalse(
+            $startPos,
+            "readBetween: start delimiter not found in source: {$start}"
+        );
         $startPos += strlen($start);
-        $endPos    = strpos($haystack, $end, $startPos);
-        if (false === $endPos) {
-            return '';
-        }
-        return substr($haystack, $startPos, $endPos - $startPos);
+        $endPos   = strpos($haystack, $end, $startPos);
+        self::assertNotFalse(
+            $endPos,
+            "readBetween: end delimiter not found after start in source: {$end}"
+        );
+        $block = substr($haystack, $startPos, $endPos - $startPos);
+        self::assertNotSame(
+            '',
+            trim($block),
+            "readBetween: extracted block between '{$start}' and '{$end}' is empty"
+        );
+        return $block;
     }
 
     // -------------------------------------------------------------------
-    // Fix 1.1 — doubtful-request regex delimiter
+    // Fix 1.1 — doubtful-request regex delimiter convention
     // -------------------------------------------------------------------
 
     #[Test]
-    public function fix11_doubtfulRequestRegexUsesValidDelimiter(): void
+    public function fix11_doubtfulRequestRegexUsesConventionalDelimiter(): void
     {
         $source = self::readSource(self::PROTECTOR_FILE);
 
-        // The broken "?...?" delimiter must not survive anywhere in the file.
+        // Pin the delimiter change for this file. '?' is a technically-valid
+        // PCRE delimiter in PHP, but '#' is the project convention and removes
+        // visual collision with the '?' zero-or-one quantifier. This test
+        // fails if anyone reverts the choice.
         $this->assertStringNotContainsString(
             "preg_match('?[",
             $source,
-            '"?" is not a valid PCRE delimiter — preg_match() returned false on every call'
+            'Legacy ?-delimited doubtful-request pattern must not be reintroduced'
         );
 
         // The replacement delimiter (#) plus opening \s in the character class
-        // must be present. Combined with the fix11_...Pattern test below, which
-        // verifies the pattern's semantics, this pins both the source change
-        // and its meaning.
+        // must be present. Combined with the pattern-semantics test below,
+        // this pins both the source change and its meaning.
         $this->assertMatchesRegularExpression(
             '/preg_match\(\s*\'#\[\\\\s/',
             $source,

@@ -100,7 +100,13 @@ class ProtectorFilterHandler
         // every file readdir() returned, which allowed a writable filters_enabled
         // directory to achieve RCE if an attacker could place or symlink a file
         // whose name happened to start with the requested type prefix.
+        // If realpath() fails (missing dir, broken symlink), bail out now — every
+        // per-file containment check below would fail the same way.
         $baseReal = realpath($this->filters_base);
+        if (false === $baseReal) {
+            closedir($dh);
+            return $ret;
+        }
 
         while (($file = readdir($dh)) !== false) {
             if (strncmp($file, $type . '_', strlen($type) + 1) !== 0) {
@@ -120,7 +126,6 @@ class ProtectorFilterHandler
             // whose canonical path escapes the base.
             $realPath = realpath($this->filters_base . '/' . $file);
             if (false === $realPath
-                || false === $baseReal
                 || !str_starts_with($realPath, $baseReal . DIRECTORY_SEPARATOR)) {
                 continue;
             }

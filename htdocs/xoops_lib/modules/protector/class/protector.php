@@ -141,9 +141,11 @@ class Protector
             }
 
             // register as doubtful requests against SQL Injections
-            // Fix 1.1: '?' is not a valid PCRE delimiter. The previous pattern returned
-            // false from preg_match() on every call, disabling _doubtful_requests
-            // population and neutralising check_sql_union() and check_sql_isolatedcommentin().
+            // Fix 1.1: pin the PCRE delimiter to '#' for clarity. The legacy '?' form
+            // parsed correctly (PHP accepts '?' as a delimiter) but was visually
+            // ambiguous because '?' also serves as the zero-or-one quantifier. No
+            // detection-semantic change — the character class and match behaviour
+            // are identical to the previous form.
             if (preg_match('#[\s\'"`/]#', $val)) {
                 $this->_doubtful_requests[(string)$key] = $val;
             }

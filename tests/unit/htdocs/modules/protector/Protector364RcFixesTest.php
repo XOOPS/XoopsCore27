@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace modulesprotector;
 
 use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -263,8 +265,17 @@ final class Protector364RcFixesTest extends TestCase
     }
 
     #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function fix15_behaviouralRequestMetadataDoesNotPoisonDoubtfuls(): void
     {
+        // Isolate this method in a forked process. dblayertrap_init() can
+        // @define('XOOPS_DB_ALTERNATIVE', ...) as a side effect if any poisoning
+        // value were to leak through (i.e. if Fix 1.5 regresses). On regression
+        // the assertion below fails — but without process isolation the constant
+        // would remain defined for the rest of the PHPUnit run and cascade into
+        // unrelated failures (notably ProtectorCorePreloadTest, which define()s
+        // the same constant itself). Forking keeps the failure local.
         // Behavioural test for the whole attacker-controlled metadata surface.
         // Each of these can legitimately carry an SQL-keyword substring in a
         // crafted request:

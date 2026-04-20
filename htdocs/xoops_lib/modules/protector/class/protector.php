@@ -250,7 +250,7 @@ class Protector
             // Fix 1.2: defined() requires the constant name as a string literal.
             // Without quotes PHP 8 throws a Fatal Error when XOOPS_COOKIE_DOMAIN is absent;
             // when it is defined, PHP evaluates it first and passes its value to defined(),
-            // which is then always false.
+            // so defined() checks the wrong constant name and will typically return false.
             $domain =  defined('XOOPS_COOKIE_DOMAIN') ? XOOPS_COOKIE_DOMAIN : '';
             $past = time() - 3600;
             foreach ($_COOKIE as $key => $value) {

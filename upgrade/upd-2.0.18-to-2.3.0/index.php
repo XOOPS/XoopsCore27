@@ -419,11 +419,24 @@ class Upgrade_230 extends XoopsUpgrade
         $lines = file($file);
         foreach (array_keys($lines) as $ln) {
             if (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", $lines[$ln], $matches)) {
-                $valSource  = isset($vars[$matches[3]]) ? $vars[$matches[3]] : (defined($matches[3]) ? constant($matches[3]) : $matches[4]);
-                $val        = is_numeric((string) $valSource) ? (string) ((int) $valSource) : $matches[4];
+                if (isset($vars[$matches[3]])) {
+                    $valSource = $vars[$matches[3]];
+                } elseif (defined($matches[3])) {
+                    $valSource = constant($matches[3]);
+                } else {
+                    $valSource = $matches[4];
+                }
+                $valSourceString = trim((string) $valSource);
+                $val             = preg_match('/^-?\d+$/', $valSourceString) ? (string) ((int) $valSourceString) : $matches[4];
                 $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", "define('" . $matches[3] . "', " . $val . ' )', $lines[$ln]);
             } elseif (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])([^\"']*?)\\4\s*\)/", $lines[$ln], $matches)) {
-                $val        = isset($vars[$matches[3]]) ? (string) $vars[$matches[3]] : (defined($matches[3]) ? (string) constant($matches[3]) : $matches[5]);
+                if (isset($vars[$matches[3]])) {
+                    $val = (string) $vars[$matches[3]];
+                } elseif (defined($matches[3])) {
+                    $val = (string) constant($matches[3]);
+                } else {
+                    $val = $matches[5];
+                }
                 $export     = var_export($val, true);
                 $lines[$ln] = preg_replace_callback(
                     "/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])(.*?)\\4\s*\)/",

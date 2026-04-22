@@ -3,8 +3,8 @@
 function initBootstrapCarousels(options) {
 	jQuery(function ($) {
 		$('.carousel').each(function () {
-			if (window.bootstrap && window.bootstrap.Carousel) {
-				window.bootstrap.Carousel.getOrCreateInstance(this, options);
+			if (globalThis.bootstrap?.Carousel) {
+				globalThis.bootstrap.Carousel.getOrCreateInstance(this, options);
 			} else if (typeof $.fn.carousel === 'function') {
 				$(this).carousel(options);
 			} else {
@@ -66,8 +66,8 @@ function initSlider() {
 }
 
 // Load when browser is idle
-if ('requestIdleCallback' in window) {
-	requestIdleCallback(initSlider);
+if ('requestIdleCallback' in globalThis) {
+	globalThis.requestIdleCallback(initSlider);
 } else {
 	setTimeout(initSlider, 200); // fallback
 }

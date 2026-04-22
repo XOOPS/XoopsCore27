@@ -11,7 +11,6 @@
     <meta name="rating" content="<{$xoops_meta_rating}>">
     <meta name="author" content="<{$xoops_meta_author}>">
     <meta name="generator" content="XOOPS">
-    <title><{$xoops_sitename}> - <{$xoops_pagetitle}></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Owl Carousel Assets -->
     <link href="<{xoImgUrl}>js/owl/assets/owl.carousel.css" rel="stylesheet">

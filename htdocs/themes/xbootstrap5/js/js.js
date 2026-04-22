@@ -1,17 +1,27 @@
 // JavaScript Document
 
-function initBootstrapCarousels(options) {
-	jQuery(function ($) {
-		$('.carousel').each(function () {
-			if (globalThis.bootstrap?.Carousel) {
-				globalThis.bootstrap.Carousel.getOrCreateInstance(this, options);
-			} else if (typeof $.fn.carousel === 'function') {
-				$(this).carousel(options);
-			} else {
-				console.warn('Bootstrap carousel API not available.');
-			}
+function initBootstrapCarousels($, options) {
+	var $carousels = $('.carousel');
+
+	if (!$carousels.length) {
+		return;
+	}
+
+	if (globalThis.bootstrap?.Carousel) {
+		$carousels.each(function () {
+			globalThis.bootstrap.Carousel.getOrCreateInstance(this, options);
 		});
-	});
+
+		return;
+	}
+
+	if (typeof $.fn.carousel === 'function') {
+		$carousels.carousel(options);
+
+		return;
+	}
+
+	console.warn('Bootstrap carousel API not available.');
 }
 
 /* Scroll Top */
@@ -34,10 +44,12 @@ jQuery(function ($) {
 });
 
 /* Bootstrap Carousel */
-initBootstrapCarousels({
-	interval: 5000,
-	pause: 'hover',
-	wrap: true
+jQuery(function ($) {
+	initBootstrapCarousels($, {
+		interval: 5000,
+		pause: 'hover',
+		wrap: true
+	});
 });
 
 /* Masonry Grid */
@@ -56,18 +68,3 @@ jQuery(function ($) {
 	$(".newbb-links").find('span').removeClass('forum_icon forum_button');
 	$('.newbb-thread-attachment').find('br, hr').remove();
 });
-
-/* Slider init */
-function initSlider() {
-	initBootstrapCarousels({
-		interval: 5000,
-		wrap: true
-	});
-}
-
-// Load when browser is idle
-if ('requestIdleCallback' in globalThis) {
-	globalThis.requestIdleCallback(initSlider);
-} else {
-	setTimeout(initSlider, 200); // fallback
-}

@@ -419,10 +419,16 @@ class Upgrade_230 extends XoopsUpgrade
         $lines = file($file);
         foreach (array_keys($lines) as $ln) {
             if (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", $lines[$ln], $matches)) {
-                $val        = isset($vars[$matches[3]]) ? (string) $vars[$matches[3]] : (defined($matches[3]) ? (string) constant($matches[3]) : $matches[4]);
+                $valSource  = isset($vars[$matches[3]]) ? $vars[$matches[3]] : (defined($matches[3]) ? constant($matches[3]) : $matches[4]);
+                $val        = is_numeric((string) $valSource) ? (string) ((int) $valSource) : $matches[4];
                 $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", "define('" . $matches[3] . "', " . $val . ' )', $lines[$ln]);
             } elseif (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])([^\"']*?)\\4\s*\)/", $lines[$ln], $matches)) {
                 $val        = isset($vars[$matches[3]]) ? (string) $vars[$matches[3]] : (defined($matches[3]) ? (string) constant($matches[3]) : $matches[5]);
+                $val        = str_replace(
+                    ['$', "\r", "\n"],
+                    ['\\$', '\r', '\n'],
+                    addslashes($val)
+                );
                 $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])(.*?)\\4\s*\)/", "define('" . $matches[3] . "', '" . $val . "' )", $lines[$ln]);
             }
         }

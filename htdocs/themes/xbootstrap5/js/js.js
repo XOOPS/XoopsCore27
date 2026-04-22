@@ -10,7 +10,7 @@ function initBootstrapCarousels($, options) {
 		return;
 	}
 
-	if (root.bootstrap?.Carousel) {
+	if (root.bootstrap && root.bootstrap.Carousel) {
 		$carousels.each(function () {
 			root.bootstrap.Carousel.getOrCreateInstance(this, options);
 		});

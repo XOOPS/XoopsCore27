@@ -1,5 +1,19 @@
 // JavaScript Document
 
+function initBootstrapCarousels(options) {
+	jQuery(function ($) {
+		$('.carousel').each(function () {
+			if (window.bootstrap && window.bootstrap.Carousel) {
+				window.bootstrap.Carousel.getOrCreateInstance(this, options);
+			} else if (typeof $.fn.carousel === 'function') {
+				$(this).carousel(options);
+			} else {
+				console.warn('Bootstrap carousel API not available.');
+			}
+		});
+	});
+}
+
 /* Scroll Top */
 jQuery(function ($) {
 	if (typeof $.scrollUp === 'function') {
@@ -20,12 +34,10 @@ jQuery(function ($) {
 });
 
 /* Bootstrap Carousel */
-jQuery(function ($) {
-	$('.carousel').carousel({
-		interval: 5000,
-		pause: 'hover',
-		wrap: true
-	});
+initBootstrapCarousels({
+	interval: 5000,
+	pause: 'hover',
+	wrap: true
 });
 
 /* Masonry Grid */
@@ -47,11 +59,9 @@ jQuery(function ($) {
 
 /* Slider init */
 function initSlider() {
-	jQuery(function ($) {
-		$('.carousel').carousel({
-			interval: 5000,
-			ride: 'carousel'
-		});
+	initBootstrapCarousels({
+		interval: 5000,
+		wrap: true
 	});
 }
 

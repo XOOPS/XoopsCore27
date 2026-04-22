@@ -418,7 +418,7 @@ class Upgrade_230 extends XoopsUpgrade
 
         $lines = file($file);
         if (false === $lines) {
-            echo ERR_COULD_NOT_WRITE_MAINFILE;
+            echo sprintf(defined('_FILE_ACCESS_ERROR') ? _FILE_ACCESS_ERROR : 'Could not access the file %s', basename($file));
 
             return false;
         }

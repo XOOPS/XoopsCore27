@@ -1,15 +1,18 @@
 // JavaScript Document
 
 function initBootstrapCarousels($, options) {
-	var $carousels = $('.carousel');
+	const root = typeof globalThis !== 'undefined'
+		? globalThis
+		: (typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : {}));
+	const $carousels = $('.carousel');
 
 	if (!$carousels.length) {
 		return;
 	}
 
-	if (globalThis.bootstrap?.Carousel) {
+	if (root.bootstrap?.Carousel) {
 		$carousels.each(function () {
-			globalThis.bootstrap.Carousel.getOrCreateInstance(this, options);
+			root.bootstrap.Carousel.getOrCreateInstance(this, options);
 		});
 
 		return;
@@ -54,7 +57,7 @@ jQuery(function ($) {
 
 /* Masonry Grid */
 jQuery(function ($) {
-	var $container = $('#xoopsgrid').masonry();
+	const $container = $('#xoopsgrid').masonry();
 	$container.imagesLoaded(function () {
 		$container.masonry();
 	});

@@ -417,6 +417,11 @@ class Upgrade_230 extends XoopsUpgrade
         $file = __DIR__ . '/mainfile.dist.php';
 
         $lines = file($file);
+        if (false === $lines) {
+            echo ERR_COULD_NOT_WRITE_MAINFILE;
+
+            return false;
+        }
         foreach (array_keys($lines) as $ln) {
             if (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", $lines[$ln], $matches)) {
                 if (isset($vars[$matches[3]])) {

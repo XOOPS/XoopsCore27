@@ -424,12 +424,14 @@ class Upgrade_230 extends XoopsUpgrade
                 $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([0-9]+)\s*\)/", "define('" . $matches[3] . "', " . $val . ' )', $lines[$ln]);
             } elseif (preg_match("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])([^\"']*?)\\4\s*\)/", $lines[$ln], $matches)) {
                 $val        = isset($vars[$matches[3]]) ? (string) $vars[$matches[3]] : (defined($matches[3]) ? (string) constant($matches[3]) : $matches[5]);
-                $val        = str_replace(
-                    ['$', "\r", "\n"],
-                    ['\\$', '\r', '\n'],
-                    addslashes($val)
+                $export     = var_export($val, true);
+                $lines[$ln] = preg_replace_callback(
+                    "/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])(.*?)\\4\s*\)/",
+                    static function (array $match) use ($export): string {
+                        return "define('" . $match[3] . "', " . $export . ' )';
+                    },
+                    $lines[$ln]
                 );
-                $lines[$ln] = preg_replace("/(define\()([\"'])(XOOPS_[^\"']+)\\2,\s*([\"'])(.*?)\\4\s*\)/", "define('" . $matches[3] . "', '" . $val . "' )", $lines[$ln]);
             }
         }
 

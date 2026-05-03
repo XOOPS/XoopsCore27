@@ -19,6 +19,18 @@ define('XOOPS_XMLRPC', 1);
 
 include __DIR__ . '/mainfile.php';
 
+/**
+ * XML-RPC is disabled by default for security.
+ *
+ * To enable it, add the following to XOOPS_VAR_PATH/configs/xoopsconfig.php:
+ *   'xmlrpc_enabled' => true,
+ */
+if (empty($xoopsConfig['xmlrpc_enabled'])) {
+    header('HTTP/1.1 403 Forbidden');
+    header('Content-type: text/plain');
+    exit('XML-RPC is disabled. To enable it, set \'xmlrpc_enabled\' => true in your xoopsconfig.php');
+}
+
 error_reporting(0);
 
 include_once $GLOBALS['xoops']->path('class/xml/rpc/xmlrpctag.php');

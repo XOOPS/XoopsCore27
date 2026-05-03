@@ -39,7 +39,7 @@ return [
      *
      * To enable, uncomment this line in XOOPS_VAR_PATH . '/configs/xoopsconfig.php':
      */
-    // 'xmlrpc_enabled' => true,
+    //'xmlrpc_enabled' => true,
 
     /**
      * Debug level for XOOPS

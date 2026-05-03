@@ -26,9 +26,9 @@ include __DIR__ . '/mainfile.php';
  *   'xmlrpc_enabled' => true,
  */
 if (empty($xoopsConfig['xmlrpc_enabled'])) {
-    header('HTTP/1.1 403 Forbidden');
-    header('Content-type: text/plain');
-    exit('XML-RPC is disabled. To enable it, set \'xmlrpc_enabled\' => true in your xoopsconfig.php');
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=UTF-8');
+    exit("XML-RPC is disabled. To enable it, set 'xmlrpc_enabled' => true in XOOPS_VAR_PATH/configs/xoopsconfig.php");
 }
 
 error_reporting(0);

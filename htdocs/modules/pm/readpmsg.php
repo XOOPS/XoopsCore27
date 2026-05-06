@@ -49,7 +49,9 @@ try {
     /** @var PmMessageHandler $pm_handler */
     $pm_handler = xoops_getModuleHandler('message');
 } catch (\Throwable $e) {
-    trigger_error('PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
+    // Prefix with basename(__FILE__) so the log line is traceable without
+    // exposing the absolute server path.
+    trigger_error(basename(__FILE__) . ': PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
     redirect_header(XOOPS_URL, 2, $pmActionError);
     // redirect_header() calls exit() internally, but the explicit exit
     // is defensive against custom preloads that might intercept it.
@@ -58,7 +60,7 @@ try {
 if (!($pm_handler instanceof PmMessageHandler)) {
     // Internal load failure (not an authorisation failure), so use the
     // PM action-error message rather than _NOPERM.
-    trigger_error('PM module handler unavailable', E_USER_WARNING);
+    trigger_error(basename(__FILE__) . ': PM module handler unavailable', E_USER_WARNING);
     redirect_header(XOOPS_URL, 2, $pmActionError);
     exit();
 }

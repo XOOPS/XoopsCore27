@@ -42,8 +42,11 @@ $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id
 //
 // In the "No Module is loaded" case the PM language file may not be loaded
 // yet, so _PM_ACTION_ERROR can itself fatal as an undefined constant on
-// PHP 8+. Resolve a safe fallback message BEFORE the try/catch and use it
-// in both redirect paths.
+// PHP 8+. Try to load the PM main language file, then resolve a safe
+// fallback BEFORE the try/catch so both redirect paths can rely on it.
+if (!defined('_PM_ACTION_ERROR')) {
+    xoops_loadLanguage('main', 'pm');
+}
 $pmActionError = defined('_PM_ACTION_ERROR') ? constant('_PM_ACTION_ERROR') : 'Operation failed';
 try {
     /** @var PmMessageHandler $pm_handler */
@@ -53,16 +56,12 @@ try {
     // exposing the absolute server path.
     trigger_error(basename(__FILE__) . ': PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
     redirect_header(XOOPS_URL, 2, $pmActionError);
-    // redirect_header() calls exit() internally, but the explicit exit
-    // is defensive against custom preloads that might intercept it.
-    exit();
 }
 if (!($pm_handler instanceof PmMessageHandler)) {
     // Internal load failure (not an authorisation failure), so use the
     // PM action-error message rather than _NOPERM.
     trigger_error(basename(__FILE__) . ': PM module handler unavailable', E_USER_WARNING);
     redirect_header(XOOPS_URL, 2, $pmActionError);
-    exit();
 }
 $pm                = null;
 if ($msg_id > 0) {

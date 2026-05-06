@@ -119,6 +119,13 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                 // "SELECT failed" (get() returns null in both cases).
                 //   setTodelete  hard-deletes when (from_delete != 0 && from_userid != 0)
                 //   setFromdelete hard-deletes when (to_delete   != 0)
+                // No-op-as-success for save-flag clears: updateAll() returns
+                // false for 0 affected rows, so calling setTosave($pm, 0)
+                // when to_save is already 0 (or setFromsave($pm, 0) when
+                // from_save is already 0) reports failure for what is
+                // really a no-op. This bites self-messages and any PM
+                // that's in the savebox only because of the OTHER side's
+                // save flag. Treat the already-zero case as success.
                 $saveResults    = [];
                 $messageDeleted = false;
                 if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid')) {
@@ -130,11 +137,17 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                             // Row removed — save-flag follow-up is moot.
                             $saveResults[]  = true;
                             $messageDeleted = true;
+                        } elseif ($res1) {
+                            $saveResults[] = ((int) $pm->getVar('to_save') === 0)
+                                ? true
+                                : (bool) $pm_handler->setTosave($pm, 0);
                         } else {
-                            $saveResults[] = $res1 ? $pm_handler->setTosave($pm, 0) : false;
+                            $saveResults[] = false;
                         }
                     } elseif (Request::hasVar('move_message', 'POST')) {
-                        $saveResults[] = $pm_handler->setTosave($pm, 0);
+                        $saveResults[] = ((int) $pm->getVar('to_save') === 0)
+                            ? true
+                            : (bool) $pm_handler->setTosave($pm, 0);
                     }
                 }
                 // Self-message safety: if from_userid == to_userid == current uid,
@@ -151,11 +164,17 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
                         if ($res2 && $willHardDelete) {
                             $saveResults[]  = true;
                             $messageDeleted = true;
+                        } elseif ($res2) {
+                            $saveResults[] = ((int) $pm->getVar('from_save') === 0)
+                                ? true
+                                : (bool) $pm_handler->setFromsave($pm, 0);
                         } else {
-                            $saveResults[] = $res2 ? $pm_handler->setFromsave($pm, 0) : false;
+                            $saveResults[] = false;
                         }
                     } elseif (Request::hasVar('move_message', 'POST')) {
-                        $saveResults[] = $pm_handler->setFromsave($pm, 0);
+                        $saveResults[] = ((int) $pm->getVar('from_save') === 0)
+                            ? true
+                            : (bool) $pm_handler->setFromsave($pm, 0);
                     }
                 }
                 $res = !empty($saveResults) && !in_array(false, $saveResults, true);

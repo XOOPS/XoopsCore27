@@ -39,22 +39,27 @@ $msg_id            = Request::hasVar('msg_id', 'POST') ? Request::getInt('msg_id
 // Wrap in try/catch so neither path produces an uncaught exception. Then
 // keep the instanceof PmMessageHandler check for static-analysis type
 // narrowing of the PM-specific methods (setTodelete etc.) used below.
+//
+// In the "No Module is loaded" case the PM language file may not be loaded
+// yet, so _PM_ACTION_ERROR can itself fatal as an undefined constant on
+// PHP 8+. Resolve a safe fallback message BEFORE the try/catch and use it
+// in both redirect paths.
+$pmActionError = defined('_PM_ACTION_ERROR') ? constant('_PM_ACTION_ERROR') : 'Operation failed';
 try {
     /** @var PmMessageHandler $pm_handler */
     $pm_handler = xoops_getModuleHandler('message');
 } catch (\Throwable $e) {
     trigger_error('PM module handler unavailable: ' . $e->getMessage(), E_USER_WARNING);
-    redirect_header(XOOPS_URL, 2, _PM_ACTION_ERROR);
+    redirect_header(XOOPS_URL, 2, $pmActionError);
     // redirect_header() calls exit() internally, but the explicit exit
     // is defensive against custom preloads that might intercept it.
     exit();
 }
 if (!($pm_handler instanceof PmMessageHandler)) {
-    // _PM_ACTION_ERROR is a PM module language constant; using a generic
-    // error message here rather than _NOPERM, since this is an internal
-    // load failure, not an authorisation failure.
+    // Internal load failure (not an authorisation failure), so use the
+    // PM action-error message rather than _NOPERM.
     trigger_error('PM module handler unavailable', E_USER_WARNING);
-    redirect_header(XOOPS_URL, 2, _PM_ACTION_ERROR);
+    redirect_header(XOOPS_URL, 2, $pmActionError);
     exit();
 }
 $pm                = null;

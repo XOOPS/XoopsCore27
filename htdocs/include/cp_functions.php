@@ -121,6 +121,39 @@ function xoops_file_label($filename)
 }
 
 /**
+ * Best-effort file removal used by atomic-write cleanup paths and similar
+ * fire-and-forget cleanup. Skips non-existent paths so already-deleted
+ * files don't trigger warnings, suppresses the unlink() warning via a
+ * scoped error_reporting() toggle (no `@` operator), and re-checks
+ * existence after a failed unlink — only logging when the file is still
+ * present, so TOCTOU races resolve silently.
+ *
+ * @param string $path    Absolute path to the file to remove.
+ * @param string $context Short label used in the warning message
+ *                        (e.g. 'temporary', 'backup').
+ *
+ * @return void
+ */
+function xoops_remove_file_quietly($path, $context = 'temporary')
+{
+    if (!file_exists($path)) {
+        return;
+    }
+    $previousLevel = error_reporting(0);
+    try {
+        $ok = unlink($path);
+    } finally {
+        error_reporting($previousLevel);
+    }
+    if (!$ok && file_exists($path)) {
+        trigger_error(
+            sprintf('Failed to remove %s file: %s', $context, xoops_file_label($path)),
+            E_USER_WARNING
+        );
+    }
+}
+
+/**
  * Write a file through a temporary sibling and replace the target on success.
  *
  * @param string $filename
@@ -141,13 +174,13 @@ function xoops_write_file_atomically($filename, $content)
     $expectedBytes = strlen($content);
     $bytesWritten  = file_put_contents($tempFile, $content, LOCK_EX);
     if ($bytesWritten === false) {
-        @unlink($tempFile);
+        xoops_remove_file_quietly($tempFile, 'temporary');
         trigger_error(sprintf('Failed to write file: %s', $label), E_USER_WARNING);
 
         return false;
     }
     if ($bytesWritten !== $expectedBytes) {
-        @unlink($tempFile);
+        xoops_remove_file_quietly($tempFile, 'temporary');
         trigger_error(
             sprintf(
                 'Short write for %s: wrote %d of %d bytes',
@@ -167,11 +200,25 @@ function xoops_write_file_atomically($filename, $content)
             $targetPerms = $currentPerms & 0777;
         }
     }
-    @chmod($tempFile, $targetPerms);
+    if (!chmod($tempFile, $targetPerms)) {
+        // Non-fatal: file is written, only the perms didn't take. Continue
+        // with the rename rather than aborting — most callers care about
+        // content integrity over exact perms.
+        trigger_error(
+            sprintf('Failed to set permissions on temp file for %s', $label),
+            E_USER_WARNING
+        );
+    }
 
+    // The four @rename(...) calls below are inside `if (!...)` checks —
+    // failure is detected by the boolean return and reported via
+    // trigger_error(). The `@` is retained to suppress PHP's native
+    // warning, which would otherwise double-report alongside our own
+    // diagnostic line. Removing it would not improve detection but would
+    // pollute display_errors output.
     if (!@rename($tempFile, $filename)) {
         if (!file_exists($filename)) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temporary');
             trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
 
             return false;
@@ -179,14 +226,16 @@ function xoops_write_file_atomically($filename, $content)
 
         $backupFile = tempnam($directory, 'xwb');
         if ($backupFile === false) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temporary');
             trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
 
             return false;
         }
-        @unlink($backupFile);
+        // tempnam() created a 0-byte placeholder we don't need; remove it
+        // so the rename below can take its slot.
+        xoops_remove_file_quietly($backupFile, 'backup');
         if (!@rename($filename, $backupFile)) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temporary');
             trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
 
             return false;
@@ -194,7 +243,7 @@ function xoops_write_file_atomically($filename, $content)
 
         if (!@rename($tempFile, $filename)) {
             if (!@rename($backupFile, $filename)) {
-                @unlink($tempFile);
+                xoops_remove_file_quietly($tempFile, 'temporary');
                 trigger_error(
                     sprintf(
                         'Failed to replace file and restore original: %s. Original content was left in backup file %s; manual restoration may be required.',
@@ -207,13 +256,13 @@ function xoops_write_file_atomically($filename, $content)
                 return false;
             }
 
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temporary');
             trigger_error(sprintf(XOOPS_WRITE_FILE_WRITE_ERROR, $label), E_USER_WARNING);
 
             return false;
         }
 
-        @unlink($backupFile);
+        xoops_remove_file_quietly($backupFile, 'backup');
     }
 
     return true;

@@ -19,6 +19,12 @@
 //    throw new \RuntimeException('XOOPS root path not defined');
 //}
 
+// xoops_remove_file_quietly() lives in cp_functions.php; admin and install
+// callers normally load it via cp_header.php / page_moduleinstaller.php,
+// but require it explicitly here so SystemMaintenance is self-sufficient
+// regardless of which context instantiates it.
+require_once XOOPS_ROOT_PATH . '/include/cp_functions.php';
+
 /**
  * System Maintenance
  *
@@ -168,8 +174,33 @@ class SystemMaintenance
 
         /** @var array $myrow */
         while (false !== ($myrow = $this->db->fetchArray($result))) {
-            //delete file
-            @unlink(XOOPS_UPLOAD_PATH . '/' . $myrow['avatar_file']);
+            // Avatar files are stored as 'avatars/<filename>' (see
+            // kernel/avatar.php and the various admin/edituser writers),
+            // so basename() would silently bypass cleanup. Instead:
+            //   - normalise backslashes to '/' (Windows-historic data)
+            //   - strip leading slashes (defends against absolute paths
+            //     accidentally or maliciously stored in the column)
+            //   - resolve via realpath() so any '../' segments collapse
+            //   - confirm the resolved path is contained inside the
+            //     resolved upload-root (prefix check with a trailing
+            //     separator so 'uploadsX/...' doesn't satisfy 'uploads')
+            //   - confirm it's a regular file before removal.
+            // Only then invoke the cleanup helper.
+            $avatarFile = ltrim(str_replace('\\', '/', (string) ($myrow['avatar_file'] ?? '')), '/');
+            if ('' === $avatarFile) {
+                $result1 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $myrow['avatar_id']);
+                continue;
+            }
+            $avatarPath = realpath(XOOPS_UPLOAD_PATH . '/' . $avatarFile);
+            $uploadRoot = realpath(XOOPS_UPLOAD_PATH);
+            if (
+                is_string($avatarPath)
+                && is_string($uploadRoot)
+                && str_starts_with($avatarPath, rtrim($uploadRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+                && is_file($avatarPath)
+            ) {
+                xoops_remove_file_quietly($avatarPath, 'orphaned avatar');
+            }
             //clean avatar table
             $result1 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $myrow['avatar_id']);
         }
@@ -221,10 +252,10 @@ class SystemMaintenance
         $result = file_put_contents($tempFile, $content, LOCK_EX);
 
         if ($result === false) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temp guard');
             trigger_error(sprintf('Failed to write guard file: %s', $label), E_USER_WARNING);
         } elseif ($result !== $expected) {
-            @unlink($tempFile);
+            xoops_remove_file_quietly($tempFile, 'temp guard');
             trigger_error(
                 sprintf(
                     'Short write for guard file %s: wrote %d of %d bytes',
@@ -242,20 +273,34 @@ class SystemMaintenance
                     $targetPerms = $currentPerms & 0777;
                 }
             }
-            @chmod($tempFile, $targetPerms);
+            if (!chmod($tempFile, $targetPerms)) {
+                // Non-fatal: content is written, only the perms didn't
+                // take. Continue with the rename rather than aborting.
+                trigger_error(
+                    sprintf('Failed to set permissions on temp guard file for %s', $label),
+                    E_USER_WARNING
+                );
+            }
 
+            // The @rename(...) calls below are inside `if (!...)` checks —
+            // failure is detected by the boolean return and reported via
+            // trigger_error(). The `@` is retained to suppress PHP's
+            // native warning, which would otherwise double-report
+            // alongside our own diagnostic.
             $backupFile = null;
             if (file_exists($filename)) {
                 $backupFile = tempnam(dirname($filename), 'mtb');
                 if ($backupFile === false) {
-                    @unlink($tempFile);
+                    xoops_remove_file_quietly($tempFile, 'temp guard');
                     trigger_error(sprintf('Failed to create backup file for %s', $label), E_USER_WARNING);
 
                     return;
                 }
-                @unlink($backupFile);
+                // tempnam() created a 0-byte placeholder; remove it so
+                // the rename below can take its slot.
+                xoops_remove_file_quietly($backupFile, 'backup guard');
                 if (!@rename($filename, $backupFile)) {
-                    @unlink($tempFile);
+                    xoops_remove_file_quietly($tempFile, 'temp guard');
                     trigger_error(sprintf('Failed to back up guard file: %s', $label), E_USER_WARNING);
 
                     return;
@@ -263,7 +308,7 @@ class SystemMaintenance
             }
 
             if (!@rename($tempFile, $filename)) {
-                @unlink($tempFile);
+                xoops_remove_file_quietly($tempFile, 'temp guard');
                 if ($backupFile !== null) {
                     if (!@rename($backupFile, $filename)) {
                         trigger_error(sprintf('Failed to restore original guard file: %s', $label), E_USER_WARNING);
@@ -271,8 +316,8 @@ class SystemMaintenance
                 }
 
                 trigger_error(sprintf('Failed to replace guard file: %s', $label), E_USER_WARNING);
-            } elseif ($backupFile !== null && file_exists($backupFile) && !@unlink($backupFile)) {
-                trigger_error(sprintf('Failed to remove backup guard file: %s', $label), E_USER_WARNING);
+            } elseif ($backupFile !== null) {
+                xoops_remove_file_quietly($backupFile, 'backup guard');
             }
         }
     }

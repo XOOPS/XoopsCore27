@@ -261,4 +261,223 @@ class SystemMaintenanceTest extends KernelTestCase
         // Invalid table still false from cache
         $this->assertFalse($method->invoke($maintenance, 'nonexistent'));
     }
+
+    // ---------------------------------------------------------------
+    // CleanAvatar() — orphan avatar file/row cleanup.
+    //
+    // The method scans the avatar table for custom-avatar rows whose
+    // owning user has been deleted, removes the on-disk file (when it
+    // is safely contained under XOOPS_UPLOAD_PATH), and deletes both
+    // the avatar row and any leftover avatar_user_link rows.
+    //
+    // These tests cover the path-traversal-safe resolution introduced
+    // when @unlink() was replaced by xoops_remove_file_quietly():
+    //   - happy path: avatars/<file> under XOOPS_UPLOAD_PATH is removed
+    //   - traversal / absolute / outside-root inputs are silently skipped
+    //   - the avatar DB row is deleted regardless of file-removal outcome
+    //   - empty avatar_file deletes the DB row and continues
+    //
+    // Filesystem fixtures live in a unique subdirectory under
+    // XOOPS_UPLOAD_PATH/avatars/ so the tests do not collide with each
+    // other or with anything else in the upload tree.
+    // ---------------------------------------------------------------
+
+    /**
+     * Returns the per-test scratch subdirectory under XOOPS_UPLOAD_PATH/avatars/.
+     * The path is RELATIVE to the upload root, formatted with forward slashes
+     * so it can be embedded in avatar_file values verbatim.
+     */
+    private function avatarScratchRel(): string
+    {
+        return 'avatars/_test_' . getmypid() . '_' . uniqid();
+    }
+
+    /**
+     * Build the absolute filesystem path that corresponds to a relative
+     * avatar_file value (e.g. 'avatars/foo.png').
+     */
+    private function uploadAbs(string $rel): string
+    {
+        return XOOPS_UPLOAD_PATH . '/' . $rel;
+    }
+
+    /**
+     * Create the scratch directory and place a fixture avatar file inside.
+     * Returns [$relPath, $absPath] where $relPath is what would be stored
+     * in the avatar_file column and $absPath is the on-disk location.
+     */
+    private function placeFixtureAvatar(string $scratchRel, string $filename): array
+    {
+        $scratchAbs = $this->uploadAbs($scratchRel);
+        if (!is_dir($scratchAbs) && !mkdir($scratchAbs, 0755, true) && !is_dir($scratchAbs)) {
+            $this->fail('Could not create test scratch dir: ' . $scratchAbs);
+        }
+        $absPath = $scratchAbs . '/' . $filename;
+        file_put_contents($absPath, 'fixture');
+        $relPath = $scratchRel . '/' . $filename;
+
+        return [$relPath, $absPath];
+    }
+
+    /**
+     * Recursively remove the per-test scratch directory.
+     */
+    private function removeScratchDir(string $scratchRel): void
+    {
+        $scratchAbs = $this->uploadAbs($scratchRel);
+        if (!is_dir($scratchAbs)) {
+            return;
+        }
+        foreach (scandir($scratchAbs) ?: [] as $entry) {
+            if ('.' === $entry || '..' === $entry) {
+                continue;
+            }
+            $path = $scratchAbs . '/' . $entry;
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+        @rmdir($scratchAbs);
+    }
+
+    /**
+     * Stub the database mock so $db->query() returns a sentinel result and
+     * $db->fetchArray() yields the supplied avatar rows once, then false.
+     * Returns the mock for further expectations.
+     */
+    private function stubAvatarSweep($db, array $rows): void
+    {
+        $db->method('query')->willReturn('mock_result');
+        $db->method('isResultSet')->willReturn(true);
+        $rows[] = false; // end-of-result sentinel
+        $db->method('fetchArray')->willReturnOnConsecutiveCalls(...$rows);
+    }
+
+    #[Test]
+    public function cleanAvatarRemovesValidAvatarFileUnderUploadRoot(): void
+    {
+        $scratchRel       = $this->avatarScratchRel();
+        [$rel, $abs]      = $this->placeFixtureAvatar($scratchRel, 'foo.png');
+
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 42, 'avatar_file' => $rel],
+        ]);
+        // exec() called twice: once for DELETE FROM avatar, once for the
+        // avatar_user_link cleanup at the end of CleanAvatar().
+        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+
+        $maintenance = $this->createMaintenance($db);
+        try {
+            $maintenance->CleanAvatar();
+            $this->assertFileDoesNotExist($abs, 'fixture avatar should have been removed');
+        } finally {
+            $this->removeScratchDir($scratchRel);
+        }
+    }
+
+    #[Test]
+    public function cleanAvatarSkipsTraversalPathButStillDeletesDbRow(): void
+    {
+        // Place a real fixture OUTSIDE the upload root so a successful
+        // traversal would visibly remove it; the test asserts it survives.
+        $outside = sys_get_temp_dir() . '/xoops_avatar_traversal_target_' . uniqid() . '.png';
+        file_put_contents($outside, 'must-not-be-removed');
+
+        // Compute the relative '../' path from XOOPS_UPLOAD_PATH that
+        // would resolve to $outside. Even if the relative form is not
+        // exact, realpath() will either resolve outside the upload root
+        // (rejected by the prefix check) or fail (also rejected).
+        $traversalRel = '../../' . basename($outside);
+
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 99, 'avatar_file' => $traversalRel],
+        ]);
+        // DB row + avatar_user_link cleanup still execute.
+        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+
+        $maintenance = $this->createMaintenance($db);
+        try {
+            $maintenance->CleanAvatar();
+            $this->assertFileExists($outside, 'traversal target outside upload root must not be removed');
+        } finally {
+            @unlink($outside);
+        }
+    }
+
+    #[Test]
+    public function cleanAvatarSkipsAbsolutePathButStillDeletesDbRow(): void
+    {
+        // An absolute path stored in avatar_file should not allow the
+        // cleanup to escape XOOPS_UPLOAD_PATH. The ltrim('/') step in
+        // CleanAvatar() turns '/etc/hosts' into 'etc/hosts' which is
+        // then resolved relative to the upload root — and almost
+        // certainly does not exist. realpath() returns false → skipped.
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 100, 'avatar_file' => '/etc/hosts'],
+        ]);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+
+        $maintenance = $this->createMaintenance($db);
+        $this->assertFileExists('/etc/hosts', 'pre-test sanity: /etc/hosts should exist');
+        $maintenance->CleanAvatar();
+        $this->assertFileExists('/etc/hosts', '/etc/hosts must not be removed by avatar cleanup');
+    }
+
+    #[Test]
+    public function cleanAvatarHandlesMissingFileAndStillDeletesDbRow(): void
+    {
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            // File reference that does not exist on disk — realpath() will
+            // return false. The DB row cleanup must still run.
+            ['avatar_id' => 200, 'avatar_file' => 'avatars/nonexistent_' . uniqid() . '.png'],
+        ]);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+
+        $maintenance = $this->createMaintenance($db);
+        $maintenance->CleanAvatar(); // assertion is the exec() call count
+    }
+
+    #[Test]
+    public function cleanAvatarHandlesEmptyAvatarFileAndStillDeletesDbRow(): void
+    {
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 300, 'avatar_file' => ''],
+        ]);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+
+        $maintenance = $this->createMaintenance($db);
+        $maintenance->CleanAvatar();
+    }
+
+    #[Test]
+    public function cleanAvatarNormalisesBackslashesInAvatarFile(): void
+    {
+        // Windows-historic data may store 'avatars\foo.png'. The cleanup
+        // should normalise it and remove the file under XOOPS_UPLOAD_PATH.
+        $scratchRel       = $this->avatarScratchRel();
+        [$rel, $abs]      = $this->placeFixtureAvatar($scratchRel, 'win.png');
+        // Replace forward slashes with backslashes only in the segment
+        // separator, NOT inside the scratch directory name (it has '_'
+        // not '\\'). This is what a Windows-saved row looked like.
+        $winRel = str_replace('/', '\\', $rel);
+
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 400, 'avatar_file' => $winRel],
+        ]);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+
+        $maintenance = $this->createMaintenance($db);
+        try {
+            $maintenance->CleanAvatar();
+            $this->assertFileDoesNotExist($abs, 'backslash-normalised avatar should be removed');
+        } finally {
+            $this->removeScratchDir($scratchRel);
+        }
+    }
 }

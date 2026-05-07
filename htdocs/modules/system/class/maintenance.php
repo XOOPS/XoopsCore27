@@ -172,6 +172,15 @@ class SystemMaintenance
             );
         }
 
+        // Resolve the upload-root once for the whole sweep. Both realpath()
+        // and the trailing-separator prefix are constant for the run, so
+        // computing them per row would do unnecessary filesystem work on
+        // installations with large numbers of orphaned avatars.
+        $uploadRoot       = realpath(XOOPS_UPLOAD_PATH);
+        $uploadRootPrefix = is_string($uploadRoot)
+            ? rtrim($uploadRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+            : null;
+
         /** @var array $myrow */
         while (false !== ($myrow = $this->db->fetchArray($result))) {
             // Avatar files are stored as 'avatars/<filename>' (see
@@ -192,11 +201,10 @@ class SystemMaintenance
                 continue;
             }
             $avatarPath = realpath(XOOPS_UPLOAD_PATH . '/' . $avatarFile);
-            $uploadRoot = realpath(XOOPS_UPLOAD_PATH);
             if (
                 is_string($avatarPath)
-                && is_string($uploadRoot)
-                && str_starts_with($avatarPath, rtrim($uploadRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR)
+                && is_string($uploadRootPrefix)
+                && str_starts_with($avatarPath, $uploadRootPrefix)
                 && is_file($avatarPath)
             ) {
                 xoops_remove_file_quietly($avatarPath, 'orphaned avatar');

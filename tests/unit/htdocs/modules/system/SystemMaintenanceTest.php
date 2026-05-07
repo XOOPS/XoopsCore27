@@ -343,7 +343,8 @@ class SystemMaintenanceTest extends KernelTestCase
     /**
      * Stub the database mock so $db->query() returns a sentinel result and
      * $db->fetchArray() yields the supplied avatar rows once, then false.
-     * Returns the mock for further expectations.
+     * The caller still holds the mock and can attach further expectations
+     * directly (this helper does not return it).
      */
     private function stubAvatarSweep($db, array $rows): void
     {
@@ -379,16 +380,23 @@ class SystemMaintenanceTest extends KernelTestCase
     #[Test]
     public function cleanAvatarSkipsTraversalPathButStillDeletesDbRow(): void
     {
-        // Place a real fixture OUTSIDE the upload root so a successful
-        // traversal would visibly remove it; the test asserts it survives.
-        $outside = sys_get_temp_dir() . '/xoops_avatar_traversal_target_' . uniqid() . '.png';
+        // To meaningfully exercise the upload-root containment check the
+        // fixture has to live at the location the traversal string
+        // ACTUALLY resolves to. dirname(realpath(XOOPS_UPLOAD_PATH)) is
+        // the parent of the upload root, so a fixture placed there is
+        // reachable via '../<basename>' relative to XOOPS_UPLOAD_PATH.
+        // Result:
+        //   - realpath() succeeds (the file exists at the parent dir)
+        //   - the prefix check rejects it (not under uploads/)
+        //   - the fixture survives — exercising the containment branch
+        // Without this setup, realpath() would just return false on a
+        // non-existent target and the test would pass for the wrong
+        // reason.
+        $uploadRoot = realpath(XOOPS_UPLOAD_PATH);
+        $this->assertIsString($uploadRoot, 'XOOPS_UPLOAD_PATH must resolve via realpath()');
+        $outside = dirname($uploadRoot) . DIRECTORY_SEPARATOR . 'xoops_avatar_traversal_target_' . uniqid() . '.png';
         file_put_contents($outside, 'must-not-be-removed');
-
-        // Compute the relative '../' path from XOOPS_UPLOAD_PATH that
-        // would resolve to $outside. Even if the relative form is not
-        // exact, realpath() will either resolve outside the upload root
-        // (rejected by the prefix check) or fail (also rejected).
-        $traversalRel = '../../' . basename($outside);
+        $traversalRel = '../' . basename($outside);
 
         $db = $this->createMockDatabase();
         $this->stubAvatarSweep($db, [
@@ -399,6 +407,13 @@ class SystemMaintenanceTest extends KernelTestCase
 
         $maintenance = $this->createMaintenance($db);
         try {
+            // Sanity: realpath of the traversal path resolves to the
+            // fixture (i.e. realpath() succeeds) — proving this test
+            // really exercises the prefix-check branch and not the
+            // realpath()-returns-false short-circuit.
+            $resolved = realpath(XOOPS_UPLOAD_PATH . '/' . $traversalRel);
+            $this->assertSame(realpath($outside), $resolved, 'traversal must actually resolve to the fixture');
+
             $maintenance->CleanAvatar();
             $this->assertFileExists($outside, 'traversal target outside upload root must not be removed');
         } finally {
@@ -410,20 +425,30 @@ class SystemMaintenanceTest extends KernelTestCase
     public function cleanAvatarSkipsAbsolutePathButStillDeletesDbRow(): void
     {
         // An absolute path stored in avatar_file should not allow the
-        // cleanup to escape XOOPS_UPLOAD_PATH. The ltrim('/') step in
-        // CleanAvatar() turns '/etc/hosts' into 'etc/hosts' which is
-        // then resolved relative to the upload root — and almost
-        // certainly does not exist. realpath() returns false → skipped.
+        // cleanup to escape XOOPS_UPLOAD_PATH. Use a temp fixture rather
+        // than hard-coding /etc/hosts so the test runs on every OS
+        // (Windows CI doesn't have /etc/hosts at the same location).
+        // The ltrim('/') step turns '/abs/path/foo.png' into
+        // 'abs/path/foo.png' which is then resolved relative to the
+        // upload root — typically to a non-existent path, so realpath()
+        // returns false and the cleanup is skipped.
+        $outside = tempnam(sys_get_temp_dir(), 'xoops_avatar_absolute_');
+        $this->assertNotFalse($outside, 'tempnam should succeed');
+        file_put_contents($outside, 'must-not-be-removed');
+
         $db = $this->createMockDatabase();
         $this->stubAvatarSweep($db, [
-            ['avatar_id' => 100, 'avatar_file' => '/etc/hosts'],
+            ['avatar_id' => 100, 'avatar_file' => $outside],
         ]);
         $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
-        $this->assertFileExists('/etc/hosts', 'pre-test sanity: /etc/hosts should exist');
-        $maintenance->CleanAvatar();
-        $this->assertFileExists('/etc/hosts', '/etc/hosts must not be removed by avatar cleanup');
+        try {
+            $maintenance->CleanAvatar();
+            $this->assertFileExists($outside, 'absolute-path fixture must not be removed by avatar cleanup');
+        } finally {
+            @unlink($outside);
+        }
     }
 
     #[Test]

@@ -365,7 +365,7 @@ class SystemMaintenanceTest extends KernelTestCase
         ]);
         // exec() called twice: once for DELETE FROM avatar, once for the
         // avatar_user_link cleanup at the end of CleanAvatar().
-        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
         try {
@@ -395,7 +395,7 @@ class SystemMaintenanceTest extends KernelTestCase
             ['avatar_id' => 99, 'avatar_file' => $traversalRel],
         ]);
         // DB row + avatar_user_link cleanup still execute.
-        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
         try {
@@ -418,7 +418,7 @@ class SystemMaintenanceTest extends KernelTestCase
         $this->stubAvatarSweep($db, [
             ['avatar_id' => 100, 'avatar_file' => '/etc/hosts'],
         ]);
-        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
         $this->assertFileExists('/etc/hosts', 'pre-test sanity: /etc/hosts should exist');
@@ -435,7 +435,7 @@ class SystemMaintenanceTest extends KernelTestCase
             // return false. The DB row cleanup must still run.
             ['avatar_id' => 200, 'avatar_file' => 'avatars/nonexistent_' . uniqid() . '.png'],
         ]);
-        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
         $maintenance->CleanAvatar(); // assertion is the exec() call count
@@ -448,7 +448,7 @@ class SystemMaintenanceTest extends KernelTestCase
         $this->stubAvatarSweep($db, [
             ['avatar_id' => 300, 'avatar_file' => ''],
         ]);
-        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
         $maintenance->CleanAvatar();
@@ -470,7 +470,7 @@ class SystemMaintenanceTest extends KernelTestCase
         $this->stubAvatarSweep($db, [
             ['avatar_id' => 400, 'avatar_file' => $winRel],
         ]);
-        $db->expects($this->exactly(2))->method('exec')->willReturn(1);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
         try {

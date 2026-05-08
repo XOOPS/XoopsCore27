@@ -172,27 +172,34 @@ class SystemMaintenance
             );
         }
 
-        // Resolve the upload-root once for the whole sweep. Both realpath()
-        // and the trailing-separator prefix are constant for the run, so
-        // computing them per row would do unnecessary filesystem work on
-        // installations with large numbers of orphaned avatars.
-        $uploadRoot       = realpath(XOOPS_UPLOAD_PATH);
-        $uploadRootPrefix = is_string($uploadRoot)
-            ? rtrim($uploadRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
+        // Resolve the avatars subdirectory once for the whole sweep.
+        // Custom avatars live under XOOPS_UPLOAD_PATH/avatars/ (see
+        // kernel/avatar.php and the various admin/edituser writers, all
+        // of which prepend 'avatars/' to the stored filename). Narrowing
+        // the containment check to this subtree is defence-in-depth: an
+        // avatar_file value that points elsewhere under uploads/ —
+        // legacy data, custom-module write, or accidental insertion —
+        // is now skipped instead of silently deleting an unrelated
+        // upload. realpath() is constant for the run, so per-row
+        // resolution would just be wasted filesystem work on
+        // installations with large orphaned-avatar tables.
+        $avatarRoot       = realpath(XOOPS_UPLOAD_PATH . '/avatars');
+        $avatarRootPrefix = is_string($avatarRoot)
+            ? rtrim($avatarRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
             : null;
 
         /** @var array $myrow */
         while (false !== ($myrow = $this->db->fetchArray($result))) {
-            // Avatar files are stored as 'avatars/<filename>' (see
-            // kernel/avatar.php and the various admin/edituser writers),
-            // so basename() would silently bypass cleanup. Instead:
+            // Avatar files are stored as 'avatars/<filename>'
+            // (kernel/avatar.php and 14 admin/edituser writers), so
+            // basename() would silently bypass cleanup. Instead:
             //   - normalise backslashes to '/' (Windows-historic data)
             //   - strip leading slashes (defends against absolute paths
             //     accidentally or maliciously stored in the column)
             //   - resolve via realpath() so any '../' segments collapse
             //   - confirm the resolved path is contained inside the
-            //     resolved upload-root (prefix check with a trailing
-            //     separator so 'uploadsX/...' doesn't satisfy 'uploads')
+            //     resolved avatars/ subdir (trailing-separator prefix
+            //     so 'avatarsX/...' doesn't satisfy 'avatars')
             //   - confirm it's a regular file before removal.
             // Only then invoke the cleanup helper.
             // (int) cast on avatar_id is defence-in-depth: the value is
@@ -209,8 +216,8 @@ class SystemMaintenance
             $avatarPath = realpath(XOOPS_UPLOAD_PATH . '/' . $avatarFile);
             if (
                 is_string($avatarPath)
-                && is_string($uploadRootPrefix)
-                && str_starts_with($avatarPath, $uploadRootPrefix)
+                && is_string($avatarRootPrefix)
+                && str_starts_with($avatarPath, $avatarRootPrefix)
                 && is_file($avatarPath)
             ) {
                 xoops_remove_file_quietly($avatarPath, 'orphaned avatar');
@@ -287,14 +294,11 @@ class SystemMaintenance
                     $targetPerms = $currentPerms & 0777;
                 }
             }
-            if (!chmod($tempFile, $targetPerms)) {
-                // Non-fatal: content is written, only the perms didn't
-                // take. Continue with the rename rather than aborting.
-                trigger_error(
-                    sprintf('Failed to set permissions on temp guard file for %s', $label),
-                    E_USER_WARNING
-                );
-            }
+            // Non-fatal: content is written, only the perms may not
+            // take. Continue with the rename rather than aborting. The
+            // helper suppresses the native PHP warning so a single
+            // failure produces a single project-standard log line.
+            xoops_chmod_quietly($tempFile, $targetPerms, 'temp guard');
 
             // The @rename(...) calls below are inside `if (!...)` checks —
             // failure is detected by the boolean return and reported via

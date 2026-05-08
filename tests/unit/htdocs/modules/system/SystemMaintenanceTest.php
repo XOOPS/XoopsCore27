@@ -480,6 +480,57 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
+    public function cleanAvatarSkipsNonAvatarsSubdirUnderUploadRoot(): void
+    {
+        // Defence-in-depth: even an avatar_file value that points to a
+        // legitimate path UNDER XOOPS_UPLOAD_PATH but OUTSIDE the
+        // avatars/ subtree must not be removed by the avatar sweep.
+        // Place a fixture at uploads/files/<unique>.doc, set avatar_file
+        // to that path, verify the file survives.
+        $filesDir = XOOPS_UPLOAD_PATH . '/files';
+        $created  = false;
+        if (!is_dir($filesDir)) {
+            if (!mkdir($filesDir, 0755, true) && !is_dir($filesDir)) {
+                $this->fail('Could not create test files dir: ' . $filesDir);
+            }
+            $created = true;
+        }
+        $fixtureName = '_test_nonavatar_' . getmypid() . '_' . uniqid() . '.doc';
+        $fixturePath = $filesDir . '/' . $fixtureName;
+        file_put_contents($fixturePath, 'must-not-be-removed');
+        $rel = 'files/' . $fixtureName;
+
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 500, 'avatar_file' => $rel],
+        ]);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
+
+        $maintenance = $this->createMaintenance($db);
+        try {
+            // Sanity: the resolved path IS under uploads/ but NOT under
+            // uploads/avatars/, so the broad upload-root check would
+            // have allowed deletion. Asserting the resolution succeeds
+            // proves the test really exercises the narrow prefix branch.
+            $resolved = realpath($fixturePath);
+            $this->assertIsString($resolved, 'fixture should resolve');
+            $this->assertStringStartsWith(
+                rtrim((string) realpath(XOOPS_UPLOAD_PATH), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
+                $resolved,
+                'fixture must be inside uploads/'
+            );
+
+            $maintenance->CleanAvatar();
+            $this->assertFileExists($fixturePath, 'non-avatar file under uploads/ must not be removed');
+        } finally {
+            @unlink($fixturePath);
+            if ($created) {
+                @rmdir($filesDir);
+            }
+        }
+    }
+
+    #[Test]
     public function cleanAvatarNormalisesBackslashesInAvatarFile(): void
     {
         // Windows-historic data may store 'avatars\foo.png'. The cleanup

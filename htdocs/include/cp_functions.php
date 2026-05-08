@@ -121,6 +121,39 @@ function xoops_file_label($filename)
 }
 
 /**
+ * Set file permissions, suppressing the native PHP warning on failure
+ * via the same scoped error_reporting() toggle used by
+ * xoops_remove_file_quietly(). Without this, a chmod() failure produces
+ * TWO log lines: the native PHP warning AND the project's own
+ * trigger_error(). The helper consolidates them into a single
+ * project-standard warning based on the boolean return value.
+ *
+ * @param string $path    Absolute path to the file.
+ * @param int    $perms   Permission bits (octal).
+ * @param string $context Short label used in the warning message
+ *                        (e.g. 'temp', 'temp guard').
+ *
+ * @return bool True on success, false on failure (warning already emitted).
+ */
+function xoops_chmod_quietly($path, $perms, $context = 'temp')
+{
+    $previousLevel = error_reporting(0);
+    try {
+        $ok = chmod($path, $perms);
+    } finally {
+        error_reporting($previousLevel);
+    }
+    if (!$ok) {
+        trigger_error(
+            sprintf('Failed to set permissions on %s file: %s', $context, xoops_file_label($path)),
+            E_USER_WARNING
+        );
+    }
+
+    return $ok;
+}
+
+/**
  * Best-effort file removal used by atomic-write cleanup paths and similar
  * fire-and-forget cleanup. Skips non-existent paths so already-deleted
  * files don't trigger warnings, suppresses the unlink() warning via a
@@ -200,15 +233,12 @@ function xoops_write_file_atomically($filename, $content)
             $targetPerms = $currentPerms & 0777;
         }
     }
-    if (!chmod($tempFile, $targetPerms)) {
-        // Non-fatal: file is written, only the perms didn't take. Continue
-        // with the rename rather than aborting — most callers care about
-        // content integrity over exact perms.
-        trigger_error(
-            sprintf('Failed to set permissions on temp file for %s', $label),
-            E_USER_WARNING
-        );
-    }
+    // Non-fatal: file is written, only the perms may not take. Continue
+    // with the rename rather than aborting — most callers care about
+    // content integrity over exact perms. The helper suppresses the
+    // native PHP warning so a single failure produces a single
+    // project-standard log line.
+    xoops_chmod_quietly($tempFile, $targetPerms, 'temp');
 
     // The four @rename(...) calls below are inside `if (!...)` checks —
     // failure is detected by the boolean return and reported via

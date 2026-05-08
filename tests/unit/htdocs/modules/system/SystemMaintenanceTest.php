@@ -313,7 +313,16 @@ class SystemMaintenanceTest extends KernelTestCase
             $this->fail('Could not create test scratch dir: ' . $scratchAbs);
         }
         $absPath = $scratchAbs . '/' . $filename;
-        file_put_contents($absPath, 'fixture');
+        // Assert the fixture write actually succeeded with the expected
+        // byte count — otherwise a happy-path test could later "pass"
+        // because CleanAvatar() found no file to delete
+        // (assertFileDoesNotExist would succeed even though the cleanup
+        // never ran on a real fixture). Checking the byte count also
+        // catches partial-write failures, not just "false return".
+        $bytesWritten = file_put_contents($absPath, 'fixture');
+        $this->assertNotFalse($bytesWritten, 'Could not write fixture avatar: ' . $absPath);
+        $this->assertSame(strlen('fixture'), $bytesWritten);
+        $this->assertFileExists($absPath);
         $relPath = $scratchRel . '/' . $filename;
 
         return [$relPath, $absPath];
@@ -395,7 +404,9 @@ class SystemMaintenanceTest extends KernelTestCase
         $uploadRoot = realpath(XOOPS_UPLOAD_PATH);
         $this->assertIsString($uploadRoot, 'XOOPS_UPLOAD_PATH must resolve via realpath()');
         $outside = dirname($uploadRoot) . DIRECTORY_SEPARATOR . 'xoops_avatar_traversal_target_' . uniqid() . '.png';
-        file_put_contents($outside, 'must-not-be-removed');
+        $bytesWritten = file_put_contents($outside, 'must-not-be-removed');
+        $this->assertNotFalse($bytesWritten, 'Could not write traversal fixture: ' . $outside);
+        $this->assertSame(strlen('must-not-be-removed'), $bytesWritten);
         $traversalRel = '../' . basename($outside);
 
         $db = $this->createMockDatabase();
@@ -434,7 +445,9 @@ class SystemMaintenanceTest extends KernelTestCase
         // returns false and the cleanup is skipped.
         $outside = tempnam(sys_get_temp_dir(), 'xoops_avatar_absolute_');
         $this->assertNotFalse($outside, 'tempnam should succeed');
-        file_put_contents($outside, 'must-not-be-removed');
+        $bytesWritten = file_put_contents($outside, 'must-not-be-removed');
+        $this->assertNotFalse($bytesWritten, 'Could not write absolute-path fixture: ' . $outside);
+        $this->assertSame(strlen('must-not-be-removed'), $bytesWritten);
 
         $db = $this->createMockDatabase();
         $this->stubAvatarSweep($db, [
@@ -497,7 +510,9 @@ class SystemMaintenanceTest extends KernelTestCase
         }
         $fixtureName = '_test_nonavatar_' . getmypid() . '_' . uniqid() . '.doc';
         $fixturePath = $filesDir . '/' . $fixtureName;
-        file_put_contents($fixturePath, 'must-not-be-removed');
+        $bytesWritten = file_put_contents($fixturePath, 'must-not-be-removed');
+        $this->assertNotFalse($bytesWritten, 'Could not write non-avatar fixture: ' . $fixturePath);
+        $this->assertSame(strlen('must-not-be-removed'), $bytesWritten);
         $rel = 'files/' . $fixtureName;
 
         $db = $this->createMockDatabase();

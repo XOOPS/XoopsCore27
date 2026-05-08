@@ -137,6 +137,12 @@ function xoops_file_label($filename)
  */
 function xoops_chmod_quietly($path, $perms, $context = 'temp')
 {
+    // Initialise $ok before the try block: error_reporting(0) does NOT
+    // disable user-defined error handlers, only the native warning. A
+    // naively written handler that always throws (without checking
+    // error_reporting() & $errno) would propagate out of the try block
+    // before chmod() returns, leaving $ok unset. Defensive default.
+    $ok            = false;
     $previousLevel = error_reporting(0);
     try {
         $ok = chmod($path, $perms);
@@ -172,6 +178,10 @@ function xoops_remove_file_quietly($path, $context = 'temporary')
     if (!file_exists($path)) {
         return;
     }
+    // Initialise $ok defensively — see xoops_chmod_quietly() for the
+    // rationale (error_reporting(0) does not disable user-defined
+    // error handlers).
+    $ok            = false;
     $previousLevel = error_reporting(0);
     try {
         $ok = unlink($path);

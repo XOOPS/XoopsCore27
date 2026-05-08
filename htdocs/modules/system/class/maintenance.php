@@ -160,6 +160,8 @@ class SystemMaintenance
      * @author slider84 of Team FrXoops
      *
      * @return boolean
+     *
+     * @throws \RuntimeException If the avatar table query fails.
      */
     public function CleanAvatar()
     {
@@ -210,7 +212,7 @@ class SystemMaintenance
             $avatarId   = (int) ($myrow['avatar_id'] ?? 0);
             $avatarFile = ltrim(str_replace('\\', '/', (string) ($myrow['avatar_file'] ?? '')), '/');
             if ('' === $avatarFile) {
-                $result1 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
+                $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
                 continue;
             }
             $avatarPath = realpath(XOOPS_UPLOAD_PATH . '/' . $avatarFile);
@@ -223,7 +225,7 @@ class SystemMaintenance
                 xoops_remove_file_quietly($avatarPath, 'orphaned avatar');
             }
             //clean avatar table
-            $result1 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
+            $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
         }
         //clean any deleted users from avatar_user_link table
         $result2 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar_user_link') . ' WHERE user_id NOT IN (SELECT uid FROM ' . $this->db->prefix('users') . ')');

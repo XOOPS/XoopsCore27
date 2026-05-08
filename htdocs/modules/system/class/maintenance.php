@@ -15,9 +15,14 @@
  * @package             system
  */
 
-//if (!defined('XOOPS_ROOT_PATH')) {
-//    throw new \RuntimeException('XOOPS root path not defined');
-//}
+// Direct-access guard: this file is module/admin-only and must never
+// execute outside a bootstrapped XOOPS context. Without this, the
+// require_once below would fail with an "undefined constant" fatal
+// when the file is hit via a direct URL, leaking server path details
+// in the error message.
+if (!defined('XOOPS_ROOT_PATH')) {
+    exit();
+}
 
 // xoops_remove_file_quietly() lives in cp_functions.php; admin and install
 // callers normally load it via cp_header.php / page_moduleinstaller.php,

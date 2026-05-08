@@ -175,7 +175,12 @@ function xoops_chmod_quietly($path, $perms, $context = 'temp')
  */
 function xoops_remove_file_quietly($path, $context = 'temporary')
 {
-    if (!file_exists($path)) {
+    // file_exists() returns false for broken symlinks, so a dangling
+    // symlink would be skipped here and also bypass the post-unlink
+    // existence check below — leaving the orphaned link in place. Treat
+    // links as existing too: unlink() can remove broken symlinks just
+    // fine, and the targets they point to are not what we care about.
+    if (!file_exists($path) && !is_link($path)) {
         return;
     }
     // Initialise $ok defensively — see xoops_chmod_quietly() for the
@@ -188,7 +193,7 @@ function xoops_remove_file_quietly($path, $context = 'temporary')
     } finally {
         error_reporting($previousLevel);
     }
-    if (!$ok && file_exists($path)) {
+    if (!$ok && (file_exists($path) || is_link($path))) {
         trigger_error(
             sprintf('Failed to remove %s file: %s', $context, xoops_file_label($path)),
             E_USER_WARNING

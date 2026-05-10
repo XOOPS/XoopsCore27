@@ -194,6 +194,13 @@ class SystemMaintenance
             ? rtrim($avatarRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR
             : null;
 
+        // Track whether every DELETE in the sweep succeeded. The method
+        // contract is `@return bool`, but the previous implementation
+        // unconditionally returned true even if a DELETE failed and an
+        // orphaned row was left behind. Callers can now distinguish a
+        // clean sweep from a partial one.
+        $deleteOk = true;
+
         /** @var array $myrow */
         while (false !== ($myrow = $this->db->fetchArray($result))) {
             // Avatar files are stored as 'avatars/<filename>'
@@ -226,7 +233,9 @@ class SystemMaintenance
             $avatarId   = (int) ($myrow['avatar_id'] ?? 0);
             $avatarFile = ltrim(str_replace('\\', '/', (string) ($myrow['avatar_file'] ?? '')), '/');
             if ('' === $avatarFile) {
-                $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
+                if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId)) {
+                    $deleteOk = false;
+                }
                 continue;
             }
             $avatarCandidate = XOOPS_UPLOAD_PATH . '/' . $avatarFile;
@@ -240,12 +249,16 @@ class SystemMaintenance
                 xoops_remove_file_quietly($avatarCandidate, 'orphaned avatar');
             }
             //clean avatar table
-            $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
+            if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId)) {
+                $deleteOk = false;
+            }
         }
         //clean any deleted users from avatar_user_link table
-        $result2 = $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar_user_link') . ' WHERE user_id NOT IN (SELECT uid FROM ' . $this->db->prefix('users') . ')');
+        if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar_user_link') . ' WHERE user_id NOT IN (SELECT uid FROM ' . $this->db->prefix('users') . ')')) {
+            $deleteOk = false;
+        }
 
-        return true;
+        return $deleteOk;
     }
 
     /**
@@ -344,13 +357,28 @@ class SystemMaintenance
 
             if (!@rename($tempFile, $filename)) {
                 xoops_remove_file_quietly($tempFile, 'temp guard');
+                // Track whether the backup-restore step succeeded so the
+                // composite failure warning can communicate that the
+                // original guard file is intact (vs. the worse case
+                // where both replace and restore failed and manual
+                // intervention may be required).
+                $restoredBackup = false;
                 if ($backupFile !== null) {
                     if (!@rename($backupFile, $filename)) {
                         trigger_error(sprintf('Failed to restore original guard file: %s', $label), E_USER_WARNING);
+                    } else {
+                        $restoredBackup = true;
                     }
                 }
 
-                trigger_error(sprintf('Failed to replace guard file: %s', $label), E_USER_WARNING);
+                trigger_error(
+                    sprintf(
+                        'Failed to replace guard file: %s%s',
+                        $label,
+                        $restoredBackup ? ' (original restored)' : ''
+                    ),
+                    E_USER_WARNING
+                );
             } elseif ($backupFile !== null) {
                 xoops_remove_file_quietly($backupFile, 'backup guard');
             }

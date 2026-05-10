@@ -19,10 +19,9 @@
 // execute outside a bootstrapped XOOPS context. Without this, the
 // require_once below would fail with an "undefined constant" fatal
 // when the file is hit via a direct URL, leaking server path details
-// in the error message.
-if (!defined('XOOPS_ROOT_PATH')) {
-    exit();
-}
+// in the error message. Uses the project-standard one-liner shape
+// for consistency with the rest of the codebase.
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 // xoops_remove_file_quietly() lives in cp_functions.php; admin and install
 // callers normally load it via cp_header.php / page_moduleinstaller.php,
@@ -164,7 +163,7 @@ class SystemMaintenance
      *
      * @author slider84 of Team FrXoops
      *
-     * @return boolean
+     * @return bool
      *
      * @throws \RuntimeException If the avatar table query fails.
      */
@@ -203,12 +202,22 @@ class SystemMaintenance
             //   - normalise backslashes to '/' (Windows-historic data)
             //   - strip leading slashes (defends against absolute paths
             //     accidentally or maliciously stored in the column)
-            //   - resolve via realpath() so any '../' segments collapse
-            //   - confirm the resolved path is contained inside the
-            //     resolved avatars/ subdir (trailing-separator prefix
-            //     so 'avatarsX/...' doesn't satisfy 'avatars')
-            //   - confirm it's a regular file before removal.
-            // Only then invoke the cleanup helper.
+            //   - resolve the parent directory via realpath() so any
+            //     '../' segments collapse, and confirm the parent is
+            //     inside the resolved avatars/ subdir (trailing-
+            //     separator prefix so 'avatarsX/...' doesn't satisfy
+            //     'avatars')
+            //   - confirm the candidate is a regular file OR a symlink
+            //     before removal.
+            // Then invoke the cleanup helper on the ORIGINAL candidate
+            // path (not the realpath result). This matters when the
+            // avatar entry is a symlink: realpath() resolves to the
+            // symlink target, so unlinking the resolved path would
+            // delete the target file (potentially another avatar)
+            // instead of the symlink itself. Resolving the PARENT only
+            // keeps the containment check honest without following the
+            // symlink into the wrong file.
+            //
             // (int) cast on avatar_id is defence-in-depth: the value is
             // DB-origin so SQL injection is implausible, but the project
             // convention is to never concatenate non-cast values into
@@ -220,14 +229,15 @@ class SystemMaintenance
                 $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);
                 continue;
             }
-            $avatarPath = realpath(XOOPS_UPLOAD_PATH . '/' . $avatarFile);
+            $avatarCandidate = XOOPS_UPLOAD_PATH . '/' . $avatarFile;
+            $avatarParent    = realpath(dirname($avatarCandidate));
             if (
-                is_string($avatarPath)
+                is_string($avatarParent)
                 && is_string($avatarRootPrefix)
-                && str_starts_with($avatarPath, $avatarRootPrefix)
-                && is_file($avatarPath)
+                && str_starts_with(rtrim($avatarParent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR, $avatarRootPrefix)
+                && (is_file($avatarCandidate) || is_link($avatarCandidate))
             ) {
-                xoops_remove_file_quietly($avatarPath, 'orphaned avatar');
+                xoops_remove_file_quietly($avatarCandidate, 'orphaned avatar');
             }
             //clean avatar table
             $this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId);

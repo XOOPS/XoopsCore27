@@ -345,10 +345,16 @@ class SystemMaintenanceTest extends KernelTestCase
             }
             $path = $scratchAbs . '/' . $entry;
             if (is_file($path)) {
-                @unlink($path);
+                $this->assertTrue(
+                    unlink($path),
+                    'Could not clean up scratch-dir entry: ' . $path
+                );
             }
         }
-        @rmdir($scratchAbs);
+        $this->assertTrue(
+            rmdir($scratchAbs),
+            'Could not remove scratch dir: ' . $scratchAbs
+        );
     }
 
     /**
@@ -430,7 +436,9 @@ class SystemMaintenanceTest extends KernelTestCase
             $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileExists($outside, 'traversal target outside upload root must not be removed');
         } finally {
-            @unlink($outside);
+            if (file_exists($outside)) {
+                $this->assertTrue(unlink($outside), 'Could not clean up fixture: ' . $outside);
+            }
         }
     }
 
@@ -462,7 +470,9 @@ class SystemMaintenanceTest extends KernelTestCase
             $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileExists($outside, 'absolute-path fixture must not be removed by avatar cleanup');
         } finally {
-            @unlink($outside);
+            if (file_exists($outside)) {
+                $this->assertTrue(unlink($outside), 'Could not clean up fixture: ' . $outside);
+            }
         }
     }
 
@@ -559,9 +569,11 @@ class SystemMaintenanceTest extends KernelTestCase
             $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileExists($fixturePath, 'non-avatar file under uploads/ must not be removed');
         } finally {
-            @unlink($fixturePath);
-            if ($created) {
-                @rmdir($filesDir);
+            if (file_exists($fixturePath)) {
+                $this->assertTrue(unlink($fixturePath), 'Could not clean up fixture: ' . $fixturePath);
+            }
+            if ($created && is_dir($filesDir)) {
+                $this->assertTrue(rmdir($filesDir), 'Could not clean up files dir: ' . $filesDir);
             }
         }
     }

@@ -72,12 +72,34 @@ if (!function_exists('xoops_safe_basename')) {
      * the filename. Use this where the warning must NEVER disclose any
      * directory structure (e.g. cleanup of orphan/temp files).
      *
+     * Defensive shape, mirroring xoops_chmod_quietly() /
+     * xoops_remove_file_quietly(): reject null-byte payloads up front
+     * and wrap basename() in catch(\Throwable). Empirically basename()
+     * does not throw on a "\0"-bearing path in PHP 8.2-8.4 (it returns
+     * the byte verbatim), but the helpers it serves are documented as
+     * best-effort/non-propagating, so the same guarantee must hold here
+     * — a stray null byte in a future PHP version, a userland override,
+     * or a throwing error handler must NOT escape the cleanup path. A
+     * literal "\0" in the formatted trigger_error() output would also
+     * confuse log parsers; returning a fixed placeholder keeps the
+     * warning readable.
+     *
      * @param string $path
      * @return string
      */
     function xoops_safe_basename($path)
     {
-        return basename(str_replace('\\', '/', (string) $path));
+        $normalized = str_replace('\\', '/', (string) $path);
+
+        if (str_contains($normalized, "\0")) {
+            return 'invalid-path';
+        }
+
+        try {
+            return basename($normalized);
+        } catch (\Throwable $e) {
+            return 'invalid-path';
+        }
     }
 }
 

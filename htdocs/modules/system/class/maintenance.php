@@ -232,21 +232,24 @@ class SystemMaintenance
             // concatenation warning on these DELETE statements.
             $avatarId   = (int) ($myrow['avatar_id'] ?? 0);
             $avatarFile = ltrim(str_replace('\\', '/', (string) ($myrow['avatar_file'] ?? '')), '/');
-            if ('' === $avatarFile) {
-                if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId)) {
-                    $deleteOk = false;
+            // Reject null-byte payloads BEFORE any filesystem call:
+            // dirname(), realpath(), is_file(), and is_link() all raise
+            // ValueError on PHP 8+ when the argument contains "\0".
+            // Letting that propagate would abort the sweep mid-loop and
+            // skip the avatar_user_link cleanup that follows. The DB
+            // row is still deleted unconditionally below — a malformed
+            // path should never block reclaiming the orphaned row.
+            if ('' !== $avatarFile && !str_contains($avatarFile, "\0")) {
+                $avatarCandidate = XOOPS_UPLOAD_PATH . '/' . $avatarFile;
+                $avatarParent    = realpath(dirname($avatarCandidate));
+                if (
+                    is_string($avatarParent)
+                    && is_string($avatarRootPrefix)
+                    && str_starts_with(rtrim($avatarParent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR, $avatarRootPrefix)
+                    && (is_file($avatarCandidate) || is_link($avatarCandidate))
+                ) {
+                    xoops_remove_file_quietly($avatarCandidate, 'orphaned avatar');
                 }
-                continue;
-            }
-            $avatarCandidate = XOOPS_UPLOAD_PATH . '/' . $avatarFile;
-            $avatarParent    = realpath(dirname($avatarCandidate));
-            if (
-                is_string($avatarParent)
-                && is_string($avatarRootPrefix)
-                && str_starts_with(rtrim($avatarParent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR, $avatarRootPrefix)
-                && (is_file($avatarCandidate) || is_link($avatarCandidate))
-            ) {
-                xoops_remove_file_quietly($avatarCandidate, 'orphaned avatar');
             }
             //clean avatar table
             if (!$this->db->exec('DELETE FROM ' . $this->db->prefix('avatar') . ' WHERE avatar_id=' . $avatarId)) {

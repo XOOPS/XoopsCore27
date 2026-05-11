@@ -493,6 +493,25 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
+    public function cleanAvatarHandlesNullByteAvatarFileAndStillDeletesDbRow(): void
+    {
+        // On PHP 8+ dirname()/realpath()/is_file()/is_link() raise
+        // ValueError when the argument contains "\0". CleanAvatar() must
+        // skip the filesystem work for such a row but still issue both
+        // DELETEs — the per-row avatar DELETE and the trailing
+        // avatar_user_link cleanup — so the malformed row doesn't block
+        // the rest of the sweep.
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 400, 'avatar_file' => "avatars/evil\0.png"],
+        ]);
+        $db->expects($this->exactly(2))->method('exec')->willReturn(true);
+
+        $maintenance = $this->createMaintenance($db);
+        $maintenance->CleanAvatar();
+    }
+
+    #[Test]
     public function cleanAvatarSkipsNonAvatarsSubdirUnderUploadRoot(): void
     {
         // Defence-in-depth: even an avatar_file value that points to a

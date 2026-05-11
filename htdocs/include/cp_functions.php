@@ -142,10 +142,17 @@ function xoops_chmod_quietly($path, $perms, $context = 'temp')
     // naively written handler that always throws (without checking
     // error_reporting() & $errno) would propagate out of the try block
     // before chmod() returns, leaving $ok unset. Defensive default.
+    // Catch \Throwable too: chmod() raises ValueError on PHP 8+ for
+    // paths containing a null byte, and a user error handler may throw
+    // ErrorException for other filesystem conditions. Both are reported
+    // as a single project-standard warning, never propagated out of a
+    // best-effort cleanup helper.
     $ok            = false;
     $previousLevel = error_reporting(0);
     try {
         $ok = chmod($path, $perms);
+    } catch (\Throwable $e) {
+        $ok = false;
     } finally {
         error_reporting($previousLevel);
     }
@@ -180,20 +187,40 @@ function xoops_remove_file_quietly($path, $context = 'temporary')
     // existence check below — leaving the orphaned link in place. Treat
     // links as existing too: unlink() can remove broken symlinks just
     // fine, and the targets they point to are not what we care about.
-    if (!file_exists($path) && !is_link($path)) {
+    //
+    // file_exists() / is_link() can themselves raise ValueError on PHP
+    // 8+ when the path contains a null byte. Treat any throw from the
+    // pre-check as "nothing to do" — there is no file we could safely
+    // remove, and propagating the exception out of a best-effort
+    // cleanup helper would abort the caller's unrelated work.
+    try {
+        if (!file_exists($path) && !is_link($path)) {
+            return;
+        }
+    } catch (\Throwable $e) {
         return;
     }
     // Initialise $ok defensively — see xoops_chmod_quietly() for the
     // rationale (error_reporting(0) does not disable user-defined
-    // error handlers).
+    // error handlers). Catch \Throwable around unlink() for the same
+    // ValueError-on-null-byte / throwing-error-handler reasons.
     $ok            = false;
     $previousLevel = error_reporting(0);
     try {
         $ok = unlink($path);
+    } catch (\Throwable $e) {
+        $ok = false;
     } finally {
         error_reporting($previousLevel);
     }
-    if (!$ok && (file_exists($path) || is_link($path))) {
+    // Same try/catch shape around the post-unlink probe: if the path
+    // contained a null byte we have nothing useful to report anyway.
+    try {
+        $stillPresent = file_exists($path) || is_link($path);
+    } catch (\Throwable $e) {
+        $stillPresent = false;
+    }
+    if (!$ok && $stillPresent) {
         trigger_error(
             sprintf('Failed to remove %s file: %s', $context, xoops_file_label($path)),
             E_USER_WARNING

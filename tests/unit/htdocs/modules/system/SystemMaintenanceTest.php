@@ -329,7 +329,9 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     /**
-     * Recursively remove the per-test scratch directory.
+     * Remove the per-test scratch directory and the files directly under
+     * it. Fixtures are flat (single-level), so a single scandir + rmdir
+     * pass is sufficient — no recursive descent.
      */
     private function removeScratchDir(string $scratchRel): void
     {
@@ -364,7 +366,7 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
-    public function cleanAvatarRemovesValidAvatarFileUnderUploadRoot(): void
+    public function testCleanAvatarRemovesValidAvatarFileUnderUploadRoot(): void
     {
         $scratchRel       = $this->avatarScratchRel();
         [$rel, $abs]      = $this->placeFixtureAvatar($scratchRel, 'foo.png');
@@ -379,7 +381,7 @@ class SystemMaintenanceTest extends KernelTestCase
 
         $maintenance = $this->createMaintenance($db);
         try {
-            $maintenance->CleanAvatar();
+            $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileDoesNotExist($abs, 'fixture avatar should have been removed');
         } finally {
             $this->removeScratchDir($scratchRel);
@@ -387,7 +389,7 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
-    public function cleanAvatarSkipsTraversalPathButStillDeletesDbRow(): void
+    public function testCleanAvatarSkipsTraversalPathButStillDeletesDbRow(): void
     {
         // To meaningfully exercise the upload-root containment check the
         // fixture has to live at the location the traversal string
@@ -425,7 +427,7 @@ class SystemMaintenanceTest extends KernelTestCase
             $resolved = realpath(XOOPS_UPLOAD_PATH . '/' . $traversalRel);
             $this->assertSame(realpath($outside), $resolved, 'traversal must actually resolve to the fixture');
 
-            $maintenance->CleanAvatar();
+            $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileExists($outside, 'traversal target outside upload root must not be removed');
         } finally {
             @unlink($outside);
@@ -433,7 +435,7 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
-    public function cleanAvatarSkipsAbsolutePathButStillDeletesDbRow(): void
+    public function testCleanAvatarSkipsAbsolutePathButStillDeletesDbRow(): void
     {
         // An absolute path stored in avatar_file should not allow the
         // cleanup to escape XOOPS_UPLOAD_PATH. Use a temp fixture rather
@@ -457,7 +459,7 @@ class SystemMaintenanceTest extends KernelTestCase
 
         $maintenance = $this->createMaintenance($db);
         try {
-            $maintenance->CleanAvatar();
+            $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileExists($outside, 'absolute-path fixture must not be removed by avatar cleanup');
         } finally {
             @unlink($outside);
@@ -465,7 +467,7 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
-    public function cleanAvatarHandlesMissingFileAndStillDeletesDbRow(): void
+    public function testCleanAvatarHandlesMissingFileAndStillDeletesDbRow(): void
     {
         $db = $this->createMockDatabase();
         $this->stubAvatarSweep($db, [
@@ -476,11 +478,11 @@ class SystemMaintenanceTest extends KernelTestCase
         $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
-        $maintenance->CleanAvatar(); // assertion is the exec() call count
+        $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
     }
 
     #[Test]
-    public function cleanAvatarHandlesEmptyAvatarFileAndStillDeletesDbRow(): void
+    public function testCleanAvatarHandlesEmptyAvatarFileAndStillDeletesDbRow(): void
     {
         $db = $this->createMockDatabase();
         $this->stubAvatarSweep($db, [
@@ -489,11 +491,11 @@ class SystemMaintenanceTest extends KernelTestCase
         $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
-        $maintenance->CleanAvatar();
+        $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
     }
 
     #[Test]
-    public function cleanAvatarHandlesNullByteAvatarFileAndStillDeletesDbRow(): void
+    public function testCleanAvatarHandlesNullByteAvatarFileAndStillDeletesDbRow(): void
     {
         // On PHP 8+ dirname()/realpath()/is_file()/is_link() raise
         // ValueError when the argument contains "\0". CleanAvatar() must
@@ -508,11 +510,11 @@ class SystemMaintenanceTest extends KernelTestCase
         $db->expects($this->exactly(2))->method('exec')->willReturn(true);
 
         $maintenance = $this->createMaintenance($db);
-        $maintenance->CleanAvatar();
+        $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
     }
 
     #[Test]
-    public function cleanAvatarSkipsNonAvatarsSubdirUnderUploadRoot(): void
+    public function testCleanAvatarSkipsNonAvatarsSubdirUnderUploadRoot(): void
     {
         // Defence-in-depth: even an avatar_file value that points to a
         // legitimate path UNDER XOOPS_UPLOAD_PATH but OUTSIDE the
@@ -554,7 +556,7 @@ class SystemMaintenanceTest extends KernelTestCase
                 'fixture must be inside uploads/'
             );
 
-            $maintenance->CleanAvatar();
+            $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileExists($fixturePath, 'non-avatar file under uploads/ must not be removed');
         } finally {
             @unlink($fixturePath);
@@ -565,7 +567,7 @@ class SystemMaintenanceTest extends KernelTestCase
     }
 
     #[Test]
-    public function cleanAvatarNormalisesBackslashesInAvatarFile(): void
+    public function testCleanAvatarNormalisesBackslashesInAvatarFile(): void
     {
         // Windows-historic data may store 'avatars\foo.png'. The cleanup
         // should normalise it and remove the file under XOOPS_UPLOAD_PATH.
@@ -584,10 +586,34 @@ class SystemMaintenanceTest extends KernelTestCase
 
         $maintenance = $this->createMaintenance($db);
         try {
-            $maintenance->CleanAvatar();
+            $this->assertTrue($maintenance->CleanAvatar(), 'expected CleanAvatar() to report a clean sweep');
             $this->assertFileDoesNotExist($abs, 'backslash-normalised avatar should be removed');
         } finally {
             $this->removeScratchDir($scratchRel);
         }
+    }
+
+    #[Test]
+    public function testCleanAvatarReturnsFalseWhenAvatarDeleteFails(): void
+    {
+        // Locks in the boolean contract introduced for CleanAvatar(): a
+        // failing DELETE must surface as a `false` return so callers can
+        // distinguish a clean sweep from a partial one. The first exec()
+        // (per-row avatar DELETE) returns false; the second (trailing
+        // avatar_user_link cleanup) still returns true. Either failing
+        // alone is enough to flip the return value.
+        $db = $this->createMockDatabase();
+        $this->stubAvatarSweep($db, [
+            ['avatar_id' => 500, 'avatar_file' => ''],
+        ]);
+        $db->expects($this->exactly(2))
+            ->method('exec')
+            ->willReturnOnConsecutiveCalls(false, true);
+
+        $maintenance = $this->createMaintenance($db);
+        $this->assertFalse(
+            $maintenance->CleanAvatar(),
+            'CleanAvatar() must return false when any DELETE in the sweep fails'
+        );
     }
 }

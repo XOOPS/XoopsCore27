@@ -23,11 +23,18 @@
 // for consistency with the rest of the codebase.
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
-// xoops_remove_file_quietly() lives in cp_functions.php; admin and install
-// callers normally load it via cp_header.php / page_moduleinstaller.php,
-// but require it explicitly here so SystemMaintenance is self-sufficient
-// regardless of which context instantiates it.
-require_once XOOPS_ROOT_PATH . '/include/cp_functions.php';
+// xoops_remove_file_quietly() and friends live in include/file_safety.php
+// — a deliberately side-effect-free file. Earlier revisions required
+// include/cp_functions.php here, which defines XOOPS_CPFUNC_LOADED;
+// include/functions.php keys off that constant to force redirect_header()
+// into the 'default' theme. SystemMaintenance is also instantiated from
+// upgrade/upd_2.5.10-to-2.5.11/index.php and upgrade/upd_2.5.11-to-2.7.0/
+// index.php, so loading cp_functions.php at class-file-load time was
+// silently overriding the configured theme during upgrades. Loading just
+// the helpers avoids that side effect; CP and admin callers still see
+// XOOPS_CPFUNC_LOADED via their own cp_header.php / page_moduleinstaller.php
+// load paths.
+require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
 
 /**
  * System Maintenance

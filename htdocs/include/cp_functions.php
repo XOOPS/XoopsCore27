@@ -18,6 +18,13 @@
 define('XOOPS_CPFUNC_LOADED', 1);
 define('XOOPS_WRITE_FILE_WRITE_ERROR', 'Failed to write file: %s');
 
+// xoops_file_label(), xoops_chmod_quietly(), and xoops_remove_file_quietly()
+// live in a side-effect-free include so callers that only need the
+// file helpers (e.g. modules/system/class/maintenance.php, also loaded
+// from upgrade scripts) don't pick up the XOOPS_CPFUNC_LOADED define,
+// which forces redirect_header() into the 'default' theme.
+require_once __DIR__ . '/file_safety.php';
+
 /**
  * CP Header
  *
@@ -100,132 +107,6 @@ function xoopsfwrite()
     }
 
     return true;
-}
-
-/**
- * Create a short, non-sensitive file label for warnings.
- *
- * @param string $filename
- * @return string
- */
-function xoops_file_label($filename)
-{
-    $normalized = str_replace('\\', '/', $filename);
-    $rootPrefix = rtrim(str_replace('\\', '/', XOOPS_ROOT_PATH), '/') . '/';
-
-    if (strncmp($normalized, $rootPrefix, strlen($rootPrefix)) === 0) {
-        return substr($normalized, strlen($rootPrefix));
-    }
-
-    return basename($filename);
-}
-
-/**
- * Set file permissions, suppressing the native PHP warning on failure
- * via the same scoped error_reporting() toggle used by
- * xoops_remove_file_quietly(). Without this, a chmod() failure produces
- * TWO log lines: the native PHP warning AND the project's own
- * trigger_error(). The helper consolidates them into a single
- * project-standard warning based on the boolean return value.
- *
- * @param string $path    Absolute path to the file.
- * @param int    $perms   Permission bits (octal).
- * @param string $context Short label used in the warning message
- *                        (e.g. 'temp', 'temp guard').
- *
- * @return bool True on success, false on failure (warning already emitted).
- */
-function xoops_chmod_quietly($path, $perms, $context = 'temp')
-{
-    // Initialise $ok before the try block: error_reporting(0) does NOT
-    // disable user-defined error handlers, only the native warning. A
-    // naively written handler that always throws (without checking
-    // error_reporting() & $errno) would propagate out of the try block
-    // before chmod() returns, leaving $ok unset. Defensive default.
-    // Catch \Throwable too: chmod() raises ValueError on PHP 8+ for
-    // paths containing a null byte, and a user error handler may throw
-    // ErrorException for other filesystem conditions. Both are reported
-    // as a single project-standard warning, never propagated out of a
-    // best-effort cleanup helper.
-    $ok            = false;
-    $previousLevel = error_reporting(0);
-    try {
-        $ok = chmod($path, $perms);
-    } catch (\Throwable $e) {
-        $ok = false;
-    } finally {
-        error_reporting($previousLevel);
-    }
-    if (!$ok) {
-        trigger_error(
-            sprintf('Failed to set permissions on %s file: %s', $context, xoops_file_label($path)),
-            E_USER_WARNING
-        );
-    }
-
-    return $ok;
-}
-
-/**
- * Best-effort file removal used by atomic-write cleanup paths and similar
- * fire-and-forget cleanup. Skips non-existent paths so already-deleted
- * files don't trigger warnings, suppresses the unlink() warning via a
- * scoped error_reporting() toggle (no `@` operator), and re-checks
- * existence after a failed unlink — only logging when the file is still
- * present, so TOCTOU races resolve silently.
- *
- * @param string $path    Absolute path to the file to remove.
- * @param string $context Short label used in the warning message
- *                        (e.g. 'temporary', 'backup').
- *
- * @return void
- */
-function xoops_remove_file_quietly($path, $context = 'temporary')
-{
-    // file_exists() returns false for broken symlinks, so a dangling
-    // symlink would be skipped here and also bypass the post-unlink
-    // existence check below — leaving the orphaned link in place. Treat
-    // links as existing too: unlink() can remove broken symlinks just
-    // fine, and the targets they point to are not what we care about.
-    //
-    // file_exists() / is_link() can themselves raise ValueError on PHP
-    // 8+ when the path contains a null byte. Treat any throw from the
-    // pre-check as "nothing to do" — there is no file we could safely
-    // remove, and propagating the exception out of a best-effort
-    // cleanup helper would abort the caller's unrelated work.
-    try {
-        if (!file_exists($path) && !is_link($path)) {
-            return;
-        }
-    } catch (\Throwable $e) {
-        return;
-    }
-    // Initialise $ok defensively — see xoops_chmod_quietly() for the
-    // rationale (error_reporting(0) does not disable user-defined
-    // error handlers). Catch \Throwable around unlink() for the same
-    // ValueError-on-null-byte / throwing-error-handler reasons.
-    $ok            = false;
-    $previousLevel = error_reporting(0);
-    try {
-        $ok = unlink($path);
-    } catch (\Throwable $e) {
-        $ok = false;
-    } finally {
-        error_reporting($previousLevel);
-    }
-    // Same try/catch shape around the post-unlink probe: if the path
-    // contained a null byte we have nothing useful to report anyway.
-    try {
-        $stillPresent = file_exists($path) || is_link($path);
-    } catch (\Throwable $e) {
-        $stillPresent = false;
-    }
-    if (!$ok && $stillPresent) {
-        trigger_error(
-            sprintf('Failed to remove %s file: %s', $context, xoops_file_label($path)),
-            E_USER_WARNING
-        );
-    }
 }
 
 /**

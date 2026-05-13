@@ -7,13 +7,15 @@ use PHPUnit\Framework\TestCase;
 require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
 
 /**
- * Coverage for the three side-effect-free file helpers in
- * htdocs/include/file_safety.php. The helpers are documented as
- * best-effort / non-propagating: on any failure they emit a single
- * E_USER_WARNING (or return early) and continue. These tests pin that
- * contract specifically against null-byte payloads, which trigger
- * ValueError in the underlying filesystem calls on PHP 8+ — the case
- * that motivated the explicit catch(\Throwable) wrappers and the
+ * Coverage for the four file-safety helpers in
+ * htdocs/include/file_safety.php: xoops_safe_basename(),
+ * xoops_chmod_quietly(), xoops_remove_file_quietly(), and
+ * xoops_file_label(). The first three are documented as best-effort /
+ * non-propagating: on any failure they emit a single E_USER_WARNING
+ * (or return early) and continue. These tests pin that contract
+ * specifically against null-byte payloads, which trigger ValueError
+ * in the underlying filesystem calls on PHP 8+ — the case that
+ * motivated the explicit catch(\Throwable) wrappers and the
  * xoops_safe_basename() defensive shape.
  */
 class FileSafetyTest extends TestCase
@@ -115,6 +117,14 @@ class FileSafetyTest extends TestCase
         // strip-prefix branch and the basename fallback.
         $absUnderRoot = rtrim(XOOPS_ROOT_PATH, '/\\') . '/uploads/foo.png';
         $this->assertSame('uploads/foo.png', xoops_file_label($absUnderRoot));
+
+        // Backslash separators under XOOPS_ROOT_PATH must collapse to
+        // forward slashes so the relative label looks the same on
+        // Windows and *nix. The outside-root branch falls through to
+        // basename(), which is platform-dependent on '\\' — not
+        // asserted here.
+        $absUnderRootBackslash = rtrim(str_replace('/', '\\', XOOPS_ROOT_PATH), '\\') . '\\uploads\\bar.png';
+        $this->assertSame('uploads/bar.png', xoops_file_label($absUnderRootBackslash));
 
         $absOutside = sys_get_temp_dir() . '/foo.png';
         $this->assertSame('foo.png', xoops_file_label($absOutside));

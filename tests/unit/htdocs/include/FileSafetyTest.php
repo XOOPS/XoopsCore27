@@ -10,13 +10,17 @@ require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
  * Coverage for the four file-safety helpers in
  * htdocs/include/file_safety.php: xoops_safe_basename(),
  * xoops_chmod_quietly(), xoops_remove_file_quietly(), and
- * xoops_file_label(). The first three are documented as best-effort /
- * non-propagating: on any failure they emit a single E_USER_WARNING
- * (or return early) and continue. These tests pin that contract
- * specifically against null-byte payloads, which trigger ValueError
- * in the underlying filesystem calls on PHP 8+ — the case that
- * motivated the explicit catch(\Throwable) wrappers and the
- * xoops_safe_basename() defensive shape.
+ * xoops_file_label(). These helpers are tested as defensive /
+ * non-propagating, but with different failure contracts:
+ * xoops_safe_basename() returns a fixed placeholder for invalid
+ * paths, while xoops_chmod_quietly() and
+ * xoops_remove_file_quietly() may either emit a single
+ * E_USER_WARNING or return without warning for guarded / no-op
+ * cases. These tests pin that behavior specifically against
+ * null-byte payloads, which trigger ValueError in underlying
+ * filesystem calls on PHP 8+ and motivated the explicit
+ * catch(\Throwable) wrappers and xoops_safe_basename()'s
+ * defensive shape.
  */
 class FileSafetyTest extends TestCase
 {

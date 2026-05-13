@@ -82,8 +82,8 @@ class FileSafetyTest extends TestCase
         // behavior. The helper wraps both in catch(\Throwable) for
         // forward-compat and userland error handlers that may throw.
         // The contract being tested is simply that no exception escapes.
+        $this->expectNotToPerformAssertions();
         xoops_remove_file_quietly("bad\0path");
-        $this->assertTrue(true, 'xoops_remove_file_quietly returned without throwing');
     }
 
     public function testXoopsRemoveFileQuietlyIsNoOpForMissingPath(): void
@@ -101,7 +101,9 @@ class FileSafetyTest extends TestCase
         });
 
         try {
-            xoops_remove_file_quietly(sys_get_temp_dir() . '/xoops_definitely_missing_' . uniqid() . '.tmp');
+            xoops_remove_file_quietly(
+                sys_get_temp_dir() . '/xoops_definitely_missing_' . bin2hex(random_bytes(16)) . '.tmp'
+            );
         } finally {
             restore_error_handler();
         }

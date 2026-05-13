@@ -50,13 +50,15 @@ class FileSafetyTest extends TestCase
         // local error handler instead of the @ operator to swallow the
         // warning — this codebase forbids @-suppression and we want to
         // assert the warning still fires.
-        $captured = null;
-        set_error_handler(static function (int $level, string $msg) use (&$captured): bool {
+        $captured            = [];
+        $unexpectedWarnings  = [];
+        set_error_handler(static function (int $level, string $msg) use (&$captured, &$unexpectedWarnings): bool {
             if (E_USER_WARNING === $level) {
-                $captured = $msg;
+                $captured[] = $msg;
                 return true;
             }
-            return false;
+            $unexpectedWarnings[] = [$level, $msg];
+            return true;
         });
 
         try {
@@ -66,16 +68,18 @@ class FileSafetyTest extends TestCase
         }
 
         $this->assertFalse($result, 'chmod on a null-byte path must report failure');
-        $this->assertNotNull($captured, 'helper must still emit one E_USER_WARNING on failure');
-        $this->assertStringContainsString('invalid-path', (string) $captured);
+        $this->assertSame([], $unexpectedWarnings, 'native chmod warnings must be suppressed');
+        $this->assertCount(1, $captured, 'helper must emit exactly one E_USER_WARNING on failure');
+        $this->assertStringContainsString('invalid-path', $captured[0]);
     }
 
     public function testXoopsRemoveFileQuietlyDoesNotPropagateOnNullBytePath(): void
     {
-        // The pre-check file_exists() / is_link() does not throw on a
-        // "\0"-bearing path in PHP 8.2-8.4 (it returns false), so the
-        // helper returns early without ever reaching unlink(). The
-        // contract being tested is just "no exception escapes".
+        // The pre-check file_exists() / is_link() may return false or
+        // throw for a "\0"-bearing path depending on PHP/runtime
+        // behavior. The helper wraps both in catch(\Throwable) for
+        // forward-compat and userland error handlers that may throw.
+        // The contract being tested is simply that no exception escapes.
         xoops_remove_file_quietly("bad\0path");
         $this->assertTrue(true, 'xoops_remove_file_quietly returned without throwing');
     }

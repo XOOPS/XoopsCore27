@@ -32,4 +32,4 @@ if (file_exists($licenseFile)) {
 /**
  *  Define XOOPS version
  */
-define('XOOPS_VERSION', 'XOOPS 2.7.0-FINAL');
+define('XOOPS_VERSION', 'XOOPS 2.7.0');

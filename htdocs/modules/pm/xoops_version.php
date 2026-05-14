@@ -25,7 +25,7 @@
 
 $modversion                   = [];
 $modversion['name']           = _PM_MI_NAME;
-$modversion['version']        = '1.1.4-Stable';
+$modversion['version']        = '1.1.4';
 $modversion['description']    = _PM_MI_DESC;
 $modversion['author']         = 'Jan Pedersen, Taiwen Jiang';
 $modversion['credits']        = 'The XOOPS Project, Wanikoo';

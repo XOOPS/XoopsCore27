@@ -24,14 +24,15 @@
 $loadCommon             = !isset($xoopsOption['nocommon']);
 $xoopsOption['nocommon'] = true;
 
-if (!defined('XOOPS_ROOT_PATH')) {
-    define('XOOPS_ROOT_PATH', dirname(__DIR__));
-}
-
-if (file_exists(XOOPS_ROOT_PATH . '/mainfile.php')) {
-    include_once XOOPS_ROOT_PATH . '/mainfile.php';
+$mainfile = dirname(__DIR__) . '/mainfile.php';
+if (file_exists($mainfile)) {
+    include_once $mainfile;
 } else {
     exit('mainfile.php not found.');
+}
+
+if (!defined('XOOPS_ROOT_PATH')) {
+    exit('Bad installation: XOOPS_ROOT_PATH is not defined in mainfile.php.');
 }
 
 $mainfileKeys = [

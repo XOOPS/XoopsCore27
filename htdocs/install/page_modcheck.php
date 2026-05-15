@@ -43,6 +43,13 @@ foreach ($wizard->configs['extensions_required'] as $ext => $info) {
 }
 $blockNext = !empty($missingRequired);
 
+// Keep the MySQLi requirements row consistent with the gate: use the same
+// configured symbol list so the row cannot show success while Next is blocked
+// (mysqli loaded but mysqli_report()/the mysqli class absent).
+$mysqliSymbols   = $wizard->configs['extensions_required']['mysqli'][1] ?? [];
+$mysqliAvailable = xoInstallerExtensionAvailable('mysqli', $mysqliSymbols);
+$mysqliInfo      = $mysqliAvailable && function_exists('mysqli_get_client_info') ? mysqli_get_client_info() : '';
+
 foreach ($wizard->configs['extensions'] as $ext => $value) {
     if (extension_loaded($ext)) {
         if (is_array($value[0])) {
@@ -59,7 +66,7 @@ ob_start();
     <?php if ($blockNext): ?>
         <div class="alert alert-danger" role="alert">
             <h4 class="alert-heading"><span class="fa-solid fa-ban"></span> <?php echo MISSING_REQUIRED_EXTENSIONS; ?></h4>
-            <p class="mb-0"><?php echo htmlspecialchars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, implode(', ', $missingRequired)), ENT_QUOTES | ENT_HTML5); ?></p>
+            <p class="mb-0"><?php echo installerHtmlSpecialChars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, implode(', ', $missingRequired))); ?></p>
         </div>
     <?php endif; ?>
 
@@ -78,7 +85,7 @@ ob_start();
 
         <tr>
             <th><?php printf(PHP_EXTENSION, 'MySQLi'); ?></th>
-            <td><?php echo xoDiag(function_exists('mysqli_connect') ? 1 : -1, function_exists('mysqli_get_client_info') ? mysqli_get_client_info() : ''); ?></td>
+            <td><?php echo xoDiag($mysqliAvailable ? 1 : -1, $mysqliInfo); ?></td>
         </tr>
 
         <tr>

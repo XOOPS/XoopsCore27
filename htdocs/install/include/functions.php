@@ -299,7 +299,7 @@ function xoInstallerBlockedHtml($label)
     return '<div class="alert alert-danger" role="alert">'
         . '<h4 class="alert-heading"><span class="fa-solid fa-ban"></span> ' . MISSING_REQUIRED_EXTENSIONS . '</h4>'
         . '<p class="mb-0">'
-        . htmlspecialchars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $label), ENT_QUOTES | ENT_HTML5)
+        . installerHtmlSpecialChars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $label))
         . '</p></div>';
 }
 

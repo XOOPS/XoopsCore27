@@ -269,7 +269,7 @@ function xoPhpVersion()
  *
  * @return bool
  */
-function xoInstallerExtensionAvailable($ext, array $symbols = [])
+function xoInstallerExtensionAvailable(string $ext, array $symbols = []): bool
 {
     if (!extension_loaded($ext)) {
         return false;
@@ -285,6 +285,29 @@ function xoInstallerExtensionAvailable($ext, array $symbols = [])
 }
 
 /**
+ * Labels of the mandatory extensions that are not usable.
+ *
+ * Single source of truth shared by the requirements-page gate and the
+ * server-side guards on later pages, so every entry point applies the same
+ * rule against $configs['extensions_required'] (label + required symbols).
+ *
+ * @param XoopsInstallWizard $wizard
+ *
+ * @return string[] human-readable labels of missing extensions (empty = ok)
+ */
+function xoInstallerMissingRequired($wizard): array
+{
+    $missing = [];
+    foreach ($wizard->configs['extensions_required'] as $ext => $info) {
+        [$label, $symbols] = $info;
+        if (!xoInstallerExtensionAvailable($ext, $symbols)) {
+            $missing[] = $label;
+        }
+    }
+    return $missing;
+}
+
+/**
  * Build the "mandatory extension missing" alert markup.
  *
  * Returned (not echoed) so the caller can assign it to $content and render it
@@ -294,7 +317,7 @@ function xoInstallerExtensionAvailable($ext, array $symbols = [])
  *
  * @return string
  */
-function xoInstallerBlockedHtml($label)
+function xoInstallerBlockedHtml(string $label): string
 {
     return '<div class="alert alert-danger" role="alert">'
         . '<h4 class="alert-heading"><span class="fa-solid fa-ban"></span> ' . MISSING_REQUIRED_EXTENSIONS . '</h4>'

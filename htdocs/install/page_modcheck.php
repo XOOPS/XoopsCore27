@@ -29,19 +29,12 @@ require_once __DIR__ . '/include/common.inc.php';
 defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 
 $pageHasForm = false;
-$diagsOK     = false;
 
-// Mandatory extensions: collect any that are missing. Installation cannot
-// proceed without these (e.g. mysqli has no fallback driver and would fatal
-// on the DB-connection step), so a missing one blocks the Next button.
-$missingRequired = [];
-foreach ($wizard->configs['extensions_required'] as $ext => $info) {
-    [$label, $symbols] = $info;
-    if (!xoInstallerExtensionAvailable($ext, $symbols)) {
-        $missingRequired[] = $label;
-    }
-}
-$blockNext = !empty($missingRequired);
+// Mandatory extensions: installation cannot proceed without these (e.g.
+// mysqli has no fallback driver and would fatal on the DB-connection step),
+// so a missing one blocks the Next button.
+$missingRequired = xoInstallerMissingRequired($wizard);
+$blockNext       = !empty($missingRequired);
 
 // Keep the MySQLi requirements row consistent with the gate: use the same
 // configured symbol list so the row cannot show success while Next is blocked
@@ -64,10 +57,7 @@ foreach ($wizard->configs['extensions'] as $ext => $value) {
 ob_start();
 ?>
     <?php if ($blockNext): ?>
-        <div class="alert alert-danger" role="alert">
-            <h4 class="alert-heading"><span class="fa-solid fa-ban"></span> <?php echo MISSING_REQUIRED_EXTENSIONS; ?></h4>
-            <p class="mb-0"><?php echo installerHtmlSpecialChars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, implode(', ', $missingRequired))); ?></p>
-        </div>
+        <?php echo xoInstallerBlockedHtml(implode(', ', $missingRequired)); ?>
     <?php endif; ?>
 
     <h3><?php echo REQUIREMENTS; ?></h3>

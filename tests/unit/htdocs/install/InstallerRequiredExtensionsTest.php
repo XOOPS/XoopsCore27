@@ -91,9 +91,10 @@ class InstallerRequiredExtensionsTest extends TestCase
         };
         spl_autoload_register($probe);
         try {
-            // The extension is missing, so the function short-circuits on
-            // extension_loaded() before any symbol probe — and even when it
-            // does probe, class_exists(.., false) must not autoload.
+            // json IS loaded, so the function does not short-circuit on
+            // extension_loaded() — it reaches the symbol loop. The missing
+            // class symbol must be probed with class_exists(.., false) so no
+            // registered autoloader is invoked for it.
             xoInstallerExtensionAvailable('json', ['Xoops_Unloadable_Probe_Class']);
         } finally {
             spl_autoload_unregister($probe);

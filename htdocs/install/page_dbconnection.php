@@ -32,7 +32,7 @@ $pageHasForm = true;
 $pageHasHelp = true;
 
 // mysqli has no fallback driver; without it every step below fatals.
-xoInstallerRequireExtension($wizard, 'mysqli', 'MySQLi');
+xoInstallerRequireExtension($wizard, 'mysqli', 'MySQLi', ['mysqli_report', 'mysqli']);
 
 $vars = & $_SESSION['settings'];
 

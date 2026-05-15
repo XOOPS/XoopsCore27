@@ -267,14 +267,28 @@ function xoPhpVersion()
  * the standard installer chrome with the blocked-requirements alert and exits.
  *
  * @param XoopsInstallWizard $wizard
- * @param string             $ext    extension name (e.g. 'mysqli')
- * @param string             $label  human-readable label (e.g. 'MySQLi')
+ * @param string             $ext     extension name (e.g. 'mysqli')
+ * @param string             $label   human-readable label (e.g. 'MySQLi')
+ * @param string[]           $symbols functions/classes that must also exist;
+ *                                    catches partial builds where the
+ *                                    extension reports loaded but a symbol
+ *                                    the caller uses (e.g. mysqli_report) is
+ *                                    not actually available
  *
  * @return void
  */
-function xoInstallerRequireExtension($wizard, $ext, $label)
+function xoInstallerRequireExtension($wizard, $ext, $label, array $symbols = [])
 {
-    if (extension_loaded($ext)) {
+    $available = extension_loaded($ext);
+    if ($available) {
+        foreach ($symbols as $symbol) {
+            if (!function_exists($symbol) && !class_exists($symbol)) {
+                $available = false;
+                break;
+            }
+        }
+    }
+    if ($available) {
         return;
     }
     $blockNext = true;

@@ -36,7 +36,7 @@ $diagsOK     = false;
 // on the DB-connection step), so a missing one blocks the Next button.
 $missingRequired = [];
 foreach ($wizard->configs['extensions_required'] as $ext => $label) {
-    if (!extension_loaded($ext)) {
+    if (!xoInstallerExtensionAvailable($ext)) {
         $missingRequired[] = $label;
     }
 }

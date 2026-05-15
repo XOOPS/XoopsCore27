@@ -80,10 +80,14 @@ $configs['extensions'] = [
 // Mandatory extensions — installation cannot proceed without these.
 // Keyed by extension name; value is the human-readable label shown on the
 // requirements page. mysqli has no fallback driver, so a missing entry here
-// would otherwise fatal later in the DB-connection step.
+// would otherwise fatal later in the DB-connection step; the others are core
+// extensions with no polyfill. mbstring is intentionally NOT listed: the
+// installer autoloads symfony/polyfill-mbstring (via common.inc.php), so the
+// mb_* functions remain available even without the extension — gating on
+// extension_loaded('mbstring') would wrongly block a working install. It
+// stays in the recommended-extensions list below.
 $configs['extensions_required'] = [
     'mysqli'   => 'MySQLi',
-    'mbstring' => 'MBString',
     'session'  => 'Session',
     'pcre'     => 'PCRE',
     'filter'   => 'filter',

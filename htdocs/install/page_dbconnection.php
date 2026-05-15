@@ -31,8 +31,15 @@ defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 $pageHasForm = true;
 $pageHasHelp = true;
 
-// mysqli has no fallback driver; without it every step below fatals.
-xoInstallerRequireExtension($wizard, 'mysqli', 'MySQLi', ['mysqli_report', 'mysqli']);
+// mysqli has no fallback driver; without it every step below fatals. The
+// requirements page already blocks Next, but that is bypassable via a direct
+// URL or a stale session, so guard here too.
+if (!xoInstallerExtensionAvailable('mysqli', ['mysqli_report', 'mysqli'])) {
+    $blockNext = true;
+    $content   = xoInstallerBlockedHtml('MySQLi');
+    include __DIR__ . '/include/install_tpl.php';
+    exit;
+}
 
 $vars = & $_SESSION['settings'];
 

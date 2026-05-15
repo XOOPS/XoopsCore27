@@ -257,51 +257,50 @@ function xoPhpVersion()
 }
 
 /**
- * Halt the installer with a clear message when a mandatory extension that has
- * no fallback driver is unavailable.
+ * Whether a mandatory extension is usable.
  *
- * The requirements page already blocks the Next button, but that gate is
- * client-side and bypassable (direct URL, stale session). Without this guard
- * the database steps call mysqli_*() unconditionally and fatal with
- * "Call to undefined function" on a PHP build lacking the extension. Renders
- * the standard installer chrome with the blocked-requirements alert and exits.
+ * For extensions with no fallback driver (e.g. mysqli) a plain
+ * extension_loaded() is enough, but a partial/unusual build can report the
+ * extension loaded while a specific symbol the caller needs (e.g.
+ * mysqli_report) is absent — so optional functions/classes are verified too.
  *
- * @param XoopsInstallWizard $wizard
- * @param string             $ext     extension name (e.g. 'mysqli')
- * @param string             $label   human-readable label (e.g. 'MySQLi')
- * @param string[]           $symbols functions/classes that must also exist;
- *                                    catches partial builds where the
- *                                    extension reports loaded but a symbol
- *                                    the caller uses (e.g. mysqli_report) is
- *                                    not actually available
+ * @param string   $ext     extension name (e.g. 'mysqli')
+ * @param string[] $symbols functions/classes that must also exist
  *
- * @return void
+ * @return bool
  */
-function xoInstallerRequireExtension($wizard, $ext, $label, array $symbols = [])
+function xoInstallerExtensionAvailable($ext, array $symbols = [])
 {
-    $available = extension_loaded($ext);
-    if ($available) {
-        foreach ($symbols as $symbol) {
-            if (!function_exists($symbol) && !class_exists($symbol)) {
-                $available = false;
-                break;
-            }
+    if (!extension_loaded($ext)) {
+        return false;
+    }
+    foreach ($symbols as $symbol) {
+        // class_exists(.., false): don't trigger the autoloader during the
+        // install bootstrap just to probe for an internal extension class.
+        if (!function_exists($symbol) && !class_exists($symbol, false)) {
+            return false;
         }
     }
-    if ($available) {
-        return;
-    }
-    $blockNext = true;
-    ob_start();
-    ?>
-    <div class="alert alert-danger" role="alert">
-        <h4 class="alert-heading"><span class="fa-solid fa-ban"></span> <?php echo MISSING_REQUIRED_EXTENSIONS; ?></h4>
-        <p class="mb-0"><?php echo htmlspecialchars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $label), ENT_QUOTES | ENT_HTML5); ?></p>
-    </div>
-    <?php
-    $content = ob_get_clean();
-    include __DIR__ . '/install_tpl.php';
-    exit;
+    return true;
+}
+
+/**
+ * Build the "mandatory extension missing" alert markup.
+ *
+ * Returned (not echoed) so the caller can assign it to $content and render it
+ * through the standard installer chrome at file scope.
+ *
+ * @param string $label human-readable extension label (e.g. 'MySQLi')
+ *
+ * @return string
+ */
+function xoInstallerBlockedHtml($label)
+{
+    return '<div class="alert alert-danger" role="alert">'
+        . '<h4 class="alert-heading"><span class="fa-solid fa-ban"></span> ' . MISSING_REQUIRED_EXTENSIONS . '</h4>'
+        . '<p class="mb-0">'
+        . htmlspecialchars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $label), ENT_QUOTES | ENT_HTML5)
+        . '</p></div>';
 }
 
 /**

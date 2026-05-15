@@ -15,16 +15,20 @@ use PHPUnit\Framework\TestCase;
  *
  *   - xoInstallerExtensionAvailable($ext, $symbols): capability probe used
  *     by both the requirements-page gate and the server-side DB guard.
- *   - xoInstallerBlockedHtml($label): builds the escaped "extension
+ *   - xoInstallerMissingRequired($wizard): single source of truth for the
+ *     missing-extension label list, consumed by every install entry point.
+ *   - xoInstallerBlockedHtml($labels): builds the escaped "extension
  *     missing" alert markup.
  *
  * install/include/functions.php is pure function declarations (no
  * top-level code), so it is safe to require once here.
  *
  * @see \xoInstallerExtensionAvailable
+ * @see \xoInstallerMissingRequired
  * @see \xoInstallerBlockedHtml
  */
 #[CoversFunction('xoInstallerExtensionAvailable')]
+#[CoversFunction('xoInstallerMissingRequired')]
 #[CoversFunction('xoInstallerBlockedHtml')]
 class InstallerRequiredExtensionsTest extends TestCase
 {
@@ -47,6 +51,18 @@ class InstallerRequiredExtensionsTest extends TestCase
         }
 
         require_once XOOPS_ROOT_PATH . '/install/include/functions.php';
+        // xoInstallerMissingRequired() type-hints XoopsInstallWizard; the
+        // class file is plain (no access guard) and the class has no
+        // constructor, so it is safe to load and instantiate here.
+        require_once XOOPS_ROOT_PATH . '/install/class/installwizard.php';
+    }
+
+    private function wizardWith(array $extensionsRequired): \XoopsInstallWizard
+    {
+        $wizard                                  = new \XoopsInstallWizard();
+        $wizard->configs['extensions_required'] = $extensionsRequired;
+
+        return $wizard;
     }
 
     // =====================================================================
@@ -101,6 +117,52 @@ class InstallerRequiredExtensionsTest extends TestCase
         }
 
         self::assertNotContains('Xoops_Unloadable_Probe_Class', $autoloadHits);
+    }
+
+    // =====================================================================
+    // xoInstallerMissingRequired()
+    // =====================================================================
+
+    public function testMissingRequiredEmptyWhenAllPresent(): void
+    {
+        // json and pcre are compiled in on every supported PHP build.
+        $wizard = $this->wizardWith([
+            'json' => ['JSON', []],
+            'pcre' => ['PCRE', []],
+        ]);
+
+        self::assertSame([], xoInstallerMissingRequired($wizard));
+    }
+
+    public function testMissingRequiredReportsAbsentExtension(): void
+    {
+        $wizard = $this->wizardWith([
+            'json'             => ['JSON', []],
+            'totally_fake_ext' => ['FakeExt', []],
+        ]);
+
+        self::assertSame(['FakeExt'], xoInstallerMissingRequired($wizard));
+    }
+
+    public function testMissingRequiredHonoursSymbolList(): void
+    {
+        // Extension present, but a required symbol is not — must be reported.
+        $wizard = $this->wizardWith([
+            'json' => ['JSON', ['xoops_no_such_symbol_xyz']],
+        ]);
+
+        self::assertSame(['JSON'], xoInstallerMissingRequired($wizard));
+    }
+
+    public function testMissingRequiredPreservesConfigOrder(): void
+    {
+        $wizard = $this->wizardWith([
+            'totally_fake_ext' => ['FakeExt', []],
+            'json'             => ['JSON', []],
+            'another_fake_ext' => ['OtherFake', []],
+        ]);
+
+        self::assertSame(['FakeExt', 'OtherFake'], xoInstallerMissingRequired($wizard));
     }
 
     // =====================================================================

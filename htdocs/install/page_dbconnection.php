@@ -34,10 +34,11 @@ $pageHasHelp = true;
 // mysqli has no fallback driver; without it every step below fatals. The
 // requirements page already blocks Next, but that is bypassable via a direct
 // URL or a stale session, so guard here too.
-if (!xoInstallerExtensionAvailable('mysqli', ['mysqli_report', 'mysqli'])) {
+[$mysqliLabel, $mysqliSymbols] = $wizard->configs['extensions_required']['mysqli'];
+if (!xoInstallerExtensionAvailable('mysqli', $mysqliSymbols)) {
     $blockNext = true;
-    $content   = xoInstallerBlockedHtml('MySQLi');
-    include __DIR__ . '/include/install_tpl.php';
+    $content   = xoInstallerBlockedHtml($mysqliLabel);
+    include_once __DIR__ . '/include/install_tpl.php';
     exit;
 }
 

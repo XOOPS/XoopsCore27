@@ -86,12 +86,18 @@ $configs['extensions'] = [
 // mb_* functions remain available even without the extension — gating on
 // extension_loaded('mbstring') would wrongly block a working install. It
 // stays in the recommended-extensions list below.
+//
+// Each entry is [human-readable label, [symbols that must also exist]]. The
+// symbol list is the single source of truth shared by the requirements-page
+// gate and the server-side DB guard, so both apply identical rules: a
+// partial build that reports mysqli loaded but lacks mysqli_report()/the
+// mysqli class is treated as missing in both places.
 $configs['extensions_required'] = [
-    'mysqli'   => 'MySQLi',
-    'session'  => 'Session',
-    'pcre'     => 'PCRE',
-    'filter'   => 'filter',
-    'fileinfo' => 'fileinfo',
+    'mysqli'   => ['MySQLi', ['mysqli_report', 'mysqli']],
+    'session'  => ['Session', []],
+    'pcre'     => ['PCRE', []],
+    'filter'   => ['filter', []],
+    'fileinfo' => ['fileinfo', []],
 ];
 
 // Writable files and directories

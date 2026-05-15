@@ -35,8 +35,9 @@ $diagsOK     = false;
 // proceed without these (e.g. mysqli has no fallback driver and would fatal
 // on the DB-connection step), so a missing one blocks the Next button.
 $missingRequired = [];
-foreach ($wizard->configs['extensions_required'] as $ext => $label) {
-    if (!xoInstallerExtensionAvailable($ext)) {
+foreach ($wizard->configs['extensions_required'] as $ext => $info) {
+    [$label, $symbols] = $info;
+    if (!xoInstallerExtensionAvailable($ext, $symbols)) {
         $missingRequired[] = $label;
     }
 }

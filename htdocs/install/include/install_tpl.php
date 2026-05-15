@@ -182,7 +182,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
 
                                 <div class="text-end mt-4">
                                     <?php if (!empty($blockNext)): ?>
-                                        <button class="btn btn-lg btn-success" type="button" disabled aria-disabled="true">
+                                        <button class="btn btn-lg btn-secondary disabled" type="button" disabled aria-disabled="true">
                                             <?php echo BUTTON_NEXT; ?> <i class="fa-solid fa-caret-right"></i>
                                         </button>
                                     <?php else: ?>

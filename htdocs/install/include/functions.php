@@ -295,7 +295,7 @@ function xoInstallerExtensionAvailable(string $ext, array $symbols = []): bool
  *
  * @return string[] human-readable labels of missing extensions (empty = ok)
  */
-function xoInstallerMissingRequired($wizard): array
+function xoInstallerMissingRequired(XoopsInstallWizard $wizard): array
 {
     $missing = [];
     foreach ($wizard->configs['extensions_required'] as $ext => $info) {
@@ -313,16 +313,17 @@ function xoInstallerMissingRequired($wizard): array
  * Returned (not echoed) so the caller can assign it to $content and render it
  * through the standard installer chrome at file scope.
  *
- * @param string $label human-readable extension label (e.g. 'MySQLi')
+ * @param string $labels human-readable extension label or comma-separated
+ *                       list of labels (callers pass the joined missing set)
  *
  * @return string
  */
-function xoInstallerBlockedHtml(string $label): string
+function xoInstallerBlockedHtml(string $labels): string
 {
     return '<div class="alert alert-danger" role="alert">'
         . '<h4 class="alert-heading"><span class="fa-solid fa-ban"></span> ' . MISSING_REQUIRED_EXTENSIONS . '</h4>'
         . '<p class="mb-0">'
-        . installerHtmlSpecialChars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $label))
+        . installerHtmlSpecialChars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $labels))
         . '</p></div>';
 }
 

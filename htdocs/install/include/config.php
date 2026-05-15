@@ -78,20 +78,20 @@ $configs['extensions'] = [
 ];
 
 // Mandatory extensions — installation cannot proceed without these.
-// Keyed by extension name; value is the human-readable label shown on the
-// requirements page. mysqli has no fallback driver, so a missing entry here
-// would otherwise fatal later in the DB-connection step; the others are core
-// extensions with no polyfill. mbstring is intentionally NOT listed: the
-// installer autoloads symfony/polyfill-mbstring (via common.inc.php), so the
-// mb_* functions remain available even without the extension — gating on
+// Keyed by extension name; each value is a tuple
+// [human-readable label, [symbols that must also exist]]. mysqli has no
+// fallback driver, so a missing entry here would otherwise fatal later in
+// the DB-connection step; the others are core extensions with no polyfill.
+// mbstring is intentionally NOT listed: the installer autoloads
+// symfony/polyfill-mbstring (via common.inc.php), so the mb_* functions
+// remain available even without the extension — gating on
 // extension_loaded('mbstring') would wrongly block a working install. It
 // stays in the recommended-extensions list below.
 //
-// Each entry is [human-readable label, [symbols that must also exist]]. The
-// symbol list is the single source of truth shared by the requirements-page
-// gate and the server-side DB guard, so both apply identical rules: a
-// partial build that reports mysqli loaded but lacks mysqli_report()/the
-// mysqli class is treated as missing in both places.
+// The symbol list is the single source of truth shared by the
+// requirements-page gate and the server-side guards, so both apply
+// identical rules: a partial build that reports mysqli loaded but lacks
+// mysqli_report()/the mysqli class is treated as missing in both places.
 $configs['extensions_required'] = [
     'mysqli'   => ['MySQLi', ['mysqli_report', 'mysqli']],
     'session'  => ['Session', []],

@@ -1,0 +1,51 @@
+name: Changelog
+
+# Generates the root CHANGELOG.md from the conventional-commit history with
+# git-cliff (config: cliff.toml). CHANGELOG.md is a generated artifact and
+# must not be hand-edited. Runs on each published release and can be
+# dispatched manually. The curated narrative notes stay in
+# docs/changelog.270.txt.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: changelog-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: Generate CHANGELOG.md
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit CHANGELOG.md if changed
+        run: |
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "xoops-ci"
+          git config user.email "ci@xoops.org"
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): regenerate CHANGELOG.md [skip ci]"
+          git push

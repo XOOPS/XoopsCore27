@@ -257,6 +257,40 @@ function xoPhpVersion()
 }
 
 /**
+ * Halt the installer with a clear message when a mandatory extension that has
+ * no fallback driver is unavailable.
+ *
+ * The requirements page already blocks the Next button, but that gate is
+ * client-side and bypassable (direct URL, stale session). Without this guard
+ * the database steps call mysqli_*() unconditionally and fatal with
+ * "Call to undefined function" on a PHP build lacking the extension. Renders
+ * the standard installer chrome with the blocked-requirements alert and exits.
+ *
+ * @param XoopsInstallWizard $wizard
+ * @param string             $ext    extension name (e.g. 'mysqli')
+ * @param string             $label  human-readable label (e.g. 'MySQLi')
+ *
+ * @return void
+ */
+function xoInstallerRequireExtension($wizard, $ext, $label)
+{
+    if (extension_loaded($ext)) {
+        return;
+    }
+    $blockNext = true;
+    ob_start();
+    ?>
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading"><span class="fa-solid fa-ban"></span> <?php echo MISSING_REQUIRED_EXTENSIONS; ?></h4>
+        <p class="mb-0"><?php echo htmlspecialchars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, $label), ENT_QUOTES | ENT_HTML5); ?></p>
+    </div>
+    <?php
+    $content = ob_get_clean();
+    include __DIR__ . '/install_tpl.php';
+    exit;
+}
+
+/**
  * @param $path
  * @param $valid
  *

@@ -77,6 +77,19 @@ $configs['extensions'] = [
     ],
 ];
 
+// Mandatory extensions — installation cannot proceed without these.
+// Keyed by extension name; value is the human-readable label shown on the
+// requirements page. mysqli has no fallback driver, so a missing entry here
+// would otherwise fatal later in the DB-connection step.
+$configs['extensions_required'] = [
+    'mysqli'   => 'MySQLi',
+    'mbstring' => 'MBString',
+    'session'  => 'Session',
+    'pcre'     => 'PCRE',
+    'filter'   => 'filter',
+    'fileinfo' => 'fileinfo',
+];
+
 // Writable files and directories
 $configs['writable'] = [
     'uploads/',

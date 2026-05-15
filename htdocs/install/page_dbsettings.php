@@ -31,6 +31,9 @@ defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 $pageHasForm = true;
 $pageHasHelp = true;
 
+// mysqli has no fallback driver; without it every step below fatals.
+xoInstallerRequireExtension($wizard, 'mysqli', 'MySQLi');
+
 $vars = & $_SESSION['settings'];
 
 $hostConnectPrefix = empty($vars['DB_PCONNECT']) ? '' : 'p:';

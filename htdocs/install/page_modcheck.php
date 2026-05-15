@@ -31,6 +31,17 @@ defined('XOOPS_INSTALL') || die('XOOPS Installation wizard die');
 $pageHasForm = false;
 $diagsOK     = false;
 
+// Mandatory extensions: collect any that are missing. Installation cannot
+// proceed without these (e.g. mysqli has no fallback driver and would fatal
+// on the DB-connection step), so a missing one blocks the Next button.
+$missingRequired = [];
+foreach ($wizard->configs['extensions_required'] as $ext => $label) {
+    if (!extension_loaded($ext)) {
+        $missingRequired[] = $label;
+    }
+}
+$blockNext = !empty($missingRequired);
+
 foreach ($wizard->configs['extensions'] as $ext => $value) {
     if (extension_loaded($ext)) {
         if (is_array($value[0])) {
@@ -44,6 +55,13 @@ foreach ($wizard->configs['extensions'] as $ext => $value) {
 }
 ob_start();
 ?>
+    <?php if ($blockNext): ?>
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading"><span class="fa-solid fa-ban"></span> <?php echo MISSING_REQUIRED_EXTENSIONS; ?></h4>
+            <p class="mb-0"><?php echo htmlspecialchars(sprintf(MISSING_REQUIRED_EXTENSIONS_MSG, implode(', ', $missingRequired)), ENT_QUOTES | ENT_HTML5); ?></p>
+        </div>
+    <?php endif; ?>
+
     <h3><?php echo REQUIREMENTS; ?></h3>
     <table class="table table-hover">
         <tbody>

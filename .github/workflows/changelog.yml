@@ -29,6 +29,9 @@ jobs:
         # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
+          # On release: published the default ref is the tag (detached HEAD),
+          # which cannot be pushed back. Always work on the default branch.
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
       - name: Generate changelog
@@ -38,7 +41,14 @@ jobs:
           config: cliff.toml
           args: --verbose
         env:
+          # git-cliff-action reads OUTPUT as an ENV var (run.sh:
+          # OUTPUT=${OUTPUT:="git-cliff/CHANGELOG.md"}); there is no `output`
+          # action input. Do not move this into `with:` — it would be ignored
+          # and the changelog would land at the default git-cliff/ path.
           OUTPUT: CHANGELOG.md
+
+      - name: Verify changelog was generated at the repo root
+        run: test -s CHANGELOG.md
 
       - name: Commit CHANGELOG.md if changed
         run: |
@@ -50,4 +60,4 @@ jobs:
           git config user.email "ci@xoops.org"
           git add CHANGELOG.md
           git commit -m "docs(changelog): regenerate CHANGELOG.md [skip ci]"
-          git push
+          git push origin HEAD:${{ github.event.repository.default_branch }}

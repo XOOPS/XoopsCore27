@@ -16,9 +16,11 @@ permissions:
 
 concurrency:
   # Fixed group (not keyed by ref): release-tag and manual-dispatch runs
-  # both push the default branch, so serialize them to avoid a push race.
+  # both push the default branch. Queue them (cancel-in-progress: false) so
+  # each run finishes and persists its CHANGELOG.md instead of a later run
+  # cancelling an in-flight one mid-push.
   group: changelog
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   generate:

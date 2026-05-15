@@ -62,6 +62,12 @@ jobs:
         # Pinned to a commit SHA (supply-chain hardening); comment tracks the tag.
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
+          # Intentional: GITHUB_TOKEN-created PRs do not trigger CI/Sonar
+          # (GitHub recursion-prevention). That is fine here — master's
+          # ruleset requires only 1 approving review, not status checks, and
+          # CI on a generated CHANGELOG.md is low value. A maintainer reviews
+          # and merges the changelog PR. Do not swap in a PAT/App token just
+          # to run checks — it adds a managed elevated secret for no benefit.
           token: ${{ secrets.GITHUB_TOKEN }}
           base: ${{ github.event.repository.default_branch }}
           branch: automation/update-changelog

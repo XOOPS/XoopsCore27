@@ -24,7 +24,7 @@ release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 """
 body = """
 {% if version %}\
-## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+## [{{ version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
 {% else %}\
 ## [Unreleased]
 {% endif %}\

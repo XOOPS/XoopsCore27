@@ -15,7 +15,9 @@ permissions:
   contents: write
 
 concurrency:
-  group: changelog-${{ github.ref }}
+  # Fixed group (not keyed by ref): release-tag and manual-dispatch runs
+  # both push the default branch, so serialize them to avoid a push race.
+  group: changelog
   cancel-in-progress: true
 
 jobs:

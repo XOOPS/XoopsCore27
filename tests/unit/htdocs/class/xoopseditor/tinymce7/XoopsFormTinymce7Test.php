@@ -35,12 +35,16 @@ class XoopsFormTinymce7Test extends TestCase
 
         define('_XOOPS_EDITOR_TINYMCE7_LANGUAGE', 'zh_TW');
 
-        // Anonymous subclass with an empty constructor: skips the heavy
-        // parent constructor (which builds a TinyMCE editor) without
+        // Anonymous subclass: skip the heavy parent constructor without
         // reflection. getLanguage() only needs $this->language (unset here)
         // and the constant, so this faithfully exercises the target path.
         $editor = new class extends \XoopsFormTinymce7 {
-            public function __construct() {}
+            public function __construct()
+            {
+                // Intentionally empty: bypass XoopsFormTinymce7::__construct(),
+                // which builds a full TinyMCE editor and is irrelevant to
+                // getLanguage().
+            }
         };
 
         self::assertSame('zh_TW', $editor->getLanguage());

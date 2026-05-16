@@ -7,7 +7,6 @@ namespace xoopseditor\tinymce7;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
 
 require_once XOOPS_ROOT_PATH . '/class/xoopseditor/tinymce7/formtinymce.php';
 
@@ -36,7 +35,13 @@ class XoopsFormTinymce7Test extends TestCase
 
         define('_XOOPS_EDITOR_TINYMCE7_LANGUAGE', 'zh_TW');
 
-        $editor = (new ReflectionClass(\XoopsFormTinymce7::class))->newInstanceWithoutConstructor();
+        // Anonymous subclass with an empty constructor: skips the heavy
+        // parent constructor (which builds a TinyMCE editor) without
+        // reflection. getLanguage() only needs $this->language (unset here)
+        // and the constant, so this faithfully exercises the target path.
+        $editor = new class extends \XoopsFormTinymce7 {
+            public function __construct() {}
+        };
 
         self::assertSame('zh_TW', $editor->getLanguage());
     }

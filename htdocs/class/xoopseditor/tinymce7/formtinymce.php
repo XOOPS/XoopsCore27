@@ -85,6 +85,20 @@ class XoopsFormTinymce7 extends XoopsEditor
         'zh-hant' => 'zh_TW',
         'zh-hk'   => 'zh_TW',
         'zh-tw'   => 'zh_TW',
+        // Collapse the common country variants of languages whose only
+        // TinyMCE 7 pack is the bare code (no de_DE.js/es_ES.js/...). A
+        // genuine regional pack (e.g. es_MX) is intentionally NOT aliased
+        // here so it still resolves via the generic path.
+        'de-de'   => 'de',
+        'es-es'   => 'es',
+        'it-it'   => 'it',
+        'ja-jp'   => 'ja',
+        'nl-nl'   => 'nl',
+        'pl-pl'   => 'pl',
+        'ru-ru'   => 'ru',
+        'tr-tr'   => 'tr',
+        'uk-ua'   => 'uk',
+        'vi-vn'   => 'vi',
     ];
 
     public $language;
@@ -186,16 +200,22 @@ class XoopsFormTinymce7 extends XoopsEditor
             return self::TINYMCE7_LANGUAGE_MAP[$key];
         }
 
-        $parts = preg_split('/-+/', $key);
-        if ($parts === false || $parts[0] === '') {
+        [$language, $region] = array_pad(explode('-', $key, 2), 2, '');
+
+        // Reject malformed tokens: a TinyMCE 7 locale is a 2-3 letter
+        // language, optionally with a 2-letter region. Anything else
+        // (symbols, digits, junk) degrades to the built-in English.
+        if (!preg_match('/^[a-z]{2,3}$/', $language)) {
+            return 'en';
+        }
+        if ($region === '') {
+            return $language;
+        }
+        if (!preg_match('/^[a-z]{2}$/', $region)) {
             return 'en';
         }
 
-        if (!isset($parts[1]) || $parts[1] === '') {
-            return $parts[0];
-        }
-
-        return $parts[0] . '_' . strtoupper($parts[1]);
+        return $language . '_' . strtoupper($region);
     }
 
     /**

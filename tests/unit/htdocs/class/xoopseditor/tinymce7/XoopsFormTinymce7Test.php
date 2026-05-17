@@ -65,6 +65,10 @@ class XoopsFormTinymce7Test extends TestCase
             'brazilian portuguese preserves region case' => ['pt_BR', 'pt_BR'],
             'swedish maps to TinyMCE 7 filename' => ['sv', 'sv_SE'],
             'custom regional packs keep TinyMCE 7 separator style' => ['es-mx', 'es_MX'],
+            'germany country variant collapses to bare pack' => ['de_DE', 'de'],
+            'spain country variant collapses to bare pack' => ['es_ES', 'es'],
+            'malformed token falls back to english' => ['@@', 'en'],
+            'invalid region falls back to english' => ['es-123', 'en'],
             'empty language falls back to english' => ['', 'en'],
         ];
     }
@@ -86,5 +90,36 @@ class XoopsFormTinymce7Test extends TestCase
         };
 
         self::assertSame($expected, $editor->normalizeForTest($langcode));
+    }
+
+    /**
+     * End-to-end guard: getLanguage() must actually run _LANGCODE through
+     * the normalizer when _XOOPS_EDITOR_TINYMCE7_LANGUAGE is absent — i.e.
+     * proves the wiring of the #76 fix, not just the helper in isolation.
+     *
+     * Separate process because it has to define() the _LANGCODE global
+     * constant (a PHP constant cannot be unset). Local Windows PHPUnit
+     * process isolation has been flaky in this repo, but CI runs the
+     * existing isolated test reliably.
+     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testGetLanguageFallbackUsesLangcodeNormalizer(): void
+    {
+        if (defined('_XOOPS_EDITOR_TINYMCE7_LANGUAGE') || defined('_LANGCODE')) {
+            self::markTestSkipped('Locale constants already defined; cannot exercise the fallback branch in isolation.');
+        }
+
+        define('_LANGCODE', 'zh-tw_utf8');
+
+        $editor = new class extends \XoopsFormTinymce7 {
+            public function __construct()
+            {
+                // Intentionally empty: bypass the heavy parent constructor;
+                // only the getLanguage() fallback branch is under test.
+            }
+        };
+
+        self::assertSame('zh_TW', $editor->getLanguage());
     }
 }

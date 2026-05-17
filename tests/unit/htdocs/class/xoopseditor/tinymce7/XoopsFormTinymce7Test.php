@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace xoopseditor\tinymce7;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -48,5 +49,42 @@ class XoopsFormTinymce7Test extends TestCase
         };
 
         self::assertSame('zh_TW', $editor->getLanguage());
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function fallbackLanguageCodeProvider(): array
+    {
+        return [
+            'english remains default TinyMCE code' => ['en', 'en'],
+            'french maps to TinyMCE 7 filename' => ['fr', 'fr_FR'],
+            'traditional chinese underscore' => ['zh_TW', 'zh_TW'],
+            'traditional chinese hyphen' => ['zh-tw', 'zh_TW'],
+            'legacy TinyMCE 3 utf8 suffix is stripped' => ['zh-tw_utf8', 'zh_TW'],
+            'brazilian portuguese preserves region case' => ['pt_BR', 'pt_BR'],
+            'swedish maps to TinyMCE 7 filename' => ['sv', 'sv_SE'],
+            'custom regional packs keep TinyMCE 7 separator style' => ['es-mx', 'es_MX'],
+            'empty language falls back to english' => ['', 'en'],
+        ];
+    }
+
+    #[DataProvider('fallbackLanguageCodeProvider')]
+    public function testFallbackLanguageCodesUseTinymce7LocaleFormat(string $langcode, string $expected): void
+    {
+        $editor = new class extends \XoopsFormTinymce7 {
+            public function __construct()
+            {
+                // Intentionally empty: this test only exercises the language
+                // formatter used by the getLanguage() fallback branch.
+            }
+
+            public function normalizeForTest(string $langcode): string
+            {
+                return self::normalizeLanguageCode($langcode);
+            }
+        };
+
+        self::assertSame($expected, $editor->normalizeForTest($langcode));
     }
 }

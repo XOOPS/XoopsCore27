@@ -27,6 +27,66 @@ xoops_load('XoopsEditor');
  */
 class XoopsFormTinymce7 extends XoopsEditor
 {
+    private const TINYMCE7_LANGUAGE_MAP = [
+        'ar'    => 'ar',
+        'bg'    => 'bg_BG',
+        'bg-bg' => 'bg_BG',
+        'ca'    => 'ca',
+        'cs'    => 'cs',
+        'da'    => 'da',
+        'de'    => 'de',
+        'el'    => 'el',
+        'en'    => 'en',
+        'en-us' => 'en',
+        'es'    => 'es',
+        'eu'    => 'eu',
+        'fa'    => 'fa',
+        'fi'    => 'fi',
+        'fr'    => 'fr_FR',
+        'fr-fr' => 'fr_FR',
+        'he'    => 'he_IL',
+        'he-il' => 'he_IL',
+        'hi'    => 'hi',
+        'hr'    => 'hr',
+        'hu'    => 'hu_HU',
+        'hu-hu' => 'hu_HU',
+        'id'    => 'id',
+        'in'    => 'id',
+        'iw'    => 'he_IL',
+        'it'    => 'it',
+        'ja'    => 'ja',
+        'kk'    => 'kk',
+        'ko'    => 'ko_KR',
+        'ko-kr' => 'ko_KR',
+        'ms'    => 'ms',
+        'nb'    => 'nb_NO',
+        'nb-no' => 'nb_NO',
+        'nl'    => 'nl',
+        'no'    => 'nb_NO',
+        'pl'    => 'pl',
+        'pt'    => 'pt_PT',
+        'pt-br' => 'pt_BR',
+        'pt-pt' => 'pt_PT',
+        'ro'    => 'ro',
+        'ru'    => 'ru',
+        'sk'    => 'sk',
+        'sl'    => 'sl_SI',
+        'sl-si' => 'sl_SI',
+        'sv'    => 'sv_SE',
+        'sv-se' => 'sv_SE',
+        'th'    => 'th_TH',
+        'th-th' => 'th_TH',
+        'tr'    => 'tr',
+        'uk'    => 'uk',
+        'vi'    => 'vi',
+        'zh'      => 'zh_CN',
+        'zh-cn'   => 'zh_CN',
+        'zh-hans' => 'zh_CN',
+        'zh-hant' => 'zh_TW',
+        'zh-hk'   => 'zh_TW',
+        'zh-tw'   => 'zh_TW',
+    ];
+
     public $language;
     public $width  = '100%';
     public $height = '500px';
@@ -99,13 +159,43 @@ class XoopsFormTinymce7 extends XoopsEditor
         if (defined('_XOOPS_EDITOR_TINYMCE7_LANGUAGE')) {
             $this->language = constant('_XOOPS_EDITOR_TINYMCE7_LANGUAGE');
         } else {
-            $this->language = str_replace('_', '-', strtolower(_LANGCODE));
-            if (strtolower(_CHARSET) === 'utf-8') {
-                $this->language .= '_utf8';
-            }
+            $langcode = defined('_LANGCODE') ? (string) constant('_LANGCODE') : 'en';
+            $this->language = self::normalizeLanguageCode($langcode);
         }
 
         return $this->language;
+    }
+
+    /**
+     * Convert XOOPS language codes to TinyMCE 7 language-pack filenames.
+     *
+     * TinyMCE 7 dropped the legacy TinyMCE 3 "_utf8" suffix and requires
+     * case-sensitive language codes matching the pack filename, e.g. zh_TW.
+     */
+    protected static function normalizeLanguageCode(string $languageCode): string
+    {
+        $languageCode = trim($languageCode);
+        if ($languageCode === '') {
+            return 'en';
+        }
+
+        $key = strtolower(str_replace('_', '-', $languageCode));
+        $key = preg_replace('/[-.]utf-?8$/', '', $key) ?? $key;
+
+        if (isset(self::TINYMCE7_LANGUAGE_MAP[$key])) {
+            return self::TINYMCE7_LANGUAGE_MAP[$key];
+        }
+
+        $parts = preg_split('/-+/', $key);
+        if ($parts === false || $parts[0] === '') {
+            return 'en';
+        }
+
+        if (!isset($parts[1]) || $parts[1] === '') {
+            return $parts[0];
+        }
+
+        return $parts[0] . '_' . strtoupper($parts[1]);
     }
 
     /**

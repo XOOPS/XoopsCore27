@@ -217,6 +217,7 @@ class XoopsLoad
             'xoopsformtextarea'          => XOOPS_ROOT_PATH . '/class/xoopsform/formtextarea.php',
             'xoopsformdhtmltextarea'     => XOOPS_ROOT_PATH . '/class/xoopsform/formdhtmltextarea.php',
             'xoopsformelementtray'       => XOOPS_ROOT_PATH . '/class/xoopsform/formelementtray.php',
+            'xoopsformtabtray'           => XOOPS_ROOT_PATH . '/class/xoopsform/formtabtray.php',
             'xoopsthemeform'             => XOOPS_ROOT_PATH . '/class/xoopsform/themeform.php',
             'xoopssimpleform'            => XOOPS_ROOT_PATH . '/class/xoopsform/simpleform.php',
             'xoopsformtextdateselect'    => XOOPS_ROOT_PATH . '/class/xoopsform/formtextdateselect.php',

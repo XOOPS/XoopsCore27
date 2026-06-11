@@ -70,4 +70,37 @@ final class CsrfTokenGuardTest extends TestCase
         self::assertNotFalse($mutPos, 'user.php: deleteUser() not found');
         self::assertLessThan($mutPos, $guardPos, 'self-delete must validate the token before deleteUser()');
     }
+
+    /** @return array<string, array{string, string}> */
+    public static function ajaxToggleHandlers(): array
+    {
+        return [
+            'avatars display'   => ['/modules/system/admin/avatars/main.php',  "'display' === \$op"],
+            'smilies display'   => ['/modules/system/admin/smilies/main.php',  "'smilies_update_display' === \$op"],
+            'userrank special'  => ['/modules/system/admin/userrank/main.php', "'userrank_update_special' === \$op"],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('ajaxToggleHandlers')]
+    public function ajaxToggleValidatesTokenBeforeOutput(string $relPath, string $opGuard): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . $relPath);
+        self::assertNotFalse($src, $relPath);
+        $guardPos  = strpos($src, $opGuard);
+        $headerPos = strpos($src, 'xoops_cp_header(');
+        self::assertNotFalse($guardPos, "{$relPath}: missing op guard");
+        self::assertNotFalse($headerPos, "{$relPath}: xoops_cp_header() not found");
+        self::assertLessThan($headerPos, $guardPos, "{$relPath}: token guard must precede page output");
+        $region = substr($src, $guardPos, 200);
+        self::assertMatchesRegularExpression('/->\s*check\(\s*false\s*\)/', $region, "{$relPath}: toggle must validate the token");
+    }
+
+    #[Test]
+    public function controlPanelFooterEmitsRequestToken(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/include/cp_functions.php');
+        self::assertNotFalse($src);
+        self::assertStringContainsString('getTokenHTML()', $src);
+    }
 }

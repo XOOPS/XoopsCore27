@@ -103,9 +103,14 @@ function _refreshToken(html, $tokenInput) {
 
 function system_setStatus(data, img, file) {
     const $form = $('form[name="moduleadmin"]');
-    const $tokenInput = $form.length
+    let $tokenInput = $form.length
         ? $form.find("input[name='XOOPS_TOKEN_REQUEST']").first()
         : $("input[name='XOOPS_TOKEN_REQUEST']").first();
+    // Fall back to any token on the page (e.g. the control-panel footer token)
+    // when the module-admin form does not carry one.
+    if (!$tokenInput.length) {
+        $tokenInput = $("input[name='XOOPS_TOKEN_REQUEST']").first();
+    }
     if ($tokenInput.length) {
         data[$tokenInput.attr('name')] = $tokenInput.val();
     }

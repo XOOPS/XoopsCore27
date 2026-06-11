@@ -170,6 +170,9 @@ abstract class SystemFineUploadHandler
             $this->chunksFolder
         );
         $totalParts = Request::getInt('qqtotalparts', 1, 'POST');
+        if ($totalParts < 1) {
+            throw new \RuntimeException('Invalid chunk metadata.');
+        }
 
         $targetPath = $this->assertWithin(
             implode(DIRECTORY_SEPARATOR, [$uploadDirectory, $uuid, $name]),
@@ -177,8 +180,16 @@ abstract class SystemFineUploadHandler
         );
         $this->uploadName = $name;
 
+        // Confirm every expected chunk is present before writing the final file,
+        // so a combine request cannot produce an empty or partial target.
+        for ($i = 0; $i < $totalParts; $i++) {
+            if (!is_readable($targetFolder . DIRECTORY_SEPARATOR . $i)) {
+                throw new \RuntimeException('Missing upload chunk.');
+            }
+        }
+
         if (!file_exists($targetPath)) {
-            if (!mkdir($concurrentDirectory = dirname($targetPath), 0777, true) && !is_dir($concurrentDirectory)) {
+            if (!mkdir($concurrentDirectory = dirname($targetPath), 0775, true) && !is_dir($concurrentDirectory)) {
                 throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
             }
         }
@@ -252,8 +263,10 @@ abstract class SystemFineUploadHandler
         // Get size and name
         $file = Request::getArray($this->inputName, [], 'FILES');
         $size = $file['size'];
-        if (Request::hasVar('qqtotalfilesize')) {
-            $size = Request::getInt('qqtotalfilesize');
+        // Pin the declared total size to POST so a GET/cookie value cannot
+        // understate the size and slip past the size-limit check below.
+        if (Request::hasVar('qqtotalfilesize', 'POST')) {
+            $size = Request::getInt('qqtotalfilesize', 0, 'POST');
         }
 
         if (null === $name) {

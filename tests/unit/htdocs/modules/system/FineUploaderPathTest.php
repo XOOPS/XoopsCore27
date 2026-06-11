@@ -97,6 +97,37 @@ final class FineUploaderPathTest extends TestCase
     }
 
     #[Test]
+    public function combineChunksRejectsZeroTotalParts(): void
+    {
+        // A zero (or negative) part count must be refused before any file is
+        // opened, so a combine request cannot create an empty allowed-extension
+        // file. The guard runs before any filesystem access.
+        $_POST['qquuid']       = 'abc123';
+        $_POST['qqtotalparts'] = '0';
+
+        $this->expectException(\RuntimeException::class);
+        try {
+            $this->handler()->combineChunks(sys_get_temp_dir(), 'photo.jpg');
+        } finally {
+            unset($_POST['qquuid'], $_POST['qqtotalparts']);
+        }
+    }
+
+    #[Test]
+    public function declaredTotalSizeIsPinnedToPost(): void
+    {
+        // The declared total size must be read from POST only, so a GET/cookie
+        // value cannot understate it and bypass the size limit.
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/class/fineuploadhandler.php');
+        self::assertNotFalse($src);
+        self::assertSame(
+            1,
+            preg_match("/Request::getInt\(\s*'qqtotalfilesize'\s*,\s*0\s*,\s*'POST'\s*\)/", $src),
+            'qqtotalfilesize must be read from POST.'
+        );
+    }
+
+    #[Test]
     public function subclassesInheritConfinedMethods(): void
     {
         require_once XOOPS_ROOT_PATH . '/modules/system/class/fineimuploadhandler.php';

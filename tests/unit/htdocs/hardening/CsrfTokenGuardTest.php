@@ -103,4 +103,25 @@ final class CsrfTokenGuardTest extends TestCase
         self::assertNotFalse($src);
         self::assertStringContainsString('getTokenHTML()', $src);
     }
+
+    #[Test]
+    public function blocksAdminAjaxOpsValidateTokenBeforeOutput(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/blocksadmin/main.php');
+        self::assertNotFalse($src);
+        $guardPos  = strpos($src, "in_array(\$op, ['display', 'drag', 'order']");
+        $headerPos = strpos($src, 'xoops_cp_header(');
+        self::assertNotFalse($guardPos, 'blocksadmin: missing AJAX op guard');
+        self::assertNotFalse($headerPos, 'blocksadmin: xoops_cp_header() not found');
+        self::assertLessThan($headerPos, $guardPos, 'blocksadmin: token guard must precede page output');
+        self::assertMatchesRegularExpression('/->\s*check\(\s*false\s*\)/', substr($src, $guardPos, 200));
+    }
+
+    #[Test]
+    public function blocksJsSubmitsRequestToken(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/js/blocks.js');
+        self::assertNotFalse($src);
+        self::assertStringContainsString('XOOPS_TOKEN_REQUEST', $src);
+    }
 }

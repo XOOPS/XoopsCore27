@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__DIR__, 4) . '/bootstrap.php';
 
 xoops_load('XoopsFormElement');
+xoops_load('XoopsFormContainerInterface');
 xoops_load('XoopsFormElementTray');
 xoops_load('XoopsFormText');
 xoops_load('XoopsFormHidden');
@@ -73,6 +74,11 @@ class XoopsFormElementTrayTest extends TestCase
     public function testIsContainerReturnsTrue(): void
     {
         $this->assertTrue($this->tray->isContainer());
+    }
+
+    public function testImplementsContainerInterface(): void
+    {
+        $this->assertInstanceOf(\XoopsFormContainerInterface::class, $this->tray);
     }
 
     // ------------------------------------------------------------------
@@ -152,6 +158,46 @@ class XoopsFormElementTrayTest extends TestCase
         $required = $this->tray->getRequired();
         $this->assertCount(1, $required);
         $this->assertSame($text, $required[0]);
+    }
+
+    public function testAddElementUsesContainerInterfaceContract(): void
+    {
+        $container = new class extends \XoopsFormElement implements \XoopsFormContainerInterface {
+            public function __construct() {}
+
+            public function isContainer()
+            {
+                return false;
+            }
+
+            public function &getRequired()
+            {
+                static $required = [];
+                if ([] === $required) {
+                    $required[] = new \XoopsFormText('Required Field', 'required_field', 25, 100);
+                }
+
+                return $required;
+            }
+
+            public function &getElements($recurse = false)
+            {
+                static $elements = [];
+                return $elements;
+            }
+
+            public function render()
+            {
+                return '';
+            }
+        };
+
+        $this->tray->addElement($container);
+
+        $required = $this->tray->getRequired();
+        $this->assertCount(1, $required);
+        $this->assertInstanceOf(\XoopsFormText::class, $required[0]);
+        $this->assertSame('required_field', $required[0]->getName(false));
     }
 
     // ------------------------------------------------------------------

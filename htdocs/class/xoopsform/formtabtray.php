@@ -17,6 +17,7 @@
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 require_once __DIR__ . '/renderer/XoopsFormTabRendererInterface.php';
+require_once __DIR__ . '/formcontainerinterface.php';
 
 /**
  * A tabbed group of form elements.
@@ -50,7 +51,7 @@ require_once __DIR__ . '/renderer/XoopsFormTabRendererInterface.php';
  * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @link      https://xoops.org
  */
-class XoopsFormTabTray extends XoopsFormElement
+class XoopsFormTabTray extends XoopsFormElement implements XoopsFormContainerInterface
 {
     /**
      * Tab panes: each entry is ['title' => string, 'elements' => XoopsFormElement[]].
@@ -169,7 +170,7 @@ class XoopsFormTabTray extends XoopsFormElement
         $this->_tabs[$this->_currentTab]['elements'][] = $formElement;
         $this->_elements[]                             = $formElement;
 
-        if (!$formElement->isContainer()) {
+        if (!$formElement instanceof XoopsFormContainerInterface) {
             if ($required) {
                 $formElement->_required = true;
                 $this->_required[]      = $formElement;

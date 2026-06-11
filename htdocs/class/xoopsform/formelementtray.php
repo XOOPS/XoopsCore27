@@ -18,11 +18,12 @@
  */
 
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+require_once __DIR__ . '/formcontainerinterface.php';
 
 /**
  * A group of form elements
  */
-class XoopsFormElementTray extends XoopsFormElement
+class XoopsFormElementTray extends XoopsFormElement implements XoopsFormContainerInterface
 {
     public const ORIENTATION_HORIZONTAL = 'horizontal';
     public const ORIENTATION_VERTICAL   = 'vertical';
@@ -97,7 +98,7 @@ class XoopsFormElementTray extends XoopsFormElement
     public function addElement(XoopsFormElement $formElement, $required = false)
     {
         $this->_elements[] = $formElement;
-        if (!$formElement->isContainer()) {
+        if (!$formElement instanceof XoopsFormContainerInterface) {
             if ($required) {
                 $formElement->_required = true;
                 $this->_required[]      = $formElement;

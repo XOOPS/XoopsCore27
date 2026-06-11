@@ -57,7 +57,10 @@ use Xmf\Jwt\TokenReader;
  * SOFTWARE.
  */
 
-if (\Xmf\Request::hasVar('Authorization', 'POST')) {
+// This runs BEFORE mainfile.php loads the XMF autoloader, so use the raw
+// superglobals here rather than Xmf\Request (which is not defined yet).
+// FineUploader may send the token in the request body or the query string.
+if (isset($_POST['Authorization']) || isset($_GET['Authorization'])) {
     define('PROTECTOR_SKIP_DOS_CHECK', 1);
 }
 include __DIR__ . '/mainfile.php';

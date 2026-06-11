@@ -128,6 +128,19 @@ final class FineUploaderPathTest extends TestCase
     }
 
     #[Test]
+    public function uploadIdentifiersAreNotPostPinned(): void
+    {
+        // FineUploader emits qq* identifiers in the query string; pinning them to
+        // POST returns empty and breaks every upload. Guard against re-pinning.
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/class/fineuploadhandler.php');
+        self::assertNotFalse($src);
+        self::assertSame(0, preg_match("/getString\\(\\s*'qquuid'\\s*,\\s*''\\s*,\\s*'POST'\\s*\\)/", $src),
+            'qquuid must be read from REQUEST, not POST-only.');
+        self::assertSame(0, preg_match("/getInt\\(\\s*'qqtotalparts'\\s*,\\s*1\\s*,\\s*'POST'\\s*\\)/", $src),
+            'qqtotalparts must be read from REQUEST, not POST-only.');
+    }
+
+    #[Test]
     public function subclassesInheritConfinedMethods(): void
     {
         require_once XOOPS_ROOT_PATH . '/modules/system/class/fineimuploadhandler.php';

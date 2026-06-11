@@ -163,7 +163,7 @@ abstract class SystemFineUploadHandler
      */
     public function combineChunks($uploadDirectory, $name = null)
     {
-        $uuid = $this->safeUuid(Request::getString('qquuid', '', 'POST'));
+        $uuid = $this->safeUuid(Request::getString('qquuid', '', 'REQUEST'));
         if (null === $name || '' === $name) {
             $name = $this->getName();
         }
@@ -172,7 +172,7 @@ abstract class SystemFineUploadHandler
             $this->chunksFolder . DIRECTORY_SEPARATOR . $uuid,
             $this->chunksFolder
         );
-        $totalParts = Request::getInt('qqtotalparts', 1, 'POST');
+        $totalParts = Request::getInt('qqtotalparts', 1, 'REQUEST');
         if ($totalParts < 1) {
             throw new \RuntimeException('Invalid chunk metadata.');
         }
@@ -320,16 +320,20 @@ abstract class SystemFineUploadHandler
 
         // Save a chunk
         $totalParts = 1;
-        if (Request::hasVar('qqtotalparts', 'POST')) {
-            $totalParts = Request::getInt('qqtotalparts', 1, 'POST');
+        if (Request::hasVar('qqtotalparts')) {
+            $totalParts = Request::getInt('qqtotalparts', 1, 'REQUEST');
         }
 
-        $uuid = $this->safeUuid(Request::getString('qquuid', '', 'POST'));
+        // FineUploader sends its qq* identifiers where the REQUEST hash finds them
+        // (query string or body depending on the client); do NOT pin these to POST
+        // or uploads break. safeUuid() validates the value regardless of source.
+        // Only qqtotalfilesize stays POST-only (above), where the source matters.
+        $uuid = $this->safeUuid(Request::getString('qquuid', '', 'REQUEST'));
         if ($totalParts > 1) {
             # chunked upload
 
             $chunksFolder = $this->chunksFolder;
-            $partIndex = Request::getInt('qqpartindex', -1, 'POST');
+            $partIndex = Request::getInt('qqpartindex', -1, 'REQUEST');
             if ($partIndex < 0 || $partIndex >= $totalParts) {
                 throw new \RuntimeException('Invalid chunk metadata.');
             }
@@ -420,7 +424,7 @@ abstract class SystemFineUploadHandler
                 $uuid = $this->safeUuid($tokens[count($tokens) - 1]);
             }
         } elseif ('POST' === $method) {
-            $uuid = $this->safeUuid(Request::getString('qquuid', '', 'POST'));
+            $uuid = $this->safeUuid(Request::getString('qquuid', '', 'REQUEST'));
         } else {
             return ['success' => false,
                 'error'   => 'Invalid request method! ' . $method,

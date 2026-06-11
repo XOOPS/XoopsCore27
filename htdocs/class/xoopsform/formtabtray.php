@@ -82,6 +82,13 @@ class XoopsFormTabTray extends XoopsFormElement
     private $_currentTab = -1;
 
     /**
+     * Index of the tab that should be shown first when rendered.
+     *
+     * @var int
+     */
+    private $_activeTab = 0;
+
+    /**
      * Process-wide counter giving each rendered tray a unique DOM id even when
      * the element has no name.
      *
@@ -104,6 +111,9 @@ class XoopsFormTabTray extends XoopsFormElement
      */
     public function __construct($caption = '', $name = '')
     {
+        // XoopsFormElement::__construct() is a guard that exit()s to prevent
+        // instantiating the base class, so containers set name/caption directly
+        // (matching XoopsFormElementTray) rather than chaining to the parent.
         $this->setName($name);
         $this->setCaption($caption);
     }
@@ -194,6 +204,31 @@ class XoopsFormTabTray extends XoopsFormElement
     }
 
     /**
+     * Get the index of the active tab.
+     *
+     * @return int
+     */
+    public function getActiveTab()
+    {
+        return $this->_activeTab;
+    }
+
+    /**
+     * Set the index of the active tab. The value is clamped to the range of
+     * existing tabs so an out-of-range index can never leave every pane hidden.
+     *
+     * @param int $index tab index
+     *
+     * @return void
+     */
+    public function setActiveTab($index)
+    {
+        $index = (int) $index;
+        $count = count($this->_tabs);
+        $this->_activeTab = ($count > 0) ? max(0, min($index, $count - 1)) : 0;
+    }
+
+    /**
      * Get the child elements. With $recurse, nested containers are flattened so
      * the owning form sees every leaf element (for validation JS, etc.).
      *
@@ -257,14 +292,15 @@ class XoopsFormTabTray extends XoopsFormElement
         $panes  = '';
 
         foreach ($this->_tabs as $k => $tab) {
-            $isActive = (0 === $k);
+            $isActive = ($this->_activeTab === $k);
             $active   = $isActive ? ' xoops-tab-active' : '';
             $paneId   = $id . '_' . $k;
             $tabId    = $id . '_tab_' . $k;
 
             $nav .= '<li class="xoops-tab' . $active . '" role="presentation">'
                   . '<a id="' . $tabId . '" href="#' . $paneId . '" data-xoops-tab="' . $k . '"'
-                  . ' role="tab" aria-controls="' . $paneId . '" aria-selected="' . ($isActive ? 'true' : 'false') . '">'
+                  . ' role="tab" aria-controls="' . $paneId . '" aria-selected="' . ($isActive ? 'true' : 'false') . '"'
+                  . ' title="' . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '">'
                   . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '</a></li>';
 
             $rows = '';
@@ -337,6 +373,7 @@ class XoopsFormTabTray extends XoopsFormElement
         $js = '<script>(function(){'
             . "var roots=document.querySelectorAll('.xoops-tabs');"
             . 'Array.prototype.forEach.call(roots,function(root){'
+            . "if(root.classList.contains('js-xoops-tabs')){return;}"
             . "root.classList.add('js-xoops-tabs');"
             . "var links=root.querySelectorAll('.xoops-tabnav a');"
             . 'Array.prototype.forEach.call(links,function(link){'

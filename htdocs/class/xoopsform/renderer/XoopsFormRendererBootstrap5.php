@@ -825,14 +825,15 @@ EOJS;
         foreach ($element->getTabs() as $k => $tab) {
             $tabId      = $id . '-tab-' . $k;
             $paneId     = $id . '-pane-' . $k;
-            $isActive   = (0 === $k);
+            $isActive   = ($element->getActiveTab() === $k);
             $navActive  = $isActive ? ' active' : '';
             $paneActive = $isActive ? ' show active' : '';
             $selected   = $isActive ? 'true' : 'false';
 
             $nav .= '<li class="nav-item" role="presentation">'
                 . '<button class="nav-link' . $navActive . '" id="' . $tabId . '" data-bs-toggle="tab" data-bs-target="#'
-                . $paneId . '" type="button" role="tab" aria-controls="' . $paneId . '" aria-selected="' . $selected . '">'
+                . $paneId . '" type="button" role="tab" aria-controls="' . $paneId . '" aria-selected="' . $selected . '"'
+                . ' title="' . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '">'
                 . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '</button></li>';
 
             $rows = '';

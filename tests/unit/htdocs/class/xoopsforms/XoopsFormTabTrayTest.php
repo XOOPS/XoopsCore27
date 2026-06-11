@@ -16,6 +16,8 @@ xoops_load('XoopsFormHidden');
 xoops_load('XoopsFormRenderer');
 xoops_load('XoopsFormRendererInterface');
 xoops_load('XoopsFormRendererLegacy');
+xoops_load('XoopsFormRendererBootstrap3');
+xoops_load('XoopsFormRendererBootstrap4');
 xoops_load('XoopsFormRendererBootstrap5');
 xoops_load('XoopsFormRendererTailwind');
 
@@ -281,5 +283,120 @@ class XoopsFormTabTrayTest extends TestCase
         $this->assertStringContainsString('role="tabpanel"', $html);
         $this->assertStringContainsString('aria-controls="', $html);
         $this->assertStringContainsString('aria-labelledby="', $html);
+    }
+
+    public function testBootstrap3RendererEmitsNavTabs(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('Name', 'name', 25, 100));
+
+        $html = (new \XoopsFormRendererBootstrap3())->renderFormTabTray($this->tray);
+
+        $this->assertStringContainsString('nav nav-tabs', $html);
+        $this->assertStringContainsString('data-toggle="tab"', $html);
+        $this->assertStringContainsString('tab-pane', $html);
+        $this->assertStringContainsString('role="tabpanel"', $html);
+    }
+
+    public function testBootstrap4RendererEmitsNavTabs(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('Name', 'name', 25, 100));
+
+        $html = (new \XoopsFormRendererBootstrap4())->renderFormTabTray($this->tray);
+
+        $this->assertStringContainsString('nav nav-tabs', $html);
+        $this->assertStringContainsString('data-toggle="tab"', $html);
+        $this->assertStringContainsString('tab-pane', $html);
+        $this->assertStringContainsString('role="tabpanel"', $html);
+    }
+
+    // ------------------------------------------------------------------
+    //  Active tab management
+    // ------------------------------------------------------------------
+
+    public function testGetActiveTabDefaultsToZero(): void
+    {
+        $this->assertSame(0, $this->tray->getActiveTab());
+    }
+
+    public function testSetActiveTabStoresIndex(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addTab('Two');
+        $this->tray->setActiveTab(1);
+        $this->assertSame(1, $this->tray->getActiveTab());
+    }
+
+    public function testSetActiveTabClampsOutOfRangeIndex(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addTab('Two');
+        $this->tray->setActiveTab(99);
+        // Clamped to the last existing tab, never beyond.
+        $this->assertSame(1, $this->tray->getActiveTab());
+    }
+
+    public function testSetActiveTabClampsNegativeIndex(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addTab('Two');
+        $this->tray->setActiveTab(-5);
+        $this->assertSame(0, $this->tray->getActiveTab());
+    }
+
+    public function testFallbackDefaultsToFirstTabActive(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('A', 'a', 25, 100));
+        $this->tray->addTab('Two');
+        $this->tray->addElement(new \XoopsFormText('B', 'b', 25, 100));
+
+        $html = $this->tray->render();
+
+        // Exactly one tab is selected, and it is the first one (appears before
+        // the unselected tab in document order).
+        $this->assertSame(1, substr_count($html, 'aria-selected="true"'));
+        $this->assertLessThan(
+            strpos($html, 'aria-selected="false"'),
+            strpos($html, 'aria-selected="true"')
+        );
+    }
+
+    public function testFallbackRespectsActiveTab(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('A', 'a', 25, 100));
+        $this->tray->addTab('Two');
+        $this->tray->addElement(new \XoopsFormText('B', 'b', 25, 100));
+        $this->tray->setActiveTab(1);
+
+        $html = $this->tray->render();
+
+        // Still exactly one selected tab, now the second one (appears after the
+        // unselected first tab in document order).
+        $this->assertSame(1, substr_count($html, 'aria-selected="true"'));
+        $this->assertGreaterThan(
+            strpos($html, 'aria-selected="false"'),
+            strpos($html, 'aria-selected="true"')
+        );
+    }
+
+    public function testBootstrap5RespectsActiveTab(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('A', 'a', 25, 100));
+        $this->tray->addTab('Two');
+        $this->tray->addElement(new \XoopsFormText('B', 'b', 25, 100));
+        $this->tray->setActiveTab(1);
+
+        $html = (new \XoopsFormRendererBootstrap5())->renderFormTabTray($this->tray);
+
+        // The second nav button carries the active state.
+        $this->assertSame(1, substr_count($html, 'aria-selected="true"'));
+        $this->assertGreaterThan(
+            strpos($html, 'aria-selected="false"'),
+            strpos($html, 'aria-selected="true"')
+        );
     }
 }

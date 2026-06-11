@@ -2,12 +2,14 @@
 /**
  * Side-effect-free file-safety helpers.
  *
- * Hosts the three small filesystem helpers used by atomic-write and
- * cleanup paths:
+ * Hosts small, dependency-light safety helpers used by atomic-write, cleanup
+ * and redirect paths:
  *
  *  - xoops_file_label()        — root-relative label for warnings
+ *  - xoops_safe_basename()     — null-byte-safe basename() with placeholder
  *  - xoops_chmod_quietly()     — scoped-suppressed chmod() with single warning
  *  - xoops_remove_file_quietly() — scoped-suppressed unlink() with single warning
+ *  - xoops_isLocalUrl()        — strict same-origin check (scheme/host/port) for redirects
  *
  * They originally lived in include/cp_functions.php, but that file
  * unconditionally `define()`s XOOPS_CPFUNC_LOADED, which include/

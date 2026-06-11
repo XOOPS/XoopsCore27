@@ -102,14 +102,18 @@ final class FineUploaderPathTest extends TestCase
         // A zero (or negative) part count must be refused before any file is
         // opened, so a combine request cannot create an empty allowed-extension
         // file. The guard runs before any filesystem access.
-        $_POST['qquuid']       = 'abc123';
-        $_POST['qqtotalparts'] = '0';
+        // The handler reads these from the REQUEST hash, so seed $_REQUEST (not
+        // just $_POST) and assert the specific message, or the test would pass on
+        // the empty-UUID check instead of the chunk-count guard under test.
+        $_REQUEST['qquuid']       = 'abc123';
+        $_REQUEST['qqtotalparts'] = '0';
 
         $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Invalid chunk metadata.');
         try {
             $this->handler()->combineChunks(sys_get_temp_dir(), 'photo.jpg');
         } finally {
-            unset($_POST['qquuid'], $_POST['qqtotalparts']);
+            unset($_REQUEST['qquuid'], $_REQUEST['qqtotalparts']);
         }
     }
 

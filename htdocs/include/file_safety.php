@@ -252,7 +252,7 @@ if (!function_exists('xoops_isLocalUrl')) {
         }
 
         $base = parse_url((string) XOOPS_URL);
-        if (!is_array($base) || !isset($base['host'])) {
+        if (!isset($base['host'])) {
             return false;
         }
 

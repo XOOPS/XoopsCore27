@@ -87,9 +87,12 @@ abstract class SystemFineUploadHandler
      * @return string the validated leaf name
      * @throws \RuntimeException when the value is empty, hidden, or disallowed
      */
-    protected function safeLeafName($name)
+    protected function safeLeafName($name): string
     {
-        $name = basename(str_replace('\\', '/', (string) $name));
+        if (!is_string($name)) {
+            throw new \RuntimeException('Invalid file name.');
+        }
+        $name = basename(str_replace('\\', '/', $name));
         if ('' === $name || '.' === $name[0]
             || strlen($name) > 255
             || preg_match('/[\x00-\x1F\x7F]/', $name)) {
@@ -131,17 +134,18 @@ abstract class SystemFineUploadHandler
     /**
      * Get the original filename
      */
-    public function getName()
+    public function getName(): string
     {
         if (Request::hasVar('qqfilename', 'REQUEST')) {
-            $qqfilename = Request::getString('qqfilename', '', 'REQUEST');
-            return $qqfilename;
+            return Request::getString('qqfilename', '', 'REQUEST');
         }
 
         if (Request::hasVar($this->inputName, 'FILES')) {
-            $file = Request::getArray($this->inputName, null, 'FILES');
-            return $file ;
+            $file = Request::getArray($this->inputName, [], 'FILES');
+            return (is_array($file) && isset($file['name']) && is_string($file['name'])) ? $file['name'] : '';
         }
+
+        return '';
     }
 
     /**

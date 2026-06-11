@@ -225,13 +225,17 @@ function blocks_preview() {
  *
  * @author  Kraven30
  */
+function xoAdminToken() {
+    var $t = $("input[name='XOOPS_TOKEN_REQUEST']").first();
+    return $t.length ? $t.val() : '';
+}
 function display_post(uid) {
     $('#display_post_' + uid).hide();
     $("#loading_" + uid).show();
     $.ajax({
         type: "POST",
         url: "./admin/users/jquery.php",
-        data: "op=display_post&uid=" + uid,
+        data: "op=display_post&uid=" + uid + "&XOOPS_TOKEN_REQUEST=" + encodeURIComponent(xoAdminToken()),
         success: function (msg) {
             $('#display_post_' + uid).html(msg);
             $('#loading_' + uid).hide();

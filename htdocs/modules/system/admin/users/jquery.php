@@ -36,6 +36,10 @@ switch ($op) {
 
     // Display post
     case 'display_post':
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            http_response_code(403);
+            exit();
+        }
         global $xoopsDB;
 
         $GLOBALS['xoopsLogger']->activated = false;

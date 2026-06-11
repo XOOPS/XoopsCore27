@@ -124,4 +124,29 @@ final class CsrfTokenGuardTest extends TestCase
         self::assertNotFalse($src);
         self::assertStringContainsString('XOOPS_TOKEN_REQUEST', $src);
     }
+
+    #[Test]
+    public function imagesDisplayTogglesValidateTokenBeforeOutput(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/images/main.php');
+        self::assertNotFalse($src);
+        $guardPos  = strpos($src, "in_array(\$op, ['display_cat', 'display_img']");
+        $headerPos = strpos($src, 'xoops_cp_header(');
+        self::assertNotFalse($guardPos, 'images: missing toggle guard');
+        self::assertNotFalse($headerPos, 'images: xoops_cp_header() not found');
+        self::assertLessThan($headerPos, $guardPos, 'images: token guard must precede page output');
+        self::assertMatchesRegularExpression('/->\s*check\(\s*false\s*\)/', substr($src, $guardPos, 200));
+    }
+
+    #[Test]
+    public function usersJqueryPostCountValidatesTokenBeforeUpdate(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/users/jquery.php');
+        self::assertNotFalse($src);
+        $guardPos = strpos($src, "xoopsSecurity']->check(");
+        $mutPos   = strpos($src, '->exec(');
+        self::assertNotFalse($guardPos, 'users/jquery: missing token check');
+        self::assertNotFalse($mutPos, 'users/jquery: exec() not found');
+        self::assertLessThan($mutPos, $guardPos, 'post-count update must validate the token first');
+    }
 }

@@ -772,19 +772,19 @@ EOJS;
                 continue;
             }
 
-            $ret .= '<div class="form-group row">';
+            $ret .= '<div class="row mb-3">';
             if (($caption = $element->getCaption()) != '') {
-                $ret .= '<label for="' . $element->getName() . '" class="col-xs-12 col-sm-2 col-form-label text-sm-end">'
+                $ret .= '<label for="' . $element->getName() . '" class="col-12 col-sm-2 col-form-label text-sm-end">'
                     . $element->getCaption()
                     . ($element->isRequired() ? '<span class="xo-caption-required">*</span>' : '')
                     . '</label>';
             } else {
-                $ret .= '<div class="col-xs-12 col-sm-2"> </div>';
+                $ret .= '<div class="col-12 col-sm-2"> </div>';
             }
-            $ret .= '<div class="col-xs-12 col-sm-10">';
+            $ret .= '<div class="col-12 col-sm-10">';
             $ret .= $element->render();
             if (($desc = $element->getDescription()) != '') {
-                $ret .= '<p class="form-text text-muted">' . $desc . '</p>';
+                $ret .= '<div class="form-text">' . $desc . '</div>';
             }
             $ret .= '</div>';
             $ret .= '</div>';

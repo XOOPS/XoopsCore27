@@ -791,9 +791,12 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
             $url = XOOPS_URL;
         }
     }
-    if (!$allowExternalLink && $pos = strpos($url, '://')) {
-        $xoopsLocation = substr(XOOPS_URL, strpos(XOOPS_URL, '://') + 3);
-        if (strcasecmp(substr($url, $pos + 3, strlen($xoopsLocation)), $xoopsLocation)) {
+    if (!$allowExternalLink && (false !== strpos($url, '://') || 0 === strncmp((string) $url, '//', 2))) {
+        // Absolute or scheme-relative target: confirm it is same-origin with
+        // XOOPS_URL (full scheme/host/port match, not a prefix). Bare relative
+        // paths are left untouched, matching the previous behaviour.
+        require_once __DIR__ . '/file_safety.php';
+        if (!xoops_isLocalUrl($url)) {
             $url = XOOPS_URL;
         }
     }

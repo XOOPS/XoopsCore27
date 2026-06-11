@@ -213,3 +213,51 @@ if (!function_exists('xoops_remove_file_quietly')) {
         }
     }
 }
+
+if (!function_exists('xoops_isLocalUrl')) {
+    /**
+     * Decide whether an absolute or scheme-relative URL points at this site.
+     *
+     * Decodes HTML entities first, rejects control characters, then compares
+     * scheme, host and port against XOOPS_URL exactly. A look-alike host such as
+     * `localhost.example.org`, a userinfo trick such as `localhost@evil.test`, or
+     * a scheme-relative `//evil.test` therefore does not match. A single
+     * leading-slash, root-relative path (e.g. `/index.php`) is treated as local;
+     * `//` is not. Bare relative paths (e.g. `user.php`) are the caller's
+     * responsibility and are intentionally not the target of this helper.
+     *
+     * @param string $url candidate URL
+     * @return bool true when the target is same-origin or a root-relative path
+     */
+    function xoops_isLocalUrl($url)
+    {
+        $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $decoded)) {
+            return false; // control characters / CR-LF
+        }
+
+        $parts = parse_url($decoded);
+        if ($parts === false) {
+            return false;
+        }
+
+        if (!isset($parts['host'])) {
+            // Path-only target: allow single-slash root-relative, reject `//host`.
+            return isset($parts['path'])
+                && strncmp($parts['path'], '/', 1) === 0
+                && strncmp($decoded, '//', 2) !== 0;
+        }
+
+        $base = parse_url((string) XOOPS_URL);
+        if (!is_array($base) || !isset($base['host'])) {
+            return false;
+        }
+
+        $sameHost   = strcasecmp($parts['host'], $base['host']) === 0;
+        $sameScheme = strcasecmp($parts['scheme'] ?? 'http', $base['scheme'] ?? 'http') === 0;
+        $samePort   = ($parts['port'] ?? null) === ($base['port'] ?? null);
+
+        return $sameHost && $sameScheme && $samePort;
+    }
+}

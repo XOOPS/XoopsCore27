@@ -96,12 +96,9 @@ if (!is_object($xoopsUser)) {
 }
 
 if (false !== $accesserror) {
-    $ref = xoops_getenv('HTTP_REFERER');
-    if ($ref != '') {
-        redirect_header($ref, 2, _NOPERM);
-    } else {
-        redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 2, _NOPERM);
-    }
+    // Redirect to the known item page rather than to the request-supplied
+    // Referer header.
+    redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 2, _NOPERM);
     exit();
 }
 

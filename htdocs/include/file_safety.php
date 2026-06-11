@@ -258,7 +258,13 @@ if (!function_exists('xoops_isLocalUrl')) {
 
         $sameHost   = strcasecmp($parts['host'], $base['host']) === 0;
         $sameScheme = strcasecmp($parts['scheme'] ?? 'http', $base['scheme'] ?? 'http') === 0;
-        $samePort   = ($parts['port'] ?? null) === ($base['port'] ?? null);
+
+        // Normalise default ports so http://host and http://host:80 (and the
+        // https/443 pair) compare as the same origin.
+        $defaultPorts = ['http' => 80, 'https' => 443, 'ftp' => 21];
+        $targetPort = $parts['port'] ?? ($defaultPorts[strtolower($parts['scheme'] ?? '')] ?? null);
+        $basePort   = $base['port'] ?? ($defaultPorts[strtolower($base['scheme'] ?? '')] ?? null);
+        $samePort   = $targetPort === $basePort;
 
         return $sameHost && $sameScheme && $samePort;
     }

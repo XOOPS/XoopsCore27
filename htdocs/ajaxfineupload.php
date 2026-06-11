@@ -128,7 +128,8 @@ if ($method === 'POST') {
             // To return a name used for uploaded file you can use the following line.
             $result['uploadName'] = $uploader->getUploadName();
         }
-    } catch (\RuntimeException $e) {
+    } catch (\Throwable $e) {
+        trigger_error('FineUploader rejected upload: ' . $e->getMessage(), E_USER_WARNING);
         $result = ['success' => false, 'error' => 'Upload rejected.', 'preventRetry' => true];
     }
 
@@ -140,7 +141,8 @@ if ($method === 'POST') {
 } elseif ($method == 'DELETE') { // for delete file requests
     try {
         $result = $uploader->handleDelete('files');
-    } catch (\RuntimeException $e) {
+    } catch (\Throwable $e) {
+        trigger_error('FineUploader rejected delete: ' . $e->getMessage(), E_USER_WARNING);
         $result = ['success' => false, 'error' => 'Delete rejected.'];
     }
     echo json_encode($result);

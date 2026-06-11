@@ -791,12 +791,15 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
             $url = XOOPS_URL;
         }
     }
-    if (!$allowExternalLink && (false !== strpos($url, '://') || 0 === strncmp((string) $url, '//', 2))) {
-        // Absolute or scheme-relative target: confirm it is same-origin with
-        // XOOPS_URL (full scheme/host/port match, not a prefix). Bare relative
-        // paths are left untouched, matching the previous behaviour.
+    if (!$allowExternalLink) {
         require_once __DIR__ . '/file_safety.php';
-        if (!xoops_isLocalUrl($url)) {
+        $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Validate any scheme-bearing (http:, data:, mailto:, ...) or
+        // scheme-relative target against XOOPS_URL (full scheme/host/port match,
+        // not a prefix). Bare relative paths carry no scheme and are left
+        // untouched, matching the previous behaviour.
+        if ((null !== parse_url($decoded, PHP_URL_SCHEME) || 0 === strncmp(ltrim($decoded), '//', 2))
+            && !xoops_isLocalUrl($url)) {
             $url = XOOPS_URL;
         }
     }

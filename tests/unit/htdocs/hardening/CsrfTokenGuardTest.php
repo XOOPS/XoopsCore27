@@ -23,7 +23,7 @@ final class CsrfTokenGuardTest extends TestCase
             self::fail("case '{$caseLabel}' not found");
         }
         $start = (int) $m[0][1];
-        if (preg_match("/\\n\\s*case\\s+'/", $source, $n, PREG_OFFSET_CAPTURE, $start + 1)) {
+        if (preg_match("/\\n\\s*(case\\s+'|default\\s*:)/", $source, $n, PREG_OFFSET_CAPTURE, $start + 1)) {
             return substr($source, $start, ((int) $n[0][1]) - $start);
         }
         return substr($source, $start);

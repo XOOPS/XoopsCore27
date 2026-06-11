@@ -90,7 +90,9 @@ abstract class SystemFineUploadHandler
     protected function safeLeafName($name)
     {
         $name = basename(str_replace('\\', '/', (string) $name));
-        if ('' === $name || '.' === $name[0]) {
+        if ('' === $name || '.' === $name[0]
+            || strlen($name) > 255
+            || preg_match('/[\x00-\x1F\x7F]/', $name)) {
             throw new \RuntimeException('Invalid file name.');
         }
         if (!empty($this->allowedExtensions)) {

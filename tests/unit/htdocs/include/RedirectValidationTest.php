@@ -30,6 +30,8 @@ final class RedirectValidationTest extends TestCase
             'raw crlf'      => ["https://localhost/\r\nX: y"],
             'encoded host'  => ['https://evil.test/%0d%0aSet-Cookie:x=y'],
             'javascript'    => ['javascript:alert(1)'],
+            'data scheme'   => ['data:text/html,<script>alert(1)</script>'],
+            'mailto'        => ['mailto:a@b.test'],
         ];
     }
 
@@ -46,6 +48,7 @@ final class RedirectValidationTest extends TestCase
         return [
             'same host'        => ['http://localhost/modules/news/index.php'],
             'same host w/port' => ['http://localhost'],
+            'default http port'=> ['http://localhost:80/admin.php'],
             'root relative'    => ['/admin.php?fct=preferences'],
         ];
     }

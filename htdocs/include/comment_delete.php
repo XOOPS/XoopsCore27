@@ -29,6 +29,7 @@ $filters = [
     'op' => FILTER_SANITIZE_FULL_SPECIAL_CHARS,
     'com_order' => FILTER_VALIDATE_INT,
     'com_id' => FILTER_VALIDATE_INT,
+    'com_itemid' => FILTER_VALIDATE_INT,
 ];
 
 if (!empty($_POST)) {
@@ -39,6 +40,9 @@ if (!empty($_POST)) {
 $com_mode  = $result['com_mode'] ?: 'flat';
 $com_order = $result['com_order'] ?: XOOPS_COMMENT_OLD1ST;
 $com_id    = $result['com_id'] ?: 0;
+// Available for the early redirect targets below; reassigned from the comment
+// object once it is loaded in the delete branches.
+$com_itemid = $result['com_itemid'] ?: 0;
 if ($result['op']) {
     $op = $result['op'];
 }

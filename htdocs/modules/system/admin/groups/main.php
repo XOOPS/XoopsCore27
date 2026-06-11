@@ -350,7 +350,7 @@ switch ($op) {
         //Add users group
     case 'action_group':
         if (!$GLOBALS['xoopsSecurity']->check()) {
-            redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            redirect_header('admin.php?fct=groups', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         $error = true;
         $edit_group    = Request::getCmd('edit_group', '', 'POST');

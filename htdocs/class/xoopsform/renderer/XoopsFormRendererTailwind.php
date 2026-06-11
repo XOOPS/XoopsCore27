@@ -1154,8 +1154,11 @@ EOJS;
         $hidden = '';
 
         foreach ($element->getTabs() as $k => $tab) {
+            $tabId   = $id . '-tab-' . $k;
+            $paneId  = $id . '-pane-' . $k;
             $checked = (0 === $k) ? ' checked="checked"' : '';
-            $ret    .= '<input type="radio" name="' . $this->esc($group) . '" role="tab" class="tab"'
+            $ret    .= '<input type="radio" id="' . $this->esc($tabId) . '" name="' . $this->esc($group) . '"'
+                . ' role="tab" class="tab" aria-controls="' . $this->esc($paneId) . '"'
                 . ' aria-label="' . $this->esc((string) $tab['title']) . '"' . $checked . ' />';
 
             $rows = '';
@@ -1167,7 +1170,8 @@ EOJS;
                 $rows .= $this->renderThemeFormField($ele);
             }
 
-            $ret .= '<div role="tabpanel" class="tab-content border-base-300 bg-base-100 p-4">' . $rows . '</div>';
+            $ret .= '<div role="tabpanel" id="' . $this->esc($paneId) . '" aria-labelledby="' . $this->esc($tabId) . '"'
+                . ' class="tab-content border-base-300 bg-base-100 p-4">' . $rows . '</div>';
         }
 
         $ret .= '</div>' . $hidden;

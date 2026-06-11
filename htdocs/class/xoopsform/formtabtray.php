@@ -257,9 +257,15 @@ class XoopsFormTabTray extends XoopsFormElement
         $panes  = '';
 
         foreach ($this->_tabs as $k => $tab) {
-            $active = (0 === $k) ? ' xoops-tab-active' : '';
-            $nav   .= '<li class="xoops-tab' . $active . '"><a href="#' . $id . '_' . $k . '" data-xoops-tab="' . $k . '">'
-                    . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '</a></li>';
+            $isActive = (0 === $k);
+            $active   = $isActive ? ' xoops-tab-active' : '';
+            $paneId   = $id . '_' . $k;
+            $tabId    = $id . '_tab_' . $k;
+
+            $nav .= '<li class="xoops-tab' . $active . '" role="presentation">'
+                  . '<a id="' . $tabId . '" href="#' . $paneId . '" data-xoops-tab="' . $k . '"'
+                  . ' role="tab" aria-controls="' . $paneId . '" aria-selected="' . ($isActive ? 'true' : 'false') . '">'
+                  . htmlspecialchars((string) $tab['title'], ENT_QUOTES | ENT_HTML5) . '</a></li>';
 
             $rows = '';
             foreach ($tab['elements'] as $ele) {
@@ -269,11 +275,12 @@ class XoopsFormTabTray extends XoopsFormElement
                 }
                 $rows .= $this->renderRow($ele);
             }
-            $panes .= '<fieldset class="xoops-tabpane' . $active . '" id="' . $id . '_' . $k . '">'
+            $panes .= '<fieldset class="xoops-tabpane' . $active . '" id="' . $paneId . '"'
+                    . ' role="tabpanel" aria-labelledby="' . $tabId . '">'
                     . '<table class="outer" cellspacing="1">' . $rows . '</table></fieldset>';
         }
 
-        return '<div class="xoops-tabs" id="' . $id . '"><ul class="xoops-tabnav">' . $nav . '</ul>'
+        return '<div class="xoops-tabs" id="' . $id . '"><ul class="xoops-tabnav" role="tablist">' . $nav . '</ul>'
             . $panes . '</div>' . $hidden . $this->renderTabAssets();
     }
 
@@ -337,7 +344,9 @@ class XoopsFormTabTray extends XoopsFormElement
             . 'e.preventDefault();'
             . "var k=link.getAttribute('data-xoops-tab');"
             . "Array.prototype.forEach.call(root.querySelectorAll('.xoops-tabnav li'),function(li){li.classList.remove('xoops-tab-active');});"
+            . "Array.prototype.forEach.call(root.querySelectorAll('.xoops-tabnav a'),function(a){a.setAttribute('aria-selected','false');});"
             . "link.parentNode.classList.add('xoops-tab-active');"
+            . "link.setAttribute('aria-selected','true');"
             . "Array.prototype.forEach.call(root.querySelectorAll('.xoops-tabpane'),function(p){p.classList.remove('xoops-tab-active');});"
             . "var pane=document.getElementById(root.id+'_'+k);"
             . "if(pane){pane.classList.add('xoops-tab-active');}"

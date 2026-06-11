@@ -47,6 +47,9 @@ final class CsrfTokenGuardTest extends TestCase
             'mailusers send'      => [$base . '/modules/system/admin/mailusers/main.php', 'send',         '->send('],
             'comment delete_one'  => [$base . '/include/comment_delete.php',              'delete_one',   '->delete('],
             'comment delete_all'  => [$base . '/include/comment_delete.php',              'delete_all',   '->delete('],
+            'users_active'        => [$base . '/modules/system/admin/users/main.php',     'users_active', 'insertUser'],
+            'users_synchronize'   => [$base . '/modules/system/admin/users/main.php',     'users_synchronize', 'synchronize('],
+            'profile step toggle' => [$base . '/modules/profile/admin/step.php',          'toggle',       'profile_stepsave_toggle'],
         ];
     }
 
@@ -136,6 +139,20 @@ final class CsrfTokenGuardTest extends TestCase
         self::assertNotFalse($headerPos, 'images: xoops_cp_header() not found');
         self::assertLessThan($headerPos, $guardPos, 'images: token guard must precede page output');
         self::assertMatchesRegularExpression('/->\s*check\(\s*false\s*\)/', substr($src, $guardPos, 200));
+    }
+
+    #[Test]
+    public function getLinkTogglesEmbedTokenInTemplates(): void
+    {
+        $checks = [
+            '/modules/system/templates/admin/system_users.tpl'         => 'XOOPS_TOKEN_REQUEST=<{$users_csrf}>',
+            '/modules/profile/templates/profile_admin_steplist.tpl'    => 'XOOPS_TOKEN_REQUEST=<{$steps_csrf}>',
+        ];
+        foreach ($checks as $rel => $needle) {
+            $src = file_get_contents(XOOPS_ROOT_PATH . $rel);
+            self::assertNotFalse($src, $rel);
+            self::assertStringContainsString($needle, $src, "{$rel}: GET toggle link must carry the request token");
+        }
     }
 
     #[Test]

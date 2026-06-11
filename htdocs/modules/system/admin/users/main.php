@@ -361,6 +361,10 @@ case 'users_save':
 
         // Active member
     case 'users_active':
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            break;
+        }
         if (Request::hasVar('uid')) {
             $obj = $member_handler->getUser($uid);
         }
@@ -377,6 +381,10 @@ case 'users_save':
 
         // Synchronize
     case 'users_synchronize':
+        if (!$GLOBALS['xoopsSecurity']->check(false)) {
+            redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            break;
+        }
         if (Request::hasVar('status') && Request::getString('status') == 1) {
             synchronize($uid, 'user');
         } elseif (Request::hasVar('status') && Request::getString('status') == 2) {
@@ -928,6 +936,8 @@ case 'users_save':
             $tokenElement = new XoopsFormHiddenToken();
             $token = $tokenElement->render();
             $xoopsTpl->assign('form_token', $token);
+            // raw token value for the tokenised activate / synchronize action links
+            $xoopsTpl->assign('users_csrf', $GLOBALS['xoopsSecurity']->createToken());
 
             // echo $requete_search;
 

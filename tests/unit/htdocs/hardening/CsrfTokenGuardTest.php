@@ -129,6 +129,18 @@ final class CsrfTokenGuardTest extends TestCase
     }
 
     #[Test]
+    public function adminJsDisplayPostSubmitsRequestToken(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/js/admin.js');
+        self::assertNotFalse($src);
+        self::assertMatchesRegularExpression(
+            '/op=display_post.*XOOPS_TOKEN_REQUEST/s',
+            $src,
+            'admin.js display_post must submit the request token'
+        );
+    }
+
+    #[Test]
     public function imagesDisplayTogglesValidateTokenBeforeOutput(): void
     {
         $src = file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/images/main.php');
@@ -145,8 +157,9 @@ final class CsrfTokenGuardTest extends TestCase
     public function getLinkTogglesEmbedTokenInTemplates(): void
     {
         $checks = [
-            '/modules/system/templates/admin/system_users.tpl'         => 'XOOPS_TOKEN_REQUEST=<{$users_csrf}>',
-            '/modules/profile/templates/profile_admin_steplist.tpl'    => 'XOOPS_TOKEN_REQUEST=<{$steps_csrf}>',
+            '/modules/system/templates/admin/system_users.tpl'                       => 'XOOPS_TOKEN_REQUEST=<{$users_csrf}>',
+            '/modules/system/themes/dark/modules/system/admin/system_users.tpl'      => 'XOOPS_TOKEN_REQUEST=<{$users_csrf}>',
+            '/modules/profile/templates/profile_admin_steplist.tpl'                  => 'XOOPS_TOKEN_REQUEST=<{$steps_csrf}>',
         ];
         foreach ($checks as $rel => $needle) {
             $src = file_get_contents(XOOPS_ROOT_PATH . $rel);

@@ -116,16 +116,20 @@ $method = get_request_method();
 if ($method === 'POST') {
     header('Content-Type: text/plain');
 
-    // Assumes you have a chunking.success.endpoint set to point here with a query parameter of "done".
-    // For example: /myserver/handlers/endpoint.php?done
-    if (\Xmf\Request::hasVar('done', 'GET')) {
-        $result = $uploader->combineChunks(XOOPS_ROOT_PATH . '/uploads');
-    } else { // Handle upload requests
-        // Call handleUpload() with the name of the folder, relative to PHP's getcwd()
-        $result = $uploader->handleUpload(XOOPS_ROOT_PATH . '/uploads');
+    try {
+        // Assumes you have a chunking.success.endpoint set to point here with a query parameter of "done".
+        // For example: /myserver/handlers/endpoint.php?done
+        if (\Xmf\Request::hasVar('done', 'GET')) {
+            $result = $uploader->combineChunks(XOOPS_ROOT_PATH . '/uploads');
+        } else { // Handle upload requests
+            // Call handleUpload() with the name of the folder, relative to PHP's getcwd()
+            $result = $uploader->handleUpload(XOOPS_ROOT_PATH . '/uploads');
 
-        // To return a name used for uploaded file you can use the following line.
-        $result['uploadName'] = $uploader->getUploadName();
+            // To return a name used for uploaded file you can use the following line.
+            $result['uploadName'] = $uploader->getUploadName();
+        }
+    } catch (\RuntimeException $e) {
+        $result = ['success' => false, 'error' => 'Upload rejected.', 'preventRetry' => true];
     }
 
     //====================
@@ -134,7 +138,11 @@ if ($method === 'POST') {
 
     echo json_encode($result);
 } elseif ($method == 'DELETE') { // for delete file requests
-    $result = $uploader->handleDelete('files');
+    try {
+        $result = $uploader->handleDelete('files');
+    } catch (\RuntimeException $e) {
+        $result = ['success' => false, 'error' => 'Delete rejected.'];
+    }
     echo json_encode($result);
 } else {
     header('HTTP/1.0 405 Method Not Allowed');

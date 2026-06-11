@@ -338,7 +338,7 @@ abstract class SystemFineUploadHandler
                 throw new \RuntimeException('Invalid chunk metadata.');
             }
 
-            if (!is_writable($chunksFolder) && !is_executable($chunksFolder)) {
+            if ($this->isInaccessible($chunksFolder)) {
                 return ['error' => "Server error. Chunks directory isn't writable or executable."];
             }
 
@@ -429,6 +429,12 @@ abstract class SystemFineUploadHandler
             return ['success' => false,
                 'error'   => 'Invalid request method! ' . $method,
             ];
+        }
+
+        // Refuse a missing identifier: without it the target resolves to the
+        // upload root itself and removeDir() would wipe the whole directory.
+        if (false === $uuid || '' === $uuid) {
+            return ['success' => false, 'error' => 'Missing upload identifier.'];
         }
 
         $target = $this->assertWithin(

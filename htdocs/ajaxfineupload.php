@@ -144,7 +144,8 @@ if ($method === 'POST') {
             $result['uploadName'] = $uploader->getUploadName();
         }
     } catch (\Throwable $e) {
-        trigger_error('FineUploader rejected upload: ' . $e->getMessage(), E_USER_WARNING);
+        // Return JSON only — never emit the exception (it can carry absolute
+        // paths, and on a display_errors host it would corrupt the response).
         $result = ['success' => false, 'error' => 'Upload rejected.', 'preventRetry' => true];
     }
 
@@ -157,7 +158,6 @@ if ($method === 'POST') {
     try {
         $result = $uploader->handleDelete('files');
     } catch (\Throwable $e) {
-        trigger_error('FineUploader rejected delete: ' . $e->getMessage(), E_USER_WARNING);
         $result = ['success' => false, 'error' => 'Delete rejected.'];
     }
     echo json_encode($result);

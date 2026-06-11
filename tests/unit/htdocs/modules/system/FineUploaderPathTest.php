@@ -141,6 +141,26 @@ final class FineUploaderPathTest extends TestCase
     }
 
     #[Test]
+    public function handleDeleteRefusesMissingUuid(): void
+    {
+        // A DELETE with an empty URI must not let the target resolve to the
+        // upload root and wipe it; the guard returns an error, dir stays intact.
+        $root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fu_del_' . getmypid();
+        @mkdir($root, 0775, true);
+        $_SERVER['REQUEST_METHOD'] = 'DELETE';
+        $_SERVER['REQUEST_URI']    = '';
+        try {
+            $result = $this->handler()->handleDelete($root);
+            self::assertIsArray($result);
+            self::assertArrayHasKey('error', $result);
+            self::assertDirectoryExists($root, 'upload root must not be deleted');
+        } finally {
+            @rmdir($root);
+            unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+        }
+    }
+
+    #[Test]
     public function subclassesInheritConfinedMethods(): void
     {
         require_once XOOPS_ROOT_PATH . '/modules/system/class/fineimuploadhandler.php';

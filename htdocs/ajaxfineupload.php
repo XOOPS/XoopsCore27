@@ -60,8 +60,20 @@ use Xmf\Jwt\TokenReader;
 // This runs BEFORE mainfile.php loads the XMF autoloader, so use the raw
 // superglobals here rather than Xmf\Request (which is not defined yet).
 // FineUploader may send the token in the request body or the query string.
+//
+// A Fine Uploader request carries the JWT (validated below, once mainfile has
+// loaded). Protector's pre-checks run during mainfile, before that validation,
+// and false-positive on a legitimate multi-file upload:
+//   - the rapid concurrent POST burst trips the DoS/post-flood filter, and
+//   - check_uploaded_files() rejects ordinary image filenames with more than one
+//     dot ("pngkey.com-….png") and any image getimagesize() cannot parse.
+// This endpoint enforces its own extension + MIME allowlist and stores files
+// under generated single-extension names, so skip those two Protector filters
+// here. The upload is still only processed after the JWT is validated, so a
+// request with a bogus token skips the filters but stores nothing.
 if (isset($_POST['Authorization']) || isset($_GET['Authorization'])) {
     define('PROTECTOR_SKIP_DOS_CHECK', 1);
+    define('PROTECTOR_SKIP_FILESCHECKER', 1);
 }
 include __DIR__ . '/mainfile.php';
 $xoopsLogger->activated = false;

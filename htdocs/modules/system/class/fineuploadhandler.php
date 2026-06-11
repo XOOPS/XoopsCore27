@@ -87,11 +87,8 @@ abstract class SystemFineUploadHandler
      * @return string the validated leaf name
      * @throws \RuntimeException when the value is empty, hidden, or disallowed
      */
-    protected function safeLeafName($name): string
+    protected function safeLeafName(string $name): string
     {
-        if (!is_string($name)) {
-            throw new \RuntimeException('Invalid file name.');
-        }
         $name = basename(str_replace('\\', '/', $name));
         if ('' === $name || '.' === $name[0]
             || strlen($name) > 255
@@ -268,7 +265,7 @@ abstract class SystemFineUploadHandler
 
         // Get size and name
         $file = Request::getArray($this->inputName, [], 'FILES');
-        $size = $file['size'];
+        $size = $file['size'] ?? 0;
         // Pin the declared total size to POST so a GET/cookie value cannot
         // understate the size and slip past the size-limit check below.
         if (Request::hasVar('qqtotalfilesize', 'POST')) {
@@ -280,7 +277,7 @@ abstract class SystemFineUploadHandler
         }
 
         // check file error
-        if ($file['error']) {
+        if (!empty($file['error'])) {
             return ['error' => 'Upload Error #' . $file['error']];
         }
 
@@ -323,8 +320,8 @@ abstract class SystemFineUploadHandler
 
         // Save a chunk
         $totalParts = 1;
-        if (Request::hasVar('qqtotalparts')) {
-            $totalParts = (int) Request::getString('qqtotalparts');
+        if (Request::hasVar('qqtotalparts', 'POST')) {
+            $totalParts = Request::getInt('qqtotalparts', 1, 'POST');
         }
 
         $uuid = $this->safeUuid(Request::getString('qquuid', '', 'POST'));
@@ -337,7 +334,7 @@ abstract class SystemFineUploadHandler
                 throw new \RuntimeException('Invalid chunk metadata.');
             }
 
-            if (!is_writable($chunksFolder) && !is_executable($uploadDirectory)) {
+            if (!is_writable($chunksFolder) && !is_executable($chunksFolder)) {
                 return ['error' => "Server error. Chunks directory isn't writable or executable."];
             }
 
@@ -412,6 +409,7 @@ abstract class SystemFineUploadHandler
         }
 
         $uuid = false;
+        $url  = '';
         $method = Request::getString('REQUEST_METHOD', 'GET', 'SERVER');
 
         if ('DELETE' === $method) {

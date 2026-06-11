@@ -256,14 +256,19 @@ if (!function_exists('xoops_isLocalUrl')) {
             return false;
         }
 
-        $sameHost   = strcasecmp($parts['host'], $base['host']) === 0;
-        $sameScheme = strcasecmp($parts['scheme'] ?? 'http', $base['scheme'] ?? 'http') === 0;
+        $sameHost = strcasecmp($parts['host'], $base['host']) === 0;
+
+        // A scheme-relative target (//host/...) inherits the base scheme, so
+        // compare against the base rather than defaulting to http.
+        $baseScheme   = strtolower($base['scheme'] ?? 'http');
+        $targetScheme = strtolower($parts['scheme'] ?? $baseScheme);
+        $sameScheme   = $targetScheme === $baseScheme;
 
         // Normalise default ports so http://host and http://host:80 (and the
         // https/443 pair) compare as the same origin.
         $defaultPorts = ['http' => 80, 'https' => 443, 'ftp' => 21];
-        $targetPort = $parts['port'] ?? ($defaultPorts[strtolower($parts['scheme'] ?? '')] ?? null);
-        $basePort   = $base['port'] ?? ($defaultPorts[strtolower($base['scheme'] ?? '')] ?? null);
+        $targetPort = $parts['port'] ?? ($defaultPorts[$targetScheme] ?? null);
+        $basePort   = $base['port'] ?? ($defaultPorts[$baseScheme] ?? null);
         $samePort   = $targetPort === $basePort;
 
         return $sameHost && $sameScheme && $samePort;

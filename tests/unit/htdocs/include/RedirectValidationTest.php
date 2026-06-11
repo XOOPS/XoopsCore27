@@ -46,10 +46,11 @@ final class RedirectValidationTest extends TestCase
     public static function safeUrls(): array
     {
         return [
-            'same host'        => ['http://localhost/modules/news/index.php'],
-            'same host w/port' => ['http://localhost'],
-            'default http port'=> ['http://localhost:80/admin.php'],
-            'root relative'    => ['/admin.php?fct=preferences'],
+            'same host'         => ['http://localhost/modules/news/index.php'],
+            'same host w/port'  => ['http://localhost'],
+            'default http port' => ['http://localhost:80/admin.php'],
+            'scheme-rel host'   => ['//localhost/admin.php'],
+            'root relative'     => ['/admin.php?fct=preferences'],
         ];
     }
 

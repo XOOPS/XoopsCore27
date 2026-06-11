@@ -47,8 +47,11 @@ final class AuthLdapEscapeTest extends KernelTestCase
         if (!function_exists('ldap_escape')) {
             self::markTestSkipped('ext-ldap not available');
         }
-        $dn = $this->ldap()->getUserDN('a,b+c');
+        $dn = strtolower($this->ldap()->getUserDN('a,b+c'));
         self::assertStringNotContainsString('a,b+c', $dn);
+        // metacharacters escaped to their \HEX forms
+        self::assertStringContainsString('\2c', $dn); // ,
+        self::assertStringContainsString('\2b', $dn); // +
     }
 
     #[Test]

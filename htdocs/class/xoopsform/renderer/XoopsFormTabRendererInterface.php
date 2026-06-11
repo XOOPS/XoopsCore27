@@ -14,8 +14,6 @@
  * @link      https://xoops.org
  */
 
-defined('XOOPS_ROOT_PATH') || exit('Restricted access');
-
 /**
  * Optional, additive companion to {@link XoopsFormRendererInterface}.
  *
@@ -28,6 +26,13 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  * framework-neutral, progressively-enhanced output.
  *
  * Who calls it: XoopsFormTabTray::render().
+ *
+ * @category  XoopsForm
+ * @package   XoopsFormTabRendererInterface
+ * @author    XOOPS Development Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 interface XoopsFormTabRendererInterface
 {
@@ -38,5 +43,5 @@ interface XoopsFormTabRendererInterface
      *
      * @return string rendered HTML
      */
-    public function renderFormTabTray(XoopsFormTabTray $element);
+    public function renderFormTabTray(XoopsFormTabTray $element): string;
 }

@@ -813,7 +813,7 @@ EOJS;
      *
      * @return string rendered HTML
      */
-    public function renderFormTabTray(XoopsFormTabTray $element)
+    public function renderFormTabTray(XoopsFormTabTray $element): string
     {
         $base = $element->getName();
         $id   = 'xo-tabs-' . ('' !== $base ? preg_replace('/[^A-Za-z0-9]+/', '', $base) . '-' : '') . ++self::$tabSeq;

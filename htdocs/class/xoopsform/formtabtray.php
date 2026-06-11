@@ -42,6 +42,13 @@ require_once __DIR__ . '/renderer/XoopsFormTabRendererInterface.php';
  * framework-neutral fallback whose panes are only collapsed once JavaScript adds
  * the `js-xoops-tabs` hook — so with scripting disabled every pane stays visible
  * and the form remains fully usable.
+ *
+ * @category  XoopsForm
+ * @package   XoopsFormTabTray
+ * @author    XOOPS Development Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 class XoopsFormTabTray extends XoopsFormElement
 {

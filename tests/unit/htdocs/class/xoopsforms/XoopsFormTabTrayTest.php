@@ -100,6 +100,45 @@ class XoopsFormTabTrayTest extends TestCase
         $this->assertSame('legacy_req', $required[0]->getName(false));
     }
 
+    public function testGetElementsRecursiveFlattensLegacyDuckTypedContainer(): void
+    {
+        // BC: recursive flattening must also honour legacy duck-typed containers.
+        $leaf   = new \XoopsFormText('Leaf', 'legacy_leaf', 25, 100);
+        $legacy = new class($leaf) extends \XoopsFormElement {
+            private $list;
+            public function __construct($leaf)
+            {
+                $this->list = [$leaf];
+            }
+            public function isContainer()
+            {
+                return true;
+            }
+            public function &getRequired()
+            {
+                static $none = [];
+                return $none;
+            }
+            public function &getElements($recurse = false)
+            {
+                return $this->list;
+            }
+            public function render()
+            {
+                return '';
+            }
+        };
+
+        $this->tray->addTab('Tab');
+        $this->tray->addElement(new \XoopsFormText('Top', 'top', 25, 100));
+        $this->tray->addElement($legacy);
+
+        $flat = $this->tray->getElements(true);
+        $this->assertCount(2, $flat);
+        $this->assertSame('top', $flat[0]->getName(false));
+        $this->assertSame('legacy_leaf', $flat[1]->getName(false));
+    }
+
     public function testIsRequiredReturnsFalseWhenEmpty(): void
     {
         $this->assertFalse($this->tray->isRequired());

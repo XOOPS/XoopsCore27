@@ -103,8 +103,10 @@ class XoopsFormElementTray extends XoopsFormElement implements XoopsFormContaine
         // isContainer() duck-typing so third-party containers that predate
         // XoopsFormContainerInterface keep bubbling their required elements.
         if ($formElement instanceof XoopsFormContainerInterface
-            || (method_exists($formElement, 'getRequired') && $formElement->isContainer())) {
-            $required_elements = $formElement->getRequired();
+            || (method_exists($formElement, 'getRequired')
+                && method_exists($formElement, 'isContainer')
+                && $formElement->isContainer())) {
+            $required_elements = &$formElement->getRequired();
             $count             = count($required_elements);
             for ($i = 0; $i < $count; ++$i) {
                 $this->_required[] = &$required_elements[$i];
@@ -141,7 +143,9 @@ class XoopsFormElementTray extends XoopsFormElement implements XoopsFormContaine
             for ($i = 0; $i < $count; ++$i) {
                 $child = $this->_elements[$i];
                 if ($child instanceof XoopsFormContainerInterface
-                    || (method_exists($child, 'getElements') && $child->isContainer())) {
+                    || (method_exists($child, 'getElements')
+                        && method_exists($child, 'isContainer')
+                        && $child->isContainer())) {
                     $elements = &$child->getElements(true);
                     $count2   = count($elements);
                     for ($j = 0; $j < $count2; ++$j) {

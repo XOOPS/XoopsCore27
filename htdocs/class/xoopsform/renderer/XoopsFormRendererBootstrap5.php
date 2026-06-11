@@ -815,7 +815,7 @@ EOJS;
      */
     public function renderFormTabTray(XoopsFormTabTray $element): string
     {
-        $base = $element->getName();
+        $base = $element->getName(false);
         $id   = 'xo-tabs-' . ('' !== $base ? preg_replace('/[^A-Za-z0-9]+/', '', $base) . '-' : '') . ++self::$tabSeq;
 
         $nav     = '<ul class="nav nav-tabs" role="tablist" id="' . $id . '">';

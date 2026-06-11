@@ -250,7 +250,7 @@ class XoopsFormTabTray extends XoopsFormElement
      */
     protected function renderFallback()
     {
-        $base   = $this->getName();
+        $base   = $this->getName(false);
         $id     = 'xoops_tabs_' . ('' !== $base ? preg_replace('/[^a-z0-9]+/i', '', $base) . '_' : '') . ++self::$idSeq;
         $hidden = '';
         $nav    = '';

@@ -16,6 +16,8 @@ xoops_load('XoopsFormHidden');
 xoops_load('XoopsFormRenderer');
 xoops_load('XoopsFormRendererInterface');
 xoops_load('XoopsFormRendererLegacy');
+xoops_load('XoopsFormRendererBootstrap5');
+xoops_load('XoopsFormRendererTailwind');
 
 /**
  * Tests for XoopsFormTabTray
@@ -216,11 +218,13 @@ class XoopsFormTabTrayTest extends TestCase
         $html = $this->tray->render();
 
         $this->assertStringContainsString('name="secret"', $html);
-        // The hidden input is emitted after the tab panes, never inside a pane.
-        $this->assertLessThan(
-            strpos($html, 'name="secret"'),
-            strrpos($html, '</fieldset>')
-        );
+        // The hidden input is emitted after the tab panes, never inside a pane,
+        // so it appears later in the markup than the last closing </fieldset>.
+        $hiddenPos        = strpos($html, 'name="secret"');
+        $lastPaneClosePos = strrpos($html, '</fieldset>');
+        $this->assertNotFalse($hiddenPos);
+        $this->assertNotFalse($lastPaneClosePos);
+        $this->assertGreaterThan($lastPaneClosePos, $hiddenPos);
     }
 
     // ------------------------------------------------------------------
@@ -241,5 +245,41 @@ class XoopsFormTabTrayTest extends TestCase
         $this->tray->addTab('Two');
 
         $this->assertSame('DELEGATED:2', $this->tray->render());
+    }
+
+    // ------------------------------------------------------------------
+    //  Themed renderer output (Bootstrap 5 / Tailwind)
+    // ------------------------------------------------------------------
+
+    public function testBootstrap5RendererEmitsNavTabsAndBs5Classes(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('Name', 'name', 25, 100));
+
+        $html = (new \XoopsFormRendererBootstrap5())->renderFormTabTray($this->tray);
+
+        $this->assertStringContainsString('nav nav-tabs', $html);
+        $this->assertStringContainsString('data-bs-toggle="tab"', $html);
+        $this->assertStringContainsString('tab-pane', $html);
+        $this->assertStringContainsString('role="tabpanel"', $html);
+        // Bootstrap 5 row classes (not the removed form-group / col-xs-*).
+        $this->assertStringContainsString('row mb-3', $html);
+        $this->assertStringContainsString('col-12', $html);
+        $this->assertStringNotContainsString('form-group', $html);
+        $this->assertStringNotContainsString('col-xs-12', $html);
+    }
+
+    public function testTailwindRendererEmitsRadioTablistWithAria(): void
+    {
+        $this->tray->addTab('One');
+        $this->tray->addElement(new \XoopsFormText('Name', 'name', 25, 100));
+
+        $html = (new \XoopsFormRendererTailwind())->renderFormTabTray($this->tray);
+
+        $this->assertStringContainsString('role="tablist"', $html);
+        $this->assertStringContainsString('role="tab"', $html);
+        $this->assertStringContainsString('role="tabpanel"', $html);
+        $this->assertStringContainsString('aria-controls="', $html);
+        $this->assertStringContainsString('aria-labelledby="', $html);
     }
 }

@@ -230,6 +230,7 @@ class XoopsLoad
             'xoopsformcalendar'          => XOOPS_ROOT_PATH . '/class/xoopsform/formcalendar.php',
             'xoopsformrenderer'          => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRenderer.php',
             'xoopsformrendererinterface' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererInterface.php',
+            'xoopsformtabrendererinterface' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormTabRendererInterface.php',
             'xoopsformrendererlegacy'    => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererLegacy.php',
             'xoopsformrendererbootstrap3' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap3.php',
             'xoopsformrendererbootstrap4' => XOOPS_ROOT_PATH . '/class/xoopsform/renderer/XoopsFormRendererBootstrap4.php',

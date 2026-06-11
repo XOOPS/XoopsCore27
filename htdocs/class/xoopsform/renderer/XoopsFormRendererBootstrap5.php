@@ -782,7 +782,7 @@ EOJS;
                 $ret .= '<div class="col-12 col-sm-2"> </div>';
             }
             $ret .= '<div class="col-12 col-sm-10">';
-            $ret .= $element->render();
+            $ret .= (string) $element->render();
             if (($desc = $element->getDescription()) != '') {
                 $ret .= '<div class="form-text">' . $desc . '</div>';
             }
@@ -875,7 +875,7 @@ EOJS;
             $ret .= '<div class="col-12 col-sm-2"> </div>';
         }
         $ret .= '<div class="col-12 col-sm-10">';
-        $ret .= $element->render();
+        $ret .= (string) $element->render();
         if (($desc = $element->getDescription()) != '') {
             $ret .= '<div class="form-text">' . $desc . '</div>';
         }

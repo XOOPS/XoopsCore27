@@ -774,7 +774,7 @@ EOJS;
                 $ret .= '<div class="col-md-2"> </div>';
             }
             $ret .= '<div class="col-md-10">';
-            $ret .= $element->render();
+            $ret .= (string) $element->render();
             if (($desc = $element->getDescription()) != '') {
                 $ret .= '<p class="help-block">' . $desc . '</p>';
             }
@@ -875,7 +875,7 @@ EOJS;
             $ret .= '<div class="col-sm-2"> </div>';
         }
         $ret .= '<div class="col-sm-10">';
-        $ret .= $element->render();
+        $ret .= (string) $element->render();
         if (($desc = $element->getDescription()) != '') {
             $ret .= '<p class="help-block">' . $desc . '</p>';
         }

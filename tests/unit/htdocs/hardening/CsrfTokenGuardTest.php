@@ -1,0 +1,73 @@
+<?php
+
+declare(strict_types=1);
+
+namespace hardening;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Each state-changing admin action must validate a XOOPS token before it mutates
+ * (findings H-2, H-3, H-4, M-1). These procedural handlers cannot be executed in
+ * isolation, so the guard is asserted at the source level: the token check must
+ * be present AND appear before the first mutating call in that branch.
+ */
+final class CsrfTokenGuardTest extends TestCase
+{
+    private function extractCaseBlock(string $source, string $caseLabel): string
+    {
+        $pattern = "/case\\s+'" . preg_quote($caseLabel, '/') . "'\\s*:/";
+        if (!preg_match($pattern, $source, $m, PREG_OFFSET_CAPTURE)) {
+            self::fail("case '{$caseLabel}' not found");
+        }
+        $start = (int) $m[0][1];
+        if (preg_match("/\\n\\s*case\\s+'/", $source, $n, PREG_OFFSET_CAPTURE, $start + 1)) {
+            return substr($source, $start, ((int) $n[0][1]) - $start);
+        }
+        return substr($source, $start);
+    }
+
+    private function assertGuardBeforeMutation(string $block, string $mutation, string $label): void
+    {
+        $guardPos = strpos($block, "xoopsSecurity']->check(");
+        $mutPos   = strpos($block, $mutation);
+        self::assertNotFalse($guardPos, "{$label}: missing token check");
+        self::assertNotFalse($mutPos, "{$label}: mutation needle '{$mutation}' not found");
+        self::assertLessThan($mutPos, $guardPos, "{$label}: token check must precede the mutation");
+    }
+
+    /** @return array<string, array{string, string, string}> */
+    public static function guardedCases(): array
+    {
+        $base = XOOPS_ROOT_PATH;
+        return [
+            'groups action_group' => [$base . '/modules/system/admin/groups/main.php',   'action_group', 'addUserToGroup'],
+            'mailusers send'      => [$base . '/modules/system/admin/mailusers/main.php', 'send',         '->send('],
+            'comment delete_one'  => [$base . '/include/comment_delete.php',              'delete_one',   '->delete('],
+            'comment delete_all'  => [$base . '/include/comment_delete.php',              'delete_all',   '->delete('],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('guardedCases')]
+    public function tokenCheckPrecedesMutation(string $file, string $case, string $mutation): void
+    {
+        $src = file_get_contents($file);
+        self::assertNotFalse($src, $file);
+        $this->assertGuardBeforeMutation($this->extractCaseBlock($src, $case), $mutation, $case);
+    }
+
+    #[Test]
+    public function userSelfDeleteChecksTokenBeforeDeleteUser(): void
+    {
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/user.php');
+        self::assertNotFalse($src);
+        $guardPos = strpos($src, "xoopsSecurity']->check(");
+        $mutPos   = strpos($src, 'deleteUser(');
+        self::assertNotFalse($guardPos, 'user.php: missing token check');
+        self::assertNotFalse($mutPos, 'user.php: deleteUser() not found');
+        self::assertLessThan($mutPos, $guardPos, 'self-delete must validate the token before deleteUser()');
+    }
+}

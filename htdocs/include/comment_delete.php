@@ -105,6 +105,9 @@ if (false !== $accesserror) {
 xoops_loadLanguage('comment');
 switch ($op) {
     case 'delete_one':
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        }
         /** @var  XoopsCommentHandler $comment_handler */
         $comment_handler = xoops_getHandler('comment');
         $comment         = $comment_handler->get($com_id);
@@ -194,6 +197,9 @@ switch ($op) {
         break;
 
     case 'delete_all':
+        if (!$GLOBALS['xoopsSecurity']->check()) {
+            redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+        }
         /** @var  XoopsCommentHandler $comment_handler */
         $comment_handler = xoops_getHandler('comment');
         $comment         = $comment_handler->get($com_id);

@@ -21,9 +21,11 @@ final class FineUploaderPathTest extends TestCase
 {
     private function handler(): \SystemFineUploadHandler
     {
-        return new class (new \stdClass()) extends \SystemFineUploadHandler {
-            public $allowedExtensions = ['jpg', 'png', 'gif'];
-        };
+        // allowedExtensions is a public property on the parent; set it on the
+        // instance rather than redeclaring it in the subclass.
+        $handler = new class (new \stdClass()) extends \SystemFineUploadHandler {};
+        $handler->allowedExtensions = ['jpg', 'png', 'gif'];
+        return $handler;
     }
 
     /**

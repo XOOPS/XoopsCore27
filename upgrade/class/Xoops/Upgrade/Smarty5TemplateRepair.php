@@ -211,20 +211,40 @@ class Smarty5TemplateRepair extends ScannerProcess
         $expected = strlen($updated);
         $written  = file_put_contents($tmpPath, $updated, LOCK_EX);
         if (false === $written || $written !== $expected) {
-            @unlink($tmpPath);
+            $this->removeStagingFile($tmpPath, 'short write');
             trigger_error(sprintf('Error writing file: %s', $filename), E_USER_WARNING);
 
             return;
         }
         unset($file); // release the read handle so rename can replace the original (Windows)
         if (false === @rename($tmpPath, $pathname)) {
-            @unlink($tmpPath);
+            $this->removeStagingFile($tmpPath, 'rename failed');
             trigger_error(sprintf('Error replacing file: %s', $filename), E_USER_WARNING);
 
             return;
         }
 
         $output->outputIssue($output->makeOutputIssue($filename, $count, $backupName));
+    }
+
+    /**
+     * Best-effort removal of the staging temp file. The repair has already aborted
+     * with the original preserved, so a leftover .s5tmp is operational noise — log
+     * a notice (not a warning) rather than ignoring the unlink result.
+     *
+     * @param string $tmpPath
+     * @param string $context
+     *
+     * @return void
+     */
+    private function removeStagingFile(string $tmpPath, string $context): void
+    {
+        if (is_file($tmpPath) && !unlink($tmpPath)) {
+            trigger_error(
+                sprintf('Could not remove staging file (%s): %s', $context, basename($tmpPath)),
+                E_USER_NOTICE
+            );
+        }
     }
 
     /**

@@ -330,11 +330,15 @@ function smartyLogOverride(array $scan, int $uid): void
     if (defined('XOOPS_VAR_PATH')) {
         $dir = XOOPS_VAR_PATH . '/data';
         if (is_dir($dir) && is_writable($dir)) {
-            @file_put_contents(
+            $logged = @file_put_contents(
                 $dir . '/smarty5_gate_override.log',
                 json_encode($record, JSON_UNESCAPED_SLASHES) . "\n",
                 FILE_APPEND | LOCK_EX
             );
+            if (false === $logged) {
+                // The override audit record matters; surface a failure to write it.
+                trigger_error('Could not write the Smarty5 gate override audit log', E_USER_WARNING);
+            }
         }
     }
 

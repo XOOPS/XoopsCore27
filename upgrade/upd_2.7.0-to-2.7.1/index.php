@@ -330,8 +330,10 @@ class Upgrade_271 extends XoopsUpgrade
             'reportOnly'  => $output->getReportOnlyIssues(),
             'at'          => time(),
         ];
-        // Merge so a token recorded by preflight (if any) is preserved.
-        $_SESSION['smartyScan'] = array_merge($_SESSION['smartyScan'] ?? [], $tally);
+        // Merge so a token recorded by preflight (if any) is preserved; normalise a
+        // non-array session value first so corrupt state cannot fatal array_merge().
+        $existing = $_SESSION['smartyScan'] ?? [];
+        $_SESSION['smartyScan'] = array_merge(is_array($existing) ? $existing : [], $tally);
 
         return self::$scanCache = $tally;
     }
@@ -359,12 +361,10 @@ class Upgrade_271 extends XoopsUpgrade
                 continue;
             }
             $path = $dir . DIRECTORY_SEPARATOR . $entry;
-            if (is_link($path)) {
-                @unlink($path);
-            } elseif (is_dir($path)) {
+            if (is_dir($path) && !is_link($path)) {
                 $this->purgeTree($path);
             } else {
-                @unlink($path);
+                $this->removePath($path);
             }
         }
     }
@@ -387,13 +387,31 @@ class Upgrade_271 extends XoopsUpgrade
                 continue;
             }
             $path = $dir . DIRECTORY_SEPARATOR . $entry;
-            if (is_link($path) || is_file($path)) {
-                @unlink($path);
-            } elseif (is_dir($path)) {
+            if (is_dir($path) && !is_link($path)) {
                 $this->purgeTree($path);
+            } else {
+                $this->removePath($path);
             }
         }
-        @rmdir($dir);
+        $this->removePath($dir);
+    }
+
+    /**
+     * Best-effort removal of a file, symlink, or empty directory. Logs a low-level
+     * notice (rather than silently ignoring the result) when removal genuinely
+     * fails, so a permission problem during the purge is visible without wedging
+     * the upgrade.
+     *
+     * @param string $path
+     *
+     * @return void
+     */
+    private function removePath(string $path): void
+    {
+        $removed = (is_dir($path) && !is_link($path)) ? @rmdir($path) : @unlink($path);
+        if (false === $removed && file_exists($path)) {
+            trigger_error('Could not remove ' . basename($path), E_USER_NOTICE);
+        }
     }
 }
 

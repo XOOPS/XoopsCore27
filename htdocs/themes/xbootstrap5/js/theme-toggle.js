@@ -7,6 +7,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     applyTheme(savedTheme);
 
+    if (!toggleBtn) {
+        return;
+    }
+
     toggleBtn.innerHTML = savedTheme === "dark" ? "☀️" : "🌙";
 
     toggleBtn.addEventListener("click", () => {
@@ -17,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function applyTheme(theme) {
         document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-bs-theme", theme);
         localStorage.setItem("theme", theme);
     }
 });

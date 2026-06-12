@@ -31,6 +31,7 @@
 
 <{$xoops_module_header}>
     <link rel="stylesheet" type="text/css" media="all" href="<{$xoops_themecss}>">
+    <link rel="stylesheet" type="text/css" href="<{xoImgUrl 'css/dark-mode.css'}>">
 </head>
 
 <body id="<{$xoops_dirname}>" class="min-h-screen text-base-content antialiased">

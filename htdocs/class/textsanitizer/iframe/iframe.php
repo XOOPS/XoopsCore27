@@ -30,7 +30,11 @@ class MytsIframe extends MyTextSanitizerExtension
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->patterns[]     = "/\[iframe=(['\"]?)([^\"']*)\\1]([^\"]*)\[\/iframe\]/sU";
+        // The src (group 3) is rendered into a single-quoted src='...' attribute, so
+        // it must exclude BOTH quote types and angle brackets — otherwise a ' breaks
+        // out of the attribute and can inject markup (SECURITY.md M-7). The height
+        // (group 2) already excludes quotes.
+        $myts->patterns[]     = "/\[iframe=(['\"]?)([^\"']*)\\1]([^\"'<>]*)\[\/iframe\]/sU";
         $myts->replacements[] = "<iframe src='\\3' width='100%' height='\\2' scrolling='auto' frameborder='yes' marginwidth='0' marginheight='0' noresize></iframe>";
 
         return true;

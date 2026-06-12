@@ -36,9 +36,6 @@ define('_XOOPS_SMARTY5_REPAIR_BACKUP', 'Backup');
 
 // --- Preflight form / scan modes ---
 define('_XOOPS_SMARTY5_RESCAN_OPTIONS', 'Rescan Options');
-define('_XOOPS_SMARTY5_FIX_BUTTON', 'Tick the "Yes" box below, then click Run Scan to auto-fix any forward-compatible issues found.');
-define('_XOOPS_SMARTY5_SCANNER_RUN', 'Run Scan');
-define('_XOOPS_SMARTY5_SCANNER_END', 'End Scan / Proceed');
 define('_XOOPS_SMARTY5_SCANNER_RUN', 'Run Scan');
 define('_XOOPS_SMARTY5_SCANNER_END', 'End scan / proceed');
 define('_XOOPS_SMARTY5_SCAN_MODE', 'Scan mode');

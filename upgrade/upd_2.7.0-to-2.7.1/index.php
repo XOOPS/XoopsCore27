@@ -43,9 +43,10 @@ use Xoops\Upgrade\XoopsUpgrade;
  *                        band). Invariant: a missing package logs an actionable
  *                        error but never wedges the queue (session-flag warn-once).
  *
- * Fresh-install parity: core 2.7.1 ships clean templates and declares
- * xoops/smartyextensions in composer.json + registers it in the Smarty bootstrap,
- * so a fresh install satisfies all three check_ methods with no work.
+ * Fresh-install parity: core 2.7.1 ships clean templates, so smartytemplates and
+ * smartycache pass with no work. The xoops/smartyextensions package is optional and
+ * NOT bundled (it is not in composer.dist.json); its check is advisory only —
+ * absence logs an actionable notice and never blocks the upgrade.
  *
  * @category     Upgrade
  * @copyright    (c) 2000-2026 XOOPS Project (https://xoops.org)

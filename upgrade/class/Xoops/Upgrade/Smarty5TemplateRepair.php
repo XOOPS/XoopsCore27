@@ -219,8 +219,8 @@ class Smarty5TemplateRepair extends ScannerProcess
         // The temp file was created with the process umask; copy the original's
         // permission bits so rename() does not silently change the template's mode.
         // Best-effort: a failure only leaves umask permissions, not a damaged file.
-        $perms = @fileperms($pathname);
-        if (false !== $perms && false === @chmod($tmpPath, $perms & 0777)) {
+        $perms = fileperms($pathname);
+        if (false !== $perms && false === chmod($tmpPath, $perms & 0777)) {
             trigger_error(sprintf('Could not restore permissions on: %s', basename($filename)), E_USER_NOTICE);
         }
         unset($file); // release the read handle so rename can replace the original (Windows)

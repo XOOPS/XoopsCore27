@@ -6,6 +6,7 @@
 
 define('_XOOPS_SMARTY5_MIGRATION', 'XOOPS Smarty 5 Readiness');
 define('_XOOPS_SMARTY5_BADTOKEN', 'Security token mismatch — the request was ignored. Please rescan and try again.');
+define('_XOOPS_SMARTY5_SCAN_SKIPPED', 'No templates were scanned — the directory or extension was not valid. Nothing was recorded; please correct it and rescan.');
 
 // --- Scanner report (Smarty5ScannerOutput) ---
 define('_XOOPS_SMARTY5_SCANNER_RESULTS', 'Smarty 5 Readiness — Scan Results');

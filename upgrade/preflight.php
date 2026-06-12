@@ -138,7 +138,7 @@ function tplScannerForm($parameters=null)
 {
     $action = XOOPS_URL . '/upgrade/preflight.php';
 
-    $form = '<h2>' . _XOOPS_SMARTY4_RESCAN_OPTIONS . '</h2>';
+    $form = '<h2>' . _XOOPS_SMARTY5_RESCAN_OPTIONS . '</h2>';
     $form .= '<form action="' . $action . '" method="post" class="form-horizontal">';
     $form .= preflightTokenField();
 
@@ -204,7 +204,9 @@ function tplScannerForm($parameters=null)
  * @param string                        $template_dir directory relative to XOOPS_ROOT_PATH, or '' for themes/+modules/
  * @param string                        $template_ext extension to scan, or '' for tpl+html
  *
- * @return \Xoops\Upgrade\ScannerOutput the same $output, after the scan
+ * @return array{output: \Xoops\Upgrade\ScannerOutput, executed: bool} the $output
+ *         after the scan, and whether a scan actually ran (false when the path or
+ *         extension was rejected, or no scannable directory existed)
  */
 function smartyRunScanner($process, $output, string $template_dir, string $template_ext)
 {
@@ -212,11 +214,19 @@ function smartyRunScanner($process, $output, string $template_dir, string $templ
 
     $root = realpath(XOOPS_ROOT_PATH);
     if (false === $root) {
-        return $output; // cannot resolve the document root — scan nothing
+        return ['output' => $output, 'executed' => false]; // cannot resolve document root
     }
+
+    $configured = false;
     if ('' === $template_dir) {
-        $scanner->addDirectory($root . '/themes/');
-        $scanner->addDirectory($root . '/modules/');
+        // Only add roots that exist — ScannerWalker::addDirectory() asserts the
+        // directory and would throw on a slim install missing one of them.
+        foreach ([$root . '/themes/', $root . '/modules/'] as $dir) {
+            if (is_dir($dir)) {
+                $scanner->addDirectory($dir);
+                $configured = true;
+            }
+        }
     } else {
         // Confine an admin-supplied directory to a real path under the template
         // roots (themes/ or modules/), matching the scanner's UI contract. This
@@ -235,10 +245,11 @@ function smartyRunScanner($process, $output, string $template_dir, string $templ
                 }
             }
         }
-        if (!$within) {
-            return $output; // outside themes/ or modules/ — scan nothing
+        if (!$within || !is_dir($target)) {
+            return ['output' => $output, 'executed' => false]; // outside themes/ or modules/
         }
         $scanner->addDirectory($target);
+        $configured = true;
     }
 
     // Only real template extensions may be scanned or repaired.
@@ -250,11 +261,16 @@ function smartyRunScanner($process, $output, string $template_dir, string $templ
     } elseif (in_array(strtolower($template_ext), $allowedExt, true)) {
         $scanner->addExtension(strtolower($template_ext));
     } else {
-        return $output; // disallowed extension — scan nothing
+        return ['output' => $output, 'executed' => false]; // disallowed extension
     }
+
+    if (!$configured) {
+        return ['output' => $output, 'executed' => false]; // nothing to scan
+    }
+
     $scanner->runScan();
 
-    return $output;
+    return ['output' => $output, 'executed' => true];
 }
 
 /**
@@ -457,28 +473,33 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
         // --- Scan / repair pass(es) ---
         echo _XOOPS_SMARTY5_SCANNER_OFFER;
 
-        // Smarty 3->4 prerequisite layer (existing behaviour, mode-gated).
+        // Smarty 3->4 prerequisite layer (mode-gated).
         if ($doS4) {
             if ('on' === $runfix) {
-                $s4out = smartyRunScanner(new Smarty4TemplateRepair($o = new Smarty4RepairOutput()), $o, $template_dir, $template_ext);
+                $s4 = smartyRunScanner(new Smarty4TemplateRepair($o = new Smarty4RepairOutput()), $o, $template_dir, $template_ext);
             } else {
-                $s4out = smartyRunScanner(new Smarty4TemplateChecks($o = new Smarty4ScannerOutput()), $o, $template_dir, $template_ext);
+                $s4 = smartyRunScanner(new Smarty4TemplateChecks($o = new Smarty4ScannerOutput()), $o, $template_dir, $template_ext);
             }
-            echo $s4out->outputFetch();
+            echo $s4['output']->outputFetch();
         }
 
-        // Smarty 4->5 readiness layer.
-        if ($doS5) {
-            if ('on' === $runfix) {
-                $s5repair = smartyRunScanner(new Smarty5TemplateRepair($o = new Smarty5RepairOutput()), $o, $template_dir, $template_ext);
-                echo $s5repair->outputFetch();
-            }
-            // Always run the S5 checks pass: it produces the report-only/residual
-            // list AND the blocker tally the gate depends on.
-            /** @var Smarty5ScannerOutput $s5checks */
-            $s5checks = smartyRunScanner(new Smarty5TemplateChecks($o = new Smarty5ScannerOutput()), $o, $template_dir, $template_ext);
-            echo $s5checks->outputFetch();
+        // Smarty 4->5 repair layer (mode-gated; mutating).
+        if ($doS5 && 'on' === $runfix) {
+            $s5repair = smartyRunScanner(new Smarty5TemplateRepair($o = new Smarty5RepairOutput()), $o, $template_dir, $template_ext);
+            echo $s5repair['output']->outputFetch();
+        }
 
+        // The Smarty 4->5 checks pass ALWAYS runs: it produces the blocker tally the
+        // completion gate depends on, so the gate never relies on a stale scan (e.g.
+        // a later smarty4-only pass) or a missing one.
+        $s5 = smartyRunScanner(new Smarty5TemplateChecks($o = new Smarty5ScannerOutput()), $o, $template_dir, $template_ext);
+        /** @var Smarty5ScannerOutput $s5checks */
+        $s5checks = $s5['output'];
+        if ($doS5) {
+            echo $s5checks->outputFetch();
+        }
+
+        if ($s5['executed']) {
             $blockerFiles = $s5checks->getBlockerFiles();
             // Record the full tally so the upd_2.7.0-to-2.7.1 patch can VERIFY by
             // reading this scan instead of re-walking themes/+modules/ on every
@@ -492,8 +513,16 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
                 'reportOnly'  => $s5checks->getReportOnlyIssues(),
                 'at'          => time(),
             ];
-            // A fresh scan invalidates any prior override (it was bound to an old token).
+            // A fresh scan invalidates any prior override (bound to an old token).
             unset($_SESSION['smartyGateOverride']);
+        } else {
+            // The scan did not run (bad path/extension, or missing template roots):
+            // do NOT record a passing tally, and drop any prior one so the blocker
+            // gate cannot be cleared by a no-op scan.
+            echo '<div class="alert alert-warning">'
+                . htmlspecialchars(_XOOPS_SMARTY5_SCAN_SKIPPED, ENT_QUOTES, 'UTF-8')
+                . '</div>';
+            unset($_SESSION['smartyScan'], $_SESSION['smartyGateOverride']);
         }
 
         echo tplScannerForm();

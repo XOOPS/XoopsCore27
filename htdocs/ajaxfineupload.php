@@ -71,7 +71,16 @@ use Xmf\Jwt\TokenReader;
 // under generated single-extension names, so skip those two Protector filters
 // here. The upload is still only processed after the JWT is validated, so a
 // request with a bogus token skips the filters but stores nothing.
-if (isset($_POST['Authorization']) || isset($_GET['Authorization'])) {
+//
+// The JWT cannot be verified this early, but to keep a bare "?Authorization=x"
+// from disabling Protector and hammering this script, require a mutating method
+// and a JWT-shaped value (three base64url segments) before skipping.
+$fuAuthz  = $_POST['Authorization'] ?? $_GET['Authorization'] ?? '';
+$fuMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+if (in_array($fuMethod, ['POST', 'DELETE'], true)
+    && is_string($fuAuthz)
+    && 1 === preg_match('~^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$~', $fuAuthz)
+) {
     define('PROTECTOR_SKIP_DOS_CHECK', 1);
     define('PROTECTOR_SKIP_FILESCHECKER', 1);
 }

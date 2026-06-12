@@ -102,7 +102,7 @@ if (!is_object($xoopsUser)) {
 if (false !== $accesserror) {
     // Redirect to the known item page rather than to the request-supplied
     // Referer header.
-    redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 2, _NOPERM);
+    redirect_header($redirect_page . '=' . (int) $com_itemid, 2, _NOPERM);
     exit();
 }
 
@@ -110,7 +110,7 @@ xoops_loadLanguage('comment');
 switch ($op) {
     case 'delete_one':
         if (!$GLOBALS['xoopsSecurity']->check()) {
-            redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            redirect_header($redirect_page . '=' . (int) $com_itemid, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         /** @var  XoopsCommentHandler $comment_handler */
         $comment_handler = xoops_getHandler('comment');
@@ -202,7 +202,7 @@ switch ($op) {
 
     case 'delete_all':
         if (!$GLOBALS['xoopsSecurity']->check()) {
-            redirect_header($redirect_page . '?' . $comment_config['itemName'] . '=' . (int) $com_itemid, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
+            redirect_header($redirect_page . '=' . (int) $com_itemid, 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         /** @var  XoopsCommentHandler $comment_handler */
         $comment_handler = xoops_getHandler('comment');

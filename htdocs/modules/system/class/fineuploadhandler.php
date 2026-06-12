@@ -599,10 +599,13 @@ abstract class SystemFineUploadHandler
      */
     protected function isInaccessible($directory)
     {
-        $isWin = $this->isWindows();
-        $folderInaccessible =
-            ($isWin) ? !is_writable($directory) : (!is_writable($directory) && !is_executable($directory));
-        return $folderInaccessible;
+        // A directory must be writable to create files in, and (on non-Windows)
+        // executable to traverse; lacking either makes it unusable. is_executable()
+        // is unreliable for directories on Windows, so it is only checked elsewhere.
+        if (!is_writable($directory)) {
+            return true;
+        }
+        return !$this->isWindows() && !is_executable($directory);
     }
 
     /**

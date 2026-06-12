@@ -310,18 +310,24 @@ abstract class SystemFineUploadHandler
 
         $mimeType = '';
         if (!empty($this->allowedMimeTypes)) {
-
-            $temp = $this->inputName;
-            $mimeType = mime_content_type(Request::getArray($temp, [], 'FILES')['tmp_name']);
-            if (!in_array($mimeType, $this->allowedMimeTypes)) {
+            $fileArr = Request::getArray($this->inputName, [], 'FILES');
+            $tmpName = $fileArr['tmp_name'] ?? '';
+            if ('' === $tmpName || !is_string($tmpName) || !is_readable($tmpName)) {
+                return ['error' => 'File is empty.', 'preventRetry' => true];
+            }
+            $mimeType = mime_content_type($tmpName);
+            if (false === $mimeType || !in_array($mimeType, $this->allowedMimeTypes, true)) {
                 return ['error' => 'File is of an invalid type.', 'preventRetry' => true];
             }
         }
 
         // Save a chunk
         $totalParts = 1;
-        if (Request::hasVar('qqtotalparts')) {
+        if (Request::hasVar('qqtotalparts', 'REQUEST')) {
             $totalParts = Request::getInt('qqtotalparts', 1, 'REQUEST');
+        }
+        if ($totalParts < 1) {
+            throw new \RuntimeException('Invalid chunk metadata.');
         }
 
         // FineUploader sends its qq* identifiers where the REQUEST hash finds them

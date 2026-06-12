@@ -63,6 +63,21 @@ final class CsrfTokenGuardTest extends TestCase
     }
 
     #[Test]
+    public function commentDeleteRedirectsUseCanonicalItemParam(): void
+    {
+        // $redirect_page already ends with the item parameter name, so redirects
+        // must append "=<id>" (as the success path does), not "?itemName=<id>"
+        // which produces a malformed double-? URL on a failed check.
+        $src = file_get_contents(XOOPS_ROOT_PATH . '/include/comment_delete.php');
+        self::assertNotFalse($src);
+        self::assertStringNotContainsString(
+            "redirect_page . '?' . \$comment_config['itemName']",
+            $src,
+            'comment_delete redirects must not build a malformed double-? URL'
+        );
+    }
+
+    #[Test]
     public function userSelfDeleteChecksTokenBeforeDeleteUser(): void
     {
         $src = file_get_contents(XOOPS_ROOT_PATH . '/user.php');

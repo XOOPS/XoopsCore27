@@ -365,7 +365,8 @@ case 'users_save':
             redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
             break;
         }
-        if (Request::hasVar('uid')) {
+        if (Request::hasVar('uid', 'GET')) {
+            $uid = Request::getInt('uid', 0, 'GET');
             $obj = $member_handler->getUser($uid);
         }
         if (!isset($obj) || !is_object($obj)) {
@@ -385,9 +386,11 @@ case 'users_save':
             redirect_header('admin.php?fct=users', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
             break;
         }
-        if (Request::hasVar('status') && Request::getString('status') == 1) {
+        $status = Request::getInt('status', 0, 'GET');
+        if (1 === $status) {
+            $uid = Request::getInt('uid', 0, 'GET');
             synchronize($uid, 'user');
-        } elseif (Request::hasVar('status') && Request::getString('status') == 2) {
+        } elseif (2 === $status) {
             synchronize('', 'all users');
         }
         redirect_header('admin.php?fct=users', 1, _AM_SYSTEM_DBUPDATED);

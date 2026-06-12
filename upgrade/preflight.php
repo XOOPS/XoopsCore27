@@ -218,14 +218,25 @@ function smartyRunScanner($process, $output, string $template_dir, string $templ
         $scanner->addDirectory($root . '/themes/');
         $scanner->addDirectory($root . '/modules/');
     } else {
-        // Confine an admin-supplied directory to a real path under XOOPS_ROOT_PATH;
-        // reject traversal (e.g. "/../outside") and non-existent targets so the
-        // scanner — which can rewrite files in repair mode — cannot reach outside.
+        // Confine an admin-supplied directory to a real path under the template
+        // roots (themes/ or modules/), matching the scanner's UI contract. This
+        // rejects traversal ("/../outside"), the document root itself, and any
+        // other tree — the scanner can rewrite files in repair mode.
         $target = realpath($root . '/' . ltrim($template_dir, '/\\'));
-        $rootPrefix = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
-        if (false === $target
-            || 0 !== strncmp($target . DIRECTORY_SEPARATOR, $rootPrefix, strlen($rootPrefix))) {
-            return $output; // outside the document root — scan nothing
+        $base   = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
+        $allowedRoots = [$base . 'themes', $base . 'modules'];
+        $within = false;
+        if (false !== $target) {
+            foreach ($allowedRoots as $allowed) {
+                $allowedPrefix = $allowed . DIRECTORY_SEPARATOR;
+                if (0 === strncmp($target . DIRECTORY_SEPARATOR, $allowedPrefix, strlen($allowedPrefix))) {
+                    $within = true;
+                    break;
+                }
+            }
+        }
+        if (!$within) {
+            return $output; // outside themes/ or modules/ — scan nothing
         }
         $scanner->addDirectory($target);
     }
@@ -383,17 +394,22 @@ global $xoopsUser;
 if (!$xoopsUser || !$xoopsUser->isAdmin()) {
     include_once __DIR__ . '/login.php';
 } else {
-    $template_dir = Xmf\Request::getString('template_dir', '');
-    $template_ext = Xmf\Request::getString('template_ext', '');
-    $runfix       = Xmf\Request::getString('runfix', 'off');
-    $scan_mode    = Xmf\Request::getString('scan_mode', 'both');
-    $endscan      = Xmf\Request::getString('endscan', 'no');
+    // All form inputs are read from POST only: the forms submit via POST, and
+    // reading from the default bag ($_REQUEST) would let a GET like
+    // "?runfix=on" drive a mutating action without ever being a POST — and so
+    // skip the token check below.
+    $template_dir = Xmf\Request::getString('template_dir', '', 'POST');
+    $template_ext = Xmf\Request::getString('template_ext', '', 'POST');
+    $runfix       = Xmf\Request::getString('runfix', 'off', 'POST');
+    $scan_mode    = Xmf\Request::getString('scan_mode', 'both', 'POST');
+    $endscan      = Xmf\Request::getString('endscan', 'no', 'POST');
     $gateOverride = Xmf\Request::getString('gate_override', '', 'POST');
 
-    // Reject forged mutating POST actions. On an invalid CSRF token, neutralise the
+    // Reject forged mutating actions. The mutating flags are POST-only (above), so
+    // this also covers the GET case; on an invalid token, neutralise the
     // repair/complete/override flags and fall back to a harmless read-only scan.
     $isMutating = ('on' === $runfix) || ('yes' === $endscan) || ('' !== $gateOverride);
-    if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && $isMutating && !preflightTokenValid()) {
+    if ($isMutating && !preflightTokenValid()) {
         echo '<div class="alert alert-danger">'
             . htmlspecialchars(
                 defined('_XOOPS_SMARTY5_BADTOKEN') ? _XOOPS_SMARTY5_BADTOKEN : 'Security token mismatch. Please rescan.',

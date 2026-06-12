@@ -50,13 +50,13 @@ class Smarty5TemplateRepair extends ScannerProcess
     /** @var string[] replacement strings paired with $patterns */
     protected $replacements = [];
 
-    /** @var ScannerOutput */
+    /** @var Smarty5RepairOutput */
     private $output;
 
     /**
-     * @param ScannerOutput $output
+     * @param Smarty5RepairOutput $output
      */
-    public function __construct(ScannerOutput $output)
+    public function __construct(Smarty5RepairOutput $output)
     {
         $this->output = $output;
         $this->loadPatterns();
@@ -174,7 +174,7 @@ class Smarty5TemplateRepair extends ScannerProcess
             return;
         }
 
-        $filename = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
+        $filename = self::relativeToRoot($fileInfo->getPathname());
 
         $length = $fileInfo->getSize();
         if ($length <= 0) {
@@ -216,7 +216,7 @@ class Smarty5TemplateRepair extends ScannerProcess
 
             return;
         }
-        $file = null; // release the read handle so rename can replace the original (Windows)
+        unset($file); // release the read handle so rename can replace the original (Windows)
         if (false === @rename($tmpPath, $pathname)) {
             @unlink($tmpPath);
             trigger_error(sprintf('Error replacing file: %s', $filename), E_USER_WARNING);

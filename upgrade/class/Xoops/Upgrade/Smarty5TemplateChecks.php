@@ -83,14 +83,14 @@ class Smarty5TemplateChecks extends ScannerProcess
     public const COMMENT_PATTERN = '/<\{\*.*?\*\}>/s';
 
     /**
-     * @var ScannerOutput
+     * @var Smarty5ScannerOutput
      */
     private $output;
 
     /**
-     * @param ScannerOutput $output
+     * @param Smarty5ScannerOutput $output
      */
-    public function __construct(ScannerOutput $output)
+    public function __construct(Smarty5ScannerOutput $output)
     {
         $this->output = $output;
     }
@@ -193,7 +193,7 @@ class Smarty5TemplateChecks extends ScannerProcess
         }
         $file     = $fileInfo->openFile();
         $contents = $file->fread($length);
-        $relative = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
+        $relative = self::relativeToRoot($fileInfo->getPathname());
 
         // Blank out Smarty comments so commented-out tags (a commented <{php}>,
         // for example) are not reported. Replaced with a newline rather than ''

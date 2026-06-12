@@ -1,0 +1,39 @@
+name: Security Scan
+
+# Advisory, diff-aware security scan. `semgrep ci` on a pull_request event
+# automatically compares against the PR base and reports only findings that the
+# PR newly introduces — legacy code is never flagged. This mirrors the
+# added-lines-only philosophy of .githooks/pre-commit and complements (does not
+# duplicate) it: the hook runs locally on commit, this runs on every PR.
+#
+# It is intentionally non-blocking to start (continue-on-error). Once the rule
+# selection has been tuned against real PRs, drop the continue-on-error line to
+# turn it into a required gate.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep (diff-aware, advisory)
+    runs-on: ubuntu-22.04
+    # Official Semgrep image ships the CLI and fetches the rulesets at runtime.
+    # TODO: pin to a specific release digest once the current version is verified.
+    container:
+      image: semgrep/semgrep:latest
+    steps:
+      - name: Checkout (full history needed for diff-aware scanning)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Semgrep diff scan (reports PR-new findings only)
+        run: semgrep ci
+        continue-on-error: true # advisory: annotates/logs but never blocks the merge
+        env:
+          # OSS mode (no Semgrep App token): registry rulesets for PHP, the
+          # general security-audit set, and committed-secret detection.
+          SEMGREP_RULES: "p/php p/security-audit p/secrets"

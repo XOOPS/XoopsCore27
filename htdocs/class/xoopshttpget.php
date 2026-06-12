@@ -50,7 +50,52 @@ class XoopsHttpGet
      */
     public function fetch()
     {
+        if (!$this->isAllowedUrl((string) $this->url)) {
+            $this->error = 'URL rejected: only public http(s) targets are allowed.';
+            return false;
+        }
         return ($this->useCurl) ? $this->fetchCurl() : $this->fetchFopen();
+    }
+
+    /**
+     * SSRF guard: allow only public http(s) targets (SECURITY.md M-5). Blocks
+     * non-http schemes (file://, php://, gopher://, …), userinfo URLs, and hosts
+     * that resolve to private, loopback, link-local, or reserved addresses.
+     *
+     * @param string $url
+     *
+     * @return bool
+     */
+    protected function isAllowedUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return false;
+        }
+        if (!in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+            return false;
+        }
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            return false; // userinfo form can mislead host parsing
+        }
+        $host = $parts['host'];
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips = [$host];
+        } else {
+            // @-suppressed: an unresolvable host emits a benign "host not found"
+            // warning whose false return we handle immediately (fail closed, R-030).
+            $ips = @gethostbynamel($host);
+            if ($ips === false || $ips === []) {
+                return false;
+            }
+        }
+        foreach ($ips as $ip) {
+            if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                return false; // private / loopback / link-local / reserved target
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -71,6 +116,9 @@ class XoopsHttpGet
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_FOLLOWLOCATION => 1,
             CURLOPT_MAXREDIRS      => 4,
+            // Restrict to HTTP(S) so a redirect cannot pivot to file://, gopher://, etc.
+            CURLOPT_PROTOCOLS       => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
         ];
         curl_setopt_array($curlHandle, $options);
 

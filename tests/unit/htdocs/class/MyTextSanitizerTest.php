@@ -241,8 +241,10 @@ class MyTextSanitizerTest extends TestCase
     {
         $out = $this->sanitizer->displayTarea('<script>alert(1)</script> visit https://xoops.org', 0);
 
-        // displayTarea()'s legacy code path installs an error/exception handler it
-        // does not restore; drop them so this test does not leak handler state.
+        // displayTarea()'s legacy path installs an error and an exception handler
+        // and never restores them. Confirmed by PHPUnit: removing these two calls
+        // makes this test "risky — did not remove its own error/exception
+        // handlers". Pop them so handler state does not leak into later tests.
         restore_error_handler();
         restore_exception_handler();
 

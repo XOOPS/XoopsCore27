@@ -27,6 +27,10 @@ use Xoops\Upgrade\Smarty4ScannerOutput;
 use Xoops\Upgrade\Smarty4TemplateChecks;
 use Xoops\Upgrade\Smarty4TemplateRepair;
 use Xoops\Upgrade\Smarty4RepairOutput;
+use Xoops\Upgrade\Smarty5ScannerOutput;
+use Xoops\Upgrade\Smarty5TemplateChecks;
+use Xoops\Upgrade\Smarty5TemplateRepair;
+use Xoops\Upgrade\Smarty5RepairOutput;
 use Xoops\Upgrade\UpgradeControl;
 
 require_once __DIR__ . '/class/fatal_error_handler.php';
@@ -48,12 +52,11 @@ if (strlen($_SERVER['REMOTE_ADDR']) > 15) {
 include_once __DIR__ . '/checkmainfile.php';
 defined('XOOPS_ROOT_PATH') or die('Bad installation: please add this folder to the XOOPS install you want to upgrade');
 
-$endscan = Xmf\Request::getString('endscan', 'no');
-if ($endscan === 'yes') {
-    $_SESSION['preflight'] = 'complete';
-    header("Location: ./index.php");
-    exit;
-}
+// The "End scan / proceed" transition (endscan=yes) is no longer unconditional.
+// It is now gated by the Smarty-4 blocker check and handled below, after the
+// admin is authenticated and language strings are loaded, so the gate can read
+// the recorded scan tally ($_SESSION['smartyScan']) and render a localized panel.
+// Until that transition succeeds, keep the preflight marked active.
 $_SESSION['preflight'] = 'active'; // so that manually loading preflight.php forces to active
 
 $reporting = 0;
@@ -88,6 +91,7 @@ if (
     include_once XOOPS_ROOT_PATH . "/language/english/user.php";
 }
 $upgradeControl->loadLanguage('smarty4');
+$upgradeControl->loadLanguage('smarty5');
 
 /**
  * User options form for preflight
@@ -112,6 +116,22 @@ function tplScannerForm($parameters=null)
     $form .= '<div class="form-group">';
     $form .= '<input name="template_ext" class="form-control" type="text" placeholder="tpl">';
     $form .= '<label for="template_ext">' . _XOOPS_SMARTY4_TEMPLATE_EXT  . '</label>';
+    $form .= '</div>';
+
+    $currentMode = Xmf\Request::getString('scan_mode', 'both');
+    $modes = [
+        'both'    => _XOOPS_SMARTY5_MODE_BOTH,
+        'smarty4' => _XOOPS_SMARTY5_MODE_S4,
+        'smarty5' => _XOOPS_SMARTY5_MODE_S5,
+    ];
+    $form .= '<div class="form-group">';
+    $form .= '<label for="scan_mode">' . _XOOPS_SMARTY5_SCAN_MODE . '</label>';
+    $form .= '<select name="scan_mode" id="scan_mode" class="form-control">';
+    foreach ($modes as $value => $label) {
+        $selected = ($value === $currentMode) ? ' selected' : '';
+        $form .= '<option value="' . $value . '"' . $selected . '>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</option>';
+    }
+    $form .= '</select>';
     $form .= '</div>';
 
     $form .= '<div class="form-group row">';
@@ -141,6 +161,165 @@ function tplScannerForm($parameters=null)
     return $form;
 }
 
+/**
+ * Build, configure and run a scanner pass, returning its output object.
+ *
+ * @param \Xoops\Upgrade\ScannerProcess $process      checks or repair process
+ * @param \Xoops\Upgrade\ScannerOutput  $output       paired output collector
+ * @param string                        $template_dir directory relative to XOOPS_ROOT_PATH, or '' for themes/+modules/
+ * @param string                        $template_ext extension to scan, or '' for tpl+html
+ *
+ * @return \Xoops\Upgrade\ScannerOutput the same $output, after the scan
+ */
+function smartyRunScanner($process, $output, string $template_dir, string $template_ext)
+{
+    $scanner = new ScannerWalker($process, $output);
+    if ('' === $template_dir) {
+        $scanner->addDirectory(XOOPS_ROOT_PATH . '/themes/');
+        $scanner->addDirectory(XOOPS_ROOT_PATH . '/modules/');
+    } else {
+        $scanner->addDirectory(XOOPS_ROOT_PATH . $template_dir);
+    }
+    if ('' === $template_ext) {
+        $scanner->addExtension('tpl');
+        $scanner->addExtension('html');
+    } else {
+        $scanner->addExtension($template_ext);
+    }
+    $scanner->runScan();
+
+    return $output;
+}
+
+/**
+ * Compute a scan-bound token for the blocker gate.
+ *
+ * Combines the scan target, extension, the sorted blocker file list, the count,
+ * and the newest blocker mtime, so that editing a blocker template and re-scanning
+ * yields a different token — which invalidates any stale "proceed anyway" override.
+ *
+ * @param string   $template_dir
+ * @param string   $template_ext
+ * @param string[] $blockerFiles relative blocker paths
+ *
+ * @return string sha256 hex token
+ */
+function smartyScanToken(string $template_dir, string $template_ext, array $blockerFiles): string
+{
+    sort($blockerFiles);
+    $maxMtime = 0;
+    foreach ($blockerFiles as $relative) {
+        $absolute = XOOPS_ROOT_PATH . $relative;
+        if (is_file($absolute)) {
+            $maxMtime = max($maxMtime, (int) filemtime($absolute));
+        }
+    }
+
+    return hash('sha256', implode('|', [
+        $template_dir,
+        $template_ext,
+        implode(',', $blockerFiles),
+        count($blockerFiles),
+        $maxMtime,
+    ]));
+}
+
+/**
+ * Record an audited acknowledgement that the admin proceeded past Smarty-4 blockers.
+ *
+ * Appends a JSON line to a persistent log under XOOPS_VAR_PATH and emits an
+ * E_USER_WARNING so the override is visible in the upgrade report as well.
+ *
+ * @param array{token:string, blockers:int, files:string[], at:int} $scan recorded scan summary
+ * @param int                                                        $uid  acting admin user id
+ *
+ * @return void
+ */
+function smartyLogOverride(array $scan, int $uid): void
+{
+    $record = [
+        'event'    => 'smarty5_blocker_override',
+        'uid'      => $uid,
+        'blockers' => (int) ($scan['blockers'] ?? 0),
+        'files'    => array_values((array) ($scan['files'] ?? [])),
+        'token'    => (string) ($scan['token'] ?? ''),
+    ];
+
+    if (defined('XOOPS_VAR_PATH')) {
+        $dir = XOOPS_VAR_PATH . '/data';
+        if (is_dir($dir) && is_writable($dir)) {
+            @file_put_contents(
+                $dir . '/smarty5_gate_override.log',
+                json_encode($record, JSON_UNESCAPED_SLASHES) . "\n",
+                FILE_APPEND | LOCK_EX
+            );
+        }
+    }
+
+    trigger_error(
+        sprintf(
+            'Smarty 5 readiness: admin uid %d proceeded past %d Smarty-4 blocker(s): %s',
+            $uid,
+            $record['blockers'],
+            implode(', ', $record['files'])
+        ),
+        E_USER_WARNING
+    );
+}
+
+/**
+ * Render the red blocker panel: the offending files, guidance, a Re-scan button,
+ * and the scan-bound "proceed anyway" override form.
+ *
+ * @param array{token:string, files:string[]} $scan         recorded scan summary
+ * @param string                              $scan_mode    current scan mode (preserved on re-scan/proceed)
+ * @param string                              $errorMessage gate error heading
+ *
+ * @return string HTML
+ */
+function smartyBlockerPanel(array $scan, string $scan_mode, string $errorMessage): string
+{
+    $action = XOOPS_URL . '/upgrade/preflight.php';
+    $token  = (string) ($scan['token'] ?? '');
+    $files  = array_values((array) ($scan['files'] ?? []));
+
+    $html  = '<div class="panel panel-danger">';
+    $html .= '<div class="panel-heading">' . htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') . '</div>';
+    $html .= '<div class="panel-body">';
+    $html .= '<p>' . _XOOPS_SMARTY5_GATE_BLOCKER_INTRO . '</p>';
+    $html .= '<ul>';
+    foreach ($files as $file) {
+        $html .= '<li><code>' . htmlspecialchars((string) $file, ENT_QUOTES, 'UTF-8') . '</code></li>';
+    }
+    $html .= '</ul>';
+    $html .= '<p>' . _XOOPS_SMARTY5_GATE_GUIDANCE . '</p>';
+
+    $modeAttr = htmlspecialchars($scan_mode, ENT_QUOTES, 'UTF-8');
+
+    // Re-scan (normal scan submit, preserving mode)
+    $html .= '<form action="' . $action . '" method="post" style="display:inline-block;margin-right:1em;">';
+    $html .= '<input type="hidden" name="scan_mode" value="' . $modeAttr . '">';
+    $html .= '<button class="btn btn-default" type="submit">' . _XOOPS_SMARTY5_GATE_RESCAN . '</button>';
+    $html .= '</form>';
+
+    // Proceed-anyway: ticking the box submits the scan-bound override token together
+    // with endscan=yes, so a single click sets the override and completes the gate.
+    $html .= '<form action="' . $action . '" method="post" style="display:inline-block;">';
+    $html .= '<input type="hidden" name="scan_mode" value="' . $modeAttr . '">';
+    $html .= '<input type="hidden" name="endscan" value="yes">';
+    $html .= '<div class="form-check">';
+    $html .= '<input class="form-check-input" type="checkbox" name="gate_override" id="gate_override" value="'
+        . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+    $html .= '<label class="form-check-label" for="gate_override">' . _XOOPS_SMARTY5_GATE_OVERRIDE_LABEL . '</label>';
+    $html .= '</div>';
+    $html .= '<button class="btn btn-danger" type="submit">' . _XOOPS_SMARTY5_GATE_OVERRIDE_BUTTON . '</button>';
+    $html .= '</form>';
+
+    $html .= '</div></div>';
+
+    return $html;
+}
+
 ob_start();
 
 global $xoopsUser;
@@ -149,38 +328,88 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
 } else {
     $template_dir = Xmf\Request::getString('template_dir', '');
     $template_ext = Xmf\Request::getString('template_ext', '');
-    $runfix = Xmf\Request::getString('runfix', 'off');
-    // Xmf\Debug::dump($_POST, $runfix, $template_dir, $template_ext);
-    if (empty($op)) {
-        $upgradeControl->loadLanguage('welcome');
-        echo _XOOPS_SMARTY4_SCANNER_OFFER;
+    $runfix       = Xmf\Request::getString('runfix', 'off');
+    $scan_mode    = Xmf\Request::getString('scan_mode', 'both');
+    $endscan      = Xmf\Request::getString('endscan', 'no');
+    $gateOverride = Xmf\Request::getString('gate_override', '', 'POST');
+
+    $doS4 = in_array($scan_mode, ['smarty4', 'both'], true);
+    $doS5 = in_array($scan_mode, ['smarty5', 'both'], true);
+
+    // A submitted, scan-bound override is recorded BEFORE the gate is evaluated,
+    // so ticking the box + clicking "proceed" completes in a single request.
+    if ('' !== $gateOverride) {
+        $scan = $_SESSION['smartyScan'] ?? null;
+        if (is_array($scan) && !empty($scan['token']) && $gateOverride === $scan['token']) {
+            $_SESSION['smartyGateOverride'] = $scan['token'];
+        }
     }
 
-    if ($runfix==='on') {
-        $output = new Smarty4RepairOutput();
-        $process = new Smarty4TemplateRepair($output);
+    if ('yes' === $endscan) {
+        // --- Smarty-4 blocker gate (replaces the old unconditional completion) ---
+        $scan = $_SESSION['smartyScan'] ?? null;
+        if (null === $scan || empty($scan['ran'])) {
+            echo '<div class="alert alert-warning">'
+                . htmlspecialchars(_XOOPS_SMARTY5_GATE_RUN_SCAN_FIRST, ENT_QUOTES, 'UTF-8')
+                . '</div>';
+            echo tplScannerForm();
+        } elseif (($scan['blockers'] ?? 0) > 0
+                  && (($_SESSION['smartyGateOverride'] ?? null) !== $scan['token'])
+        ) {
+            echo smartyBlockerPanel($scan, $scan_mode, _XOOPS_SMARTY5_GATE_BLOCKED);
+        } else {
+            if (($scan['blockers'] ?? 0) > 0) {
+                smartyLogOverride($scan, (int) $xoopsUser->getVar('uid'));
+            }
+            $_SESSION['preflight'] = 'complete';
+            header('Location: ./index.php');
+            exit;
+        }
     } else {
-        $output = new Smarty4ScannerOutput();
-        $process = new Smarty4TemplateChecks($output);
-    }
-    $scanner = new ScannerWalker($process, $output);
-    if('' === $template_dir) {
-        $scanner->addDirectory(XOOPS_ROOT_PATH . '/themes/');
-        $scanner->addDirectory(XOOPS_ROOT_PATH . '/modules/');
-    } else {
-        $scanner->addDirectory(XOOPS_ROOT_PATH . $template_dir);
-    }
-    if('' === $template_ext) {
-        $scanner->addExtension('tpl');
-        $scanner->addExtension('html');
-    } else {
-        $scanner->addExtension($template_ext);
-    }
-    $scanner->runScan();
+        // --- Scan / repair pass(es) ---
+        echo _XOOPS_SMARTY5_SCANNER_OFFER;
 
-    echo $output->outputFetch();
+        // Smarty 3->4 prerequisite layer (existing behaviour, mode-gated).
+        if ($doS4) {
+            if ('on' === $runfix) {
+                $s4out = smartyRunScanner(new Smarty4TemplateRepair($o = new Smarty4RepairOutput()), $o, $template_dir, $template_ext);
+            } else {
+                $s4out = smartyRunScanner(new Smarty4TemplateChecks($o = new Smarty4ScannerOutput()), $o, $template_dir, $template_ext);
+            }
+            echo $s4out->outputFetch();
+        }
 
-    echo tplScannerForm();
+        // Smarty 4->5 readiness layer.
+        if ($doS5) {
+            if ('on' === $runfix) {
+                $s5repair = smartyRunScanner(new Smarty5TemplateRepair($o = new Smarty5RepairOutput()), $o, $template_dir, $template_ext);
+                echo $s5repair->outputFetch();
+            }
+            // Always run the S5 checks pass: it produces the report-only/residual
+            // list AND the blocker tally the gate depends on.
+            /** @var Smarty5ScannerOutput $s5checks */
+            $s5checks = smartyRunScanner(new Smarty5TemplateChecks($o = new Smarty5ScannerOutput()), $o, $template_dir, $template_ext);
+            echo $s5checks->outputFetch();
+
+            $blockerFiles = $s5checks->getBlockerFiles();
+            // Record the full tally so the upd_2.7.0-to-2.7.1 patch can VERIFY by
+            // reading this scan instead of re-walking themes/+modules/ on every
+            // upgrade page load (that full walk is ~20s over thousands of files).
+            $_SESSION['smartyScan'] = [
+                'ran'         => true,
+                'token'       => smartyScanToken($template_dir, $template_ext, $blockerFiles),
+                'blockers'    => $s5checks->countBlockers(),
+                'files'       => $blockerFiles,
+                'autofixable' => $s5checks->countAutoFixable(),
+                'reportOnly'  => $s5checks->getReportOnlyIssues(),
+                'at'          => time(),
+            ];
+            // A fresh scan invalidates any prior override (it was bound to an old token).
+            unset($_SESSION['smartyGateOverride']);
+        }
+
+        echo tplScannerForm();
+    }
 }
 $content = ob_get_contents();
 ob_end_clean();

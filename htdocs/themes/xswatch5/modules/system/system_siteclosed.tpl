@@ -18,7 +18,8 @@
 
     <script>
     (function() {
-        const stored = localStorage.getItem('xswatch-theme');
+        let stored = null;
+        try { stored = localStorage.getItem('xswatch-theme'); } catch (e) {}
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = stored || (prefersDark ? 'dark' : 'light');
         document.documentElement.setAttribute('data-theme', theme);

@@ -1,9 +1,11 @@
 // theme-toggle.js
 
 document.addEventListener("DOMContentLoaded", () => {
+    const safeGet = (key) => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+    const safeSet = (key, value) => { try { localStorage.setItem(key, value); } catch (e) {} };
     const toggleBtn = document.getElementById("theme-toggle");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const savedTheme = localStorage.getItem("theme") || (prefersDark ? "dark" : "light");
+    const savedTheme = safeGet("theme") || (prefersDark ? "dark" : "light");
 
     applyTheme(savedTheme);
 
@@ -22,6 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function applyTheme(theme) {
         document.documentElement.setAttribute("data-theme", theme);
         document.documentElement.setAttribute("data-bs-theme", theme);
-        localStorage.setItem("theme", theme);
+        safeSet("theme", theme);
     }
 });

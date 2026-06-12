@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>
         (function() {
-            var stored = localStorage.getItem('xtailwind2-theme');
+            var stored = null;
+            try { stored = localStorage.getItem('xtailwind2-theme'); } catch (e) {}
             var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             var theme = stored || (prefersDark ? 'noctis' : 'atelier');
             document.documentElement.setAttribute('data-theme', theme);

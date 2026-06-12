@@ -13,7 +13,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
         (function() {
-            var stored = localStorage.getItem('theme');
+            var stored = null;
+            try { stored = localStorage.getItem('theme'); } catch (e) {}
             var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             var theme = stored || (prefersDark ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', theme);

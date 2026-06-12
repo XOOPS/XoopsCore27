@@ -332,10 +332,11 @@ function smartyLogOverride(array $scan, int $uid): void
 
     if (defined('XOOPS_VAR_PATH')) {
         $dir = XOOPS_VAR_PATH . '/data';
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true); // create the audit dir if a step has not yet
-        }
-        if (is_dir($dir) && is_writable($dir)) {
+        // Ensure the audit dir exists (canonical create-or-already-exists idiom so
+        // mkdir()'s result is consumed; @ keeps a native warning from leaking the
+        // path), then require it writable.
+        $ready = (is_dir($dir) || @mkdir($dir, 0775, true) || is_dir($dir)) && is_writable($dir);
+        if ($ready) {
             $logged = @file_put_contents(
                 $dir . '/smarty5_gate_override.log',
                 json_encode($record, JSON_UNESCAPED_SLASHES) . "\n",

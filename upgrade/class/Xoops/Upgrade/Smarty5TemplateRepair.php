@@ -257,7 +257,9 @@ class Smarty5TemplateRepair extends ScannerProcess
      */
     private function removeStagingFile(string $tmpPath, string $context): void
     {
-        if (is_file($tmpPath) && !unlink($tmpPath)) {
+        // @ suppresses the native warning (it would carry the full temp path); the
+        // return is checked and a basename-only notice is logged instead.
+        if (is_file($tmpPath) && !@unlink($tmpPath)) {
             trigger_error(
                 sprintf('Could not remove staging file (%s): %s', $context, basename($tmpPath)),
                 E_USER_NOTICE

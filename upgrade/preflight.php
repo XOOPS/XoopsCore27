@@ -353,12 +353,19 @@ function smartyLogOverride(array $scan, int $uid): void
         }
     }
 
+    // Reduce blocker paths to escaped basenames: a template filename could contain
+    // HTML-special characters, and this message may be rendered into the upgrader
+    // page by the error handler — escape it and drop the path.
+    $safeFiles = implode(', ', array_map(
+        static fn ($file): string => htmlspecialchars(basename((string) $file), ENT_QUOTES, 'UTF-8'),
+        (array) $record['files']
+    ));
     trigger_error(
         sprintf(
             'Smarty 5 readiness: admin uid %d proceeded past %d Smarty-4 blocker(s): %s',
             $uid,
             $record['blockers'],
-            implode(', ', $record['files'])
+            $safeFiles
         ),
         E_USER_WARNING
     );

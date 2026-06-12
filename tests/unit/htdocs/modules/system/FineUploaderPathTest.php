@@ -102,11 +102,11 @@ final class FineUploaderPathTest extends TestCase
         // A zero (or negative) part count must be refused before any file is
         // opened, so a combine request cannot create an empty allowed-extension
         // file. The guard runs before any filesystem access.
-        // The handler reads these from the REQUEST hash, so seed $_REQUEST (not
-        // just $_POST) and assert the specific message, or the test would pass on
-        // the empty-UUID check instead of the chunk-count guard under test.
-        $_REQUEST['qquuid']       = 'abc123';
-        $_REQUEST['qqtotalparts'] = '0';
+        // Seed via the same Request facade the handler reads through (REQUEST
+        // hash) and assert the specific message, or the test would pass on the
+        // empty-UUID check instead of the chunk-count guard under test.
+        \Xmf\Request::setVar('qquuid', 'abc123', 'REQUEST');
+        \Xmf\Request::setVar('qqtotalparts', '0', 'REQUEST');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Invalid chunk metadata.');
@@ -151,8 +151,8 @@ final class FineUploaderPathTest extends TestCase
         // upload root and wipe it; the guard returns an error, dir stays intact.
         $root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fu_del_' . getmypid();
         @mkdir($root, 0775, true);
-        $_SERVER['REQUEST_METHOD'] = 'DELETE';
-        $_SERVER['REQUEST_URI']    = '';
+        \Xmf\Request::setVar('REQUEST_METHOD', 'DELETE', 'SERVER');
+        \Xmf\Request::setVar('REQUEST_URI', '', 'SERVER');
         try {
             $result = $this->handler()->handleDelete($root);
             self::assertIsArray($result);

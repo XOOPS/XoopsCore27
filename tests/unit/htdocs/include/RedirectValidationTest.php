@@ -32,6 +32,8 @@ final class RedirectValidationTest extends TestCase
             'javascript'    => ['javascript:alert(1)'],
             'data scheme'   => ['data:text/html,<script>alert(1)</script>'],
             'mailto'        => ['mailto:a@b.test'],
+            'scheme no host'  => ['http:/evil.test/'],
+            'scheme no host2' => ['https:/evil.test/path'],
         ];
     }
 

@@ -245,8 +245,12 @@ if (!function_exists('xoops_isLocalUrl')) {
         }
 
         if (!isset($parts['host'])) {
-            // Path-only target: allow single-slash root-relative, reject `//host`.
-            return isset($parts['path'])
+            // A scheme with no host (e.g. "http:/evil.test/") is malformed and a
+            // browser may normalise it to an external absolute URL — reject it. A
+            // genuine root-relative path carries no scheme: allow a single-slash
+            // path, reject `//host`.
+            return !isset($parts['scheme'])
+                && isset($parts['path'])
                 && strncmp($parts['path'], '/', 1) === 0
                 && strncmp($decoded, '//', 2) !== 0;
         }

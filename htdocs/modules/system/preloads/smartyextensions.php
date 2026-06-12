@@ -6,8 +6,8 @@
  * so no edit to class/template.php is needed. ExtensionRegistry::registerAll() auto-detects
  * the Smarty version (Smarty 4 -> registerPlugin, Smarty 5 -> addExtension via Smarty5Adapter).
  *
- * Collision policy (see docs/rector-fixes/smarty-claude.md §12): register the full catalogue
- * EXCEPT RayDebugExtension, which duplicates core's class/smarty3_plugins/{function,modifier}.ray*.
+ * Collision policy: register the full catalogue EXCEPT RayDebugExtension, which
+ * duplicates core's class/smarty3_plugins/{function,modifier}.ray*.
  *
  * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
@@ -25,6 +25,13 @@ use Xoops\SmartyExtensions\Extension\XoopsCoreExtension;
 
 /**
  * Class SystemSmartyextensionsPreload
+ *
+ * @category  Preload
+ * @package   system
+ * @author    XOOPS Project (https://xoops.org)
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 class SystemSmartyextensionsPreload extends XoopsPreloadItem
 {
@@ -46,7 +53,12 @@ class SystemSmartyextensionsPreload extends XoopsPreloadItem
             if (null === self::$registry) {
                 /** @var \XoopsSecurity|null $security */
                 $security = $GLOBALS['xoopsSecurity'] ?? null;
+                // xoops_getHandler() returns false on failure; SecurityExtension expects
+                // ?XoopsGroupPermHandler, so normalise anything else to null.
                 $permHandler = function_exists('xoops_getHandler') ? xoops_getHandler('groupperm') : null;
+                if (!($permHandler instanceof \XoopsGroupPermHandler)) {
+                    $permHandler = null;
+                }
 
                 $registry = new ExtensionRegistry();
                 $registry->add(new TextExtension());
@@ -64,10 +76,9 @@ class SystemSmartyextensionsPreload extends XoopsPreloadItem
 
             self::$registry->registerAll($tpl);
         } catch (\Throwable $e) {
-            // A plugin-registration problem must not white-screen the site.
-            if (isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])) {
-                $GLOBALS['xoopsLogger']->addExtra('SmartyExtensions', 'registration failed: ' . $e->getMessage());
-            }
+            // A plugin-registration problem must not white-screen the site; surface it
+            // as a non-fatal warning for the error handler / log instead.
+            trigger_error('SmartyExtensions registration failed: ' . $e->getMessage(), E_USER_WARNING);
         }
     }
 }

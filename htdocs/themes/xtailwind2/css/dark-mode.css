@@ -56,7 +56,7 @@
     opacity: 1;
 }
 
-.xoops-content :where(
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(
     .outer,
     .inner,
     .head,
@@ -74,7 +74,7 @@
     color: hsl(var(--bc));
 }
 
-.xoops-content :where(
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(
     .outer,
     .inner,
     .item,
@@ -87,28 +87,28 @@
     background-color: hsl(var(--b1) / 0.78);
 }
 
-.xoops-content :where(.head, .foot, .newbb-forum-title) {
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.head, .foot, .newbb-forum-title) {
     background-color: hsl(var(--b2) / 0.82);
     color: hsl(var(--bc));
 }
 
-.xoops-content :where(.newbb-thread) {
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-thread) {
     margin-bottom: 1.25rem;
     overflow: hidden;
     border-width: 1px;
     border-radius: 1.25rem;
 }
 
-.xoops-content :where(.newbb-user-data, .newbb-message-area) {
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-user-data, .newbb-message-area) {
     padding-top: 1rem;
     padding-bottom: 1rem;
 }
 
-.xoops-content :where(.newbb-message-area p, .newbb-message-area li, .newbb-message-area div) {
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-message-area p, .newbb-message-area li, .newbb-message-area div) {
     color: hsl(var(--bc) / 0.88);
 }
 
-.xoops-content :where(.newbb-user-signature, .newbb-thread-attachment) {
+:where([data-theme="noctis"], [data-theme="velvet"], [data-theme="graphite"]) .xoops-content :where(.newbb-user-signature, .newbb-thread-attachment) {
     border-top: 1px solid hsl(var(--b3) / 0.75);
     color: hsl(var(--bc) / 0.68);
 }

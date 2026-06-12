@@ -202,12 +202,18 @@ $u->apply_smartytemplates();
 check(str_contains($u->message(), '&lt;script&gt;'), 'smartytemplates: report file path is HTML-escaped');
 check(!str_contains($u->message(), '<script>'), 'smartytemplates: no raw <script> in log');
 
-// -- smartycache: one-shot --
+// -- smartycache: durable one-shot --
 $_SESSION = [];
+$s5CacheMarker = XOOPS_VAR_PATH . '/data/smarty5_cache_purged_271.marker';
+if (is_file($s5CacheMarker)) {
+    @unlink($s5CacheMarker);
+}
 $u = new _S5UpgradeStub();
 check(false === $u->check_smartycache(), 'smartycache: false before run');
 check(true === $u->apply_smartycache(), 'smartycache: apply true');
-check(true === $u->check_smartycache(), 'smartycache: true after run (session-flag)');
+check(true === $u->check_smartycache(), 'smartycache: true after run (durable marker)');
+$_SESSION = [];
+check(true === $u->check_smartycache(), 'smartycache: stays true after session reset');
 
 // -- smartyextensions: guard (package absent in test env) --
 $_SESSION = [];

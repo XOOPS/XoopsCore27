@@ -59,9 +59,6 @@ class Upgrade_271 extends XoopsUpgrade
     /** @var string session flag: smartytemplates has warned about pending issues this session */
     protected string $smartyTplKey = 'smarty5-templates-warned-271';
 
-    /** @var string session flag: compiled-template cache has been purged this session */
-    protected string $smartyCacheKey = 'smarty5-cache-cleaned-271';
-
     /** @var string session flag: smartyextensions guard has warned this session */
     protected string $smartyExtKey = 'smarty5-extensions-warned-271';
 
@@ -182,12 +179,21 @@ class Upgrade_271 extends XoopsUpgrade
         if (defined('XOOPS_VAR_PATH')) {
             $this->purge(XOOPS_VAR_PATH . '/caches/smarty_compile');
         }
+        // Record completion durably. If the marker cannot be written, the task is
+        // genuinely not complete (check_ would stay false), so report failure
+        // instead of claiming success.
         $marker = $this->cachePurgedMarker();
         $dir    = dirname($marker);
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            $this->logError('Could not create marker directory: %s', $dir);
+
+            return false;
         }
-        @file_put_contents($marker, (string) time());
+        if (false === @file_put_contents($marker, (string) time())) {
+            $this->logError('Could not write cache-purged marker: %s', $marker);
+
+            return false;
+        }
         $this->logSuccess('Compiled Smarty templates purged.');
 
         return true;

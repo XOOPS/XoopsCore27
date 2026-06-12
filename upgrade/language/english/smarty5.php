@@ -5,6 +5,7 @@
 // Translator: XOOPS Translation Team
 
 define('_XOOPS_SMARTY5_MIGRATION', 'XOOPS Smarty 5 Readiness');
+define('_XOOPS_SMARTY5_BADTOKEN', 'Security token mismatch — the request was ignored. Please rescan and try again.');
 
 // --- Scanner report (Smarty5ScannerOutput) ---
 define('_XOOPS_SMARTY5_SCANNER_RESULTS', 'Smarty 5 Readiness — Scan Results');

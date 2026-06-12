@@ -59,6 +59,39 @@ defined('XOOPS_ROOT_PATH') or die('Bad installation: please add this folder to t
 // Until that transition succeeds, keep the preflight marked active.
 $_SESSION['preflight'] = 'active'; // so that manually loading preflight.php forces to active
 
+// Per-session CSRF token for the preflight's mutating POST actions (template
+// repair, end-scan/complete, blocker override). $xoopsSecurity is unsuitable
+// here: the wizard bootstraps the (possibly pre-2.7) site being upgraded, where
+// the tokens table may not exist yet. Use a self-contained session token,
+// compared with hash_equals().
+if (empty($_SESSION['preflight_csrf'])) {
+    $_SESSION['preflight_csrf'] = bin2hex(random_bytes(32));
+}
+
+/**
+ * Hidden input carrying the preflight CSRF token, for any mutating form.
+ *
+ * @return string
+ */
+function preflightTokenField(): string
+{
+    return '<input type="hidden" name="preflight_token" value="'
+        . htmlspecialchars((string) ($_SESSION['preflight_csrf'] ?? ''), ENT_QUOTES, 'UTF-8') . '">';
+}
+
+/**
+ * Validate the preflight CSRF token submitted with a mutating POST.
+ *
+ * @return bool
+ */
+function preflightTokenValid(): bool
+{
+    $sent = Xmf\Request::getString('preflight_token', '', 'POST');
+    return '' !== $sent
+        && !empty($_SESSION['preflight_csrf'])
+        && hash_equals((string) $_SESSION['preflight_csrf'], $sent);
+}
+
 $reporting = 0;
 if (isset($_GET['debug'])) {
     $reporting = -1;
@@ -107,6 +140,7 @@ function tplScannerForm($parameters=null)
 
     $form = '<h2>' . _XOOPS_SMARTY4_RESCAN_OPTIONS . '</h2>';
     $form .= '<form action="' . $action . '" method="post" class="form-horizontal">';
+    $form .= preflightTokenField();
 
     $form .= '<div class="form-group">';
     $form .= '<input name="template_dir" class="form-control" type="text" placeholder="/themes/">';
@@ -150,6 +184,7 @@ function tplScannerForm($parameters=null)
     $form .= '</form>';
 
     $form .= '<form action="' . $action . '" method="post" class="form-horizontal">';
+    $form .= preflightTokenField();
     $form .= '<div class="form-group">';
     $form .= '<button class="btn btn-lg btn-danger" type="submit">' . _XOOPS_SMARTY4_SCANNER_END;
     $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
@@ -174,17 +209,37 @@ function tplScannerForm($parameters=null)
 function smartyRunScanner($process, $output, string $template_dir, string $template_ext)
 {
     $scanner = new ScannerWalker($process, $output);
-    if ('' === $template_dir) {
-        $scanner->addDirectory(XOOPS_ROOT_PATH . '/themes/');
-        $scanner->addDirectory(XOOPS_ROOT_PATH . '/modules/');
-    } else {
-        $scanner->addDirectory(XOOPS_ROOT_PATH . $template_dir);
+
+    $root = realpath(XOOPS_ROOT_PATH);
+    if (false === $root) {
+        return $output; // cannot resolve the document root — scan nothing
     }
-    if ('' === $template_ext) {
-        $scanner->addExtension('tpl');
-        $scanner->addExtension('html');
+    if ('' === $template_dir) {
+        $scanner->addDirectory($root . '/themes/');
+        $scanner->addDirectory($root . '/modules/');
     } else {
-        $scanner->addExtension($template_ext);
+        // Confine an admin-supplied directory to a real path under XOOPS_ROOT_PATH;
+        // reject traversal (e.g. "/../outside") and non-existent targets so the
+        // scanner — which can rewrite files in repair mode — cannot reach outside.
+        $target = realpath($root . '/' . ltrim($template_dir, '/\\'));
+        $rootPrefix = rtrim($root, '/\\') . DIRECTORY_SEPARATOR;
+        if (false === $target
+            || 0 !== strncmp($target . DIRECTORY_SEPARATOR, $rootPrefix, strlen($rootPrefix))) {
+            return $output; // outside the document root — scan nothing
+        }
+        $scanner->addDirectory($target);
+    }
+
+    // Only real template extensions may be scanned or repaired.
+    $allowedExt = ['tpl', 'html'];
+    if ('' === $template_ext) {
+        foreach ($allowedExt as $ext) {
+            $scanner->addExtension($ext);
+        }
+    } elseif (in_array(strtolower($template_ext), $allowedExt, true)) {
+        $scanner->addExtension(strtolower($template_ext));
+    } else {
+        return $output; // disallowed extension — scan nothing
     }
     $scanner->runScan();
 
@@ -298,6 +353,7 @@ function smartyBlockerPanel(array $scan, string $scan_mode, string $errorMessage
 
     // Re-scan (normal scan submit, preserving mode)
     $html .= '<form action="' . $action . '" method="post" style="display:inline-block;margin-right:1em;">';
+    $html .= preflightTokenField();
     $html .= '<input type="hidden" name="scan_mode" value="' . $modeAttr . '">';
     $html .= '<button class="btn btn-default" type="submit">' . _XOOPS_SMARTY5_GATE_RESCAN . '</button>';
     $html .= '</form>';
@@ -305,6 +361,7 @@ function smartyBlockerPanel(array $scan, string $scan_mode, string $errorMessage
     // Proceed-anyway: ticking the box submits the scan-bound override token together
     // with endscan=yes, so a single click sets the override and completes the gate.
     $html .= '<form action="' . $action . '" method="post" style="display:inline-block;">';
+    $html .= preflightTokenField();
     $html .= '<input type="hidden" name="scan_mode" value="' . $modeAttr . '">';
     $html .= '<input type="hidden" name="endscan" value="yes">';
     $html .= '<div class="form-check">';
@@ -332,6 +389,21 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
     $scan_mode    = Xmf\Request::getString('scan_mode', 'both');
     $endscan      = Xmf\Request::getString('endscan', 'no');
     $gateOverride = Xmf\Request::getString('gate_override', '', 'POST');
+
+    // Reject forged mutating POST actions. On an invalid CSRF token, neutralise the
+    // repair/complete/override flags and fall back to a harmless read-only scan.
+    $isMutating = ('on' === $runfix) || ('yes' === $endscan) || ('' !== $gateOverride);
+    if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? 'GET') && $isMutating && !preflightTokenValid()) {
+        echo '<div class="alert alert-danger">'
+            . htmlspecialchars(
+                defined('_XOOPS_SMARTY5_BADTOKEN') ? _XOOPS_SMARTY5_BADTOKEN : 'Security token mismatch. Please rescan.',
+                ENT_QUOTES,
+                'UTF-8'
+            ) . '</div>';
+        $runfix       = 'off';
+        $endscan      = 'no';
+        $gateOverride = '';
+    }
 
     $doS4 = in_array($scan_mode, ['smarty4', 'both'], true);
     $doS5 = in_array($scan_mode, ['smarty5', 'both'], true);

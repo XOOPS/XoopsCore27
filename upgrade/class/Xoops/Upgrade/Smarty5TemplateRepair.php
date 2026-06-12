@@ -193,14 +193,33 @@ class Smarty5TemplateRepair extends ScannerProcess
             return;
         }
 
-        // Back up the pristine original once before the first overwrite.
-        $backupName = $this->writeBackup($fileInfo->getPathname(), $original);
+        // Back up the pristine original once before the first overwrite, and abort
+        // the repair if the backup cannot be written — never overwrite a file we
+        // could not preserve.
+        $pathname   = $fileInfo->getPathname();
+        $backupName = $this->writeBackup($pathname, $original);
+        if ('' === $backupName) {
+            trigger_error(sprintf('Skipping repair, backup failed: %s', $filename), E_USER_WARNING);
 
-        $file->fseek(0);
-        $file->ftruncate(0);
-        $written = $file->fwrite($updated);
-        if (false === $written) {
+            return;
+        }
+
+        // Write atomically: stage to a temp file, verify the full byte count was
+        // written, then rename over the original. A failed or short write leaves
+        // the original template untouched.
+        $tmpPath  = $pathname . '.s5tmp';
+        $expected = strlen($updated);
+        $written  = file_put_contents($tmpPath, $updated, LOCK_EX);
+        if (false === $written || $written !== $expected) {
+            @unlink($tmpPath);
             trigger_error(sprintf('Error writing file: %s', $filename), E_USER_WARNING);
+
+            return;
+        }
+        $file = null; // release the read handle so rename can replace the original (Windows)
+        if (false === @rename($tmpPath, $pathname)) {
+            @unlink($tmpPath);
+            trigger_error(sprintf('Error replacing file: %s', $filename), E_USER_WARNING);
 
             return;
         }

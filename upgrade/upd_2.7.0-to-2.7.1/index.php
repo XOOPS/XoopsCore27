@@ -185,12 +185,12 @@ class Upgrade_271 extends XoopsUpgrade
         $marker = $this->cachePurgedMarker();
         $dir    = dirname($marker);
         if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-            $this->logError('Could not create marker directory: %s', $dir);
+            $this->logError('Could not create the cache marker directory: %s', basename($dir));
 
             return false;
         }
         if (false === @file_put_contents($marker, (string) time())) {
-            $this->logError('Could not write cache-purged marker: %s', $marker);
+            $this->logError('Could not write the cache-purged marker: %s', basename($marker));
 
             return false;
         }
@@ -222,7 +222,9 @@ class Upgrade_271 extends XoopsUpgrade
      */
     public function check_smartyextensions(): bool
     {
-        if (class_exists(\Xoops\SmartyExtensions\ExtensionRegistry::class)) {
+        // String form (not ::class) so static analysis does not require this
+        // optional package to be present.
+        if (class_exists('Xoops\\SmartyExtensions\\ExtensionRegistry')) {
             return true;
         }
 
@@ -236,7 +238,9 @@ class Upgrade_271 extends XoopsUpgrade
      */
     public function apply_smartyextensions(): bool
     {
-        if (class_exists(\Xoops\SmartyExtensions\ExtensionRegistry::class)) {
+        // String form (not ::class) so static analysis does not require this
+        // optional package to be present.
+        if (class_exists('Xoops\\SmartyExtensions\\ExtensionRegistry')) {
             $this->logSuccess('xoops/smartyextensions present and registered.');
         } else {
             $this->logError(

@@ -373,6 +373,14 @@ switch ($op) {
         if (!empty($clean_path_file)) {
             $path_file = realpath(XOOPS_ROOT_PATH.'/themes'.trim($clean_path_file));
             $path_file = str_replace('\\','/',$path_file);
+            // Confine writes to the themes/ tree: realpath() above resolves any ../
+            // traversal in path_file, so reject anything that escapes themes/ — otherwise
+            // the editor can overwrite files anywhere under the XOOPS root (SECURITY.md M-9).
+            $themesRoot = str_replace('\\', '/', (string) realpath(XOOPS_ROOT_PATH . '/themes'));
+            if ($themesRoot === '' || $path_file === '' || !str_starts_with($path_file, $themesRoot . '/')) {
+                redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+                exit();
+            }
             $pathInfo = pathinfo($path_file);
             if (!in_array($pathInfo['extension'], ['css', 'html', 'tpl'])) {
                 redirect_header('admin.php?fct=tplsets', 2, _AM_SYSTEM_TEMPLATES_ERROR);

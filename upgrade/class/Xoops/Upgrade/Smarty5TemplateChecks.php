@@ -127,7 +127,7 @@ class Smarty5TemplateChecks extends ScannerProcess
             // --- Smarty 4 blockers (report-only — will not compile on Smarty 4) ---
             'php_tag' => [
                 'tier' => self::TIER_BLOCK, 'autofix' => false, 'blocker' => true,
-                'pattern' => '/<\{\s*\/?\s*php\s*\}>|<\{\s*include_php\b/',
+                'pattern' => '/<\{\s*\/?\s*php\s*\}>|<\{\s*include_php\b[^}]*\}>/',
             ],
             'asp_tag' => [
                 'tier' => self::TIER_BLOCK, 'autofix' => false, 'warn' => true,

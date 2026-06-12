@@ -189,6 +189,9 @@ function tplScannerForm($parameters=null)
     $form .= '<button class="btn btn-lg btn-danger" type="submit">' . _XOOPS_SMARTY5_SCANNER_END;
     $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
     $form .= '<input type="hidden" name="endscan" value="yes">';
+    // Carry the chosen scan mode through end-scan so the blocker panel's rescan
+    // preserves it instead of falling back to the default.
+    $form .= '<input type="hidden" name="scan_mode" value="' . htmlspecialchars($currentMode, ENT_QUOTES, 'UTF-8') . '">';
     $form .= '</div>';
 
     $form .= '</form>';
@@ -329,6 +332,9 @@ function smartyLogOverride(array $scan, int $uid): void
 
     if (defined('XOOPS_VAR_PATH')) {
         $dir = XOOPS_VAR_PATH . '/data';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true); // create the audit dir if a step has not yet
+        }
         if (is_dir($dir) && is_writable($dir)) {
             $logged = @file_put_contents(
                 $dir . '/smarty5_gate_override.log',
@@ -339,10 +345,10 @@ function smartyLogOverride(array $scan, int $uid): void
                 // The override audit record matters; surface a failure to write it.
                 trigger_error('Could not write the Smarty5 gate override audit log', E_USER_WARNING);
             }
-        } elseif (is_dir($dir)) {
-            // Directory exists but is not writable: the override proceeds with no
-            // persistent audit trail — make that visible.
-            trigger_error('Smarty5 gate override audit log directory is not writable', E_USER_WARNING);
+        } else {
+            // The directory is missing or not writable: the override proceeds with
+            // no persistent audit trail — make that visible.
+            trigger_error('Smarty5 gate override audit log directory is missing or not writable', E_USER_WARNING);
         }
     }
 

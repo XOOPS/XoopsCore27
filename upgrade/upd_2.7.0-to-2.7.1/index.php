@@ -416,9 +416,11 @@ class Upgrade_271 extends XoopsUpgrade
      */
     private function removePath(string $path): void
     {
+        // @ suppresses the native PHP warning (which would leak the full path);
+        // the return is checked and a basename-only message is logged instead.
         $removed = (is_dir($path) && !is_link($path)) ? @rmdir($path) : @unlink($path);
         if (false === $removed && file_exists($path)) {
-            trigger_error('Could not remove ' . basename($path), E_USER_NOTICE);
+            trigger_error('Could not remove ' . basename($path), E_USER_WARNING);
         }
     }
 }

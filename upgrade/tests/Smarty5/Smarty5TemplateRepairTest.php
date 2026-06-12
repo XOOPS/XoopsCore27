@@ -94,6 +94,23 @@ final class Smarty5TemplateRepairTest extends TestCase
         self::assertFileDoesNotExist($tmp . Smarty5TemplateRepair::BACKUP_SUFFIX);
     }
 
+    #[Test]
+    public function itPreservesFileModeAcrossRepair(): void
+    {
+        if (0 === stripos(PHP_OS, 'WIN')) {
+            self::markTestSkipped('chmod on files is unreliable on Windows');
+        }
+        $tmp = s5_fixture_copy('block_parent.tpl');
+        chmod($tmp, 0640);
+        clearstatcache();
+
+        $out = $this->repair($tmp);
+
+        clearstatcache();
+        self::assertSame(1, $out->totalFixes(), 'fixture must actually be rewritten');
+        self::assertSame('640', substr(sprintf('%o', fileperms($tmp)), -3), 'mode preserved across atomic rewrite');
+    }
+
     /**
      * @return array<string, array{0:string}>
      */

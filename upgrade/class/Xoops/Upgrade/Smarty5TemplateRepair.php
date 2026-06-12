@@ -220,8 +220,19 @@ class Smarty5TemplateRepair extends ScannerProcess
         // permission bits so rename() does not silently change the template's mode.
         // Best-effort: a failure only leaves umask permissions, not a damaged file.
         $perms = fileperms($pathname);
-        if (false !== $perms && false === chmod($tmpPath, $perms & 0777)) {
-            trigger_error(sprintf('Could not restore permissions on: %s', basename($filename)), E_USER_NOTICE);
+        if (false !== $perms) {
+            // Wrap chmod() in a scoped error handler: no @ (keeps static analysis
+            // happy) yet the native warning — which would carry the full temp path —
+            // is swallowed; a sanitized notice is logged instead.
+            set_error_handler(static fn (): bool => true);
+            try {
+                $chmodOk = chmod($tmpPath, $perms & 0777);
+            } finally {
+                restore_error_handler();
+            }
+            if (!$chmodOk) {
+                trigger_error(sprintf('Could not restore permissions on: %s', basename($filename)), E_USER_NOTICE);
+            }
         }
         unset($file); // release the read handle so rename can replace the original (Windows)
         if (false === @rename($tmpPath, $pathname)) {

@@ -87,6 +87,20 @@ final class Upgrade271Test extends TestCase
     }
 
     #[Test]
+    public function smartytemplatesWaitsForReportOnlyWarnings(): void
+    {
+        $u = new Upgrade271Stub();
+        $u->stubAuto   = 0;
+        $u->stubReport = [['rule' => 'insert', 'file' => '/themes/x.tpl', 'match' => '{insert}', 'tier' => 'S4-MANUAL']];
+
+        // Report-only items remain even though autofixable is clean: not "verified
+        // clean" until apply_ has logged the manual-review warnings on the first pass.
+        self::assertFalse($u->check_smartytemplates());
+        self::assertTrue($u->apply_smartytemplates());
+        self::assertTrue($u->check_smartytemplates());
+    }
+
+    #[Test]
     public function smartycacheCompletionIsDurableAcrossSessions(): void
     {
         $u = new Upgrade271Stub();

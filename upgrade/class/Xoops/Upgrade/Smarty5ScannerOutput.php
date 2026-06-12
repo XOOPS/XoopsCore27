@@ -162,7 +162,9 @@ class Smarty5ScannerOutput extends ScannerOutput
         $this->summaryRow(_XOOPS_SMARTY5_SUMMARY_CHECKED, $this->getCount('checked'));
         $this->summaryRow(_XOOPS_SMARTY5_SUMMARY_BLOCKERS, $this->countBlockers(), 'danger');
         $this->summaryRow(_XOOPS_SMARTY5_SUMMARY_AUTOFIX, $this->countAutoFixable(), 'success');
-        $this->summaryRow(_XOOPS_SMARTY5_SUMMARY_MANUAL, count($this->reportOnly), 'warning');
+        // Blockers are also stored in reportOnly (for the patch's verify log) but
+        // are summarised on their own row above, so exclude them here.
+        $this->summaryRow(_XOOPS_SMARTY5_SUMMARY_MANUAL, count($this->reportOnly) - $this->countBlockers(), 'warning');
         $this->summaryRow(_XOOPS_SMARTY5_SCANNER_NOT_WRITABLE, $this->getCount('notwritable'), 'warning');
         $this->outputAppend('</table>');
     }

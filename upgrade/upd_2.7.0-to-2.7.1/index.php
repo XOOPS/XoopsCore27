@@ -36,7 +36,8 @@ use Xoops\Upgrade\XoopsUpgrade;
  *                        writes templates or blocks the queue.
  *  2. smartycache      — Purge compiled templates so stale Smarty-4 compiles built
  *                        from pre-repair sources cannot survive. Invariant: a
- *                        one-shot per upgrade session (session-flag).
+ *                        durable one-shot, recorded with a marker file (not the
+ *                        session) so it does not re-queue after a new session.
  *  3. smartyextensions — Guard that xoops/smartyextensions is installed and its
  *                        ExtensionRegistry is autoloadable (composer runs out of
  *                        band). Invariant: a missing package logs an actionable
@@ -105,12 +106,14 @@ class Upgrade_271 extends XoopsUpgrade
      */
     public function check_smartytemplates(): bool
     {
-        if (0 === $this->countAutoFixable()) {
+        if (0 === $this->countAutoFixable() && empty($this->scanReportOnly())) {
             unset($_SESSION[$this->smartyTplKey]); // genuinely clean — drop any stale warn flag
             return true;
         }
 
-        // Issues remain. Honour the warn-once flag so the upgrade can finish.
+        // Auto-fixable OR report-only (blocker / manual-review) items remain: honour
+        // the warn-once flag so the queue finishes, but not before apply_ has logged
+        // the manual-review warnings on the first pass.
         return !empty($_SESSION[$this->smartyTplKey]);
     }
 
@@ -171,7 +174,8 @@ class Upgrade_271 extends XoopsUpgrade
     /**
      * Purge compiled templates so stale Smarty-4 compiles cannot survive the repair.
      *
-     * @return bool always true (best-effort purge; missing dirs are a no-op)
+     * @return bool true once purged and the durable marker is written; false if the
+     *              marker cannot be recorded (so the task is not falsely complete)
      */
     public function apply_smartycache(): bool
     {
@@ -243,9 +247,12 @@ class Upgrade_271 extends XoopsUpgrade
         if (class_exists('Xoops\\SmartyExtensions\\ExtensionRegistry')) {
             $this->logSuccess('xoops/smartyextensions present and registered.');
         } else {
+            // Advisory only: this optional package is not bundled with 2.7.1 and
+            // its absence never blocks the upgrade.
             $this->logError(
-                'xoops/smartyextensions not found. Run "composer install" in the XOOPS root so '
-                . '2.7.1 template plugins are available.'
+                'Optional package xoops/smartyextensions is not installed; its template plugins '
+                . 'are unavailable. To add it, run "composer require xoops/smartyextensions" in '
+                . 'htdocs/xoops_lib. This is advisory and does not block the upgrade.'
             );
         }
         $_SESSION[$this->smartyExtKey] = true;

@@ -152,7 +152,7 @@ function tplScannerForm($parameters=null)
     $form .= '<label for="template_ext">' . _XOOPS_SMARTY4_TEMPLATE_EXT  . '</label>';
     $form .= '</div>';
 
-    $currentMode = Xmf\Request::getString('scan_mode', 'both');
+    $currentMode = Xmf\Request::getString('scan_mode', 'both', 'POST');
     $modes = [
         'both'    => _XOOPS_SMARTY5_MODE_BOTH,
         'smarty4' => _XOOPS_SMARTY5_MODE_S4,
@@ -170,14 +170,14 @@ function tplScannerForm($parameters=null)
 
     $form .= '<div class="form-group row">';
     $form .= '<div class="form-check">';
-    $form .= '<legend class="col-form-label">' . _XOOPS_SMARTY4_FIX_BUTTON . '</legend>';
+    $form .= '<legend class="col-form-label">' . _XOOPS_SMARTY5_FIX_BUTTON . '</legend>';
     $form .= '<input class="form-check-input" type="checkbox" name="runfix" >';
     $form .= '<label class="form-check-label" for="runfix">' . _YES . '</label>';
     $form .= '</div>';
     $form .= '</div>';
 
     $form .= '<div class="form-group">';
-    $form .= '<button class="btn btn-lg btn-success" type="submit">' . _XOOPS_SMARTY4_SCANNER_RUN;
+    $form .= '<button class="btn btn-lg btn-success" type="submit">' . _XOOPS_SMARTY5_SCANNER_RUN;
     $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
     $form .= '</div>';
 
@@ -186,7 +186,7 @@ function tplScannerForm($parameters=null)
     $form .= '<form action="' . $action . '" method="post" class="form-horizontal">';
     $form .= preflightTokenField();
     $form .= '<div class="form-group">';
-    $form .= '<button class="btn btn-lg btn-danger" type="submit">' . _XOOPS_SMARTY4_SCANNER_END;
+    $form .= '<button class="btn btn-lg btn-danger" type="submit">' . _XOOPS_SMARTY5_SCANNER_END;
     $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
     $form .= '<input type="hidden" name="endscan" value="yes">';
     $form .= '</div>';
@@ -339,6 +339,10 @@ function smartyLogOverride(array $scan, int $uid): void
                 // The override audit record matters; surface a failure to write it.
                 trigger_error('Could not write the Smarty5 gate override audit log', E_USER_WARNING);
             }
+        } elseif (is_dir($dir)) {
+            // Directory exists but is not writable: the override proceeds with no
+            // persistent audit trail — make that visible.
+            trigger_error('Smarty5 gate override audit log directory is not writable', E_USER_WARNING);
         }
     }
 
@@ -477,20 +481,25 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
         // --- Scan / repair pass(es) ---
         echo _XOOPS_SMARTY5_SCANNER_OFFER;
 
-        // Smarty 3->4 prerequisite layer (mode-gated).
+        // Smarty 3->4 prerequisite layer (mode-gated). Only echo the output when a
+        // scan actually ran — a skipped scan never closes its HTML table.
         if ($doS4) {
             if ('on' === $runfix) {
                 $s4 = smartyRunScanner(new Smarty4TemplateRepair($o = new Smarty4RepairOutput()), $o, $template_dir, $template_ext);
             } else {
                 $s4 = smartyRunScanner(new Smarty4TemplateChecks($o = new Smarty4ScannerOutput()), $o, $template_dir, $template_ext);
             }
-            echo $s4['output']->outputFetch();
+            if ($s4['executed']) {
+                echo $s4['output']->outputFetch();
+            }
         }
 
         // Smarty 4->5 repair layer (mode-gated; mutating).
         if ($doS5 && 'on' === $runfix) {
             $s5repair = smartyRunScanner(new Smarty5TemplateRepair($o = new Smarty5RepairOutput()), $o, $template_dir, $template_ext);
-            echo $s5repair['output']->outputFetch();
+            if ($s5repair['executed']) {
+                echo $s5repair['output']->outputFetch();
+            }
         }
 
         // The Smarty 4->5 checks pass ALWAYS runs: it produces the blocker tally the
@@ -499,7 +508,7 @@ if (!$xoopsUser || !$xoopsUser->isAdmin()) {
         $s5 = smartyRunScanner(new Smarty5TemplateChecks($o = new Smarty5ScannerOutput()), $o, $template_dir, $template_ext);
         /** @var Smarty5ScannerOutput $s5checks */
         $s5checks = $s5['output'];
-        if ($doS5) {
+        if ($doS5 && $s5['executed']) {
             echo $s5checks->outputFetch();
         }
 

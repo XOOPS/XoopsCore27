@@ -216,6 +216,12 @@ class Smarty5TemplateRepair extends ScannerProcess
 
             return;
         }
+        // The temp file was created with the process umask; copy the original's
+        // permission bits so rename() does not silently change the template's mode.
+        $perms = @fileperms($pathname);
+        if (false !== $perms) {
+            @chmod($tmpPath, $perms & 0777);
+        }
         unset($file); // release the read handle so rename can replace the original (Windows)
         if (false === @rename($tmpPath, $pathname)) {
             $this->removeStagingFile($tmpPath, 'rename failed');

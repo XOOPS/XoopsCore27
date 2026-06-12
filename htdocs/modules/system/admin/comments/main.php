@@ -290,8 +290,18 @@ switch ($op) {
                         $comments_poster_uname = '<a href="' . XOOPS_URL . '/userinfo.php?uid=' . $comments_arr[$i]->getVar('com_uid') . '">' . $poster->getVar('uname') . '</a>';
                     }
                 } elseif ($comments_arr[$i]->getVar('com_uid') == 0 && $comments_arr[$i]->getVar('com_user') != '') {
-                    if ($comments_arr[$i]->getVar('com_url') != '') {
-                        $comments_poster_uname = '<div class="pad2 marg2"><a href="' . $comments_arr[$i]->getVar('com_url') . '">' . $comments_arr[$i]->getVar('com_user') . '</a> ( <a href="mailto:' . $comments_arr[$i]->getVar('com_email') . '">' . $comments_arr[$i]->getVar('com_email') . '</a> ) ' . '</div>';
+                    // Validate the com_url scheme before emitting it as a clickable admin
+                    // link: a stored "javascript:" URL would otherwise become a script link
+                    // in the admin comment list (SECURITY.md M-11). Allow http/https/mailto
+                    // and relative (empty scheme); drop the link otherwise.
+                    $comUrl     = (string) $comments_arr[$i]->getVar('com_url'); // HTML-escaped by getVar('s')
+                    $comScheme  = strtolower((string) parse_url(
+                        html_entity_decode($comUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                        PHP_URL_SCHEME
+                    ));
+                    $safeComUrl = in_array($comScheme, ['http', 'https', 'mailto', ''], true) ? $comUrl : '';
+                    if ($safeComUrl !== '') {
+                        $comments_poster_uname = '<div class="pad2 marg2"><a href="' . $safeComUrl . '">' . $comments_arr[$i]->getVar('com_user') . '</a> ( <a href="mailto:' . $comments_arr[$i]->getVar('com_email') . '">' . $comments_arr[$i]->getVar('com_email') . '</a> ) ' . '</div>';
                     } else {
                         $comments_poster_uname = '<div class="pad2 marg2">' . $comments_arr[$i]->getVar('com_user') . ' ( <a href="mailto:' . $comments_arr[$i]->getVar('com_email') . '">' . $comments_arr[$i]->getVar('com_email') . '</a> ) ' . '</div>';
                     }

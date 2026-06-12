@@ -25,15 +25,17 @@ jobs:
     name: Semgrep (diff-aware, advisory)
     runs-on: ubuntu-22.04
     timeout-minutes: 10
-    # Pinned for reproducible scans. Bump intentionally (e.g. via Dependabot/
-    # Renovate); add an @sha256:<digest> suffix to lock the exact image too.
+    # Pinned to an immutable digest for reproducible, tamper-evident scans.
+    # The :tag is kept for readability; the @sha256 is authoritative. Bump
+    # intentionally (e.g. via Dependabot/Renovate).
     container:
-      image: semgrep/semgrep:1.165.0
+      image: semgrep/semgrep:1.165.0@sha256:f4791a54c891eabe1188248135574e6e03dfc31dfd3f3b747c7bec7079bfed1b
     steps:
       - name: Checkout (full history needed for diff-aware scanning)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v5
         with:
           fetch-depth: 0
+          persist-credentials: false # read-only scan: don't leave the token in .git/config
 
       - name: Semgrep diff scan (reports PR-new findings only)
         run: semgrep ci

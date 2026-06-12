@@ -368,15 +368,28 @@ if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET
 $width = Request::getInt('width', 0, 'GET');
 // height
 $height = Request::getInt('height', 0, 'GET');
-// If either a max width or max height are not specified, we default to something large so the unspecified
-// dimension isn't a constraint on our resized image.
+
+// Hard caps to prevent resource exhaustion via attacker-chosen sizes (SECURITY.md
+// M-14). Reject negative/oversized dimensions before any allocation, and cap the
+// total destination area below.
+$imgMaxDim    = 5000;        // max pixels per side
+$imgMaxPixels = 20000000;    // ~20 MP total destination area
+if ($width < 0 || $width > $imgMaxDim) {
+    $width = 0;
+}
+if ($height < 0 || $height > $imgMaxDim) {
+    $height = 0;
+}
+
+// If either a max width or max height are not specified, we default to the per-side
+// cap so the unspecified dimension isn't a constraint on our resized image.
 // If neither are specified but the color is, we aren't going to be resizing at all, just coloring.
 $max_width = $width;
 $max_height = $height;
 if (!$max_width && $max_height) {
-    $max_width = PHP_INT_MAX;
+    $max_width = $imgMaxDim;   // was PHP_INT_MAX
 } elseif ($max_width && !$max_height) {
-    $max_height = PHP_INT_MAX;
+    $max_height = $imgMaxDim;  // was PHP_INT_MAX
 } elseif (!$max_width && !$max_height) {
     $max_width = $imageWidth;
     $max_height = $imageHeight;
@@ -453,6 +466,12 @@ $quality = Request::getInt('quality', DEFAULT_IMAGE_QUALITY, 'GET') ;
 ini_set('memory_limit', MEMORY_TO_ALLOCATE);
 
 // Set up a blank canvas for our resized image (destination)
+// Final guard before allocation: reject non-positive or over-area destinations so a
+// crafted request cannot drive a huge imagecreatetruecolor() allocation (SECURITY.md M-14).
+if ($tn_width < 1 || $tn_height < 1 || ($tn_width * $tn_height) > $imgMaxPixels) {
+    http_response_code(400);
+    exit();
+}
 $destination_image = imagecreatetruecolor($tn_width, $tn_height);
 
 imagealphablending($destination_image, false);

@@ -42,6 +42,10 @@ final class Upgrade271Test extends TestCase
     protected function setUp(): void
     {
         $_SESSION = [];
+        $marker = XOOPS_VAR_PATH . '/data/smarty5_cache_purged_271.marker';
+        if (is_file($marker)) {
+            @unlink($marker);
+        }
     }
 
     #[Test]
@@ -83,13 +87,18 @@ final class Upgrade271Test extends TestCase
     }
 
     #[Test]
-    public function smartycacheIsAOneShotSessionFlag(): void
+    public function smartycacheCompletionIsDurableAcrossSessions(): void
     {
         $u = new Upgrade271Stub();
 
         self::assertFalse($u->check_smartycache());
         self::assertTrue($u->apply_smartycache());
         self::assertTrue($u->check_smartycache());
+
+        // A new or expired session must NOT make the 2.7.1 patch pending again:
+        // completion is recorded with a durable marker file, not $_SESSION.
+        $_SESSION = [];
+        self::assertTrue($u->check_smartycache(), 'smartycache must stay applied after a session reset');
     }
 
     #[Test]

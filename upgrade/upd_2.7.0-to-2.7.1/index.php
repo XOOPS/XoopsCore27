@@ -159,13 +159,16 @@ class Upgrade_271 extends XoopsUpgrade
     // =========================================================================
 
     /**
-     * One-shot per session: true once the compiled-template cache has been purged.
+     * Durable one-shot: true once the compiled-template cache has been purged.
+     *
+     * Recorded with a marker file (not $_SESSION) so a new or expired browser
+     * session does not make the 2.7.1 patch reappear as pending after the purge.
      *
      * @return bool
      */
     public function check_smartycache(): bool
     {
-        return !empty($_SESSION[$this->smartyCacheKey]);
+        return is_file($this->cachePurgedMarker());
     }
 
     /**
@@ -179,10 +182,27 @@ class Upgrade_271 extends XoopsUpgrade
         if (defined('XOOPS_VAR_PATH')) {
             $this->purge(XOOPS_VAR_PATH . '/caches/smarty_compile');
         }
-        $_SESSION[$this->smartyCacheKey] = true;
+        $marker = $this->cachePurgedMarker();
+        $dir    = dirname($marker);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        @file_put_contents($marker, (string) time());
         $this->logSuccess('Compiled Smarty templates purged.');
 
         return true;
+    }
+
+    /**
+     * Durable marker file recording that the one-shot compiled-template purge ran.
+     *
+     * @return string
+     */
+    private function cachePurgedMarker(): string
+    {
+        $base = defined('XOOPS_VAR_PATH') ? XOOPS_VAR_PATH . '/data' : XOOPS_ROOT_PATH;
+
+        return $base . '/smarty5_cache_purged_271.marker';
     }
 
     // =========================================================================

@@ -76,9 +76,13 @@ class SystemSmartyextensionsPreload extends XoopsPreloadItem
 
             self::$registry->registerAll($tpl);
         } catch (\Throwable $e) {
-            // A plugin-registration problem must not white-screen the site; surface it
-            // as a non-fatal warning for the error handler / log instead.
-            trigger_error('SmartyExtensions registration failed: ' . $e->getMessage(), E_USER_WARNING);
+            // Non-fatal: a registration problem must never white-screen the site. Emit a
+            // generic warning for the error handler and keep the exception detail in the
+            // debug log only, so internals are never leaked into displayed warning text.
+            trigger_error('SmartyExtensions registration failed.', E_USER_WARNING);
+            if (isset($GLOBALS['xoopsLogger']) && \is_object($GLOBALS['xoopsLogger'])) {
+                $GLOBALS['xoopsLogger']->addExtra('SmartyExtensions', $e->getMessage());
+            }
         }
     }
 }

@@ -105,6 +105,16 @@ switch ($op) {
         $selectModules = Request::getString('select_modules', '0');
         $activeModules = Request::getString('active_modules', '0');
         $selectTheme = Request::getString('select_theme', '');
+        // Confine select_theme to a real installed theme leaf name — a separator or
+        // ../ would let the generate/write paths below (theme_surcharge = themes/<x>/
+        // modules) escape XOOPS_THEME_PATH (SECURITY.md A2-M-2). Validated once here so
+        // every downstream write that derives from $selectTheme is covered.
+        if ($selectTheme !== ''
+            && (!preg_match('/^[a-zA-Z0-9_-]+$/', $selectTheme)
+                || !is_dir(XOOPS_THEME_PATH . '/' . $selectTheme))) {
+            redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
+            exit();
+        }
         $forceGenerated = Request::getInt('force_generated', 0);
         if (  '0' === $selectModules ||  '1' === $activeModules) {
             //Generate modules

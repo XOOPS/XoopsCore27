@@ -60,7 +60,10 @@ class XoopsSecurity
             $expire  = @ini_get('session.gc_maxlifetime');
             $timeout = ($expire > 0) ? $expire : 900;
         }
-        $token_id = md5(uniqid(mt_rand(), true));
+        // CSPRNG token id — the framework-wide CSRF boundary must not rest on
+        // mt_rand()/uniqid() (SECURITY.md M-4). The public token format below is
+        // unchanged for BC; only the entropy source is hardened.
+        $token_id = bin2hex(random_bytes(32));
         // save token data on the server
         if (!isset($_SESSION[$name . '_SESSION'])) {
             $_SESSION[$name . '_SESSION'] = [];
@@ -104,7 +107,7 @@ class XoopsSecurity
         $validFound = false;
         $token_data = &$_SESSION[$name . '_SESSION'];
         foreach (array_keys($token_data) as $i) {
-            if ($token === md5($token_data[$i]['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX)) {
+            if (hash_equals(md5($token_data[$i]['id'] . $_SERVER['HTTP_USER_AGENT'] . XOOPS_DB_PREFIX), (string) $token)) {
                 if ($this->filterToken($token_data[$i])) {
                     if ($clearIfValid) {
                         // token should be valid once, so clear it once validated
@@ -184,7 +187,11 @@ class XoopsSecurity
         if ($ref == '') {
             return false;
         }
-        return !(strpos($ref, XOOPS_URL) !== 0);
+        // Compare the referer host exactly. A prefix match (strpos === 0) accepts
+        // sibling hosts such as example.com.attacker.test (SECURITY.md M-3).
+        $refHost  = parse_url($ref, PHP_URL_HOST);
+        $baseHost = parse_url(XOOPS_URL, PHP_URL_HOST);
+        return !empty($refHost) && !empty($baseHost) && strcasecmp((string) $refHost, (string) $baseHost) === 0;
     }
 
     /**

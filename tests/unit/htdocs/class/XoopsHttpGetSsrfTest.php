@@ -53,6 +53,14 @@ final class XoopsHttpGetSsrfTest extends TestCase
             'userinfo form'       => ['http://user:pass@example.com/'],
             'scheme-relative'     => ['//example.com/'],
             'no scheme/host'      => ['/relative/path'],
+            // IPv6 literals: parse_url keeps the [..] brackets, which fail FILTER_VALIDATE_IP
+            // and DNS resolution, so these are rejected without relying on the IPv6 coverage
+            // of FILTER_FLAG_NO_PRIV_RANGE / NO_RES_RANGE.
+            'ipv6 loopback'       => ['http://[::1]/'],
+            'ipv6 mapped loopback'=> ['http://[::ffff:127.0.0.1]/'],
+            'ipv6 mapped metadata'=> ['http://[::ffff:169.254.169.254]/'],
+            'ipv6 link-local'     => ['http://[fe80::1]/'],
+            'ipv6 ula private'    => ['http://[fd00::1]/'],
         ];
     }
 

@@ -85,6 +85,11 @@ class XoopsHttpGet
         $host = $parts['host'];
         $port = isset($parts['port']) ? (int) $parts['port'] : ($scheme === 'https' ? 443 : 80);
 
+        // IPv6 literals are intentionally unsupported: parse_url() keeps the [..] brackets,
+        // which fail FILTER_VALIDATE_IP and DNS below, so every IPv6 literal (public or
+        // private) is rejected. This is deliberate — the resolver is IPv4-only, and
+        // reliably classifying private/reserved IPv6 (mapped/loopback/ULA) across the PHP
+        // 8.2 floor is error-prone, so we fail closed rather than risk an SSRF gap.
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             $ips = [$host];
         } else {
@@ -199,19 +204,25 @@ class XoopsHttpGet
             $this->error = 'URL rejected: only public http(s) targets are allowed.';
             return false;
         }
-        $parts  = parse_url($url);
+        $parts  = parse_url($url) ?: [];
         $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
         $ipHost = str_contains($pin['ip'], ':') ? '[' . $pin['ip'] . ']' : $pin['ip'];
         $target = $scheme . '://' . $ipHost . ':' . $pin['port']
             . ($parts['path'] ?? '/')
             . (isset($parts['query']) ? '?' . $parts['query'] : '');
 
+        // Include the port in the Host header when it is non-default (RFC 7230).
+        $hostHeader = $pin['host'];
+        if (('http' === $scheme && 80 !== $pin['port']) || ('https' === $scheme && 443 !== $pin['port'])) {
+            $hostHeader .= ':' . $pin['port'];
+        }
+
         $context  = stream_context_create([
             'http' => [
                 'follow_location' => 0,
                 'max_redirects'   => 0,
                 'timeout'         => 10,
-                'header'          => 'Host: ' . $pin['host'],
+                'header'          => 'Host: ' . $hostHeader,
             ],
             'ssl' => [
                 'peer_name'        => $pin['host'], // verify the cert against the real host, not the IP

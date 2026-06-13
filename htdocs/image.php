@@ -595,7 +595,7 @@ if (ENABLE_IMAGEFILTER && !empty($filter)) {
         'IMG_FILTER_SELECTIVE_BLUR' => [IMG_FILTER_SELECTIVE_BLUR, [0]],
         'IMG_FILTER_MEAN_REMOVAL'   => [IMG_FILTER_MEAN_REMOVAL, [0]],
         'IMG_FILTER_SMOOTH'         => [IMG_FILTER_SMOOTH, [1]],
-        'IMG_FILTER_PIXELATE'       => [IMG_FILTER_PIXELATE, [2]],
+        'IMG_FILTER_PIXELATE'       => [IMG_FILTER_PIXELATE, [1, 2]], // block size required, advanced-mode flag optional
     ];
     $filterSet = (array) $filter;
     foreach ($filterSet as $currentFilter) {

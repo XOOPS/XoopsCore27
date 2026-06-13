@@ -58,27 +58,33 @@ class XoopsHttpGet
     }
 
     /**
-     * SSRF guard: allow only public http(s) targets (SECURITY.md M-5). Blocks
-     * non-http schemes (file://, php://, gopher://, …), userinfo URLs, and hosts
-     * that resolve to private, loopback, link-local, or reserved addresses.
+     * SSRF guard (SECURITY.md M-5): allow only public http(s) targets. Returns the
+     * validated host/port plus a safe resolved IP to pin the connection to, or null
+     * if the URL must be refused. Blocks non-http schemes (file://, php://, …),
+     * userinfo URLs, and hosts that resolve to private/loopback/link-local/reserved
+     * addresses. Returning the resolved IP lets the caller pin the connection, which
+     * also closes the DNS-rebinding window.
      *
      * @param string $url
      *
-     * @return bool
+     * @return array{host:string,port:int,ip:string}|null
      */
-    protected function isAllowedUrl(string $url): bool
+    protected function resolveAllowed(string $url): ?array
     {
         $parts = parse_url($url);
         if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
-            return false;
+            return null;
         }
-        if (!in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
-            return false;
+        $scheme = strtolower($parts['scheme']);
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return null;
         }
         if (isset($parts['user']) || isset($parts['pass'])) {
-            return false; // userinfo form can mislead host parsing
+            return null; // userinfo form can mislead host parsing
         }
         $host = $parts['host'];
+        $port = isset($parts['port']) ? (int) $parts['port'] : ($scheme === 'https' ? 443 : 80);
+
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             $ips = [$host];
         } else {
@@ -86,64 +92,110 @@ class XoopsHttpGet
             // warning whose false return we handle immediately (fail closed, R-030).
             $ips = @gethostbynamel($host);
             if ($ips === false || $ips === []) {
-                return false;
+                return null;
             }
         }
+        $safeIp = null;
         foreach ($ips as $ip) {
+            // Reject if ANY resolved address is private/reserved (defeats split-horizon DNS).
             if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                return false; // private / loopback / link-local / reserved target
+                return null;
             }
+            if ($safeIp === null) {
+                $safeIp = $ip;
+            }
+        }
+        if ($safeIp === null) {
+            return null;
         }
 
-        return true;
+        return ['host' => $host, 'port' => $port, 'ip' => $safeIp];
     }
 
     /**
-     * Use curl to GET the specified URL.
+     * Thin boolean wrapper around {@see resolveAllowed()} (used by fetch() and tests).
+     *
+     * @param string $url
+     *
+     * @return bool
+     */
+    protected function isAllowedUrl(string $url): bool
+    {
+        return $this->resolveAllowed($url) !== null;
+    }
+
+    /**
+     * Use curl to GET the specified URL. Redirects are followed manually so each hop
+     * is re-validated against the SSRF allowlist and pinned to its resolved IP — an
+     * attacker URL cannot 30x-redirect to 127.0.0.1 / 169.254.169.254 / RFC1918, and
+     * the pin closes the DNS-rebinding window (SECURITY.md M-5).
      *
      * @return string|bool response or false on error
      */
     protected function fetchCurl()
     {
-        $curlHandle = curl_init($this->url);
-        if (false === $curlHandle) {
-            $this->error = 'curl_init failed';
-            return false;
-        }
-        $options = [
-            CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_HEADER         => 0,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_FOLLOWLOCATION => 1,
-            CURLOPT_MAXREDIRS      => 4,
-            // Restrict to HTTP(S) so a redirect cannot pivot to file://, gopher://, etc.
-            CURLOPT_PROTOCOLS       => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-        ];
-        curl_setopt_array($curlHandle, $options);
+        $url       = (string) $this->url;
+        $maxRedirs = 4;
 
-        $response = curl_exec($curlHandle);
-        if (false === $response) {
-            $this->error = curl_error($curlHandle);
-        } else {
-            $httpcode = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
-            if (200 != $httpcode) {
-                $this->error = $response;
-                $response = false;
+        for ($hop = 0; $hop <= $maxRedirs; ++$hop) {
+            $pin = $this->resolveAllowed($url);
+            if ($pin === null) {
+                $this->error = 'URL rejected: only public http(s) targets are allowed.';
+                return false;
             }
+            $curlHandle = curl_init($url);
+            if (false === $curlHandle) {
+                $this->error = 'curl_init failed';
+                return false;
+            }
+            curl_setopt_array($curlHandle, [
+                CURLOPT_RETURNTRANSFER => 1,
+                CURLOPT_HEADER         => 0,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_FOLLOWLOCATION => 0, // follow manually so each hop is re-validated
+                CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                // Pin the connection to the address we just validated (no DNS rebinding).
+                CURLOPT_RESOLVE        => [$pin['host'] . ':' . $pin['port'] . ':' . $pin['ip']],
+            ]);
+
+            $response    = curl_exec($curlHandle);
+            $httpcode    = (int) curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
+            $redirectUrl = (string) curl_getinfo($curlHandle, CURLINFO_REDIRECT_URL);
+            $curlError   = curl_error($curlHandle);
+            curl_close($curlHandle);
+
+            if (false === $response) {
+                $this->error = $curlError;
+                return false;
+            }
+            if ($httpcode >= 300 && $httpcode < 400 && $redirectUrl !== '') {
+                $url = $redirectUrl; // re-validated + re-pinned at the top of the next iteration
+                continue;
+            }
+            if (200 !== $httpcode) {
+                $this->error = $response;
+                return false;
+            }
+            return $response;
         }
-        curl_close($curlHandle);
-        return $response;
+
+        $this->error = 'Too many redirects';
+        return false;
     }
 
     /**
-     * Use stream wrapper to GET the specified URL.
+     * Use stream wrapper to GET the specified URL. Redirect following is disabled so a
+     * 30x cannot send the request to an internal target (the fopen path cannot pin the
+     * resolved IP the way the curl path does).
      *
      * @return string|false response or false on error
      */
     protected function fetchFopen()
     {
-        $response = file_get_contents($this->url);
+        $context  = stream_context_create([
+            'http' => ['follow_location' => 0, 'max_redirects' => 0, 'timeout' => 10],
+        ]);
+        $response = file_get_contents((string) $this->url, false, $context);
         if (false === $response) {
             $this->error = 'file_get_contents() failed.';
         }

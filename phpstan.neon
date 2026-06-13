@@ -20,7 +20,9 @@ parameters:
             - htdocs/install/
             - htdocs/xoops_lib/vendor/ (?)
     scanFiles:
-        - htdocs/xoops_lib/vendor/kint-php/kint/src/Kint.php
+        # Same vendor tree as above — optional so PHPStan does not error when the
+        # kint dependency is absent (checkouts without `composer install`).
+        - htdocs/xoops_lib/vendor/kint-php/kint/src/Kint.php (?)
     stubFiles:
         - phpstan-constants.stub.php
     treatPhpDocTypesAsCertain: false

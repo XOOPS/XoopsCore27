@@ -360,7 +360,7 @@ class XoopsNotificationHandler extends XoopsObjectHandler
             // appended again here (SECURITY.md L-6).
             $sql .= ' ORDER BY ' . self::buildOrderBy($criteria->getSort(), $criteria->getOrder(), [
                 'not_id', 'not_modid', 'not_itemid', 'not_category', 'not_event',
-                'not_uid', 'not_mode', 'not_class',
+                'not_uid', 'not_mode',
             ], 'not_id');
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();

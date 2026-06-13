@@ -312,6 +312,11 @@ if (!empty($imageId)) {
         exitInvalidRequest();
     }
     $sourceImage = imagecreatefromstring($imageData);
+    // imagesx()/imagesy() require a GdImage; reject a decode failure rather than
+    // passing false into them (a TypeError under PHP 8).
+    if (!($sourceImage instanceof \GdImage)) {
+        exitInvalidRequest();
+    }
     $imageWidth = imagesx($sourceImage);
     $imageHeight = imagesy($sourceImage);
 } elseif (!empty($imageUrl)) {
@@ -337,9 +342,12 @@ if (!empty($imageId)) {
     $imageFilename = basename($imagePath);  // image filename
     $imagesize = getimagesize($imagePath);
     // Reject before decode if the source is unreadable, too large on disk, or
-    // would decode to an excessive pixel count (M-14).
+    // would decode to an excessive pixel count (M-14). Treat a stat failure
+    // (filesize() === false) as a rejection, not a pass — mirrors the image-id path.
+    $srcBytes = is_file($imagePath) ? filesize($imagePath) : false;
     if (false === $imagesize
-        || (is_file($imagePath) && filesize($imagePath) > $imgSrcMaxBytes)
+        || false === $srcBytes
+        || $srcBytes > $imgSrcMaxBytes
         || ($imagesize[0] * $imagesize[1]) > $imgSrcMaxPixels) {
         exitInvalidRequest();
     }
@@ -364,6 +372,11 @@ if (!empty($imageId)) {
         default:
             exitInvalidRequest();
             break;
+    }
+    // Reject a decode failure before imagesx() further down (parity with the
+    // DB-blob path; avoids a PHP 8 TypeError on a corrupt file).
+    if (!($sourceImage instanceof \GdImage)) {
+        exitInvalidRequest();
     }
 } else {
     // No id, no url, no src parameters

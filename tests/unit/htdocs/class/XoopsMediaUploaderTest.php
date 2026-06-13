@@ -39,7 +39,8 @@ class XoopsMediaUploaderTest extends TestCase
         $uploader->allowedMimeTypes = [];
         $uploader->deniedMimeTypes = ['application/x-httpd-php'];
         $uploader->extensionsToBeSanitized = [
-            'php', 'phtml', 'phtm', 'php3', 'php4', 'cgi', 'pl', 'asp', 'php5', 'php7',
+            'php', 'phtml', 'phtm', 'pht', 'php3', 'php4', 'php5', 'php7', 'php8',
+            'phar', 'shtml', 'cgi', 'pl', 'asp',
         ];
         $uploader->imageExtensions = [
             1 => 'gif', 2 => 'jpg', 3 => 'png', 4 => 'swf', 5 => 'psd',
@@ -623,7 +624,10 @@ class XoopsMediaUploaderTest extends TestCase
     public function testDefaultExtensionsToBeSanitized(): void
     {
         $uploader = $this->createUploader();
-        $expected = ['php', 'phtml', 'phtm', 'php3', 'php4', 'cgi', 'pl', 'asp', 'php5', 'php7'];
+        $expected = [
+            'php', 'phtml', 'phtm', 'pht', 'php3', 'php4', 'php5', 'php7', 'php8',
+            'phar', 'shtml', 'cgi', 'pl', 'asp',
+        ];
         $this->assertSame($expected, $uploader->extensionsToBeSanitized);
     }
 

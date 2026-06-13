@@ -577,22 +577,25 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
 
 // Imagefilter
 if (ENABLE_IMAGEFILTER && !empty($filter)) {
-    // Allowlist the supported imagefilter constants. NEVER resolve a request-controlled
-    // filter name with constant(): on PHP 8 an unknown constant throws a fatal Error
-    // (DoS), and constant() would also resolve unrelated constants (SECURITY.md M-1).
+    // Allowlist the supported imagefilter constants and their valid extra-argument
+    // arities. NEVER resolve a request-controlled filter name with constant(): on PHP 8
+    // an unknown constant throws a fatal Error (DoS) and constant() would also resolve
+    // unrelated constants (SECURITY.md L-1). Validating the arg count additionally
+    // prevents an ArgumentCountError from a valid filter with wrong arity.
+    // [filterId, [allowed extra-arg counts]]
     $allowedFilters = [
-        'IMG_FILTER_NEGATE'         => IMG_FILTER_NEGATE,
-        'IMG_FILTER_GRAYSCALE'      => IMG_FILTER_GRAYSCALE,
-        'IMG_FILTER_BRIGHTNESS'     => IMG_FILTER_BRIGHTNESS,
-        'IMG_FILTER_CONTRAST'       => IMG_FILTER_CONTRAST,
-        'IMG_FILTER_COLORIZE'       => IMG_FILTER_COLORIZE,
-        'IMG_FILTER_EDGEDETECT'     => IMG_FILTER_EDGEDETECT,
-        'IMG_FILTER_EMBOSS'         => IMG_FILTER_EMBOSS,
-        'IMG_FILTER_GAUSSIAN_BLUR'  => IMG_FILTER_GAUSSIAN_BLUR,
-        'IMG_FILTER_SELECTIVE_BLUR' => IMG_FILTER_SELECTIVE_BLUR,
-        'IMG_FILTER_MEAN_REMOVAL'   => IMG_FILTER_MEAN_REMOVAL,
-        'IMG_FILTER_SMOOTH'         => IMG_FILTER_SMOOTH,
-        'IMG_FILTER_PIXELATE'       => IMG_FILTER_PIXELATE,
+        'IMG_FILTER_NEGATE'         => [IMG_FILTER_NEGATE, [0]],
+        'IMG_FILTER_GRAYSCALE'      => [IMG_FILTER_GRAYSCALE, [0]],
+        'IMG_FILTER_BRIGHTNESS'     => [IMG_FILTER_BRIGHTNESS, [1]],
+        'IMG_FILTER_CONTRAST'       => [IMG_FILTER_CONTRAST, [1]],
+        'IMG_FILTER_COLORIZE'       => [IMG_FILTER_COLORIZE, [3, 4]],
+        'IMG_FILTER_EDGEDETECT'     => [IMG_FILTER_EDGEDETECT, [0]],
+        'IMG_FILTER_EMBOSS'         => [IMG_FILTER_EMBOSS, [0]],
+        'IMG_FILTER_GAUSSIAN_BLUR'  => [IMG_FILTER_GAUSSIAN_BLUR, [0]],
+        'IMG_FILTER_SELECTIVE_BLUR' => [IMG_FILTER_SELECTIVE_BLUR, [0]],
+        'IMG_FILTER_MEAN_REMOVAL'   => [IMG_FILTER_MEAN_REMOVAL, [0]],
+        'IMG_FILTER_SMOOTH'         => [IMG_FILTER_SMOOTH, [1]],
+        'IMG_FILTER_PIXELATE'       => [IMG_FILTER_PIXELATE, [2]],
     ];
     $filterSet = (array) $filter;
     foreach ($filterSet as $currentFilter) {
@@ -601,11 +604,12 @@ if (ENABLE_IMAGEFILTER && !empty($filter)) {
         if (!isset($allowedFilters[$filterName])) {
             continue; // unknown/unsupported filter — skip cleanly, never fatal
         }
-        $filterArgs = [$destination_image, $allowedFilters[$filterName]];
-        foreach ($rawFilterArgs as $tempValue) {
-            $filterArgs[] = (int) trim($tempValue); // imagefilter numeric args
+        [$filterId, $validArgCounts] = $allowedFilters[$filterName];
+        $extraArgs = array_map(static fn($v): int => (int) trim((string) $v), $rawFilterArgs);
+        if (!in_array(count($extraArgs), $validArgCounts, true)) {
+            continue; // wrong arity → skip, avoid ArgumentCountError
         }
-        call_user_func_array('imagefilter', $filterArgs);
+        call_user_func_array('imagefilter', array_merge([$destination_image, $filterId], $extraArgs));
     }
 }
 

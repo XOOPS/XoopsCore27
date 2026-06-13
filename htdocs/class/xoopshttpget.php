@@ -184,18 +184,43 @@ class XoopsHttpGet
     }
 
     /**
-     * Use stream wrapper to GET the specified URL. Redirect following is disabled so a
-     * 30x cannot send the request to an internal target (the fopen path cannot pin the
-     * resolved IP the way the curl path does).
+     * Use stream wrapper to GET the specified URL. The request is sent to the IP that
+     * resolveAllowed() just validated (host rewritten to the pinned IP, Host header and
+     * TLS peer_name kept as the original host), so the stream wrapper cannot re-resolve
+     * to an internal address (DNS rebinding). Redirects are disabled (SECURITY.md M-5).
      *
      * @return string|false response or false on error
      */
     protected function fetchFopen()
     {
+        $url = (string) $this->url;
+        $pin = $this->resolveAllowed($url);
+        if ($pin === null) {
+            $this->error = 'URL rejected: only public http(s) targets are allowed.';
+            return false;
+        }
+        $parts  = parse_url($url);
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
+        $ipHost = str_contains($pin['ip'], ':') ? '[' . $pin['ip'] . ']' : $pin['ip'];
+        $target = $scheme . '://' . $ipHost . ':' . $pin['port']
+            . ($parts['path'] ?? '/')
+            . (isset($parts['query']) ? '?' . $parts['query'] : '');
+
         $context  = stream_context_create([
-            'http' => ['follow_location' => 0, 'max_redirects' => 0, 'timeout' => 10],
+            'http' => [
+                'follow_location' => 0,
+                'max_redirects'   => 0,
+                'timeout'         => 10,
+                'header'          => 'Host: ' . $pin['host'],
+            ],
+            'ssl' => [
+                'peer_name'        => $pin['host'], // verify the cert against the real host, not the IP
+                'verify_peer'      => true,
+                'verify_peer_name' => true,
+                'SNI_enabled'      => true,
+            ],
         ]);
-        $response = file_get_contents((string) $this->url, false, $context);
+        $response = file_get_contents($target, false, $context);
         if (false === $response) {
             $this->error = 'file_get_contents() failed.';
         }

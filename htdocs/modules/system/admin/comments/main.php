@@ -300,9 +300,17 @@ switch ($op) {
                     // resolving a URL (e.g. "\tjavascript:" -> "javascript:"), so strip them
                     // before the scheme check — otherwise a control-char prefix yields an
                     // empty scheme that the allowlist would wrongly permit (SECURITY.md M-11).
-                    $strippedUrl = (string) preg_replace('/[\x00-\x20]+/', '', $decodedUrl);
-                    $comScheme   = strtolower((string) parse_url($strippedUrl, PHP_URL_SCHEME));
-                    $safeComUrl  = in_array($comScheme, ['http', 'https', 'mailto', ''], true) ? $comUrl : '';
+                    // Include \x7F (DEL) per the xoops_isLocalUrl() pattern in file_safety.php.
+                    $strippedUrl  = (string) preg_replace('/[\x00-\x20\x7F]+/', '', $decodedUrl);
+                    $parsedScheme = parse_url($strippedUrl, PHP_URL_SCHEME);
+                    if (false === $parsedScheme) {
+                        // Malformed URL — reject outright rather than letting the
+                        // string cast turn it into an empty (allowed) scheme.
+                        $safeComUrl = '';
+                    } else {
+                        $comScheme  = strtolower((string) $parsedScheme);
+                        $safeComUrl = in_array($comScheme, ['http', 'https', 'mailto', ''], true) ? $comUrl : '';
+                    }
                     if ($safeComUrl !== '') {
                         $comments_poster_uname = '<div class="pad2 marg2"><a href="' . $safeComUrl . '">' . $comments_arr[$i]->getVar('com_user') . '</a> ( <a href="mailto:' . $comments_arr[$i]->getVar('com_email') . '">' . $comments_arr[$i]->getVar('com_email') . '</a> ) ' . '</div>';
                     } else {

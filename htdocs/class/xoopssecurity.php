@@ -260,7 +260,7 @@ class XoopsSecurity
 
         $addr = IPAddress::fromRequest();
         $ip = $addr->asReadable();
-        if ($xoopsConfig['enable_badips'] == 1 && $ip != '0.0.0.0') {
+        if ($xoopsConfig['enable_badips'] == 1 && $ip != '0.0.0.0' && is_array($xoopsConfig['bad_ips'] ?? null)) {
             // Admin-entered patterns may be malformed (e.g. a CIDR's "/" collides
             // with the delimiter). Swallow the resulting PCRE warning for the scan
             // and treat any non-match — including a compile failure — as "allowed",

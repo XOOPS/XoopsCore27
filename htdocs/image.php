@@ -341,13 +341,15 @@ if (!empty($imageId)) {
     // Get the size and MIME type of the requested image
     $imageFilename = basename($imagePath);  // image filename
     $imagesize = getimagesize($imagePath);
-    // Reject before decode if the source is unreadable, too large on disk, or
-    // would decode to an excessive pixel count (M-14). Treat a stat failure
-    // (filesize() === false) as a rejection, not a pass — mirrors the image-id path.
-    $srcBytes = is_file($imagePath) ? filesize($imagePath) : false;
+    // Reject before decode if the source is unreadable or would decode to an
+    // excessive pixel count (M-14). The byte cap only applies to a local file —
+    // if ONLY_LOCAL_IMAGES is ever disabled, $imagePath may be a remote URL, where
+    // is_file()/filesize() do not apply (the pixel cap from getimagesize() still
+    // does). For a local file a stat failure is a rejection, not a pass.
+    $isLocalSource = is_file($imagePath);
+    $srcBytes      = $isLocalSource ? filesize($imagePath) : false;
     if (false === $imagesize
-        || false === $srcBytes
-        || $srcBytes > $imgSrcMaxBytes
+        || ($isLocalSource && (false === $srcBytes || $srcBytes > $imgSrcMaxBytes))
         || ($imagesize[0] * $imagesize[1]) > $imgSrcMaxPixels) {
         exitInvalidRequest();
     }

@@ -42,8 +42,10 @@ class UploaderContentSniffTest extends TestCase
 
     private function makeProbe(string $bytes): UploaderContentSniffProbe
     {
-        $this->tmp = (string) tempnam(sys_get_temp_dir(), 'upl');
-        file_put_contents($this->tmp, $bytes);
+        $tmp = tempnam(sys_get_temp_dir(), 'upl');
+        $this->assertNotFalse($tmp, 'tempnam() failed to create a temp file');
+        $this->assertNotFalse(file_put_contents($tmp, $bytes), 'failed to write temp fixture');
+        $this->tmp = $tmp;
 
         $probe                = new UploaderContentSniffProbe();
         $probe->mediaTmpName  = $this->tmp;

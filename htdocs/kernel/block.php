@@ -820,6 +820,9 @@ class XoopsBlock extends XoopsObject
         $sql .= 'FROM ' . $db->prefix('newblocks') . ' b LEFT JOIN ' . $db->prefix('group_permission') . " l ON l.gperm_itemid=b.bid WHERE gperm_name = 'block_read' AND gperm_modid = 1";
         if (is_array($groupid)) {
             $groupid = array_map('intval', $groupid);
+            if ([] === $groupid) {
+                return $ret;
+            }
             $sql .= ' AND (l.gperm_groupid=' . $groupid[0] . '';
             $size = count($groupid);
             if ($size > 1) {
@@ -850,7 +853,7 @@ class XoopsBlock extends XoopsObject
         }
         // ORDER BY allowlist: comma-separated col / tbl.col tokens with an optional
         // ASC/DESC only — reject anything else to block ORDER BY injection (L-7).
-        if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', (string) $orderby)) {
+        if (!preg_match('/^\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?(?:\s*,\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?)*\s*$/i', (string) $orderby)) {
             $orderby = 'b.weight,b.bid';
         }
         $sql .= ' ORDER BY ' . $orderby;
@@ -1014,7 +1017,11 @@ class XoopsBlock extends XoopsObject
         if (isset($groupid)) {
             $sql = 'SELECT DISTINCT gperm_itemid FROM ' . $db->prefix('group_permission') . " WHERE gperm_name = 'block_read' AND gperm_modid = 1";
             if (is_array($groupid)) {
-                $sql .= ' AND gperm_groupid IN (' . implode(',', array_map('intval', $groupid)) . ')';
+                $groupid = array_map('intval', $groupid);
+                if ([] === $groupid) {
+                    return $ret;
+                }
+                $sql .= ' AND gperm_groupid IN (' . implode(',', $groupid) . ')';
             } else {
                 if ((int) $groupid > 0) {
                     $sql .= ' AND gperm_groupid=' . (int) $groupid;
@@ -1061,7 +1068,7 @@ class XoopsBlock extends XoopsObject
         }
         // ORDER BY allowlist: comma-separated col / tbl.col tokens with an optional
         // ASC/DESC only — reject anything else to block ORDER BY injection (L-7).
-        if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', (string) $orderby)) {
+        if (!preg_match('/^\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?(?:\s*,\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?)*\s*$/i', (string) $orderby)) {
             $orderby = 'b.weight, m.block_id';
         }
         $sql .= ' ORDER BY ' . $orderby;
@@ -1137,7 +1144,12 @@ class XoopsBlock extends XoopsObject
                     $sql .= ' AND m.module_id=0';
                 }
             }
-            $sql .= ' AND b.bid IN (' . implode(',', $non_grouped) . ')';
+            $sql .= ' AND b.bid IN (' . implode(',', array_map('intval', $non_grouped)) . ')';
+            // ORDER BY allowlist: comma-separated col / tbl.col tokens with an optional
+            // ASC/DESC only — reject anything else to block ORDER BY injection (L-7).
+            if (!preg_match('/^\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?(?:\s*,\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?)*\s*$/i', (string) $orderby)) {
+                $orderby = 'b.weight, m.block_id';
+            }
             $sql .= ' ORDER BY ' . $orderby;
             $result = $db->query($sql);
             if (!$db->isResultSet($result)) {

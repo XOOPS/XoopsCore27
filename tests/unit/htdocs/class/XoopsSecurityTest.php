@@ -148,7 +148,7 @@ class TestableXoopsSecurity extends \XoopsSecurity
         // Mirror of the real XoopsSecurity::checkReferer() — exact scheme/host/port compare.
         $refParts  = parse_url($ref);
         $baseParts = parse_url(XOOPS_URL);
-        if (!is_array($refParts) || !is_array($baseParts) || empty($refParts['host']) || empty($baseParts['host'])) {
+        if ($refParts === false || $baseParts === false || empty($refParts['host']) || empty($baseParts['host'])) {
             return false;
         }
         $refScheme  = strtolower($refParts['scheme'] ?? '');

@@ -72,7 +72,7 @@ class XoopsHttpGet
     protected function resolveAllowed(string $url): ?array
     {
         $parts = parse_url($url);
-        if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
             return null;
         }
         $scheme = strtolower($parts['scheme']);

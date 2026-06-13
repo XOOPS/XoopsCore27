@@ -105,13 +105,13 @@ switch ($op) {
         $selectModules = Request::getString('select_modules', '0');
         $activeModules = Request::getString('active_modules', '0');
         $selectTheme = Request::getString('select_theme', '');
-        // Confine select_theme to a real installed theme leaf name — a separator or
-        // ../ would let the generate/write paths below (theme_surcharge = themes/<x>/
-        // modules) escape XOOPS_THEME_PATH (SECURITY.md A2-M-2). Validated once here so
-        // every downstream write that derives from $selectTheme is covered.
-        if ($selectTheme !== ''
-            && (!preg_match('/^[a-zA-Z0-9_-]+$/', $selectTheme)
-                || !is_dir(XOOPS_THEME_PATH . '/' . $selectTheme))) {
+        // Confine select_theme to a real installed theme leaf name — a separator, ../, or
+        // an EMPTY value would let the generate/write paths below (theme_surcharge =
+        // themes/<x>/modules) escape XOOPS_THEME_PATH or write to the themes/ root
+        // (SECURITY.md A2-M-2). This generate op always requires a valid theme, so the
+        // check is unconditional ('' fails the `+` regex). Covers every downstream write.
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $selectTheme)
+            || !is_dir(XOOPS_THEME_PATH . '/' . $selectTheme)) {
             redirect_header('admin.php?fct=tplsets', 3, _AM_SYSTEM_TEMPLATES_ERROR);
             exit();
         }

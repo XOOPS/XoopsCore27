@@ -295,11 +295,14 @@ switch ($op) {
                     // in the admin comment list (SECURITY.md M-11). Allow http/https/mailto
                     // and relative (empty scheme); drop the link otherwise.
                     $comUrl     = (string) $comments_arr[$i]->getVar('com_url'); // HTML-escaped by getVar('s')
-                    $comScheme  = strtolower((string) parse_url(
-                        html_entity_decode($comUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-                        PHP_URL_SCHEME
-                    ));
-                    $safeComUrl = in_array($comScheme, ['http', 'https', 'mailto', ''], true) ? $comUrl : '';
+                    $decodedUrl = html_entity_decode($comUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    // Browsers strip leading/embedded whitespace and control chars before
+                    // resolving a URL (e.g. "\tjavascript:" -> "javascript:"), so strip them
+                    // before the scheme check — otherwise a control-char prefix yields an
+                    // empty scheme that the allowlist would wrongly permit (SECURITY.md M-11).
+                    $strippedUrl = (string) preg_replace('/[\x00-\x20]+/', '', $decodedUrl);
+                    $comScheme   = strtolower((string) parse_url($strippedUrl, PHP_URL_SCHEME));
+                    $safeComUrl  = in_array($comScheme, ['http', 'https', 'mailto', ''], true) ? $comUrl : '';
                     if ($safeComUrl !== '') {
                         $comments_poster_uname = '<div class="pad2 marg2"><a href="' . $safeComUrl . '">' . $comments_arr[$i]->getVar('com_user') . '</a> ( <a href="mailto:' . $comments_arr[$i]->getVar('com_email') . '">' . $comments_arr[$i]->getVar('com_email') . '</a> ) ' . '</div>';
                     } else {

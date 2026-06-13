@@ -18,14 +18,16 @@ use PHPUnit\Framework\TestCase;
 final class IframeBreakoutTest extends TestCase
 {
     /** The hardened pattern, mirroring MytsIframe::load(). */
-    private const PATTERN = '/\[iframe=([\'"]?)([^"\']*)\1]([^"\'<>]*)\[\/iframe\]/sU';
+    private const PATTERN = '/\[iframe=([\'"]?)([^"\']*)\1]((?:https?:\/\/|\/\/)[^"\'<>]*)\[\/iframe\]/sU';
 
     #[Test]
-    public function sourcePatternExcludesQuotesAndAngleBracketsFromSrc(): void
+    public function sourcePatternHardensSrc(): void
     {
         $src = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/textsanitizer/iframe/iframe.php');
-        // The src group (3rd capture) must use the [^"'<>] character class.
-        self::assertStringContainsString('([^\\"\'<>]*)', $src, 'iframe src capture is not hardened');
+        // The src group (3rd capture) must exclude quotes/angle brackets AND require an
+        // http(s):// or // scheme prefix.
+        self::assertStringContainsString('[^\\"\'<>]*', $src, 'iframe src capture is not quote-hardened');
+        self::assertStringContainsString('(?:https?:\/\/|\/\/)', $src, 'iframe src is not scheme-restricted');
     }
 
     #[Test]
@@ -48,5 +50,21 @@ final class IframeBreakoutTest extends TestCase
     public function angleBracketInjectionNoLongerMatches(): void
     {
         self::assertSame(0, preg_match(self::PATTERN, '[iframe=300]https://x/"><script>[/iframe]'));
+    }
+
+    #[Test]
+    public function dangerousSchemeNoLongerMatches(): void
+    {
+        // javascript:/data: do not start with http(s):// or // → no match → inert text.
+        self::assertSame(0, preg_match(self::PATTERN, '[iframe=300]javascript:alert(1)[/iframe]'));
+        self::assertSame(0, preg_match(self::PATTERN, '[iframe=300]data:text/html,1[/iframe]'));
+    }
+
+    #[Test]
+    public function protocolRelativeSrcStillMatches(): void
+    {
+        $ok = preg_match(self::PATTERN, '[iframe=300]//example.com/embed[/iframe]', $m);
+        self::assertSame(1, $ok);
+        self::assertSame('//example.com/embed', $m[3]);
     }
 }

@@ -103,13 +103,17 @@ class XoopsMediaUploader
         'php',
         'phtml',
         'phtm',
+        'pht',
         'php3',
         'php4',
+        'php5',
+        'php7',
+        'php8',
+        'phar',
+        'shtml',
         'cgi',
         'pl',
         'asp',
-        'php5',
-        'php7',
     ];
     // extensions needed image check (anti-IE Content-Type XSS)
     public $imageExtensions = [
@@ -586,6 +590,28 @@ class XoopsMediaUploader
             $this->mediaType = 'invalid';
             $this->setErrors(_ER_UP_UNKNOWNFILETYPEREJECTED);
             return false;
+        }
+
+        // Content-sniff the real bytes: a file whose extension or client-supplied
+        // type claims to be an image but whose content is a script/markup document
+        // must be refused regardless of what the browser declared (SECURITY.md M-12).
+        if (is_string($this->mediaTmpName) && '' !== $this->mediaTmpName
+            && is_file($this->mediaTmpName) && class_exists('finfo')) {
+            $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+            $detected = (string) $finfo->file($this->mediaTmpName);
+            $blocked  = [
+                'application/x-httpd-php',
+                'application/x-php',
+                'text/x-php',
+                'application/x-httpd-php-source',
+                'application/x-php-source',
+                'text/html',
+                'application/xhtml+xml',
+            ];
+            if (in_array($detected, $blocked, true)) {
+                $this->setErrors(sprintf(_ER_UP_MIMETYPENOTALLOWED, htmlspecialchars($detected, ENT_QUOTES | ENT_HTML5)));
+                return false;
+            }
         }
 
         if (empty($this->mediaRealType) && empty($this->allowUnknownTypes)) {

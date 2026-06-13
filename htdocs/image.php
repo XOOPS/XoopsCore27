@@ -257,6 +257,12 @@ function imageFilenameCheck($imageUrl)
 $imageId = Request::getInt('id', 0, 'GET');
 $imageUrl = Request::getUrl('url', Request::getString('src', '', 'GET'), 'GET');
 
+// Source-image guards: reject oversized inputs BEFORE decoding so a crafted
+// file or DB blob cannot drive a huge allocation in imagecreatefrom*()
+// (a decode bomb is expensive even when the OUTPUT is later capped) — M-14.
+$imgSrcMaxBytes  = 26214400; // 25 MiB cap on the raw source data
+$imgSrcMaxPixels = 40000000; // ~40 MP cap on the decoded source dimensions
+
 if (!empty($imageId)) {
     // If image is a Xoops image
     /** @var XoopsImageHandler $imageHandler */
@@ -291,6 +297,14 @@ if (!empty($imageId)) {
         $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
         $imageData = file_get_contents($imagePath);
     }
+    // Cap the raw blob and its decoded dimensions before allocating (M-14).
+    if (!is_string($imageData) || strlen($imageData) > $imgSrcMaxBytes) {
+        exitInvalidRequest();
+    }
+    $srcInfo = getimagesizefromstring($imageData);
+    if (false === $srcInfo || ($srcInfo[0] * $srcInfo[1]) > $imgSrcMaxPixels) {
+        exitInvalidRequest();
+    }
     $sourceImage = imagecreatefromstring($imageData);
     $imageWidth = imagesx($sourceImage);
     $imageHeight = imagesy($sourceImage);
@@ -316,6 +330,13 @@ if (!empty($imageId)) {
     // Get the size and MIME type of the requested image
     $imageFilename = basename($imagePath);  // image filename
     $imagesize = getimagesize($imagePath);
+    // Reject before decode if the source is unreadable, too large on disk, or
+    // would decode to an excessive pixel count (M-14).
+    if (false === $imagesize
+        || (is_file($imagePath) && filesize($imagePath) > $imgSrcMaxBytes)
+        || ($imagesize[0] * $imagesize[1]) > $imgSrcMaxPixels) {
+        exitInvalidRequest();
+    }
     $imageWidth = $imagesize[0];
     $imageHeight = $imagesize[1];
     $imageMimetype = $imagesize['mime'];

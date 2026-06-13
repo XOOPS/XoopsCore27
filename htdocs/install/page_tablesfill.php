@@ -80,9 +80,10 @@ $update  = false;
 
 // Read the admin fields explicitly rather than expanding the whole session
 // array into local scope (R-011). siteconfig only carries the fields below.
-$adminname = (string) ($_SESSION['siteconfig']['adminname'] ?? '');
-$adminmail = (string) ($_SESSION['siteconfig']['adminmail'] ?? '');
-$adminpass = (string) ($_SESSION['siteconfig']['adminpass'] ?? '');
+$siteconfig = $_SESSION['siteconfig'] ?? [];
+$adminname  = (string) ($siteconfig['adminname'] ?? '');
+$adminmail  = (string) ($siteconfig['adminmail'] ?? '');
+$adminpass  = (string) ($siteconfig['adminpass'] ?? '');
 
 require_once __DIR__ . '/include/makedata.php';
 

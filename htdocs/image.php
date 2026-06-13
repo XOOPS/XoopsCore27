@@ -295,8 +295,10 @@ if (!empty($imageId)) {
         $imageData = $image->getVar('image_body');
     } else {
         $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
-        // Cap the file on disk BEFORE reading it into memory (M-14).
-        if (!is_file($imagePath) || filesize($imagePath) > $imgSrcMaxBytes) {
+        // Cap the file on disk BEFORE reading it into memory (M-14). Treat a
+        // stat failure (filesize() === false) as a rejection, not a pass.
+        $srcBytes = is_file($imagePath) ? filesize($imagePath) : false;
+        if (false === $srcBytes || $srcBytes > $imgSrcMaxBytes) {
             exitInvalidRequest();
         }
         $imageData = file_get_contents($imagePath);

@@ -274,7 +274,6 @@ class XoopsSecurity
                         continue;
                     }
                     if (1 === preg_match('/' . $bi . '/', $ip)) {
-                        restore_error_handler();
                         exit();
                     }
                 }

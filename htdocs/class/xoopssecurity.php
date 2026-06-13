@@ -187,11 +187,22 @@ class XoopsSecurity
         if ($ref == '') {
             return false;
         }
-        // Compare the referer host exactly. A prefix match (strpos === 0) accepts
-        // sibling hosts such as example.com.attacker.test (SECURITY.md M-3).
-        $refHost  = parse_url($ref, PHP_URL_HOST);
-        $baseHost = parse_url(XOOPS_URL, PHP_URL_HOST);
-        return !empty($refHost) && !empty($baseHost) && strcasecmp((string) $refHost, (string) $baseHost) === 0;
+        // Compare scheme, host, and effective port exactly. A prefix match
+        // (strpos === 0) accepts sibling hosts such as example.com.attacker.test, and a
+        // host-only match would accept http vs https or an alternate port (SECURITY.md L-5).
+        $refParts  = parse_url($ref);
+        $baseParts = parse_url(XOOPS_URL);
+        if (!is_array($refParts) || !is_array($baseParts) || empty($refParts['host']) || empty($baseParts['host'])) {
+            return false;
+        }
+        $refScheme  = strtolower($refParts['scheme'] ?? '');
+        $baseScheme = strtolower($baseParts['scheme'] ?? 'http');
+        $refPort    = (int) ($refParts['port'] ?? ('https' === $refScheme ? 443 : 80));
+        $basePort   = (int) ($baseParts['port'] ?? ('https' === $baseScheme ? 443 : 80));
+
+        return strcasecmp((string) $refParts['host'], (string) $baseParts['host']) === 0
+            && $refScheme === $baseScheme
+            && $refPort === $basePort;
     }
 
     /**

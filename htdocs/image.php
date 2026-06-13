@@ -577,19 +577,35 @@ if (in_array($imageMimetype, ['image/gif', 'image/png', 'image/webp'])) {
 
 // Imagefilter
 if (ENABLE_IMAGEFILTER && !empty($filter)) {
+    // Allowlist the supported imagefilter constants. NEVER resolve a request-controlled
+    // filter name with constant(): on PHP 8 an unknown constant throws a fatal Error
+    // (DoS), and constant() would also resolve unrelated constants (SECURITY.md M-1).
+    $allowedFilters = [
+        'IMG_FILTER_NEGATE'         => IMG_FILTER_NEGATE,
+        'IMG_FILTER_GRAYSCALE'      => IMG_FILTER_GRAYSCALE,
+        'IMG_FILTER_BRIGHTNESS'     => IMG_FILTER_BRIGHTNESS,
+        'IMG_FILTER_CONTRAST'       => IMG_FILTER_CONTRAST,
+        'IMG_FILTER_COLORIZE'       => IMG_FILTER_COLORIZE,
+        'IMG_FILTER_EDGEDETECT'     => IMG_FILTER_EDGEDETECT,
+        'IMG_FILTER_EMBOSS'         => IMG_FILTER_EMBOSS,
+        'IMG_FILTER_GAUSSIAN_BLUR'  => IMG_FILTER_GAUSSIAN_BLUR,
+        'IMG_FILTER_SELECTIVE_BLUR' => IMG_FILTER_SELECTIVE_BLUR,
+        'IMG_FILTER_MEAN_REMOVAL'   => IMG_FILTER_MEAN_REMOVAL,
+        'IMG_FILTER_SMOOTH'         => IMG_FILTER_SMOOTH,
+        'IMG_FILTER_PIXELATE'       => IMG_FILTER_PIXELATE,
+    ];
     $filterSet = (array) $filter;
     foreach ($filterSet as $currentFilter) {
-        $rawFilterArgs = explode(',', $currentFilter);
-        $filterConst = constant(array_shift($rawFilterArgs));
-        if (null !== $filterConst) { // skip if unknown constant
-            $filterArgs = [];
-            $filterArgs[] = $destination_image;
-            $filterArgs[] = $filterConst;
-            foreach ($rawFilterArgs as $tempValue) {
-                $filterArgs[] = trim($tempValue);
-            }
-            call_user_func_array('imagefilter', $filterArgs);
+        $rawFilterArgs = explode(',', (string) $currentFilter);
+        $filterName    = trim((string) array_shift($rawFilterArgs));
+        if (!isset($allowedFilters[$filterName])) {
+            continue; // unknown/unsupported filter — skip cleanly, never fatal
         }
+        $filterArgs = [$destination_image, $allowedFilters[$filterName]];
+        foreach ($rawFilterArgs as $tempValue) {
+            $filterArgs[] = (int) trim($tempValue); // imagefilter numeric args
+        }
+        call_user_func_array('imagefilter', $filterArgs);
     }
 }
 

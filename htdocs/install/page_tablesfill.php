@@ -80,7 +80,7 @@ $update  = false;
 
 // Read the admin fields explicitly rather than expanding the whole session
 // array into local scope (R-011). siteconfig only carries the fields below.
-$siteconfig = $_SESSION['siteconfig'] ?? [];
+$siteconfig = is_array($_SESSION['siteconfig'] ?? null) ? $_SESSION['siteconfig'] : [];
 $adminname  = (string) ($siteconfig['adminname'] ?? '');
 $adminmail  = (string) ($siteconfig['adminmail'] ?? '');
 $adminpass  = (string) ($siteconfig['adminpass'] ?? '');

@@ -1067,6 +1067,43 @@ class XoopsObjectHandler
     }
 
     /**
+     * Build a safe ORDER BY column list from a (possibly multi-column) sort string.
+     *
+     * Splits $sort on commas, keeps only tokens whose (optionally table-qualified)
+     * column name is in $allowedColumns, and gives each clause a direction: its own
+     * ASC/DESC when present, otherwise the sanitized $order. This blocks ORDER BY
+     * injection, supports multi-column and table-prefixed sorts, and — because each
+     * clause already carries its direction — must be used WITHOUT appending the
+     * criteria order again.
+     *
+     * @param  string   $sort           raw sort string, e.g. "i.image_weight ASC, image_id"
+     * @param  string   $order          default direction (ASC/DESC) for clauses with none
+     * @param  string[] $allowedColumns lowercase column names permitted for this table
+     * @param  string   $defaultColumn  column used when no valid clause remains
+     * @return string   a safe ORDER BY column list including directions
+     */
+    public static function buildOrderBy($sort, $order, array $allowedColumns, $defaultColumn)
+    {
+        $order = strtoupper(trim((string) $order));
+        if ('ASC' !== $order && 'DESC' !== $order) {
+            $order = 'ASC';
+        }
+        $parts = [];
+        foreach (explode(',', (string) $sort) as $token) {
+            if (preg_match('/^\s*((?:[A-Za-z_]\w*\.)?)([A-Za-z_]\w*)\s*(ASC|DESC)?\s*$/i', $token, $m)
+                && in_array(strtolower($m[2]), $allowedColumns, true)) {
+                $direction = ('' !== ($m[3] ?? '')) ? strtoupper($m[3]) : $order;
+                $parts[]   = $m[1] . $m[2] . ' ' . $direction;
+            }
+        }
+        if ([] === $parts) {
+            return $defaultColumn . ' ' . $order;
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
      * PHP 4 style constructor compatibility shim
      *
      * @param XoopsDatabase $db database object

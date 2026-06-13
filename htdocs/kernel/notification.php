@@ -355,14 +355,13 @@ class XoopsNotificationHandler extends XoopsObjectHandler
         $sql   = 'SELECT * FROM ' . $this->db->prefix('xoopsnotifications');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
-            // Allow only comma-separated col / tbl.col tokens with an optional
-            // ASC/DESC — blocks ORDER BY injection while still permitting valid
-            // single- and multi-column sorts (SECURITY.md L-6).
-            $sort = (string) $criteria->getSort();
-            if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', $sort)) {
-                $sort = 'not_id';
-            }
-            $sql .= ' ORDER BY ' . $sort . ' ' . $criteria->getOrder();
+            // Restrict ORDER BY to real columns of this table. xoops_buildOrderBy()
+            // attaches each clause's direction, so the criteria order must NOT be
+            // appended again here (SECURITY.md L-6).
+            $sql .= ' ORDER BY ' . self::buildOrderBy($criteria->getSort(), $criteria->getOrder(), [
+                'not_id', 'not_modid', 'not_itemid', 'not_category', 'not_event',
+                'not_uid', 'not_mode', 'not_class',
+            ], 'not_id');
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();
         }

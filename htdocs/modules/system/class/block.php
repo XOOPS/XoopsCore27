@@ -414,6 +414,7 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
         }
         $sql .= 'FROM ' . $db->prefix('newblocks') . ' b LEFT JOIN ' . $db->prefix('group_permission') . " l ON l.gperm_itemid=b.bid WHERE gperm_name = 'block_read' AND gperm_modid = 1";
         if (is_array($groupid)) {
+            $groupid = array_map('intval', $groupid);
             $sql .= ' AND (l.gperm_groupid=' . $groupid[0] . '';
             $size = count($groupid);
             if ($size > 1) {
@@ -423,9 +424,9 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
             }
             $sql .= ')';
         } else {
-            $sql .= ' AND l.gperm_groupid=' . $groupid . '';
+            $sql .= ' AND l.gperm_groupid=' . (int) $groupid . '';
         }
-        $sql .= ' AND b.isactive=' . $isactive;
+        $sql .= ' AND b.isactive=' . (int) $isactive;
         if (isset($side)) {
             // get both sides in sidebox? (some themes need this)
             if ($side === XOOPS_SIDEBLOCK_BOTH) {
@@ -435,14 +436,19 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
             } elseif ($side === XOOPS_FOOTERBLOCK_ALL) {
                 $side = '(b.side=10 OR b.side=11 OR b.side=12 )';
             } else {
-                $side = 'b.side=' . $side;
+                $side = 'b.side=' . (int) $side;
             }
             $sql .= ' AND ' . $side;
         }
         if (isset($visible)) {
-            $sql .= " AND b.visible=$visible";
+            $sql .= ' AND b.visible=' . (int) $visible;
         }
-        $sql .= " ORDER BY $orderby";
+        // ORDER BY allowlist: comma-separated col / tbl.col tokens with an optional
+        // ASC/DESC only — reject anything else to block ORDER BY injection (L-7).
+        if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', (string) $orderby)) {
+            $orderby = 'b.weight,b.bid';
+        }
+        $sql .= ' ORDER BY ' . $orderby;
         $result = $db->query($sql);
         if (!$db->isResultSet($result)) {
             throw new \RuntimeException(
@@ -475,7 +481,7 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
         if (isset($groupid)) {
             $sql = 'SELECT DISTINCT gperm_itemid FROM ' . $this->db->prefix('group_permission') . " WHERE gperm_name = 'block_read' AND gperm_modid = 1";
             if (is_array($groupid)) {
-                $sql .= ' AND gperm_groupid IN (' . implode(',', $groupid) . ')';
+                $sql .= ' AND gperm_groupid IN (' . implode(',', array_map('intval', $groupid)) . ')';
             } else {
                 if ((int) $groupid > 0) {
                     $sql .= ' AND gperm_groupid=' . (int) $groupid;
@@ -521,7 +527,7 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
         if (isset($groupid)) {
             $sql = 'SELECT DISTINCT gperm_itemid FROM ' . $db->prefix('group_permission') . " WHERE gperm_name = 'block_read' AND gperm_modid = 1";
             if (is_array($groupid)) {
-                $sql .= ' AND gperm_groupid IN (' . implode(',', $groupid) . ')';
+                $sql .= ' AND gperm_groupid IN (' . implode(',', array_map('intval', $groupid)) . ')';
             } else {
                 if ((int) $groupid > 0) {
                     $sql .= ' AND gperm_groupid=' . (int) $groupid;
@@ -562,7 +568,12 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
             }
         }
         if (!empty($blockids)) {
-            $sql .= ' AND b.bid IN (' . implode(',', $blockids) . ')';
+            $sql .= ' AND b.bid IN (' . implode(',', array_map('intval', $blockids)) . ')';
+        }
+        // ORDER BY allowlist: comma-separated col / tbl.col tokens with an optional
+        // ASC/DESC only — reject anything else to block ORDER BY injection (L-7).
+        if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', (string) $orderby)) {
+            $orderby = 'b.weight, m.block_id';
         }
         $sql .= ' ORDER BY ' . $orderby;
         $result = $db->query($sql);
@@ -633,7 +644,12 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
                     $sql .= ' AND m.module_id=0';
                 }
             }
-            $sql .= ' AND b.bid IN (' . implode(',', $non_grouped) . ')';
+            $sql .= ' AND b.bid IN (' . implode(',', array_map('intval', $non_grouped)) . ')';
+            // ORDER BY allowlist: comma-separated col / tbl.col tokens with an optional
+            // ASC/DESC only — reject anything else to block ORDER BY injection (L-7).
+            if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', (string) $orderby)) {
+                $orderby = 'b.weight, m.block_id';
+            }
             $sql .= ' ORDER BY ' . $orderby;
             $result = $db->query($sql);
             if (!$db->isResultSet($result)) {

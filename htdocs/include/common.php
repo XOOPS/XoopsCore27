@@ -255,7 +255,7 @@ if (!empty($_SESSION['xoopsUserId'])) {
                    . "' WHERE uid = " . (int) $_SESSION['xoopsUserId'];
             try {
                 $xoopsDB->exec($sql);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 throw new \RuntimeException(
                     \sprintf(_DB_QUERY_ERROR, $sql) . $xoopsDB->error(),
                     E_USER_ERROR,

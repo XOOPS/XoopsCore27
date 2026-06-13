@@ -252,7 +252,7 @@ if (!empty($_SESSION['xoopsUserId'])) {
     } else {
         if (((int) $xoopsUser->getVar('last_login') + 60 * 5) < time()) {
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET last_login = '" . time()
-                   . "' WHERE uid = " . $_SESSION['xoopsUserId'];
+                   . "' WHERE uid = " . (int) $_SESSION['xoopsUserId'];
             try {
                 $xoopsDB->exec($sql);
             } catch (Exception $e) {

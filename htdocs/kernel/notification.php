@@ -355,7 +355,10 @@ class XoopsNotificationHandler extends XoopsObjectHandler
         $sql   = 'SELECT * FROM ' . $this->db->prefix('xoopsnotifications');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
-            $sort = ($criteria->getSort() != '') ? $criteria->getSort() : 'not_id';
+            $sort = !in_array($criteria->getSort(), [
+                'not_id', 'not_modid', 'not_itemid', 'not_category', 'not_event',
+                'not_uid', 'not_mode', 'not_class',
+            ], true) ? 'not_id' : $criteria->getSort();
             $sql .= ' ORDER BY ' . $sort . ' ' . $criteria->getOrder();
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();

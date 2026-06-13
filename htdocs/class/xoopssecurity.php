@@ -262,7 +262,14 @@ class XoopsSecurity
         $ip = $addr->asReadable();
         if ($xoopsConfig['enable_badips'] == 1 && $ip != '0.0.0.0') {
             foreach ($xoopsConfig['bad_ips'] as $bi) {
-                if (!empty($bi) && preg_match('/' . $bi . '/', $ip)) {
+                // Admin-entered patterns: bound the length to avoid pathological
+                // backtracking, and block only on a definite match — a malformed
+                // pattern (preg_match returns false) must not be treated as a hit
+                // nor abort the request (SECURITY.md L-19).
+                if (!is_string($bi) || '' === $bi || strlen($bi) > 255) {
+                    continue;
+                }
+                if (1 === preg_match('/' . $bi . '/', $ip)) {
                     exit();
                 }
             }

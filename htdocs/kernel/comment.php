@@ -478,12 +478,13 @@ class XoopsCommentHandler extends XoopsObjectHandler
         $sql   = 'SELECT * FROM ' . $this->db->prefix('xoopscomments');
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
-            $sort = !in_array($criteria->getSort(), [
-                'com_id', 'com_pid', 'com_rootid', 'com_modid', 'com_itemid', 'com_icon',
-                'com_created', 'com_modified', 'com_uid', 'com_user', 'com_email', 'com_url',
-                'com_ip', 'com_title', 'com_status', 'com_exparams',
-                'dohtml', 'dosmiley', 'doxcode', 'doimage', 'dobr',
-            ], true) ? 'com_id' : $criteria->getSort();
+            // Allow only comma-separated col / tbl.col tokens with an optional
+            // ASC/DESC — blocks ORDER BY injection while still permitting valid
+            // single- and multi-column sorts (SECURITY.md L-6).
+            $sort = (string) $criteria->getSort();
+            if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', $sort)) {
+                $sort = 'com_id';
+            }
             $sql .= ' ORDER BY ' . $sort . ' ' . $criteria->getOrder();
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();

@@ -315,10 +315,13 @@ class XoopsImageHandler extends XoopsObjectHandler
         }
         if (isset($criteria) && \method_exists($criteria, 'renderWhere')) {
             $sql .= ' ' . $criteria->renderWhere();
-            $sort = !in_array($criteria->getSort(), [
-                'image_id', 'image_name', 'image_nicename', 'image_mimetype',
-                'image_created', 'image_display', 'image_weight',
-            ], true) ? 'image_weight' : $criteria->getSort();
+            // Allow only comma-separated col / tbl.col tokens with an optional
+            // ASC/DESC — blocks ORDER BY injection while still permitting valid
+            // single- and multi-column sorts (SECURITY.md L-6).
+            $sort = (string) $criteria->getSort();
+            if (!preg_match('/^\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?(\s*,\s*[a-zA-Z_][\w.]*(\s+(ASC|DESC))?)*\s*$/i', $sort)) {
+                $sort = 'image_weight';
+            }
             $sql .= ' ORDER BY ' . $sort . ' ' . $criteria->getOrder();
             $limit = $criteria->getLimit();
             $start = $criteria->getStart();

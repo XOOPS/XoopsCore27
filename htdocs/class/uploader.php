@@ -609,7 +609,7 @@ class XoopsMediaUploader
                 'application/xhtml+xml',
             ];
             if (in_array($detected, $blocked, true)) {
-                $this->setErrors(sprintf(_ER_UP_MIMETYPENOTALLOWED, htmlspecialchars($detected, ENT_QUOTES | ENT_HTML5)));
+                $this->setErrors(sprintf(_ER_UP_MIMETYPENOTALLOWED, htmlspecialchars($detected, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
                 return false;
             }
         }

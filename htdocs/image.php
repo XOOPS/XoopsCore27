@@ -295,6 +295,10 @@ if (!empty($imageId)) {
         $imageData = $image->getVar('image_body');
     } else {
         $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
+        // Cap the file on disk BEFORE reading it into memory (M-14).
+        if (!is_file($imagePath) || filesize($imagePath) > $imgSrcMaxBytes) {
+            exitInvalidRequest();
+        }
         $imageData = file_get_contents($imagePath);
     }
     // Cap the raw blob and its decoded dimensions before allocating (M-14).

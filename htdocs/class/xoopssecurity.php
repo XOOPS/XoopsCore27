@@ -261,17 +261,25 @@ class XoopsSecurity
         $addr = IPAddress::fromRequest();
         $ip = $addr->asReadable();
         if ($xoopsConfig['enable_badips'] == 1 && $ip != '0.0.0.0') {
-            foreach ($xoopsConfig['bad_ips'] as $bi) {
-                // Admin-entered patterns: bound the length to avoid pathological
-                // backtracking, and block only on a definite match — a malformed
-                // pattern (preg_match returns false) must not be treated as a hit
-                // nor abort the request (SECURITY.md L-19).
-                if (!is_string($bi) || '' === $bi || strlen($bi) > 255) {
-                    continue;
+            // Admin-entered patterns may be malformed (e.g. a CIDR's "/" collides
+            // with the delimiter). Swallow the resulting PCRE warning for the scan
+            // and treat any non-match — including a compile failure — as "allowed",
+            // so a bad pattern neither warns nor blocks the request (SECURITY.md L-19).
+            set_error_handler(static fn (): bool => true);
+            try {
+                foreach ($xoopsConfig['bad_ips'] as $bi) {
+                    // Bound the length to avoid pathological backtracking and block
+                    // only on a definite match.
+                    if (!is_string($bi) || '' === $bi || strlen($bi) > 255) {
+                        continue;
+                    }
+                    if (1 === preg_match('/' . $bi . '/', $ip)) {
+                        restore_error_handler();
+                        exit();
+                    }
                 }
-                if (1 === preg_match('/' . $bi . '/', $ip)) {
-                    exit();
-                }
+            } finally {
+                restore_error_handler();
             }
         }
     }

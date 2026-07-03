@@ -89,7 +89,7 @@ function load_functions($group = '', $dirname = 'art')
  */
 function mod_loadFunctions($group = '', $dirname = '')
 {
-    $dirname  = !empty($dirname) ? basename((string) $dirname) : $GLOBALS['xoopsModule']->getVar('dirname', 'n');
+    $dirname  = !empty($dirname) ? basename((string) $dirname) : (is_object($GLOBALS['xoopsModule'] ?? null) ? $GLOBALS['xoopsModule']->getVar('dirname', 'n') : '');
     // Confine the path segments to plain identifiers (latent LFI).
     if (('' !== $group && !preg_match('/^[a-zA-Z0-9_]+$/', (string) $group))
         || !preg_match('/^[a-zA-Z0-9_-]+$/', (string) $dirname)) {

@@ -912,9 +912,10 @@ class XoopsBlock extends XoopsObject
         if (isset($visible)) {
             $where_query .= ' AND visible=' . (int) $visible;
         }
-        // Allowlist the ORDER BY column list; fall back to the default on any
-        // fragment that is not a plain comma-separated column list.
-        if (!preg_match('/^[A-Za-z0-9_,\s]+$/', (string) $orderby)) {
+        // Allowlist the ORDER BY column list (optionally qualified/aliased columns
+        // with ASC/DESC), matching the pattern used elsewhere in this handler;
+        // fall back to the default on anything else.
+        if (!preg_match('/^\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?(?:\s*,\s*(?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(?:\s+(?:ASC|DESC))?)*\s*$/i', (string) $orderby)) {
             $orderby = 'side,weight,bid';
         }
         $where_query .= ' ORDER BY ' . $orderby;

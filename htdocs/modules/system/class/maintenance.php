@@ -724,7 +724,10 @@ class SystemMaintenance
      */
     public static function dumpDirectory(): string
     {
-        $base = defined('XOOPS_VAR_PATH') ? XOOPS_VAR_PATH : (defined('XOOPS_ROOT_PATH') ? XOOPS_ROOT_PATH . '/uploads' : \sys_get_temp_dir());
+        // Never fall back to a web-accessible directory: if XOOPS_VAR_PATH is not
+        // defined use the system temp dir (outside the web root) rather than
+        // uploads/, so a dump can't land somewhere fetchable on non-Apache setups.
+        $base = defined('XOOPS_VAR_PATH') ? XOOPS_VAR_PATH : \sys_get_temp_dir();
         $dir  = $base . '/dumps';
         if (!is_dir($dir)) {
             @mkdir($dir, 0700, true);

@@ -507,6 +507,36 @@ class ModuleAdmin
     }
 
     /**
+     * Render a single changelog line as a safe subset of presentational HTML.
+     *
+     * Changelog files ship inside the module and are authored by the module
+     * developer, but they are still sanitized defensively. The whole line is
+     * HTML-escaped first, so every literal "<", ">" and "&" survives as visible
+     * text with no content loss (e.g. "requires PHP <= 8.0" or "<table>" stay
+     * readable). Only an explicit allowlist of attribute-free presentational
+     * tags is then re-enabled; any tag carrying attributes, or any tag not on
+     * the list, stays inert escaped text and can never inject <script>, event
+     * handlers, or href="javascript:" vectors. The allowlist is enforced in the
+     * pattern below, not delegated to strip_tags().
+     *
+     * @param string $line raw changelog line
+     *
+     * @return string sanitized HTML fragment
+     */
+    public static function sanitizeChangelogLine($line)
+    {
+        static $allowed = 'h1|h2|h3|h4|h5|h6|p|br|hr|ul|ol|li|strong|b|em|i|u|code|pre|blockquote|span';
+
+        $escaped = htmlspecialchars((string) $line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        return preg_replace_callback(
+            '#&lt;(/?)\s*(' . $allowed . ')\s*(/?)&gt;#i',
+            static fn($m) => '<' . $m[1] . strtolower($m[2]) . $m[3] . '>',
+            $escaped
+        );
+    }
+
+    /**
      * Create HTML text to display on Admin About page.
      *
      * The standard footer text is always appended via _AM_MODULEADMIN_ADMIN_FOOTER.
@@ -597,16 +627,10 @@ class ModuleAdmin
         // basename() the language segment so a poisoned config value cannot
         // traverse out of the module language directory.
         $language = empty( $GLOBALS['xoopsConfig']['language'] ) ? 'english' : basename( (string) $GLOBALS['xoopsConfig']['language'] );
-        // Changelog files ship inside the module and are authored by the module
-        // developer (trusted). Render a safe subset of presentational HTML so the
-        // intended formatting (headings, emphasis, rules) displays, while a poisoned
-        // changelog still cannot inject <script>, event handlers, or href=javascript:.
-        $allowedTags   = '<h1><h2><h3><h4><h5><h6><p><br><hr><ul><ol><li><strong><b><em><i><u><code><pre><blockquote><span>';
-        $changelogLine = static function ($line) use ($allowedTags) {
-            $line = strip_tags((string) $line, $allowedTags);
-            // Strip any attributes (onclick=, style=, href=, …) from the surviving tags.
-            return preg_replace('/<\s*(\/?)\s*([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/', '<$1$2>', $line);
-        };
+        // Changelog files are rendered as a safe subset of presentational HTML
+        // (see sanitizeChangelogLine()) so intended formatting displays while any
+        // script/event-handler/attribute injection stays inert escaped text.
+        $changelogLine = static fn($line) => self::sanitizeChangelogLine($line);
         $file          = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/{$language}/changelog.txt";
         if ( !is_file( $file ) && ( 'english' !== $language ) ) {
             $file = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/english/changelog.txt";

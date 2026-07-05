@@ -523,17 +523,19 @@ class ModuleAdmin
      *
      * @return string sanitized HTML fragment
      */
-    public static function sanitizeChangelogLine($line)
+    public static function sanitizeChangelogLine(string $line): string
     {
         static $allowed = 'h1|h2|h3|h4|h5|h6|p|br|hr|ul|ol|li|strong|b|em|i|u|code|pre|blockquote|span';
 
-        $escaped = htmlspecialchars((string) $line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $escaped = htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
+        // preg_replace_callback() returns ?string; fall back to the fully-escaped
+        // line if the PCRE engine ever fails, so output is never unsanitized.
         return preg_replace_callback(
             '#&lt;(/?)\s*(' . $allowed . ')\s*(/?)&gt;#i',
-            static fn($m) => '<' . $m[1] . strtolower($m[2]) . $m[3] . '>',
+            static fn($matches) => '<' . $matches[1] . strtolower($matches[2]) . $matches[3] . '>',
             $escaped
-        );
+        ) ?? $escaped;
     }
 
     /**

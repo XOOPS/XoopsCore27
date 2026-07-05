@@ -597,16 +597,26 @@ class ModuleAdmin
         // basename() the language segment so a poisoned config value cannot
         // traverse out of the module language directory.
         $language = empty( $GLOBALS['xoopsConfig']['language'] ) ? 'english' : basename( (string) $GLOBALS['xoopsConfig']['language'] );
-        $file     = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/{$language}/changelog.txt";
+        // Changelog files ship inside the module and are authored by the module
+        // developer (trusted). Render a safe subset of presentational HTML so the
+        // intended formatting (headings, emphasis, rules) displays, while a poisoned
+        // changelog still cannot inject <script>, event handlers, or href=javascript:.
+        $allowedTags   = '<h1><h2><h3><h4><h5><h6><p><br><hr><ul><ol><li><strong><b><em><i><u><code><pre><blockquote><span>';
+        $changelogLine = static function ($line) use ($allowedTags) {
+            $line = strip_tags((string) $line, $allowedTags);
+            // Strip any attributes (onclick=, style=, href=, …) from the surviving tags.
+            return preg_replace('/<\s*(\/?)\s*([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/', '<$1$2>', $line);
+        };
+        $file          = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/{$language}/changelog.txt";
         if ( !is_file( $file ) && ( 'english' !== $language ) ) {
             $file = XOOPS_ROOT_PATH . "/modules/{$module_dir}/language/english/changelog.txt";
         }
         if ( is_readable( $file ) ) {
-            $ret .= implode( '<br>', array_map( $esc, file( $file ) ) ) . "\n";
+            $ret .= implode( '<br>', array_map( $changelogLine, file( $file ) ) ) . "\n";
         } else {
             $file = XOOPS_ROOT_PATH . "/modules/{$module_dir}/docs/changelog.txt";
             if ( is_readable( $file ) ) {
-                $ret .= implode( '<br>', array_map( $esc, file( $file ) ) ) . "\n";
+                $ret .= implode( '<br>', array_map( $changelogLine, file( $file ) ) ) . "\n";
             }
         }
         $ret .= "</div>\n"

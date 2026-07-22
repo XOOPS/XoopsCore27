@@ -5,6 +5,22 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.1] - 2026-07-22
+
+### Bug Fixes
+- Render safe-subset HTML in About changelog (#119)
+
+### Documentation
+- Regenerate CHANGELOG.md (#118)
+
+### Other
+- Standardizing prefixes (#122)
+- Merge pull request #123 from mambax7/feature/update_library
+- JQuery UI  1.14.2 (2026-01-29)
+- Removing Debugbar module from Core (#121)
+- Merge pull request #120 from XOOPS/dependabot/github_actions/SonarSource/sonarqube-scan-action-8.2.1
+- Bump SonarSource/sonarqube-scan-action from 8.2.0 to 8.2.1
+
 ## [v2.7.1-RC1] - 2026-07-04
 
 ### Documentation

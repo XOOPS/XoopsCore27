@@ -90,6 +90,16 @@ require_once __DIR__ . '/include/makedata.php';
 $wizard->loadLangFile('install2');
 
 $licenseFile = XOOPS_VAR_PATH . '/data/license.php';
+// A prior completed install leaves license.php read-only (install_finalize /
+// xoPutLicenseKey chmod it 0444), so touch() below would fail on a re-install
+// with "Make ... Writable". Restore write permission first; xoPutLicenseKey
+// re-secures it to 0444 after rewriting.
+if (is_file($licenseFile) && !is_writable($licenseFile) && !@chmod($licenseFile, 0644)) {
+    // Ownership/ACLs blocked the permission change; touch() below will then
+    // fail and the existing LICENSE_NOT_WRITEABLE notice is shown. Surface the
+    // underlying cause too.
+    trigger_error(sprintf('Unable to make %s writable', basename($licenseFile)), E_USER_WARNING);
+}
 $touched = touch($licenseFile);
 if ($touched) {
     $licenseReport = '<div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> '

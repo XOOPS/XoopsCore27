@@ -55,6 +55,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $_SESSION['settings'] = [];
 xoops_setcookie('xo_install_user', '', 0, '', '');
 
+// Housekeeping: each install attempt mints one JWT key file, named
+// {prefix-derived-secret}-key-install.php (Xmf\Key\FileStorage), because the
+// wizard auto-generates a new random DB prefix per run. Left behind, they
+// accumulate as orphans and a stale one can break a later run. Also drop any
+// read-only license.php from a prior completed install. Guarded on a known
+// data path (present whenever mainfile.php still exists during a re-install).
+if (defined('XOOPS_VAR_PATH') && XOOPS_VAR_PATH !== '') {
+    $dataDir = realpath(XOOPS_VAR_PATH . '/data');
+    if (false !== $dataDir) {
+        $staleFiles   = glob($dataDir . '/*-key-install.php') ?: [];
+        $staleFiles[] = $dataDir . '/license.php';
+        foreach ($staleFiles as $staleFile) {
+            if (!is_file($staleFile)) {
+                continue;
+            }
+            // Boundary check: only operate on a file that resolves to a direct
+            // child of the data directory — never follow a link out of it.
+            $resolved = realpath($staleFile);
+            if (false === $resolved || dirname($resolved) !== $dataDir) {
+                continue;
+            }
+            @chmod($resolved, 0644);
+            if (!@unlink($resolved)) {
+                trigger_error(sprintf('Could not remove stale installer file %s', basename($resolved)), E_USER_WARNING);
+            }
+        }
+    }
+}
+
 $pageHasForm = true;
 $title = LANGUAGE_SELECTION;
 $label = 'Available Languages';

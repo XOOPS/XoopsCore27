@@ -194,9 +194,13 @@ final class CriteriaLegacyInUsageTest extends TestCase
             return null;
         }
 
+        // No 2>&1: exec() collects stdout into $output, and merging stderr in
+        // would let a git warning become an entry in the file list. A non-zero
+        // status is already the signal that there is no usable repository, and
+        // a bogus entry would now surface as an unreadable-file failure.
         $output = [];
         $status = 1;
-        exec(sprintf('git -C %s ls-files -- "*.php" 2>&1', escapeshellarg($root)), $output, $status);
+        exec(sprintf('git -C %s ls-files -- "*.php"', escapeshellarg($root)), $output, $status);
 
         if (0 !== $status || [] === $output) {
             return null;

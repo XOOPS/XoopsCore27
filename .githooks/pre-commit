@@ -170,12 +170,16 @@ if [ -n "$added" ]; then
 
     # 15. Error-suppressed call — @foo(...). Suppression hides the failure
     #     instead of handling it; use an explicit guard or try/catch(\Throwable).
-    #     Requires the `(` to follow the identifier directly, so docblock tags
-    #     (`@param string $x`, `@see self::foo()`, `@return array<int,string>`)
-    #     and e-mail literals never match — in each of those a non-`(` character
-    #     follows the tag name. Caught post-hoc by review on this very commit
-    #     (an `@exec()` in a new test), which is why it is mechanized here.
-    hits=$(printf '%s\n' "$added" | grep -E '@[a-zA-Z_][a-zA-Z0-9_]*[[:space:]]*\(' || true)
+    #     The `(` must follow the identifier directly, with no whitespace, so
+    #     docblock tags never match: `@param string $x`, `@see self::foo()`,
+    #     `@return array<int,string>`, and the parenthesised-union form
+    #     `@param (int|string) $x` all put a non-`(` character (or a space)
+    #     after the tag name. That last one is why the space is not tolerated
+    #     here — allowing it would flag valid PHPStan syntax. The cost is that
+    #     the `@ foo()` spelling slips through, which no formatter emits.
+    #     Caught post-hoc by review on this very commit (an `@exec()` in a new
+    #     test), which is why it is mechanized here.
+    hits=$(printf '%s\n' "$added" | grep -E '@[a-zA-Z_][a-zA-Z0-9_]*\(' || true)
     [ -n "$hits" ] && report "error-suppressed call @foo() — handle the failure explicitly instead" "$hits"
 
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:

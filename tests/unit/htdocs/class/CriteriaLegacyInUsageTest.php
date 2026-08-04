@@ -76,14 +76,34 @@ final class CriteriaLegacyInUsageTest extends TestCase
         'htdocs/class/xoopseditor/',
     ];
 
+    /** Must always be in the scan set; its absence means the scan is not seeing core. */
+    private const SENTINEL_FILE = 'htdocs/class/criteria.php';
+
     #[Test]
     public function noCoreSourceUsesTheLegacyCriteriaInFormat(): void
     {
-        $offenders = [];
+        $root  = dirname(__DIR__, 4);
+        $files = self::coreSourceFiles();
 
-        foreach (self::coreSourceFiles() as $file) {
-            $lines = file(dirname(__DIR__, 4) . '/' . $file, FILE_IGNORE_NEW_LINES);
+        // A guard test that scans nothing passes vacuously, which is worse than
+        // no test at all: it reports success while protecting nothing. Both ways
+        // of ending up with an empty scan — a wrong root, or git failing so the
+        // fallback walks directories that are not there — are caught here.
+        $this->assertContains(
+            self::SENTINEL_FILE,
+            $files,
+            'Scan set does not contain ' . self::SENTINEL_FILE . ', so the scan is not '
+            . 'running over core source. Check the repository root resolution.'
+        );
+
+        $offenders  = [];
+        $unreadable = [];
+
+        foreach ($files as $file) {
+            $lines = file($root . '/' . $file, FILE_IGNORE_NEW_LINES);
             if (false === $lines) {
+                // Never skip silently — an unread file is an unscanned file.
+                $unreadable[] = $file;
                 continue;
             }
             $source = implode("\n", $lines);
@@ -104,6 +124,13 @@ final class CriteriaLegacyInUsageTest extends TestCase
                 }
             }
         }
+
+        $this->assertSame(
+            [],
+            $unreadable,
+            "Core source files could not be read, so the scan is incomplete:\n"
+            . implode("\n", $unreadable)
+        );
 
         $this->assertSame(
             [],

@@ -338,12 +338,11 @@ class XoopsModule extends XoopsObject
         // ($dirname, already basename()'d above). This blocks a hostile package from
         // poisoning every getInfo('dirname') consumer and, via loadInfoAsVar(), the
         // persisted xoops_modules.dirname column, or from pointing metadata loads at
-        // another module's directory.
-        if (is_array($modversion)) {
-            $declared = isset($modversion['dirname']) ? (string) $modversion['dirname'] : '';
-            if (0 !== strcasecmp($declared, $dirname)) {
-                $modversion['dirname'] = $dirname;
-            }
+        // another module's directory. $modversion was initialised to an array above and a
+        // well-formed manifest keeps it one, so no further type guard is needed here.
+        $declared = isset($modversion['dirname']) ? (string) $modversion['dirname'] : '';
+        if (0 !== strcasecmp($declared, $dirname)) {
+            $modversion['dirname'] = $dirname;
         }
         $modVersions[$dirname] = $modversion;
         $this->modinfo         = $modVersions[$dirname];

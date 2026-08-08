@@ -59,6 +59,33 @@ function xoops_module_validate_config_entry($config, array &$msgs): bool
 }
 
 /**
+ * Normalise a module dirname to a single, safe path segment, or '' when it is not one.
+ *
+ * The dirname reaches these functions from admin POST data (the install wizard uses it
+ * as an array key) and is then concatenated into filesystem include and SQL-file paths
+ * AND, in several status and error messages, into HTML. basename() first collapses any
+ * path to its final segment, so traversal and separators cannot survive. The allowlist
+ * then admits only Unicode letters, digits and combining marks (so a non-ASCII module
+ * folder installs unchanged, whether stored in composed NFC or decomposed NFD form) plus
+ * dot, underscore and hyphen, and forbids a leading dot ('.', '..', hidden names). That
+ * set contains no '<', '>', '&', quote, space or path metacharacter, so the result is
+ * safe both as a path segment and, without further escaping, in HTML — though callers
+ * emitting it into an attribute still escape as defence in depth. Returns '' (so every
+ * caller fails closed) for anything else, including an invalid-UTF-8 name, on which the
+ * /u match returns false.
+ *
+ * @param mixed $dirname raw, possibly attacker-supplied directory name
+ *
+ * @return string the safe segment, or '' when it is not a valid single segment
+ */
+function xoops_moduleadmin_safe_dirname($dirname): string
+{
+    $dirname = basename(trim((string) $dirname));
+
+    return (1 === preg_match('/^(?!\.)[\p{L}\p{N}\p{M}._-]+$/u', $dirname)) ? $dirname : '';
+}
+
+/**
  * @param $dirname
  *
  * @return string
@@ -66,7 +93,10 @@ function xoops_module_validate_config_entry($config, array &$msgs): bool
 function xoops_module_install($dirname)
 {
     global $xoopsUser, $xoopsConfig;
-    $dirname        = trim((string) $dirname);
+    $dirname = xoops_moduleadmin_safe_dirname($dirname);
+    if ('' === $dirname) {
+        return '<p style="color:#ff0000;">' . _AM_SYSTEM_MODULES_ERRORSC . '</p>';
+    }
     $db             =& $GLOBALS['xoopsDB'];
     $reservedTables = [
         'avatar',
@@ -595,17 +625,12 @@ function xoops_module_install($dirname)
             // Build this from the directory actually being installed, never from the
             // manifest's getInfo('dirname'): that value is module-supplied and
             // unconstrained, so '../modules/other' would probe outside this package.
-            // Dots are allowed mid-name (a directory like 'foo.bar' is installable),
-            // but not leading: that excludes '.', '..' and hidden directories, and
-            // basename() above has already stripped any path separators.
-            $safeDirname       = basename((string) $dirname);
-            $testdataDirectory = (1 === preg_match('/^(?!\.)[A-Za-z0-9._-]+$/', $safeDirname))
-                ? XOOPS_ROOT_PATH . '/modules/' . $safeDirname . '/testdata'
-                : '';
-            if ('' !== $testdataDirectory && file_exists($testdataDirectory)) {
-                // $safeDirname, not getInfo('dirname'): the link must point at the same
-                // validated directory the file_exists() check just probed.
-                $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $safeDirname . '/testdata/index.php?op=load' . '">' . _AM_SYSTEM_MODULES_INSTALL_TESTDATA . '</a></div>';
+            // $dirname was validated to a safe single filesystem segment at function
+            // entry, so it is trustworthy for the probe below. It is still escaped where it
+            // enters the link: entry validation guarantees PATH safety, not HTML safety.
+            $testdataDirectory = XOOPS_ROOT_PATH . '/modules/' . $dirname . '/testdata';
+            if (file_exists($testdataDirectory)) {
+                $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars($dirname, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/testdata/index.php?op=load' . '">' . _AM_SYSTEM_MODULES_INSTALL_TESTDATA . '</a></div>';
             } else {
                 $msgs[] = '</div>';
             }
@@ -669,6 +694,10 @@ function &xoops_module_gettemplate($dirname, $template, $type = '')
 function xoops_module_uninstall($dirname)
 {
     global $xoopsConfig;
+    $dirname = xoops_moduleadmin_safe_dirname($dirname);
+    if ('' === $dirname) {
+        return '<p style="color:#ff0000;">' . _AM_SYSTEM_MODULES_ERRORSC . '</p>';
+    }
     $reservedTables = [
         'avatar',
         'avatar_users_link',
@@ -892,7 +921,10 @@ function xoops_module_uninstall($dirname)
 function xoops_module_update($dirname)
 {
     global $xoopsUser, $xoopsConfig, $xoopsTpl;
-    $dirname = trim((string) $dirname);
+    $dirname = xoops_moduleadmin_safe_dirname($dirname);
+    if ('' === $dirname) {
+        return '<p style="color:#ff0000;">' . _AM_SYSTEM_MODULES_ERRORSC . '</p>';
+    }
     $xoopsDB =& $GLOBALS['xoopsDB'];
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');

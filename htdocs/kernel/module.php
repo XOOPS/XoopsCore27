@@ -326,6 +326,21 @@ class XoopsModule extends XoopsObject
             return false;
         }
         include $file;
+        // Keep the manifest's own spelling of its dirname only when it names THE SAME
+        // FOLDER this was loaded from, compared case-insensitively -- that is what a
+        // case-insensitive filesystem treats as one directory, and a module's own casing
+        // is worth preserving. A manifest that declares a different, traversal, or empty
+        // dirname is not trusted to redirect anything: fall back to the real folder
+        // ($dirname, already basename()'d above). This blocks a hostile package from
+        // poisoning every getInfo('dirname') consumer and, via loadInfoAsVar(), the
+        // persisted xoops_modules.dirname column, or from pointing metadata loads at
+        // another module's directory.
+        if (isset($modversion) && is_array($modversion)) {
+            $declared = isset($modversion['dirname']) ? (string) $modversion['dirname'] : '';
+            if (0 !== strcasecmp($declared, $dirname)) {
+                $modversion['dirname'] = $dirname;
+            }
+        }
         $modVersions[$dirname] = $modversion;
         $this->modinfo         = $modVersions[$dirname];
 

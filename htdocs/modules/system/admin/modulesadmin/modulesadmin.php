@@ -735,6 +735,12 @@ function xoops_module_uninstall($dirname)
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');
     $module         = $module_handler->getByDirname($dirname);
+    if (!is_object($module) || !($module instanceof XoopsModule)) {
+        return '<p style="color:#ff0000;">Could not find module "'
+            . htmlspecialchars($dirname, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8')
+            . '" — uninstall aborted.</p>'
+            . '<div class="center"><a href="admin.php?fct=modulesadmin">' . _AM_SYSTEM_MODULES_BTOMADMIN . '</a></div>';
+    }
     include_once XOOPS_ROOT_PATH . '/class/template.php';
     xoops_template_clear_module_cache($module->getVar('mid'));
     if ($module->getVar('dirname') === 'system') {

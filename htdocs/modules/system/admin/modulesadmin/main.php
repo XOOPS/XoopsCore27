@@ -319,6 +319,7 @@ switch ($op) {
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->create();
         $mod->loadInfoAsVar($module);
+        $msgs = '';
         // Construct message
         if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
             $msgs = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $mod->getVar('dirname', 'n'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($mod->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
@@ -441,6 +442,7 @@ switch ($op) {
         /** @var XoopsModuleHandler $module_handler */
         $module_handler = xoops_getHandler('module');
         $mod            = $module_handler->getByDirname($module);
+        $msgs = '';
         // Construct message
         if (is_string($mod->getInfo('image')) && trim($mod->getInfo('image')) != '') {
             $msgs = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $mod->getVar('dirname', 'n'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($mod->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';

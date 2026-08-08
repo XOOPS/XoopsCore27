@@ -325,6 +325,10 @@ class XoopsModule extends XoopsObject
 
             return false;
         }
+        // Initialised before the include so it is defined on every path even if a
+        // malformed xoops_version.php never assigns it; the include below overwrites it
+        // for a well-formed manifest.
+        $modversion = [];
         include $file;
         // Keep the manifest's own spelling of its dirname only when it names THE SAME
         // FOLDER this was loaded from, compared case-insensitively -- that is what a
@@ -335,7 +339,7 @@ class XoopsModule extends XoopsObject
         // poisoning every getInfo('dirname') consumer and, via loadInfoAsVar(), the
         // persisted xoops_modules.dirname column, or from pointing metadata loads at
         // another module's directory.
-        if (isset($modversion) && is_array($modversion)) {
+        if (is_array($modversion)) {
             $declared = isset($modversion['dirname']) ? (string) $modversion['dirname'] : '';
             if (0 !== strcasecmp($declared, $dirname)) {
                 $modversion['dirname'] = $dirname;

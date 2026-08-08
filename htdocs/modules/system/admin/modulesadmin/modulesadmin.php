@@ -114,11 +114,11 @@ function xoops_module_install($dirname)
         $errs  = [];
         $msgs  = [];
         $msgs[] = '<div id="xo-module-log"><div class="header">';
-        $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_INSTALLING . $module->getInfo('name') . '</h4>';
+        $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_INSTALLING . htmlspecialchars((string)$module->getInfo('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</h4>';
         if ($module->getInfo('image') !== false && trim($module->getInfo('image')) != '') {
-            $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname') . '/' . $module->getInfo('adminindex') . '"><img src="' . XOOPS_URL . '/modules/' . $dirname . '/' . trim($module->getInfo('image')) . '" alt="" /></a>';
+            $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)$module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '"><img src="' . XOOPS_URL . '/modules/' . htmlspecialchars($dirname, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($module->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" /></a>';
         }
-        $msgs[] = '<strong>' . _VERSION . ':</strong> ' . $module->getInfo('version');
+        $msgs[] = '<strong>' . _VERSION . ':</strong> ' . htmlspecialchars((string) $module->getInfo('version'), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
         if ($module->getInfo('author') !== false && trim($module->getInfo('author')) != '') {
             $msgs[] = '<strong>' . _AUTHOR . ':</strong> ' . htmlspecialchars(trim($module->getInfo('author')), ENT_QUOTES | ENT_HTML5);
         }
@@ -580,7 +580,7 @@ function xoops_module_install($dirname)
             $redDevider = '<span class="red bold">  |  </span>';
             $msgs[] = '<div class="noininstall center"><a href="admin.php?fct=modulesadmin">' . _AM_SYSTEM_MODULES_BTOMADMIN . '</a> |
                         <a href="admin.php?fct=modulesadmin&op=installlist">' . _AM_SYSTEM_MODULES_TOINSTALL . '</a>';
-            $msgs[] = '<br><span class="red bold">' . _AM_SYSTEM_MODULES_MODULE . ' ' . $module->getInfo('name') . ': </span></div>';
+            $msgs[] = '<br><span class="red bold">' . _AM_SYSTEM_MODULES_MODULE . ' ' . htmlspecialchars((string)$module->getInfo('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . ': </span></div>';
             if ($blocks !== false) {
                 $msgs[] = '<div class="noininstall center"><a href="admin.php?fct=blocksadmin&op=list&filter=1&selgen=' . $newmid . '&selmod=-2&selgrp=-1&selvis=-1&filsave=1">' . _AM_SYSTEM_BLOCKS . '</a></div>';
             }
@@ -590,11 +590,17 @@ function xoops_module_install($dirname)
 				$msgs[] = '<div class="noininstall center">';
 			}
 			if ($module->getInfo('adminindex') != ''){
-				$msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname') . '/' . $module->getInfo('adminindex') . '">' . _AM_SYSTEM_MODULES_INSTALL_THISMODULE . '</a>';
+				$msgs[] = '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)$module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">' . _AM_SYSTEM_MODULES_INSTALL_THISMODULE . '</a>';
 			}
-            $testdataDirectory = XOOPS_ROOT_PATH . '/modules/' . $module->getInfo('dirname') . '/testdata';
-            if (file_exists($testdataDirectory)) {
-                $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname') . '/testdata/index.php?op=load' . '">' . _AM_SYSTEM_MODULES_INSTALL_TESTDATA . '</a></div>';
+            // Build this from the directory actually being installed, never from the
+            // manifest's getInfo('dirname'): that value is module-supplied and
+            // unconstrained, so '../modules/other' would probe outside this package.
+            $safeDirname       = basename((string) $dirname);
+            $testdataDirectory = (1 === preg_match('/^[A-Za-z0-9_-]+$/', $safeDirname))
+                ? XOOPS_ROOT_PATH . '/modules/' . $safeDirname . '/testdata'
+                : '';
+            if ('' !== $testdataDirectory && file_exists($testdataDirectory)) {
+                $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/testdata/index.php?op=load' . '">' . _AM_SYSTEM_MODULES_INSTALL_TESTDATA . '</a></div>';
             } else {
                 $msgs[] = '</div>';
             }
@@ -704,11 +710,11 @@ function xoops_module_uninstall($dirname)
     } else {
         $msgs   = [];
         $msgs[] = '<div id="xo-module-log"><div class="header">';
-        $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_UNINSTALL . ' ' . $module->getInfo('name', 's') . '</h4>';
+        $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_UNINSTALL . ' ' . htmlspecialchars((string)$module->getInfo('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</h4>';
         if ($module->getInfo('image') !== false && trim($module->getInfo('image')) != '') {
             $msgs[] = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars($dirname, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($module->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
         }
-        $msgs[] = '<strong>' . _VERSION . ':</strong> ' . $module->getInfo('version');
+        $msgs[] = '<strong>' . _VERSION . ':</strong> ' . htmlspecialchars((string) $module->getInfo('version'), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
         if ($module->getInfo('author') !== false && trim($module->getInfo('author')) != '') {
             $msgs[] = '<strong>' . _AUTHOR . ':</strong> ' . htmlspecialchars(trim($module->getInfo('author')), ENT_QUOTES | ENT_HTML5);
         }
@@ -963,11 +969,11 @@ function xoops_module_update($dirname)
         $newmid = $targetMid;
         $msgs   = [];
         $msgs[] = '<div id="xo-module-log"><div class="header">';
-        $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_UPDATING . $module->getInfo('name', 's') . '</h4>';
+        $msgs[] = $errs[] = '<h4>' . _AM_SYSTEM_MODULES_UPDATING . htmlspecialchars((string)$module->getInfo('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</h4>';
         if ($module->getInfo('image') !== false && trim($module->getInfo('image')) != '') {
             $msgs[] = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars($dirname, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars(trim($module->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
         }
-        $msgs[] = '<strong>' . _VERSION . ':</strong> ' . $module->getInfo('version');
+        $msgs[] = '<strong>' . _VERSION . ':</strong> ' . htmlspecialchars((string) $module->getInfo('version'), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
         if ($module->getInfo('author') !== false && trim($module->getInfo('author')) != '') {
             $msgs[] = '<strong>' . _AUTHOR . ':</strong> ' . htmlspecialchars(trim($module->getInfo('author')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
@@ -1472,7 +1478,7 @@ function xoops_module_update($dirname)
         }
         $msgs[] = sprintf(_AM_SYSTEM_MODULES_OKUPD, '<strong>' . $module->getVar('name', 's') . '</strong>');
         $msgs[] = '</div></div>';
-		$msgs[] = '<div class="center"><a href="admin.php?fct=modulesadmin">' . _AM_SYSTEM_MODULES_BTOMADMIN . '</a>  | <a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . $module->getInfo('adminindex') . '">' . _AM_SYSTEM_MODULES_INSTALL_THISMODULE . '</a></div>';
+		$msgs[] = '<div class="center"><a href="admin.php?fct=modulesadmin">' . _AM_SYSTEM_MODULES_BTOMADMIN . '</a>  | <a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)$module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">' . _AM_SYSTEM_MODULES_INSTALL_THISMODULE . '</a></div>';
         //        foreach ($msgs as $msg) {
         //            echo $msg . '<br>';
         //        }
@@ -1531,7 +1537,7 @@ function xoops_module_activate($mid)
         }
         // provide a link to the activated module
         $moduleName = $module->getVar('name', 's');
-        $moduleLink = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname') . '/' . $module->getInfo('adminindex') . '">' . $moduleName . '</a>';
+        $moduleLink = '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)$module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">' . $moduleName . '</a>';
         $msgs[] = '<p>' . sprintf(_AM_SYSTEM_MODULES_OKACT, '<strong>' . $moduleLink . '</strong>') . '</p></div>';
 
     }
@@ -1619,16 +1625,16 @@ function xoops_module_change($mid, $name)
 function xoops_module_log_header($module, $title)
 {
     $msgs[] = '<div class="header">';
-    $msgs[] = $errs[] = '<h4>' . $title . $module->getInfo('name', 's') . '</h4>';
+    $msgs[] = $errs[] = '<h4>' . $title . htmlspecialchars((string)$module->getInfo('name'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</h4>';
 
     if ($module->getInfo('image') !== false && trim((string) $module->getInfo('image')) != '') {
         if (_AM_SYSTEM_MODULES_ACTIVATE === $title) {
-            $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . $module->getInfo('adminindex') . '"><img src="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname', 'e') . '/' . trim((string) $module->getInfo('image')) . '" alt="" /></a>';
+            $msgs[] = '<a href="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)$module->getInfo('adminindex'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '"><img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string)$module->getInfo('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)trim((string) $module->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" /></a>';
         } else {
-            $msgs[] = '<img src="' . XOOPS_URL . '/modules/' . $module->getVar('dirname') . '/' . trim((string) $module->getInfo('image')) . '" alt="" />';
+            $msgs[] = '<img src="' . XOOPS_URL . '/modules/' . htmlspecialchars((string) $module->getVar('dirname'), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '/' . htmlspecialchars((string)trim((string) $module->getInfo('image')), ENT_QUOTES | ENT_HTML5, 'UTF-8') . '" alt="" />';
         }
     }
-    $msgs[] = '<strong>' . _VERSION . ':</strong> ' . $module->getInfo('version');
+    $msgs[] = '<strong>' . _VERSION . ':</strong> ' . htmlspecialchars((string) $module->getInfo('version'), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
     if ($module->getInfo('author') !== false && trim((string) $module->getInfo('author')) != '') {
         $msgs[] = '<strong>' . _AUTHOR . ':</strong> ' . htmlspecialchars(trim((string) $module->getInfo('author')), ENT_QUOTES | ENT_HTML5);
     }

@@ -56,14 +56,21 @@ if (!Request::hasVar('com_order', 'GET')) {
  */
 $comment_handler = xoops_getHandler('comment');
 $comment         = $comment_handler->get($com_id);
-// Only the comment's author or a module administrator may open it for
-// editing; the save and delete paths already enforce the same rule.
+// Only the comment's author, an administrator of the module the comment
+// belongs to, or a system comment moderator may open it for editing; the
+// save path applies the same rule. The comment's own module is checked, not
+// the module whose page was requested, so an id from another module is not
+// opened here.
 $canEdit = false;
 if (is_object($comment) && is_object($xoopsUser)) {
-    $isModuleAdmin = is_object($xoopsModule) && $xoopsUser->isAdmin($xoopsModule->getVar('mid'));
-    $isOwner       = (int) $xoopsUser->getVar('uid') > 0
+    include_once $GLOBALS['xoops']->path('modules/system/constants.php');
+    /** @var XoopsGroupPermHandler $sysperm_handler */
+    $sysperm_handler = xoops_getHandler('groupperm');
+    $isModerator = $xoopsUser->isAdmin((int) $comment->getVar('com_modid'))
+        || $sysperm_handler->checkRight('system_admin', XOOPS_SYSTEM_COMMENT, $xoopsUser->getGroups());
+    $isOwner     = (int) $xoopsUser->getVar('uid') > 0
         && (int) $comment->getVar('com_uid') === (int) $xoopsUser->getVar('uid');
-    $canEdit = $isModuleAdmin || $isOwner;
+    $canEdit = $isModerator || $isOwner;
 }
 if (!$canEdit) {
     redirect_header(XOOPS_URL . '/', 2, _NOPERM);

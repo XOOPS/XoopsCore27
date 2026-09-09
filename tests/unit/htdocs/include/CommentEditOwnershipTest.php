@@ -48,7 +48,12 @@ final class CommentEditOwnershipTest extends TestCase
         $guard = substr($this->sourceContent, $load, $firstRead - $load);
 
         self::assertStringContainsString('is_object($comment) && is_object($xoopsUser)', $guard);
-        self::assertStringContainsString("\$xoopsUser->isAdmin(\$xoopsModule->getVar('mid'))", $guard);
+        // Authorisation is against the module the comment belongs to, not the
+        // module whose page carries the request, and the system comment
+        // moderator right the save path honours is accepted here too.
+        self::assertStringContainsString("\$xoopsUser->isAdmin((int) \$comment->getVar('com_modid'))", $guard);
+        self::assertStringNotContainsString("isAdmin(\$xoopsModule->getVar('mid'))", $guard);
+        self::assertStringContainsString("checkRight('system_admin', XOOPS_SYSTEM_COMMENT, \$xoopsUser->getGroups())", $guard);
         self::assertStringContainsString("(int) \$comment->getVar('com_uid') === (int) \$xoopsUser->getVar('uid')", $guard);
         self::assertStringContainsString("(int) \$xoopsUser->getVar('uid') > 0", $guard, 'anonymous comments have no owner');
         self::assertStringContainsString('redirect_header(XOOPS_URL', $guard);

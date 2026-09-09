@@ -149,8 +149,9 @@ foreach ($fieldnames as $fieldname) {
 
 if ($current_step == 0) {
     // Reset any previous session for first step
-    $_SESSION['profile_post']         = [];
-    $_SESSION['profile_register_uid'] = null;
+    $_SESSION['profile_post']               = [];
+    $_SESSION['profile_register_uid']       = null;
+    $_SESSION['profile_register_validated'] = false;
 } else {
     // Merge current $_POST  with $_SESSION['profile_post']
     $_SESSION['profile_post'] = array_merge($_SESSION['profile_post'], $postfields);
@@ -208,6 +209,9 @@ if ($current_step == 1) {
     if (!$xoopsCaptcha->verify()) {
         $stop .= $xoopsCaptcha->getMessage();
     }
+    // Remembered so the save step can tell a request that passed this step
+    // from one that merely claims a later step number.
+    $_SESSION['profile_register_validated'] = ('' === $stop);
 }
 
 // If the last step required SAVE or if we're on the last step then we will insert/update user on database
@@ -232,6 +236,15 @@ if ($current_step > 0 && empty($stop) && (!empty($steps[$current_step - 1]['step
             $newuser->setVar('uname', $uname);
             $newuser->setVar('email', $email);
             $newuser->setVar('pass', $pass ? password_hash($pass, PASSWORD_DEFAULT) : '');
+            // The step number is supplied by the client, so this request may
+            // never have passed step 1, or may carry different identity values
+            // now. Check both at the point of insertion.
+            if (empty($_SESSION['profile_register_validated'])) {
+                $stop .= _US_REGISTERNG . '<br>';
+            } else {
+                $vpass = Request::getVar('vpass', $pass, 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
+                $stop .= XoopsUserUtility::validate($newuser, $pass, $vpass);
+            }
             $actkey = bin2hex(random_bytes(4));
             $newuser->setVar('actkey', $actkey, true);
             $newuser->setVar('user_regdate', time(), true);
@@ -247,7 +260,9 @@ if ($current_step > 0 && empty($stop) && (!empty($steps[$current_step - 1]['step
         }
 
         // Insert/update user and check if we have succeded
-        if (!$member_handler->insertUser($newuser)) {
+        if ('' !== $stop) {
+            // Validation above failed: fall through to redisplay the form.
+        } elseif (!$member_handler->insertUser($newuser)) {
             $stop .= _US_REGISTERNG . '<br>';
             $stop .= implode('<br>', $newuser->getErrors());
         } else {

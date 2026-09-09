@@ -346,7 +346,9 @@ if (empty($_SESSION['xoopsUserId'])
  */
 if (!empty($_SESSION['xoopsUserId'])) {
     $xoopsUser = $member_handler->getUser($_SESSION['xoopsUserId']);
-    if (!is_object($xoopsUser)) {
+    // A missing or deactivated account ends the session here, whether it was
+    // restored from the session store or from the remember-me cookie.
+    if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {
         $xoopsUser = '';
         $_SESSION  = [];
         session_destroy();
@@ -367,11 +369,10 @@ if (!empty($_SESSION['xoopsUserId'])) {
         }
 
         //$sess_handler->update_cookie();
-        if (isset($_SESSION['xoopsUserGroups'])) {
-            $xoopsUser->setGroups($_SESSION['xoopsUserGroups']);
-        } else {
-            $_SESSION['xoopsUserGroups'] = $xoopsUser->getGroups();
-        }
+        // Group membership is resolved from the database on every request so a
+        // change made by an administrator applies on the next request; the
+        // session copy stays populated for code that reads it directly.
+        $_SESSION['xoopsUserGroups'] = $xoopsUser->getGroups();
         if (is_object($rememberClaims)) {   // only do during a 'remember me' login
             // Read raw via 'n' format — getVar()'s default 's' escapes '&'
             // to '&amp;', which the validator's HTML guard would reject.

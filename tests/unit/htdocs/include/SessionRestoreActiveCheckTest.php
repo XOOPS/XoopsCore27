@@ -60,6 +60,12 @@ final class SessionRestoreActiveCheckTest extends TestCase
         $branch = substr($branch, 0, strpos($branch, '} else {'));
         self::assertStringContainsString('session_destroy();', $branch);
         self::assertSame(2, substr_count($branch, "xoops_setcookie(\$GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600"));
+
+        // With remember-me disabled the cookie name is empty and setcookie()
+        // throws, so the clearing must be conditional on the name.
+        $guard = strpos($branch, "if (!empty(\$GLOBALS['xoopsConfig']['usercookie'])) {");
+        self::assertNotFalse($guard);
+        self::assertLessThan(strpos($branch, 'xoops_setcookie('), $guard);
     }
 
     #[Test]

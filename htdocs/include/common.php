@@ -352,8 +352,12 @@ if (!empty($_SESSION['xoopsUserId'])) {
         $xoopsUser = '';
         $_SESSION  = [];
         session_destroy();
-        xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
-        xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
+        // The remember-me cookie name is a site setting and may be empty when
+        // the feature is disabled; setcookie() rejects an empty name.
+        if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
+            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
+            xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
+        }
     } else {
         if (((int) $xoopsUser->getVar('last_login') + 60 * 5) < time()) {
             $sql = 'UPDATE ' . $xoopsDB->prefix('users') . " SET last_login = '" . time()

@@ -143,7 +143,12 @@ $fieldnames[] = '_message_';
 $postfields = [];
 foreach ($fieldnames as $fieldname) {
     if (Request::hasVar($fieldname, 'POST')) {
-        $postfields[$fieldname] = Request::getVar($fieldname, '', 'POST');
+        // The password is hashed and validated exactly as typed at the save
+        // step, so it must not be tag-stripped or trimmed on the way through
+        // the session like the other fields.
+        $postfields[$fieldname] = ('pass' === $fieldname || 'vpass' === $fieldname)
+            ? Request::getVar($fieldname, '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM)
+            : Request::getVar($fieldname, '', 'POST');
     }
 }
 

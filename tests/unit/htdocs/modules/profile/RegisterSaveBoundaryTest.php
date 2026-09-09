@@ -73,6 +73,21 @@ final class RegisterSaveBoundaryTest extends TestCase
         );
     }
 
+    #[Test]
+    public function passwordIsCarriedBetweenStepsUnfiltered(): void
+    {
+        // Other fields are tag-stripped and trimmed on the way into the
+        // session; the password is hashed and validated as typed at the save
+        // step, so a filtered copy would be rejected or hashed wrongly.
+        $merge = $this->between('$postfields = [];', "if (\$current_step == 0) {");
+
+        self::assertStringContainsString("('pass' === \$fieldname || 'vpass' === \$fieldname)", $merge);
+        self::assertStringContainsString(
+            "Request::getVar(\$fieldname, '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM)",
+            $merge
+        );
+    }
+
     private function between(string $from, string $to): string
     {
         $start = strpos($this->sourceContent, $from);

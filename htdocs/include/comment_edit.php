@@ -56,6 +56,18 @@ if (!Request::hasVar('com_order', 'GET')) {
  */
 $comment_handler = xoops_getHandler('comment');
 $comment         = $comment_handler->get($com_id);
+// Only the comment's author or a module administrator may open it for
+// editing; the save and delete paths already enforce the same rule.
+$canEdit = false;
+if (is_object($comment) && is_object($xoopsUser)) {
+    $isModuleAdmin = is_object($xoopsModule) && $xoopsUser->isAdmin($xoopsModule->getVar('mid'));
+    $isOwner       = (int) $xoopsUser->getVar('uid') > 0
+        && (int) $comment->getVar('com_uid') === (int) $xoopsUser->getVar('uid');
+    $canEdit = $isModuleAdmin || $isOwner;
+}
+if (!$canEdit) {
+    redirect_header(XOOPS_URL . '/', 2, _NOPERM);
+}
 $dohtml          = $comment->getVar('dohtml');
 $dosmiley        = $comment->getVar('dosmiley');
 $dobr            = $comment->getVar('dobr');

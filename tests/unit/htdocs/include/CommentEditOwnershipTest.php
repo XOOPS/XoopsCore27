@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Include;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tests\Unit\System\SourceFileTestTrait;
@@ -58,5 +59,119 @@ final class CommentEditOwnershipTest extends TestCase
         self::assertStringContainsString("(int) \$xoopsUser->getVar('uid') > 0", $guard, 'anonymous comments have no owner');
         self::assertStringContainsString('redirect_header(XOOPS_URL', $guard);
         self::assertStringContainsString('_NOPERM', $guard);
+    }
+
+    /**
+     * @return array<string, array{?object, object|false, bool}>
+     */
+    public static function guardCases(): array
+    {
+        $comment = self::comment(uid: 7, modid: 3);
+
+        return [
+            'anonymous visitor'                       => [null, $comment, false],
+            'missing comment'                         => [self::user(uid: 7), false, false],
+            'unrelated member'                        => [self::user(uid: 8), $comment, false],
+            'uid 0 never owns an anonymous comment'   => [self::user(uid: 0), self::comment(uid: 0, modid: 3), false],
+            'administrator of another module'         => [self::user(uid: 8, adminOf: [4]), $comment, false],
+            'comment author'                          => [self::user(uid: 7), $comment, true],
+            "administrator of the comment's module"   => [self::user(uid: 8, adminOf: [3]), $comment, true],
+            'system comment moderator'                => [self::user(uid: 8, moderator: true), $comment, true],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('guardCases')]
+    public function guardExecutesTheAuthorModuleAdminOrModeratorRule(?object $xoopsUser, object|false $comment, bool $allowed): void
+    {
+        if (!$allowed) {
+            $this->expectException(\RedirectHeaderException::class);
+        }
+
+        self::assertSame($allowed, $this->runGuard($xoopsUser, $comment));
+    }
+
+    /**
+     * Executes the guard block of comment_edit.php, which runs before header.php
+     * is included, in a namespace where xoops_getHandler() resolves to a stub.
+     * The bootstrap's redirect_header() throws RedirectHeaderException.
+     */
+    private function runGuard(?object $xoopsUser, object|false $comment): bool
+    {
+        $this->loadSourceFile('htdocs/include/comment_edit.php');
+        $start = strpos($this->sourceContent, '$canEdit = false;');
+        self::assertNotFalse($start);
+        $end = strpos($this->sourceContent, '$dohtml', $start);
+        self::assertNotFalse($end);
+        $guard = substr($this->sourceContent, $start, $end - $start);
+
+        // The guard pulls in modules/system/constants.php for XOOPS_SYSTEM_COMMENT;
+        // that file also loads notification constants the bootstrap defines
+        // differently, so supply the one constant here instead.
+        self::assertStringContainsString("include_once \$GLOBALS['xoops']->path('modules/system/constants.php');", $guard);
+        $guard = str_replace("include_once \$GLOBALS['xoops']->path('modules/system/constants.php');", '', $guard);
+        if (!defined('XOOPS_SYSTEM_COMMENT')) {
+            define('XOOPS_SYSTEM_COMMENT', 14);
+        }
+
+        $namespace = __NAMESPACE__ . '\CommentEditGuard';
+        $GLOBALS['commentEditGuardPermHandler'] = new class {
+            /** @param int[] $groups */
+            public function checkRight(string $name, int $id, array $groups): bool
+            {
+                return 'system_admin' === $name && XOOPS_SYSTEM_COMMENT === $id && in_array(99, $groups, true);
+            }
+        };
+        if (!function_exists($namespace . '\xoops_getHandler')) {
+            eval('namespace ' . $namespace . '; function xoops_getHandler($name) { return $GLOBALS["commentEditGuardPermHandler"]; }');
+        }
+
+        $canEdit = null;
+        eval('namespace ' . $namespace . ";\n" . $guard);
+
+        return (bool) $canEdit;
+    }
+
+    /**
+     * @param int[] $adminOf module ids the user administers
+     */
+    private static function user(int $uid, array $adminOf = [], bool $moderator = false): object
+    {
+        return new class($uid, $adminOf, $moderator) {
+            /** @param int[] $adminOf */
+            public function __construct(private int $uid, private array $adminOf, private bool $moderator)
+            {
+            }
+
+            public function getVar(string $key): mixed
+            {
+                return 'uid' === $key ? $this->uid : null;
+            }
+
+            public function isAdmin(?int $mid = null): bool
+            {
+                return in_array((int) $mid, $this->adminOf, true);
+            }
+
+            /** @return int[] */
+            public function getGroups(): array
+            {
+                return $this->moderator ? [99] : [2];
+            }
+        };
+    }
+
+    private static function comment(int $uid, int $modid): object
+    {
+        return new class($uid, $modid) {
+            public function __construct(private int $uid, private int $modid)
+            {
+            }
+
+            public function getVar(string $key): mixed
+            {
+                return ['com_uid' => $this->uid, 'com_modid' => $this->modid][$key] ?? null;
+            }
+        };
     }
 }

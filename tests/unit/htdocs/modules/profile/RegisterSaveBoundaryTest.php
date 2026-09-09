@@ -74,6 +74,16 @@ final class RegisterSaveBoundaryTest extends TestCase
     }
 
     #[Test]
+    public function stepOneRecordIsConsumedByASuccessfulInsert(): void
+    {
+        // A record left behind by a finished or abandoned flow must not
+        // authorise a second insert from the same session.
+        $afterInsert = $this->between("\$_SESSION['profile_register_uid'] = \$newuser->getVar('uid');", 'if (!empty($stop) || isset($steps[$current_step])) {');
+
+        self::assertStringContainsString("\$_SESSION['profile_register_validated'] = false;", $afterInsert);
+    }
+
+    #[Test]
     public function passwordIsCarriedBetweenStepsUnfiltered(): void
     {
         // Other fields are tag-stripped and trimmed on the way into the

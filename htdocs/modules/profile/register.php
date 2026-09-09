@@ -343,6 +343,8 @@ if ($current_step > 0 && empty($stop) && (!empty($steps[$current_step - 1]['step
                     $GLOBALS['xoopsTpl']->append('confirm', $message);
                 }
                 $_SESSION['profile_register_uid'] = $newuser->getVar('uid');
+                // The step-1 record authorises exactly one insert.
+                $_SESSION['profile_register_validated'] = false;
             }
         }
     }

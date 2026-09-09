@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Profile;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Tests\Unit\System\SourceFileTestTrait;
@@ -96,6 +97,127 @@ final class RegisterSaveBoundaryTest extends TestCase
             "Request::getVar(\$fieldname, '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM)",
             $merge
         );
+    }
+
+    #[Test]
+    public function laterStepMergeToleratesAMissingOrFinishedSessionCopy(): void
+    {
+        // The session copy is set to null when a flow finishes; a later-step
+        // request in the same session must not fail in array_merge().
+        $merge = $this->between('// Merge current $_POST', '$_POST                    = array_merge(');
+
+        self::assertStringContainsString("array_merge(\$_SESSION['profile_post'] ?? [], \$postfields)", $merge);
+    }
+
+    /**
+     * @return array<string, array{bool, string, int, bool}>
+     */
+    public static function saveBoundaryCases(): array
+    {
+        // [step-1 record present, revalidation result, expected insertUser() calls, expect _US_REGISTERNG]
+        return [
+            'forged later step without a step-1 record' => [false, '', 0, true],
+            'record present but revalidation fails'     => [true, 'duplicate', 0, false],
+            'record present and revalidation passes'    => [true, '', 1, false],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('saveBoundaryCases')]
+    public function saveBranchOnlyInsertsAfterTheRecordAndRevalidationBothPass(bool $validated, string $validation, int $inserts, bool $rejected): void
+    {
+        [$stop, $calls] = $this->runSaveBranch($validated, $validation);
+
+        self::assertSame($inserts, $calls, 'insertUser() call count');
+        if ($rejected) {
+            self::assertStringContainsString(_US_REGISTERNG, $stop);
+        }
+        if ($inserts === 0) {
+            self::assertNotSame('', $stop, 'a refused save must carry a message for the form');
+        }
+    }
+
+    /**
+     * Executes the new-user save branch of register.php with stubbed request,
+     * validator and handlers, returning the resulting $stop and the number of
+     * insertUser() calls.
+     *
+     * @return array{string, int}
+     */
+    private function runSaveBranch(bool $validated, string $validation): array
+    {
+        $branch = $this->between('$isNew = $newuser->isNew();', '// User inserted! Now insert custom profile fields') . "}\n";
+
+        $namespace = __NAMESPACE__ . '\\SaveBoundary';
+        if (!class_exists($namespace . '\\Request', false)) {
+            eval('namespace ' . $namespace . ';'
+                . ' class Request {'
+                . '   public const MASK_ALLOW_RAW = 1; public const MASK_NO_TRIM = 2;'
+                . '   private static function read($n, $d) { return isset($_POST[$n]) ? (string) $_POST[$n] : $d; }'
+                . '   public static function getString($n, $d = "", $h = "POST") { return self::read($n, $d); }'
+                . '   public static function getEmail($n, $d = "", $h = "POST") { return self::read($n, $d); }'
+                . '   public static function getUrl($n, $d = "", $h = "POST") { return self::read($n, $d); }'
+                . '   public static function getVar($n, $d = "", $h = "POST", $t = "string", $m = 0) { return self::read($n, $d); }'
+                . ' }'
+                . ' class XoopsUserUtility { public static function validate($u, $p, $v) { return $GLOBALS["saveBoundaryValidation"]; } }');
+        }
+        if (!defined('_US_REGISTERNG')) {
+            define('_US_REGISTERNG', 'Registration failed');
+        }
+
+        $_POST = ['uname' => 'newbie', 'email' => 'newbie@example.com', 'url' => '', 'pass' => 'secret123', 'vpass' => 'secret123'];
+        $_SESSION['profile_register_validated'] = $validated;
+        $GLOBALS['saveBoundaryValidation'] = $validation;
+        $GLOBALS['xoopsConfig']     = ['com_order' => 0, 'com_mode' => 'flat', 'theme_set' => 'default'];
+        $GLOBALS['xoopsConfigUser'] = ['activation_type' => 0, 'new_user_notify' => 0];
+
+        $newuser = new class {
+            public function isNew(): bool
+            {
+                return true;
+            }
+
+            public function setVar(string $k, mixed $v, bool $n = false): void
+            {
+            }
+
+            public function getVar(string $k): mixed
+            {
+                return 'uid' === $k ? 5 : null;
+            }
+
+            /** @return string[] */
+            public function getErrors(): array
+            {
+                return [];
+            }
+        };
+        $member_handler = new class {
+            public int $inserts = 0;
+
+            public function insertUser(object $u): bool
+            {
+                ++$this->inserts;
+
+                return true;
+            }
+        };
+        $profile = new class {
+            public function setVar(string $k, mixed $v): void
+            {
+            }
+        };
+        $profile_handler = new class {
+            public function insert(object $p): bool
+            {
+                return true;
+            }
+        };
+        $stop = '';
+
+        eval('namespace ' . $namespace . ";\n" . $branch);
+
+        return [$stop, $member_handler->inserts];
     }
 
     private function between(string $from, string $to): string

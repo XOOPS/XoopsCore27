@@ -158,8 +158,9 @@ if ($current_step == 0) {
     $_SESSION['profile_register_uid']       = null;
     $_SESSION['profile_register_validated'] = false;
 } else {
-    // Merge current $_POST  with $_SESSION['profile_post']
-    $_SESSION['profile_post'] = array_merge($_SESSION['profile_post'], $postfields);
+    // Merge current $_POST  with $_SESSION['profile_post']; the session copy is
+    // null once a flow has finished, or absent when a later step arrives first.
+    $_SESSION['profile_post'] = array_merge($_SESSION['profile_post'] ?? [], $postfields);
     $_POST                    = array_merge($_SESSION['profile_post'], $_POST);
 }
 

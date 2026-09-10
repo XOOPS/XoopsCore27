@@ -34,9 +34,12 @@ class XoopsUserUtility
      * memory, so handing it to both rememberFingerprint() and
      * \Xmf\Jwt\TokenFactory::build() guarantees the two never see different
      * bytes, whatever happens to the key file between them. When no bytes can
-     * be read (the key could not be created or the file is unreadable) null is
-     * returned and the caller must issue nothing: a fingerprint keyed with ''
-     * would be an offline verifier for a legacy unsalted hash.
+     * be read (the key could not be created, the file is unreadable, or the
+     * read throws: the storage includes the key file, so a corrupted one is a
+     * ParseError) a warning is raised and null is returned, and the caller must
+     * issue nothing: a fingerprint keyed with '' would be an offline verifier
+     * for a legacy unsalted hash. This runs during login and session restore,
+     * so it must never throw.
      *
      * @param \Xmf\Key\KeyAbstract|null $stored the stored key; null reads the
      *                                          site's 'rememberme' key
@@ -44,8 +47,15 @@ class XoopsUserUtility
      */
     public static function rememberKey(?\Xmf\Key\KeyAbstract $stored = null): ?\Xmf\Key\KeyAbstract
     {
-        $stored  = $stored ?? \Xmf\Jwt\KeyFactory::build('rememberme');
-        $signing = (string) $stored->getSigning();
+        try {
+            $stored  = $stored ?? \Xmf\Jwt\KeyFactory::build('rememberme');
+            $signing = (string) $stored->getSigning();
+        } catch (\Throwable $e) {
+            // Class name only: the message can carry a filesystem path.
+            trigger_error('Remember-me signing key unavailable (' . get_class($e) . ')', E_USER_WARNING);
+
+            return null;
+        }
         if ('' === $signing) {
             return null;
         }

@@ -601,6 +601,36 @@ class XoopsUserUtilityTest extends TestCase
         $this->assertNull(\XoopsUserUtility::rememberKey(self::storedKey('')));
     }
 
+    public function testRememberKeyIsNullAndWarnsWhenKeyStorageThrows(): void
+    {
+        // FileStorage reads the key file with include, so a corrupted file is a
+        // ParseError, and key generation can throw on an entropy failure. Either
+        // must fail closed as a warning, never abort login or restore.
+        $storage = new class extends \Xmf\Key\ArrayStorage {
+            public function fetch($name)
+            {
+                throw new \RuntimeException('storage unavailable');
+            }
+        };
+        $storage->save('rememberme', 'bytes');
+        $warnings = [];
+        set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
+            $warnings[] = [$no, $msg];
+
+            return true;
+        });
+        try {
+            $result = \XoopsUserUtility::rememberKey(new \Xmf\Key\Basic($storage, 'rememberme'));
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertNull($result);
+        $this->assertCount(1, $warnings);
+        $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        $this->assertStringNotContainsString('storage unavailable', $warnings[0][1], 'the diagnostic must not echo the exception message');
+    }
+
     public function testRememberFingerprintOfAnUnsetHashIsStillSixtyFourHexCharacters(): void
     {
         // External-auth accounts may carry no local hash; the claim must still

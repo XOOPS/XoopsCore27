@@ -136,7 +136,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
         $renewal = substr($this->restore, (int) strpos($this->restore, '// update our remember me cookie'));
         self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $renewal);
         self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $this->sourceContent);
-        self::assertStringContainsString("\$rememberSigningKey = null === \$rememberKey ? '' : \$rememberKey->getSigning();", $this->sourceContent);
+        self::assertStringContainsString('$rememberSigningKey = $rememberKey->getSigning();', $this->sourceContent);
 
         $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
         self::assertNotFalse($login);
@@ -169,6 +169,30 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertLessThan($warn, $read);
         self::assertLessThan($issue, $warn);
         self::assertStringContainsString('E_USER_WARNING', substr($login, $warn, 200));
+    }
+
+    #[Test]
+    public function cookieValidationUsesTheSameGuardedKeySnapshotAsTheCheckAndRenewal(): void
+    {
+        // The token reader used to build the key on its own, before the
+        // snapshot existed. Now the snapshot is taken first, only when a cookie
+        // is actually present, and handed to the reader; no snapshot means the
+        // cookie is rejected without any key access happening elsewhere.
+        $src      = $this->sourceContent;
+        $present  = strpos($src, "'' !== \\Xmf\\Request::getString(\$GLOBALS['xoopsConfig']['usercookie'], '', 'COOKIE')");
+        $snapshot = strpos($src, '$rememberKey = XoopsUserUtility::rememberKey();');
+        $read     = strpos($src, "\\Xmf\\Jwt\\TokenReader::fromCookie(\$rememberKey, \$GLOBALS['xoopsConfig']['usercookie'])");
+        $seed     = strpos($src, "\$_SESSION['xoopsUserId'] = \$rememberClaims->uid;");
+        self::assertNotFalse($present);
+        self::assertNotFalse($snapshot);
+        self::assertNotFalse($read);
+        self::assertNotFalse($seed);
+        self::assertLessThan($snapshot, $present);
+        self::assertLessThan($read, $snapshot);
+        self::assertLessThan($seed, $read);
+        self::assertStringNotContainsString("TokenReader::fromCookie('rememberme'", $src);
+        // the reader runs only with a snapshot in hand
+        self::assertStringContainsString("if (null !== \$rememberKey) {\n        \$rememberSigningKey = \$rememberKey->getSigning();\n        \$rememberClaims", $src);
     }
 
     #[Test]

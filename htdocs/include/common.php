@@ -327,29 +327,33 @@ if ($xoopsConfig['use_mysession']
 
 /**
  * Load xoopsUserId from cookie if "Remember me" is enabled.
+ *
+ * The token carries a fingerprint of the stored password hash
+ * (XoopsUserUtility::rememberFingerprint), keyed with the token's signing key.
+ * One guarded snapshot of that key, taken only when a cookie is present, serves
+ * the token's validation here, the fingerprint check below and the renewal's
+ * signature; without a snapshot the cookie is rejected and nothing else reads
+ * the key.
  */
 $rememberClaims = false;
+$rememberKey = null;
+$rememberSigningKey = '';
 if (empty($_SESSION['xoopsUserId'])
     && !empty($GLOBALS['xoopsConfig']['usercookie'])
+    && '' !== \Xmf\Request::getString($GLOBALS['xoopsConfig']['usercookie'], '', 'COOKIE')
 ) {
-    $rememberClaims = \Xmf\Jwt\TokenReader::fromCookie('rememberme', $GLOBALS['xoopsConfig']['usercookie']);
+    xoops_load('XoopsUserUtility');
+    $rememberKey = XoopsUserUtility::rememberKey();
+    if (null !== $rememberKey) {
+        $rememberSigningKey = $rememberKey->getSigning();
+        $rememberClaims = \Xmf\Jwt\TokenReader::fromCookie($rememberKey, $GLOBALS['xoopsConfig']['usercookie']);
+    }
     if (false !== $rememberClaims && !empty($rememberClaims->uid)) {
         $_SESSION['xoopsUserId'] = $rememberClaims->uid;
     } else {
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600, '/', XOOPS_COOKIE_DOMAIN, 0, true);
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
     }
-}
-// The remember-me token carries a fingerprint of the stored password hash
-// (XoopsUserUtility::rememberFingerprint), keyed with the token's signing key.
-// It is checked below on the cookie path and renewed from the loaded account.
-// One snapshot of the key serves both the check and the renewal's signature.
-$rememberKey = null;
-$rememberSigningKey = '';
-if (is_object($rememberClaims)) {
-    xoops_load('XoopsUserUtility');
-    $rememberKey = XoopsUserUtility::rememberKey();
-    $rememberSigningKey = null === $rememberKey ? '' : $rememberKey->getSigning();
 }
 
 /**

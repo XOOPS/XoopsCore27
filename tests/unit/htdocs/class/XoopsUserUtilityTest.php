@@ -593,19 +593,11 @@ class XoopsUserUtilityTest extends TestCase
         $this->assertSame('first', $snapshot->getSigning());
     }
 
-    public function testRememberKeyIsNullWhenNoSigningBytesCanBeRead(): void
+    /**
+     * A key object whose storage throws on every read.
+     */
+    private static function throwingKey(): \Xmf\Key\Basic
     {
-        // A key that could not be created or read yields '' from getSigning();
-        // nothing may be fingerprinted or signed with that.
-        $this->assertNull(\XoopsUserUtility::rememberKey(self::storedKey(null)));
-        $this->assertNull(\XoopsUserUtility::rememberKey(self::storedKey('')));
-    }
-
-    public function testRememberKeyIsNullAndWarnsWhenKeyStorageThrows(): void
-    {
-        // FileStorage reads the key file with include, so a corrupted file is a
-        // ParseError, and key generation can throw on an entropy failure. Either
-        // must fail closed as a warning, never abort login or restore.
         $storage = new class extends \Xmf\Key\ArrayStorage {
             public function fetch($name)
             {
@@ -613,6 +605,18 @@ class XoopsUserUtilityTest extends TestCase
             }
         };
         $storage->save('rememberme', 'bytes');
+
+        return new \Xmf\Key\Basic($storage, 'rememberme');
+    }
+
+    /**
+     * Runs $fn with an error handler that records warnings instead of reporting
+     * them; the handler is restored before anything is asserted.
+     *
+     * @return array{0: mixed, 1: list<array{int, string}>} [return value, warnings]
+     */
+    private static function withRecordedWarnings(callable $fn): array
+    {
         $warnings = [];
         set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
             $warnings[] = [$no, $msg];
@@ -620,15 +624,60 @@ class XoopsUserUtilityTest extends TestCase
             return true;
         });
         try {
-            $result = \XoopsUserUtility::rememberKey(new \Xmf\Key\Basic($storage, 'rememberme'));
+            $result = $fn();
         } finally {
             restore_error_handler();
         }
 
+        return [$result, $warnings];
+    }
+
+    public function testRememberKeyIsNullAndWarnsWhenNoSigningBytesCanBeRead(): void
+    {
+        // A key that could not be created or read yields '' from getSigning();
+        // nothing may be fingerprinted or signed with that, and the caller's
+        // silence must be explained by a warning.
+        foreach ([self::storedKey(null), self::storedKey('')] as $key) {
+            [$result, $warnings] = self::withRecordedWarnings(static fn () => \XoopsUserUtility::rememberKey($key));
+
+            $this->assertNull($result);
+            $this->assertCount(1, $warnings);
+            $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        }
+    }
+
+    public function testRememberKeyIsNullAndWarnsWhenKeyStorageThrows(): void
+    {
+        // FileStorage reads the key file with include, so a corrupted file is a
+        // ParseError, and key generation can throw on an entropy failure. Either
+        // must fail closed as a warning, never abort login or restore.
+        [$result, $warnings] = self::withRecordedWarnings(static fn () => \XoopsUserUtility::rememberKey(self::throwingKey()));
+
         $this->assertNull($result);
         $this->assertCount(1, $warnings);
         $this->assertSame(E_USER_WARNING, $warnings[0][0]);
+        $this->assertStringContainsString('RuntimeException', $warnings[0][1]);
         $this->assertStringNotContainsString('storage unavailable', $warnings[0][1], 'the diagnostic must not echo the exception message');
+    }
+
+    public function testRememberKeyStaysNullWhenTheErrorHandlerTurnsWarningsIntoExceptions(): void
+    {
+        // An error-screen provider or a module may install a handler that
+        // converts E_USER_WARNING into an ErrorException. Reporting the failure
+        // must not then become the failure: the helper runs during login and
+        // session restore, where an escaping exception ends the request.
+        set_error_handler(static function (int $no, string $msg, string $file, int $line): bool {
+            throw new \ErrorException($msg, 0, $no, $file, $line);
+        });
+        try {
+            $fromThrowingStorage = \XoopsUserUtility::rememberKey(self::throwingKey());
+            $fromEmptyBytes      = \XoopsUserUtility::rememberKey(self::storedKey(''));
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertNull($fromThrowingStorage);
+        $this->assertNull($fromEmptyBytes);
     }
 
     public function testRememberFingerprintOfAnUnsetHashIsStillSixtyFourHexCharacters(): void

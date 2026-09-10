@@ -80,13 +80,11 @@ if (false !== $user) {
         // loginUser() rehashed it. One snapshot of the key serves both the
         // fingerprint and the signature, and without a key nothing is issued.
         // The key is read only on request: reading it creates the key file.
+        // rememberKey() explains a null result itself with a warning.
         $rememberKey = null;
         if (!empty($rememberme)) {
             xoops_load('XoopsUserUtility');
             $rememberKey = XoopsUserUtility::rememberKey();
-            if (null === $rememberKey) {
-                trigger_error('Remember-me cookie not issued: the signing key could not be read', E_USER_WARNING);
-            }
         }
         if (null !== $rememberKey) {
             $claims = [

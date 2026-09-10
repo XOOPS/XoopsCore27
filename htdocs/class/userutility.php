@@ -36,10 +36,11 @@ class XoopsUserUtility
      * bytes, whatever happens to the key file between them. When no bytes can
      * be read (the key could not be created, the file is unreadable, or the
      * read throws: the storage includes the key file, so a corrupted one is a
-     * ParseError) a warning is raised and null is returned, and the caller must
-     * issue nothing: a fingerprint keyed with '' would be an offline verifier
-     * for a legacy unsalted hash. This runs during login and session restore,
-     * so it must never throw.
+     * ParseError) an E_USER_WARNING is raised and null is returned, and the
+     * caller must issue nothing: a fingerprint keyed with '' would be an
+     * offline verifier for a legacy unsalted hash. This runs during login and
+     * session restore, so neither the read nor the report of its failure may
+     * throw.
      *
      * @param \Xmf\Key\KeyAbstract|null $stored the stored key; null reads the
      *                                          site's 'rememberme' key
@@ -51,18 +52,42 @@ class XoopsUserUtility
             $stored  = $stored ?? \Xmf\Jwt\KeyFactory::build('rememberme');
             $signing = (string) $stored->getSigning();
         } catch (\Throwable $e) {
-            // Class name only: the message can carry a filesystem path.
-            trigger_error('Remember-me signing key unavailable (' . get_class($e) . ')', E_USER_WARNING);
+            // Class and location only: the message can carry a filesystem path.
+            self::warnRememberKey(sprintf('%s at %s:%d', get_class($e), basename($e->getFile()), $e->getLine()));
 
             return null;
         }
         if ('' === $signing) {
+            self::warnRememberKey('no signing bytes in key storage');
+
             return null;
         }
         $snapshot = new \Xmf\Key\ArrayStorage();
         $snapshot->save('rememberme', $signing);
 
         return new \Xmf\Key\Basic($snapshot, 'rememberme');
+    }
+
+    /**
+     * Report a remember-me key failure without letting the report itself fail.
+     *
+     * A module or an error-screen provider may install an error handler that
+     * converts E_USER_WARNING into an ErrorException. Raised from inside
+     * rememberKey()'s catch block, such an exception would escape with nothing
+     * left to contain it and end the login or restore the warning was meant to
+     * explain, so the report is contained the way modules/system/preloads/core.php
+     * contains its online-tracking report.
+     *
+     * @param string $detail what failed; must not carry a message or full path
+     * @return void
+     */
+    private static function warnRememberKey(string $detail): void
+    {
+        try {
+            trigger_error('Remember-me signing key unavailable: ' . $detail, E_USER_WARNING);
+        } catch (\Throwable $ignored) {
+            // The failure is already answered by the null return.
+        }
     }
 
     /**

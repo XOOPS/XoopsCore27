@@ -150,25 +150,23 @@ final class SessionRestoreActiveCheckTest extends TestCase
     }
 
     #[Test]
-    public function loginReadsTheKeyOnlyWhenRememberMeWasRequestedAndReportsAMissingOne(): void
+    public function loginReadsTheKeyOnlyWhenRememberMeWasRequested(): void
     {
         // Reading the key creates the key file as a side effect, so a login
-        // without "remember me" must not touch it; and a request that cannot be
-        // honoured leaves a warning rather than a silently cleared cookie.
+        // without "remember me" must not touch it. A request that cannot be
+        // honoured is explained by the warning rememberKey() itself raises for
+        // every null result, so the login handler adds no second one.
         $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
         self::assertNotFalse($login);
         $request = strpos($login, 'if (!empty($rememberme)) {');
         $read    = strpos($login, '$rememberKey = XoopsUserUtility::rememberKey();');
-        $warn    = strpos($login, 'trigger_error(');
         $issue   = strpos($login, 'if (null !== $rememberKey) {');
         self::assertNotFalse($request);
         self::assertNotFalse($read);
-        self::assertNotFalse($warn);
         self::assertNotFalse($issue);
         self::assertLessThan($read, $request);
-        self::assertLessThan($warn, $read);
-        self::assertLessThan($issue, $warn);
-        self::assertStringContainsString('E_USER_WARNING', substr($login, $warn, 200));
+        self::assertLessThan($issue, $read);
+        self::assertStringNotContainsString('trigger_error(', substr($login, $request, $issue - $request));
     }
 
     #[Test]
@@ -192,7 +190,8 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertLessThan($seed, $read);
         self::assertStringNotContainsString("TokenReader::fromCookie('rememberme'", $src);
         // the reader runs only with a snapshot in hand
-        self::assertStringContainsString("if (null !== \$rememberKey) {\n        \$rememberSigningKey = \$rememberKey->getSigning();\n        \$rememberClaims", $src);
+        $flat = (string) preg_replace('/\s+/', ' ', $src);
+        self::assertStringContainsString('if (null !== $rememberKey) { $rememberSigningKey = $rememberKey->getSigning(); $rememberClaims', $flat);
     }
 
     #[Test]

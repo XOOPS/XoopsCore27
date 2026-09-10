@@ -75,17 +75,19 @@ if (false !== $user) {
     $xoopsPreload->triggerEvent('core.behavior.user.login', $user);
     // Set cookie for rememberme
     if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
-        if (!empty($rememberme)) {
-            // The fingerprint of the stored hash lets a later password change
-            // revoke this token; $user already carries a rehashed password when
-            // loginUser() rehashed it.
-            xoops_load('XoopsUserUtility');
+        // The fingerprint of the stored hash lets a later password change
+        // revoke this token; $user already carries a rehashed password when
+        // loginUser() rehashed it. One snapshot of the key serves both the
+        // fingerprint and the signature, and without a key nothing is issued.
+        xoops_load('XoopsUserUtility');
+        $rememberKey = XoopsUserUtility::rememberKey();
+        if (!empty($rememberme) && null !== $rememberKey) {
             $claims = [
                 'uid' => $_SESSION['xoopsUserId'],
-                'pfp' => XoopsUserUtility::rememberFingerprint($user, \Xmf\Jwt\KeyFactory::build('rememberme')->getSigning()),
+                'pfp' => XoopsUserUtility::rememberFingerprint($user, $rememberKey->getSigning()),
             ];
             $rememberTime = 60 * 60 * 24 * 30;
-            $token = \Xmf\Jwt\TokenFactory::build('rememberme', $claims, $rememberTime);
+            $token = \Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime);
             xoops_setcookie(
                 $GLOBALS['xoopsConfig']['usercookie'],
                 $token,

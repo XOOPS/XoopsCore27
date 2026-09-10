@@ -112,10 +112,39 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertLessThan($cookie, $active);
         self::assertLessThan($string, $cookie);
         self::assertLessThan($equal, $string);
-        self::assertStringContainsString('&& (!is_string($rememberClaims->pfp ?? null)', $condition);
+        self::assertStringContainsString("&& ('' === \$rememberSigningKey\n                || !is_string(\$rememberClaims->pfp ?? null)", $condition);
 
         // A signed token can still carry a malformed claim; it must fail the
         // comparison, never be coerced into a string.
         self::assertStringNotContainsString('(string) $rememberClaims->pfp', $condition);
+
+        // No readable signing key: fail closed rather than compare against a
+        // fingerprint keyed with ''.
+        $noKey = strpos($condition, "'' === \$rememberSigningKey");
+        self::assertNotFalse($noKey);
+        self::assertLessThan($noKey, $cookie);
+        self::assertLessThan($string, $noKey);
+    }
+
+    #[Test]
+    public function fingerprintAndSignatureShareOneSnapshotOfTheKey(): void
+    {
+        // Both issue sites take the key once via rememberKey() and hand that
+        // same object to the signer, so a re-read of storage between the two
+        // cannot produce a token whose fingerprint and signature disagree.
+        $renewal = substr($this->restore, (int) strpos($this->restore, '// update our remember me cookie'));
+        self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $renewal);
+        self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $this->sourceContent);
+        self::assertStringContainsString("\$rememberSigningKey = null === \$rememberKey ? '' : \$rememberKey->getSigning();", $this->sourceContent);
+
+        $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
+        self::assertNotFalse($login);
+        self::assertStringContainsString('$rememberKey = XoopsUserUtility::rememberKey();', $login);
+        self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $login);
+        self::assertStringContainsString("rememberFingerprint(\$user, \$rememberKey->getSigning())", $login);
+        // and nothing is issued without a key
+        self::assertStringContainsString('if (!empty($rememberme) && null !== $rememberKey) {', $login);
+        self::assertStringNotContainsString("TokenFactory::build('rememberme'", $login);
+        self::assertStringNotContainsString("TokenFactory::build('rememberme'", $renewal);
     }
 }

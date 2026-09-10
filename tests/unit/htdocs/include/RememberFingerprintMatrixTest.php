@@ -54,15 +54,19 @@ final class RememberFingerprintMatrixTest extends TestCase
             'null claim'                                   => [$active, (object) ['uid' => 5, 'pfp' => null], true],
             'array claim'                                  => [$active, (object) ['uid' => 5, 'pfp' => [self::FP]], true],
             'object claim'                                 => [$active, (object) ['uid' => 5, 'pfp' => (object) ['v' => self::FP]], true],
+            'boolean claim'                                => [$active, (object) ['uid' => 5, 'pfp' => true], true],
+            'integer claim'                                => [$active, (object) ['uid' => 5, 'pfp' => 1], true],
+            'float claim'                                  => [$active, (object) ['uid' => 5, 'pfp' => 1.0], true],
             'session-store restore ignores the fingerprint' => [$active, false, false],
             'inactive account'                             => [self::user(active: false), (object) ['uid' => 5, 'pfp' => self::FP], true],
             'missing account'                              => ['', (object) ['uid' => 5, 'pfp' => self::FP], true],
+            'no signing key readable'                      => [$active, (object) ['uid' => 5, 'pfp' => self::FP], true, ''],
         ];
     }
 
     #[Test]
     #[DataProvider('cases')]
-    public function restoreEndsTheSessionOnlyWhenItShould(mixed $xoopsUser, mixed $rememberClaims, bool $ends): void
+    public function restoreEndsTheSessionOnlyWhenItShould(mixed $xoopsUser, mixed $rememberClaims, bool $ends, string $rememberSigningKey = 'unit-test-signing-key'): void
     {
         $this->loadSourceFile('htdocs/include/common.php');
         $start = strpos($this->sourceContent, 'if (!is_object($xoopsUser) || !$xoopsUser->isActive()');
@@ -83,7 +87,6 @@ final class RememberFingerprintMatrixTest extends TestCase
                 . ' }');
         }
         $GLOBALS['rememberMatrixHelperCalls'] = 0;
-        $rememberSigningKey = 'unit-test-signing-key';
 
         $result = eval('namespace ' . $namespace . "; return " . $condition . ';');
 

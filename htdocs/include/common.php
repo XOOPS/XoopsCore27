@@ -343,10 +343,13 @@ if (empty($_SESSION['xoopsUserId'])
 // The remember-me token carries a fingerprint of the stored password hash
 // (XoopsUserUtility::rememberFingerprint), keyed with the token's signing key.
 // It is checked below on the cookie path and renewed from the loaded account.
+// One snapshot of the key serves both the check and the renewal's signature.
+$rememberKey = null;
 $rememberSigningKey = '';
 if (is_object($rememberClaims)) {
     xoops_load('XoopsUserUtility');
-    $rememberSigningKey = \Xmf\Jwt\KeyFactory::build('rememberme')->getSigning();
+    $rememberKey = XoopsUserUtility::rememberKey();
+    $rememberSigningKey = null === $rememberKey ? '' : $rememberKey->getSigning();
 }
 
 /**
@@ -359,10 +362,12 @@ if (!empty($_SESSION['xoopsUserId'])) {
     // cookie path the token must also carry the fingerprint of the current
     // password hash: a token issued before a password change, or before this
     // claim existed, is rejected. A signed token can still carry a malformed
-    // claim, so the value is type-checked rather than cast.
+    // claim, so the value is type-checked rather than cast, and with no
+    // readable signing key the cookie path fails closed.
     if (!is_object($xoopsUser) || !$xoopsUser->isActive()
         || (is_object($rememberClaims)
-            && (!is_string($rememberClaims->pfp ?? null)
+            && ('' === $rememberSigningKey
+                || !is_string($rememberClaims->pfp ?? null)
                 || !hash_equals(XoopsUserUtility::rememberFingerprint($xoopsUser, $rememberSigningKey), $rememberClaims->pfp)))
     ) {
         $xoopsUser = '';
@@ -409,7 +414,7 @@ if (!empty($_SESSION['xoopsUserId'])) {
                 'pfp' => XoopsUserUtility::rememberFingerprint($xoopsUser, $rememberSigningKey),
             ];
             $rememberTime = 60 * 60 * 24 * 30;
-            $token = \Xmf\Jwt\TokenFactory::build('rememberme', $claims, $rememberTime);
+            $token = \Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime);
             xoops_setcookie(
                 $GLOBALS['xoopsConfig']['usercookie'],
                 $token,

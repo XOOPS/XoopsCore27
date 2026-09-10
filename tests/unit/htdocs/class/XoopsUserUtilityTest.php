@@ -562,6 +562,45 @@ class XoopsUserUtilityTest extends TestCase
         );
     }
 
+    // rememberKey(): one snapshot of the signing bytes shared by the
+    // fingerprint and the token signature, so the two can never disagree.
+
+    private static function storedKey(?string $bytes): \Xmf\Key\Basic
+    {
+        $storage = new \Xmf\Key\ArrayStorage();
+        if (null !== $bytes) {
+            $storage->save('rememberme', $bytes);
+        }
+
+        return new \Xmf\Key\Basic($storage, 'rememberme');
+    }
+
+    public function testRememberKeySnapshotsTheSigningBytesOfTheStoredKey(): void
+    {
+        $snapshot = \XoopsUserUtility::rememberKey(self::storedKey('stored-signing-bytes'));
+
+        $this->assertInstanceOf(\Xmf\Key\KeyAbstract::class, $snapshot);
+        $this->assertSame('stored-signing-bytes', $snapshot->getSigning());
+    }
+
+    public function testRememberKeySnapshotIsNotAffectedByALaterChangeOfTheStoredKey(): void
+    {
+        $source   = self::storedKey('first');
+        $snapshot = \XoopsUserUtility::rememberKey($source);
+        $source->kill();
+        $source->create(); // storage now holds different random bytes
+
+        $this->assertSame('first', $snapshot->getSigning());
+    }
+
+    public function testRememberKeyIsNullWhenNoSigningBytesCanBeRead(): void
+    {
+        // A key that could not be created or read yields '' from getSigning();
+        // nothing may be fingerprinted or signed with that.
+        $this->assertNull(\XoopsUserUtility::rememberKey(self::storedKey(null)));
+        $this->assertNull(\XoopsUserUtility::rememberKey(self::storedKey('')));
+    }
+
     public function testRememberFingerprintOfAnUnsetHashIsStillSixtyFourHexCharacters(): void
     {
         // External-auth accounts may carry no local hash; the claim must still

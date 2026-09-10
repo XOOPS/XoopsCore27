@@ -89,6 +89,10 @@ final class CommentModuleOwnershipTest extends TestCase
         // The check runs where the module id is already the requesting
         // module's, and before the code that acts on the comment.
         self::assertNotFalse(strpos($this->sourceContent, $mustPrecede, $start), "$mustPrecede must follow the check");
+        // and it is not skipped for a zero or negative id: every operation acts
+        // on the id, and the handler returns a fresh object for 0, whose module
+        // id of 0 must be refused like any other mismatch.
+        self::assertStringNotContainsString('if ($com_id > 0) {', $this->sourceContent);
 
         $com_modid     = 3;
         $com_itemid    = 9;

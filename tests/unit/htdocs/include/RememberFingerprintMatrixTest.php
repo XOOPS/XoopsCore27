@@ -40,8 +40,15 @@ final class RememberFingerprintMatrixTest extends TestCase
 
     private const FP = 'current-fingerprint';
 
+    protected function tearDown(): void
+    {
+        unset($GLOBALS['rememberMatrixHelperCalls']);
+    }
+
     /**
-     * @return array<string, array{mixed, mixed, bool}>
+     * Rows: [user, claims, session ends, signing key (defaults to a readable one)].
+     *
+     * @return array<string, array{mixed, mixed, bool, 3?: string}>
      */
     public static function cases(): array
     {
@@ -73,8 +80,14 @@ final class RememberFingerprintMatrixTest extends TestCase
         self::assertNotFalse($start);
         $end = strpos($this->sourceContent, "{\n", $start);
         self::assertNotFalse($end);
-        // "if (<condition>) {" -> "<condition>"
+        // "if (<condition>) {" -> "<condition>". The slice ends at the first
+        // "{\n" after the start, which is the if's opening brace as long as the
+        // condition itself contains no brace; the balance check below catches a
+        // truncated or over-long slice before eval() can run it.
         $condition = trim(substr($this->sourceContent, $start + 3, $end - $start - 3));
+        self::assertSame(substr_count($condition, '('), substr_count($condition, ')'), 'condition slice is not balanced');
+        self::assertStringStartsWith('(', $condition);
+        self::assertStringEndsWith(')', $condition);
 
         $namespace = __NAMESPACE__ . '\\RestoreCondition';
         if (!class_exists($namespace . '\\XoopsUserUtility', false)) {

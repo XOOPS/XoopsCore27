@@ -605,9 +605,15 @@ class XoopsUserUtilityTest extends TestCase
     {
         // External-auth accounts may carry no local hash; the claim must still
         // be well formed so the restore comparison has something to compare.
+        // setVar() discards null, so the user is left at its initialised default
+        // and the precondition is asserted rather than assumed.
+        require_once XOOPS_ROOT_PATH . '/kernel/user.php';
+        $user = new \XoopsUser();
+        $this->assertNull($user->getVar('pass', 'n'));
+
         $this->assertMatchesRegularExpression(
             '/^[0-9a-f]{64}$/',
-            \XoopsUserUtility::rememberFingerprint(self::userWithHash(null), self::FIXTURE_KEY)
+            \XoopsUserUtility::rememberFingerprint($user, self::FIXTURE_KEY)
         );
     }
 }

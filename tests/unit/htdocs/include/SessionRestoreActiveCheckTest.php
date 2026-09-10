@@ -112,7 +112,8 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertLessThan($cookie, $active);
         self::assertLessThan($string, $cookie);
         self::assertLessThan($equal, $string);
-        self::assertStringContainsString("&& ('' === \$rememberSigningKey\n                || !is_string(\$rememberClaims->pfp ?? null)", $condition);
+        $flat = (string) preg_replace('/\s+/', ' ', $condition);
+        self::assertStringContainsString("&& ('' === \$rememberSigningKey || !is_string(\$rememberClaims->pfp ?? null)", $flat);
 
         // A signed token can still carry a malformed claim; it must fail the
         // comparison, never be coerced into a string.
@@ -143,8 +144,42 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertStringContainsString('\Xmf\Jwt\TokenFactory::build($rememberKey, $claims, $rememberTime)', $login);
         self::assertStringContainsString("rememberFingerprint(\$user, \$rememberKey->getSigning())", $login);
         // and nothing is issued without a key
-        self::assertStringContainsString('if (!empty($rememberme) && null !== $rememberKey) {', $login);
+        self::assertStringContainsString('if (null !== $rememberKey) {', $login);
         self::assertStringNotContainsString("TokenFactory::build('rememberme'", $login);
         self::assertStringNotContainsString("TokenFactory::build('rememberme'", $renewal);
+    }
+
+    #[Test]
+    public function loginReadsTheKeyOnlyWhenRememberMeWasRequestedAndReportsAMissingOne(): void
+    {
+        // Reading the key creates the key file as a side effect, so a login
+        // without "remember me" must not touch it; and a request that cannot be
+        // honoured leaves a warning rather than a silently cleared cookie.
+        $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
+        self::assertNotFalse($login);
+        $request = strpos($login, 'if (!empty($rememberme)) {');
+        $read    = strpos($login, '$rememberKey = XoopsUserUtility::rememberKey();');
+        $warn    = strpos($login, 'trigger_error(');
+        $issue   = strpos($login, 'if (null !== $rememberKey) {');
+        self::assertNotFalse($request);
+        self::assertNotFalse($read);
+        self::assertNotFalse($warn);
+        self::assertNotFalse($issue);
+        self::assertLessThan($read, $request);
+        self::assertLessThan($warn, $read);
+        self::assertLessThan($issue, $warn);
+        self::assertStringContainsString('E_USER_WARNING', substr($login, $warn, 200));
+    }
+
+    #[Test]
+    public function theKeyBytesDoNotOutliveTheRestoreBlock(): void
+    {
+        // The raw HMAC key and the key object are plain globals in common.php;
+        // once the renewal has used them nothing else may read them.
+        $blockEnd = strpos($this->sourceContent, '$xoopsUserIsAdmin = $xoopsUser->isAdmin();');
+        $unset    = strpos($this->sourceContent, 'unset($rememberKey, $rememberSigningKey);');
+        self::assertNotFalse($blockEnd);
+        self::assertNotFalse($unset);
+        self::assertLessThan($unset, $blockEnd);
     }
 }

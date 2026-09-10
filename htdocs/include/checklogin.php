@@ -79,9 +79,16 @@ if (false !== $user) {
         // revoke this token; $user already carries a rehashed password when
         // loginUser() rehashed it. One snapshot of the key serves both the
         // fingerprint and the signature, and without a key nothing is issued.
-        xoops_load('XoopsUserUtility');
-        $rememberKey = XoopsUserUtility::rememberKey();
-        if (!empty($rememberme) && null !== $rememberKey) {
+        // The key is read only on request: reading it creates the key file.
+        $rememberKey = null;
+        if (!empty($rememberme)) {
+            xoops_load('XoopsUserUtility');
+            $rememberKey = XoopsUserUtility::rememberKey();
+            if (null === $rememberKey) {
+                trigger_error('Remember-me cookie not issued: the signing key could not be read', E_USER_WARNING);
+            }
+        }
+        if (null !== $rememberKey) {
             $claims = [
                 'uid' => $_SESSION['xoopsUserId'],
                 'pfp' => XoopsUserUtility::rememberFingerprint($user, $rememberKey->getSigning()),

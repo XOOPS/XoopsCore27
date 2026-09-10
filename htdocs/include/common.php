@@ -428,6 +428,9 @@ if (!empty($_SESSION['xoopsUserId'])) {
         $xoopsUserIsAdmin = $xoopsUser->isAdmin();
     }
 }
+// The key bytes have no reader past the renewal above; keep them out of the
+// globals that templates, blocks and debug dumps can walk.
+unset($rememberKey, $rememberSigningKey);
 // Cookie is handled by session_set_cookie_params() in the session handler (PHP 8.2+)
 // user characteristics are established
 $xoopsPreload->triggerEvent('core.include.common.auth.success');

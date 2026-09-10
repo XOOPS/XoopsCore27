@@ -53,7 +53,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
     #[Test]
     public function inactiveAccountIsTreatedLikeAMissingOne(): void
     {
-        self::assertStringContainsString('if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {', $this->restore);
+        self::assertStringContainsString('if (!is_object($xoopsUser) || !$xoopsUser->isActive()', $this->restore);
 
         // The same branch must still clear the session and both cookie forms.
         $branch = substr($this->restore, strpos($this->restore, '!$xoopsUser->isActive()'));
@@ -73,5 +73,49 @@ final class SessionRestoreActiveCheckTest extends TestCase
     {
         self::assertStringNotContainsString("setGroups(\$_SESSION['xoopsUserGroups'])", $this->restore);
         self::assertStringContainsString("\$_SESSION['xoopsUserGroups'] = \$xoopsUser->getGroups();", $this->restore);
+    }
+
+    #[Test]
+    public function rememberTokenCarriesTheCredentialFingerprintAtBothIssueSites(): void
+    {
+        $claim = "'pfp' => XoopsUserUtility::rememberFingerprint(";
+
+        // Renewal on the cookie path recomputes the claim from the loaded account.
+        $renewal = strpos($this->restore, '// update our remember me cookie');
+        self::assertNotFalse($renewal);
+        $renewal = substr($this->restore, $renewal);
+        self::assertStringContainsString($claim . '$xoopsUser, ', $renewal);
+
+        // Initial issue at login uses the authenticated object, which already
+        // carries a rehashed password when loginUser() rehashed it.
+        $login = file_get_contents(dirname($this->filePath) . '/checklogin.php');
+        self::assertNotFalse($login);
+        self::assertStringContainsString($claim . '$user, ', $login);
+    }
+
+    #[Test]
+    public function aRememberTokenWithoutAMatchingFingerprintEndsTheSession(): void
+    {
+        $condition = substr($this->restore, (int) strpos($this->restore, 'if (!is_object($xoopsUser) || !$xoopsUser->isActive()'));
+        $condition = substr($condition, 0, (int) strpos($condition, "\$xoopsUser = '';"));
+
+        $active = strpos($condition, '!$xoopsUser->isActive()');
+        $cookie = strpos($condition, 'is_object($rememberClaims)');
+        $string = strpos($condition, 'is_string($rememberClaims->pfp ?? null)');
+        $equal  = strpos($condition, 'hash_equals(XoopsUserUtility::rememberFingerprint($xoopsUser, ');
+        self::assertNotFalse($cookie);
+        self::assertNotFalse($string);
+        self::assertNotFalse($equal);
+
+        // A missing or inactive account short-circuits before the helper runs,
+        // and the fingerprint terms apply only on the cookie path.
+        self::assertLessThan($cookie, $active);
+        self::assertLessThan($string, $cookie);
+        self::assertLessThan($equal, $string);
+        self::assertStringContainsString('&& (!is_string($rememberClaims->pfp ?? null)', $condition);
+
+        // A signed token can still carry a malformed claim; it must fail the
+        // comparison, never be coerced into a string.
+        self::assertStringNotContainsString('(string) $rememberClaims->pfp', $condition);
     }
 }

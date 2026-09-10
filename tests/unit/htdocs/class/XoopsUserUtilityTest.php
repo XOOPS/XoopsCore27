@@ -507,4 +507,68 @@ class XoopsUserUtilityTest extends TestCase
         // Xmf\IPAddress::fromRequest() uses '0.0.0.0' when REMOTE_ADDR is absent
         $this->assertSame('0.0.0.0', $result);
     }
+
+    // ------------------------------------------------------------------
+    // rememberFingerprint(): the claim a remember-me token carries so that a
+    // change to the stored password hash revokes every earlier token.
+    // ------------------------------------------------------------------
+
+    private const FIXTURE_HASH = '$2y$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345678';
+    private const FIXTURE_KEY  = 'unit-test-signing-key';
+
+    private static function userWithHash(?string $hash): \XoopsUser
+    {
+        require_once XOOPS_ROOT_PATH . '/kernel/user.php';
+        $user = new \XoopsUser();
+        $user->setVar('pass', $hash);
+
+        return $user;
+    }
+
+    public function testRememberFingerprintIsAKeyedDigestOfTheStoredHash(): void
+    {
+        // hash_hmac('sha256', 'xoops-remember-pfp:' . FIXTURE_HASH, FIXTURE_KEY)
+        $this->assertSame(
+            'd61603731b34683b6c7f41f8bb89e1c2de86e9b852bfd29fbe9c1c766c50e9e3',
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY)
+        );
+    }
+
+    public function testRememberFingerprintIsStableForTheSameHash(): void
+    {
+        $this->assertSame(
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY),
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY)
+        );
+    }
+
+    public function testRememberFingerprintChangesWhenTheSamePasswordIsRehashed(): void
+    {
+        $first  = password_hash('secret', PASSWORD_DEFAULT);
+        $second = password_hash('secret', PASSWORD_DEFAULT);
+        $this->assertNotSame($first, $second, 'password_hash() salts every call');
+
+        $this->assertNotSame(
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash($first), self::FIXTURE_KEY),
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash($second), self::FIXTURE_KEY)
+        );
+    }
+
+    public function testRememberFingerprintChangesWithTheSigningKey(): void
+    {
+        $this->assertNotSame(
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), self::FIXTURE_KEY),
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(self::FIXTURE_HASH), 'another-key')
+        );
+    }
+
+    public function testRememberFingerprintOfAnUnsetHashIsStillSixtyFourHexCharacters(): void
+    {
+        // External-auth accounts may carry no local hash; the claim must still
+        // be well formed so the restore comparison has something to compare.
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{64}$/',
+            \XoopsUserUtility::rememberFingerprint(self::userWithHash(null), self::FIXTURE_KEY)
+        );
+    }
 }

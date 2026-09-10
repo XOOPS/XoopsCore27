@@ -321,6 +321,25 @@ class XoopsUserUtility
      * @param  mixed $linked
      * @return string
      */
+    /**
+     * Fingerprint of the stored password hash, carried in the remember-me token.
+     *
+     * Any change to the persisted hash (a password change through any path, the
+     * rehash on login, a directory sync that writes a new hash) changes the value
+     * and so revokes every token issued before it. It is keyed with the token's
+     * own signing key because the token payload is readable by the client, and an
+     * unkeyed digest of a legacy unsalted hash would be an offline verifier.
+     *
+     * @param XoopsUser $user       the account the token is issued for
+     * @param string    $signingKey \Xmf\Jwt\KeyFactory::build('rememberme')->getSigning()
+     * @return string 64 lowercase hex characters
+     */
+    public static function rememberFingerprint(XoopsUser $user, string $signingKey): string
+    {
+        // 'n' returns the stored value as is; the default format HTML-escapes.
+        return hash_hmac('sha256', 'xoops-remember-pfp:' . (string) $user->getVar('pass', 'n'), $signingKey);
+    }
+
     public static function getUnameFromId($userid, $usereal = false, $linked = false)
     {
         $myts     = \MyTextSanitizer::getInstance();

@@ -76,8 +76,13 @@ if (false !== $user) {
     // Set cookie for rememberme
     if (!empty($GLOBALS['xoopsConfig']['usercookie'])) {
         if (!empty($rememberme)) {
+            // The fingerprint of the stored hash lets a later password change
+            // revoke this token; $user already carries a rehashed password when
+            // loginUser() rehashed it.
+            xoops_load('XoopsUserUtility');
             $claims = [
                 'uid' => $_SESSION['xoopsUserId'],
+                'pfp' => XoopsUserUtility::rememberFingerprint($user, \Xmf\Jwt\KeyFactory::build('rememberme')->getSigning()),
             ];
             $rememberTime = 60 * 60 * 24 * 30;
             $token = \Xmf\Jwt\TokenFactory::build('rememberme', $claims, $rememberTime);

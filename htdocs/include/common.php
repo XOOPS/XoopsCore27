@@ -340,6 +340,14 @@ if (empty($_SESSION['xoopsUserId'])
         xoops_setcookie($GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600);
     }
 }
+// The remember-me token carries a fingerprint of the stored password hash
+// (XoopsUserUtility::rememberFingerprint), keyed with the token's signing key.
+// It is checked below on the cookie path and renewed from the loaded account.
+$rememberSigningKey = '';
+if (is_object($rememberClaims)) {
+    xoops_load('XoopsUserUtility');
+    $rememberSigningKey = \Xmf\Jwt\KeyFactory::build('rememberme')->getSigning();
+}
 
 /**
  * Log user in and deal with Sessions and Cookies
@@ -347,8 +355,16 @@ if (empty($_SESSION['xoopsUserId'])
 if (!empty($_SESSION['xoopsUserId'])) {
     $xoopsUser = $member_handler->getUser($_SESSION['xoopsUserId']);
     // A missing or deactivated account ends the session here, whether it was
-    // restored from the session store or from the remember-me cookie.
-    if (!is_object($xoopsUser) || !$xoopsUser->isActive()) {
+    // restored from the session store or from the remember-me cookie. On the
+    // cookie path the token must also carry the fingerprint of the current
+    // password hash: a token issued before a password change, or before this
+    // claim existed, is rejected. A signed token can still carry a malformed
+    // claim, so the value is type-checked rather than cast.
+    if (!is_object($xoopsUser) || !$xoopsUser->isActive()
+        || (is_object($rememberClaims)
+            && (!is_string($rememberClaims->pfp ?? null)
+                || !hash_equals(XoopsUserUtility::rememberFingerprint($xoopsUser, $rememberSigningKey), $rememberClaims->pfp)))
+    ) {
         $xoopsUser = '';
         $_SESSION  = [];
         session_destroy();
@@ -386,9 +402,11 @@ if (!empty($_SESSION['xoopsUserId'])) {
             ) {
                 $_SESSION['xoopsUserTheme'] = $user_theme;
             }
-            // update our remember me cookie
+            // update our remember me cookie, recomputing the fingerprint from
+            // the loaded account rather than copying the old claim
             $claims = [
                 'uid' => $_SESSION['xoopsUserId'],
+                'pfp' => XoopsUserUtility::rememberFingerprint($xoopsUser, $rememberSigningKey),
             ];
             $rememberTime = 60 * 60 * 24 * 30;
             $token = \Xmf\Jwt\TokenFactory::build('rememberme', $claims, $rememberTime);

@@ -21,6 +21,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 require_once __DIR__ . '/user.php';
 require_once __DIR__ . '/group.php';
 require_once __DIR__ . '/../class/XoopsTokenHandler.php';
+require_once __DIR__ . '/user2fa.php';
 
 /**
  * XOOPS member handler class.
@@ -65,6 +66,11 @@ class XoopsMemberHandler
     protected ?XoopsTokenHandler $tokenHandler = null;
 
     /**
+     * @var XoopsUser2faHandler|null
+     */
+    protected ?XoopsUser2faHandler $user2faHandler = null;
+
+    /**
      * @var array<int,XoopsUser> Temporary user objects cache
      */
     protected $membersWorkingList = [];
@@ -94,6 +100,7 @@ class XoopsMemberHandler
         $this->userHandler = new XoopsUserHandler($db);
         $this->membershipHandler = new XoopsMembershipHandler($db);
         $this->tokenHandler = self::tokenHandlerFor($db);
+        $this->user2faHandler = self::user2faHandlerFor($db);
     }
 
     /**
@@ -108,6 +115,20 @@ class XoopsMemberHandler
     protected static function tokenHandlerFor(XoopsDatabase $db): ?XoopsTokenHandler
     {
         return $db instanceof XoopsMySQLDatabase ? new XoopsTokenHandler($db) : null;
+    }
+
+    /**
+     * The second-factor handler for a connection.
+     *
+     * Same rule as the tokens: without the concrete MySQL connection there
+     * is no factor row to delete.
+     *
+     * @param XoopsDatabase $db Database connection object
+     * @return XoopsUser2faHandler|null
+     */
+    protected static function user2faHandlerFor(XoopsDatabase $db): ?XoopsUser2faHandler
+    {
+        return $db instanceof XoopsMySQLDatabase ? new XoopsUser2faHandler($db) : null;
     }
 
     /**
@@ -182,13 +203,22 @@ class XoopsMemberHandler
             return false;
         }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
-        if (!$this->membershipHandler->deleteAll($criteria)) {
-            // Same rule: a step that did not run keeps the account, so a
-            // false return always means the row is still there.
+        if (!$this->membershipHandler->deleteAll($criteria) || !$this->userHandler->delete($user)) {
             return false;
         }
+        // Users and memberships can be MyISAM. Keep the factor until the
+        // account is gone: deleting it first would disable 2FA on a failed
+        // account deletion, and a transaction cannot restore a MyISAM user.
+        try {
+            if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
+                throw new \RuntimeException('Second-factor cleanup failed');
+            }
+        } catch (\Throwable $e) {
+            // The account is already gone; an orphaned factor grants no login.
+            trigger_error(sprintf('User %d deleted; second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
+        }
 
-        return (bool) $this->userHandler->delete($user);
+        return true;
     }
 
     /**
@@ -429,7 +459,12 @@ class XoopsMemberHandler
             } else {
                 $newHash = password_hash($pwd, PASSWORD_DEFAULT);
                 $user->setVar('pass', $newHash);
-                $this->userHandler->insert($user);
+                if (!$this->userHandler->insert($user)) {
+                    // The row still holds the verified hash; keep the object in step with it so
+                    // a digest taken from the object (the two-factor challenge) matches the row.
+                    $user->setVar('pass', $hash);
+                    $this->logSecurityEvent('Password rehash not persisted', ['uid' => (int) $user->getVar('uid')]);
+                }
             }
         }
 

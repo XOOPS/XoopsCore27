@@ -6,11 +6,14 @@ use Xmf\Request;
 // path to your xoops main directory
 $path = '/path/to/xoops/directory';
 
+// Keep headers writable until authentication has rotated the session cookie.
+ob_start();
 include $path . '/mainfile.php';
 if (!defined('XOOPS_ROOT_PATH')) {
     exit();
 }
 include_once XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/user.php';
+xoops_loadLanguage('user2fa');
 $op = Request::getString('op', 'login', 'POST') === 'dologin' ? 'dologin' : 'login';
 
 $username = trim(Request::getString('username', '', 'POST'));
@@ -62,6 +65,36 @@ if ($op === 'dologin') {
                 exit();
             }
         }
+        // This popup has no challenge page: an account whose factor must be
+        // presented signs in through the site's own login form instead. A
+        // copy of an older version of this file on the host stays a bypass
+        // there; the release notes say so.
+        /** @var XoopsUser2faHandler $factorHandler */
+        $factorHandler = xoops_getHandler('user2fa');
+        try {
+            $factorRow   = $factorHandler->getRow((int) $user->getVar('uid'));
+            $factorState = $factorHandler->stateOfRow($factorRow);
+        } catch (\Throwable $e) {
+            $factorRow   = false;
+            $factorState = XoopsUser2faHandler::STATE_UNAVAILABLE;
+        }
+        if (XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy($xoopsConfig), $factorState)) {
+            // The SSL bridge can use a different host; never invent an HTTPS core URL.
+            if ('https' !== strtolower((string) parse_url(XOOPS_URL, PHP_URL_SCHEME))) {
+                xoops_error(htmlspecialchars(_US_2FA_HTTP_LOGIN, ENT_QUOTES, 'UTF-8'));
+                echo '<p><a href="' . htmlspecialchars(XOOPS_URL . '/user.php', ENT_QUOTES, 'UTF-8') . '">'
+                    . htmlspecialchars(_US_2FA_REQUIRED, ENT_QUOTES, 'UTF-8') . '</a></p>';
+                exit();
+            }
+            redirect_header(XOOPS_URL . '/user.php', 3, _US_2FA_REQUIRED, false);
+            exit();
+        }
+        if (!$GLOBALS['sess_handler']->regenerate_id(true)) {
+            // A failed rotation must not keep an earlier session's identity alive.
+            $_SESSION = [];
+            xoops_error(_US_2FA_STARTAGAIN);
+            exit();
+        }
         $user->setVar('last_login', time());
         if (!$member_handler->insertUser($user)) {
             // Handle error
@@ -69,6 +102,11 @@ if ($op === 'dologin') {
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();
+        // The stamp include/common.php checks on every request: without it an
+        // enrolled account signed in while the policy is off loses this
+        // session on its next request.
+        $_SESSION['xoops2faGeneration'] = is_array($factorRow) ? (string) $factorRow['generation'] : '';
+        $_SESSION['xoops2faVerified']   = false;
         if (!empty($xoopsConfig['use_ssl'])) {
             xoops_confirm([$xoopsConfig['sslpost_name'] => session_id()], XOOPS_URL . '/misc.php?action=showpopups&amp;type=ssllogin', _US_PRESSLOGIN, _LOGIN);
         } else {

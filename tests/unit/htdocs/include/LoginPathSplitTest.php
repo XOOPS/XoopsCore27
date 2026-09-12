@@ -38,16 +38,17 @@ final class LoginPathSplitTest extends TestCase
     use SourceFileTestTrait;
 
     #[Test]
-    public function theHelpersFileDeclaresOnlyTheTwoFunctions(): void
+    public function theHelpersFileDeclaresOnlyLoginFunctions(): void
     {
         $this->loadSourceFile('htdocs/include/loginsession.php');
         self::assertStringContainsString('function xoops_login_authenticate(string $uname, string $pass)', $this->sourceContent);
-        self::assertStringContainsString('function xoops_login_establish_session(XoopsUser $user, bool $remember, string $redirect): never', $this->sourceContent);
+        self::assertStringContainsString('function xoops_login_begin_challenge(XoopsUser $user, string $state, string $generation, bool $remember, string $redirect): never', $this->sourceContent);
+        self::assertStringContainsString('function xoops_login_establish_session(XoopsUser $user, bool $remember, string $redirect, ?string $verifiedGeneration = null): never', $this->sourceContent);
         // Side-effect free: no top-level statements that run on include. Each
         // declaration is removed with the brace walk below; what remains must
         // be the open tag, comments and the access guard only.
         $topLevel = $this->sourceContent;
-        foreach (['xoops_login_authenticate', 'xoops_login_establish_session'] as $name) {
+        foreach (['xoops_login_authenticate', 'xoops_login_begin_challenge', 'xoops_login_establish_session', 'xoops_login_set_session'] as $name) {
             $start = strpos($topLevel, 'function ' . $name . '(');
             self::assertNotFalse($start);
             $body = $this->functionBody($name);
@@ -79,10 +80,9 @@ final class LoginPathSplitTest extends TestCase
         $this->loadSourceFile('htdocs/include/loginsession.php');
         $body  = $this->functionBody('xoops_login_establish_session');
         $order = [
+            'xoops_login_set_session($user, $factorGeneration, null !== $verifiedGeneration)',
             "\$user->setVar('last_login', time());",
             '->insertUser($user)',
-            'regenerate_id(true)',
-            "\$_SESSION['xoopsUserId']     = \$user->getVar('uid');",
             "triggerEvent('core.behavior.user.login', \$user)",
             'XoopsUserUtility::rememberKey()',
             "'pfp' => XoopsUserUtility::rememberFingerprint(\$user, \$rememberKey->getSigning())",
@@ -97,8 +97,11 @@ final class LoginPathSplitTest extends TestCase
             $last = $pos;
         }
         // remember-me is issued only on request; the parameter replaces the POST read
-        self::assertStringContainsString('if ($remember) {', $body);
+        self::assertStringContainsString('if ($remember && !$factorEnrolled) {', $body);
         self::assertStringNotContainsString("getString('rememberme'", $body);
+        $session = $this->functionBody('xoops_login_set_session');
+        self::assertStringContainsString('regenerate_id(true)', $session);
+        self::assertStringContainsString("\$_SESSION['xoopsUserId'] = \$user->getVar('uid');", $session);
     }
 
     #[Test]

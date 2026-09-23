@@ -130,6 +130,16 @@ class XoopsEditorHandler
      */
     public function get($name = '', $options = null, $noHtml = false, $OnFailure = '')
     {
+        require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
+        if (is_string($options['value'] ?? null) && XoopsMarkdown::source($options['value']) !== null) {
+            // Stored format outranks a remembered editor. An HTML editor would
+            // flatten Markdown newlines before the user can even switch back.
+            if (isset($this->getList($noHtml)['easymde']) && $editor = $this->_loadEditor('easymde', $options)) {
+                return $editor;
+            }
+            // Never fall through to a WYSIWYG editor when EasyMDE is unavailable.
+            return new XoopsFormTextArea($options['caption'] ?? '', $options['name'] ?? '', $options['value'], $options['rows'] ?? 5, $options['cols'] ?? 50);
+        }
         if (array_key_exists($name, $this->getList($noHtml)) && $editor = $this->_loadEditor($name, $options)) {
             return $editor;
         }

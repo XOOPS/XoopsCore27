@@ -10,9 +10,9 @@
  * htdocs/class/textsanitizer/{image,youtube,ul,li,wiki,iframe,mp3,soundcloud,
  * mms,rtsp,wmp}/*.php).
  *
- * IMPORTANT — this plugin only ever runs SCEditor in permanent BBCode SOURCE
- * mode (see ../sceditor.php render()). That is deliberate and is the actual
- * mechanism that keeps unrecognised BBCode intact:
+ * SCEditor starts visually and exposes its built-in source switch (see
+ * ../sceditor.php render()). The format definitions below cover the XOOPS
+ * tags rendered by the server; source mode remains available for other tags:
  *
  *   SCEditor only rewrites text when it converts between its BBCode source and
  *   its WYSIWYG HTML representation (using the `format`/`html`/`tags`
@@ -85,9 +85,23 @@
      * match passes through, anything else falls back to 'medium'. Best-effort only —
      * see file header, this path is not exercised while the editor stays in source mode.
      */
-    function toXoopsSize(cssSize) {
-        var i = XOOPS_SIZES.indexOf(String(cssSize).toLowerCase());
-        return i !== -1 ? XOOPS_SIZES[i] : 'medium';
+    function toXoopsSize(cssSize, htmlSize) {
+        var numeric = parseInt(htmlSize, 10);
+        if (numeric >= 1 && numeric <= 7) {
+            return XOOPS_SIZES[numeric - 1];
+        }
+        var value = String(cssSize).toLowerCase().trim();
+        var i = XOOPS_SIZES.indexOf(value);
+        if (i !== -1) {
+            return XOOPS_SIZES[i];
+        }
+        var percent = parseFloat(value);
+        if (value.indexOf('%') !== -1 && isFinite(percent)) {
+            return percent <= 50 ? 'xx-small' : percent <= 75 ? 'x-small'
+                : percent <= 90 ? 'small' : percent <= 110 ? 'medium'
+                : percent <= 140 ? 'large' : percent <= 175 ? 'x-large' : 'xx-large';
+        }
+        return 'medium';
     }
 
     /**
@@ -289,7 +303,8 @@
         quoteType: QuoteType.always,
         format: function (element, content) {
             var size = element.style ? element.style.fontSize : '';
-            return '[size=' + toXoopsSize(size) + ']' + content + '[/size]';
+            var htmlSize = element.getAttribute ? element.getAttribute('size') : '';
+            return '[size=' + toXoopsSize(size, htmlSize) + ']' + content + '[/size]';
         },
         html: function (token, attrs, content) {
             var size = (attrs && attrs.defaultattr) || 'medium';
@@ -561,13 +576,17 @@
      * are understood if already present in content, but not offered by
      * default. sceditor.php reads this global when creating the instance.
      */
+    // Keep SCEditor's complete command set, including its visual/source switch.
+    // XOOPS overrides above supply the server-compatible output for commands whose
+    // stock BBCode differs; stock commands remain available for the standard tags.
     window.xoopsBBCodeToolbar =
-        'bold,italic,underline,strike|' +
-        'left,center,right|' +
-        'font,size,color|' +
-        'link,siteurl,email|' +
-        'image,youtube|' +
-        'bulletlist|' +
-        'quote,code|' +
-        'wikipage';
+        'bold,italic,underline,strike,subscript,superscript|' +
+        'left,center,right,justify|' +
+        'font,size,color,removeformat|' +
+        'cut,copy,paste|' +
+        'bulletlist,orderedlist,table|' +
+        'link,siteurl,email,image,youtube|' +
+        'quote,code,wikipage|' +
+        'horizontalrule,emoticon|' +
+        'print,maximize,source';
 }());

@@ -593,6 +593,22 @@ class MyTextSanitizer
     public function &displayTarea($text, $html = 0, $smiley = 1, $xcode = 1, $image = 1, $br = 1)
     {
         $text = (string) $text;
+        // Visual BBCode editors may serialize quoted attributes as entities
+        // (for example [size=&quot;x-large&quot;]). Decode entities only inside
+        // BBCode tags; body text must retain its literal entity content.
+        $text = preg_replace_callback('/\[([^\]\r\n]*)\]/', static function (array $match): string {
+            return '[' . html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8') . ']';
+        }, $text) ?? $text;
+        $markdown = [];
+        if (str_contains($text, '[xoops:markdown=')) {
+            require_once __DIR__ . '/xoopsmarkdown.php';
+            $source = XoopsMarkdown::source($text);
+            if ($source !== null) {
+                $text = XoopsMarkdown::render($source, (bool) $image);
+                return $text;
+            }
+            $markdown = XoopsMarkdown::protect($text, (bool) $image);
+        }
         $charset = (defined('_CHARSET') ? _CHARSET : 'UTF-8');
         if (function_exists('mb_convert_encoding')) {
             $text = mb_convert_encoding($text, $charset, mb_detect_encoding($text, mb_detect_order(), true));
@@ -607,6 +623,15 @@ class MyTextSanitizer
         if ($html != 1) {
             // html not allowed
             $text = $this->htmlSpecialChars($text, ENT_COMPAT, $charset);
+        }
+        if ($xcode != 0) {
+            // htmlSpecialChars() encoded the tag again; unwrap only tag syntax
+            // so the BBCode decoder can recognize quoted attributes.
+            $text = preg_replace_callback('/\[([^\]\r\n]*)\]/', static function (array $match): string {
+                $value = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                return '[' . $value . ']';
+            }, $text) ?? $text;
         }
         $text = $this->codePreConv($text, $xcode); // Ryuji_edit(2003-11-18)
         if ($smiley != 0) {
@@ -626,11 +651,22 @@ class MyTextSanitizer
         if ($br != 0) {
             $text = $this->nl2Br($text);
         }
+        // Newlines used to format XOOPS [ul]/[li] source are not content
+        // between list items. Do not turn them into visible empty rows.
+        $text = preg_replace([
+            '/(<(?:ul|ol)>)\s*<br\s*\/?>(?=<li>)/i',
+            '/<br\s*\/?>(?=\s*<\/\s*(?:ul|ol)>)/i',
+            '/<\/li>\s*<br\s*\/?>\s*(?=<li>)/i',
+        ], ['$1', '', '</li>'], $text);
         $text = $this->codeConv($text, $xcode);
         $text = $this->trimBlockBreaks($text);
         $text = $this->makeClickable($text);
         if (!empty($this->config['filterxss_on_display'])) {
             $text = $this->filterXss($text);
+        }
+
+        if ($markdown !== []) {
+            $text = strtr($text, $markdown);
         }
 
         return $text;
@@ -649,6 +685,9 @@ class MyTextSanitizer
      */
     public function &previewTarea($text, $html = 0, $smiley = 1, $xcode = 1, $image = 1, $br = 1)
     {
+        if (class_exists('XoopsMarkdown', false)) {
+            $text = XoopsMarkdown::previewSource((string) $text);
+        }
         $text = & $this->displayTarea($text, $html, $smiley, $xcode, $image, $br);
 
         return $text;

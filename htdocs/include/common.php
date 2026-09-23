@@ -20,8 +20,8 @@ global $xoops, $xoopsPreload, $xoopsLogger, $xoopsErrorHandler, $xoopsSecurity, 
 /**
  * YOU SHOULD NEVER USE THE FOLLOWING TO CONSTANTS, THEY WILL BE REMOVED
  */
-defined('DS') or define('DS', DIRECTORY_SEPARATOR);
-defined('NWLINE') or define('NWLINE', "\n");
+defined('DS') || define('DS', DIRECTORY_SEPARATOR);
+defined('NWLINE') || define('NWLINE', "\n");
 
 /**
  * Include files with definitions
@@ -143,6 +143,17 @@ include_once $xoops->path('class/criteria.php');
 include_once $xoops->path('class/module.textsanitizer.php');
 require_once $xoops->path('include/xoopssetcookie.php');
 include_once $xoops->path('include/functions.php');
+
+// Preserve editor format in existing module columns before save/preview handlers
+// read input. This does not authorize a save or enable raw HTML.
+if (\Xmf\Request::hasVar('_xoops_markdown', 'POST')) {
+    require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
+    $markdownPost = \Xmf\Request::get('POST', \Xmf\Request::MASK_ALLOW_RAW);
+    $markdownRequest = \Xmf\Request::get('REQUEST', \Xmf\Request::MASK_ALLOW_RAW);
+    XoopsMarkdown::preparePost($markdownPost, $markdownRequest);
+    \Xmf\Request::set($markdownPost, 'POST');
+    \Xmf\Request::set($markdownRequest, 'REQUEST');
+}
 
 /* new installs should create this in mainfile */
 if (!defined('XOOPS_COOKIE_DOMAIN')) {

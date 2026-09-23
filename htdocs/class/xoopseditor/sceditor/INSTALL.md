@@ -44,10 +44,14 @@ selection list:
 - `minified/themes/default.min.css` — toolbar/chrome stylesheet
 - `minified/themes/content/default.min.css` — editing-area stylesheet
 
-The editor always starts and stays in BBCode source mode
-(`startInSourceMode`) — this plugin never switches SCEditor into its WYSIWYG
-mode, which is what keeps XOOPS-specific and unrecognised BBCode (including
-arbitrary smilie text codes) from being rewritten or dropped.
+The editor starts in SCEditor's visual mode and includes the complete colored
+toolbar, including the visual/source switch. The XOOPS dialect registers the
+server-supported tags and the source button remains available for tags that do
+not have a visual representation.
+
+NewBB's normal Preview remains available and uses the same XOOPS sanitizer as
+the normal post view, including the selected smiley, XOOPS-code, image and
+line-break options.
 
 The rest of `minified/` (`plugins/`, `icons/`, the xhtml format, the jQuery
 builds, the extra themes) is not loaded by the integration. It ships anyway,

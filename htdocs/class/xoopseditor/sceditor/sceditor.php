@@ -9,12 +9,10 @@
  * so a deployment that strips the library out leaves this editor inert (it
  * simply does not appear in the editor list) rather than broken.
  *
- * This plugin only ever runs SCEditor in BBCode source mode, never WYSIWYG:
- * in WYSIWYG mode any tag SCEditor's format table does not recognise is
- * silently stripped when content round-trips through HTML. Source mode never
- * performs that round-trip, so existing posts using XOOPS-specific or
- * unrecognised BBCode (including arbitrary smilie text codes) cannot be
- * corrupted.
+ * SCEditor runs in its normal visual mode and exposes its source-mode switch.
+ * The XOOPS BBCode dialect in js/xoops-bbcode.js covers the tags supported by
+ * the server renderer; users can still use source mode for tags not represented
+ * by the visual format table.
  *
  * You may not change or alter any portion of this comment or credits
  * of supporting developers from this source code or any supporting source code
@@ -181,11 +179,16 @@ class FormSCEditor extends XoopsEditor
         $width   = htmlspecialchars($this->width, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $htmlName     = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        // XOOPS form builders commonly pass the edit value through one
+        // htmlspecialchars() layer before constructing the editor. Remove that
+        // presentation layer once; the textarea escaping below adds exactly one
+        // layer back, preventing BBCode such as [size="xx-large"] from becoming
+        // literal &quot; text during a visual/source round-trip.
+        $value = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $escapedValue = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $jsId         = json_encode($name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
 
         $editorPath = XOOPS_URL . $this->rootPath;
-
         $html = '';
 
         // Include CSS/JS assets only once per page
@@ -210,12 +213,8 @@ class FormSCEditor extends XoopsEditor
                . $escapedValue
                . '</textarea>' . "\n";
 
-        // Initialize SCEditor: BBCode format, permanently in source mode.
-        // startInSourceMode matters for correctness, not just preference: creating the
-        // instance in the default WYSIWYG mode would parse the existing BBCode into HTML
-        // and re-serialise it on the way back to source — exactly the round-trip that can
-        // rewrite or drop XOOPS-specific tags. Starting in source mode means the content
-        // never enters that conversion path.
+        // Initialize SCEditor in its normal visual mode. The toolbar includes the
+        // built-in source command, so users can inspect/edit the exact BBCode at any time.
         // Defensive: a missing or failed library must leave a plain, fully
         // usable textarea rather than a dead control.
         $html .= '<script>' . "\n";
@@ -225,7 +224,7 @@ class FormSCEditor extends XoopsEditor
         $html .= '  if (!el) { return; }' . "\n";
         $html .= '  sceditor.create(el, {' . "\n";
         $html .= '    format: "bbcode",' . "\n";
-        $html .= '    startInSourceMode: true,' . "\n";
+        $html .= '    startInSourceMode: false,' . "\n";
         // autoUpdate keeps the original textarea's value continuously in sync. SCEditor
         // does sync on form submit by itself, but XOOPS validation runs from the form's
         // inline onsubmit attribute, which can fire before SCEditor's own submit listener
@@ -239,24 +238,6 @@ class FormSCEditor extends XoopsEditor
         $html .= '    width: ' . json_encode($this->width, JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    height: ' . json_encode($this->height, JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
         $html .= '  });' . "\n";
-        // Belt and braces for the source-mode-only promise: the toolbar exposes no source
-        // toggle, but any stray script calling sourceMode(false) OR toggleSourceMode() (the
-        // method SCEditor's own source command uses) would trigger the exact BBCode->HTML
-        // conversion this integration exists to prevent. Keep the getter and sourceMode(true)
-        // working; swallow only the switch to WYSIWYG.
-        $html .= '  var instance = sceditor.instance(el);' . "\n";
-        $html .= '  if (instance && typeof instance.sourceMode === "function") {' . "\n";
-        $html .= '    var xoopsOrigSourceMode = instance.sourceMode.bind(instance);' . "\n";
-        $html .= '    instance.sourceMode = function (enable) {' . "\n";
-        $html .= '      if (false === enable) { return; }' . "\n";
-        $html .= '      return xoopsOrigSourceMode.apply(null, arguments);' . "\n";
-        $html .= '    };' . "\n";
-        $html .= '    if (typeof instance.toggleSourceMode === "function") {' . "\n";
-        $html .= '      instance.toggleSourceMode = function () {' . "\n";
-        $html .= '        if (!xoopsOrigSourceMode()) { xoopsOrigSourceMode(true); }' . "\n";
-        $html .= '      };' . "\n";
-        $html .= '    }' . "\n";
-        $html .= '  }' . "\n";
         $html .= '});' . "\n";
         $html .= '</script>' . "\n";
 

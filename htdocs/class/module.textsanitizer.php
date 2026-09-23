@@ -407,6 +407,8 @@ class MyTextSanitizer
         $replacements[] = '<a href="\\2" rel="external" title="">\\3</a>';
         $patterns[]     = "/\[url=(['\"]?)([^'\"<>]*)\\1](.*)\[\/url\]/sU";
         $replacements[] = '<a href="http://\\2" rel="noopener external" title="">\\3</a>';
+        $patterns[]     = "/\[color=(['\"]?)(rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))\\1?](.*)\[\/color\]/sU";
+        $replacements[] = '<span style="color: \\2;">\\3</span>';
         $patterns[]     = "/\[color=(['\"]?)([a-zA-Z0-9#]+)\\1?](.*)\[\/color\]/sU";
         $replacements[] = '<span style="color: #\\2;">\\3</span>';
         $patterns[]     = "/\[size=(['\"]?)([a-zA-Z0-9-]+)\\1?](.*)\[\/size\]/sU";

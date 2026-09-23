@@ -259,7 +259,7 @@ class FormSCEditor extends XoopsEditor
             return $config;
         }
         try {
-            $smileys = MyTextSanitizer::getInstance()->getSmileys(false);
+            $smileys = MyTextSanitizer::getInstance()->getSmileys(true);
         } catch (Throwable $e) {
             return $config;
         }
@@ -269,7 +269,8 @@ class FormSCEditor extends XoopsEditor
             if ($code === '' || $file === '') {
                 continue;
             }
-            $config['dropdown'][$code] = XOOPS_UPLOAD_URL . '/' . $file;
+            $bucket = !empty($smiley['display']) ? 'dropdown' : 'more';
+            $config[$bucket][$code] = XOOPS_UPLOAD_URL . '/' . $file;
         }
         return $config;
     }

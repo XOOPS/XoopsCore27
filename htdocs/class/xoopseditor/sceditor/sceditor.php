@@ -187,6 +187,7 @@ class FormSCEditor extends XoopsEditor
         $value = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $escapedValue = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $jsId         = json_encode($name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
+        $emoticons    = $this->emoticonsConfig();
 
         $editorPath = XOOPS_URL . $this->rootPath;
         $html = '';
@@ -233,7 +234,8 @@ class FormSCEditor extends XoopsEditor
         // Content stylesheet for the editing area, per the upstream usage docs.
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    toolbar: (typeof xoopsBBCodeToolbar !== "undefined") ? xoopsBBCodeToolbar : "bold,italic,underline,strike",' . "\n";
-        $html .= '    emoticonsEnabled: false,' . "\n";
+        $html .= '    emoticonsEnabled: ' . (!empty($emoticons['dropdown']) ? 'true' : 'false') . ",\n";
+        $html .= '    emoticons: ' . json_encode($emoticons, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ",\n";
         $html .= '    resizeEnabled: true,' . "\n";
         $html .= '    width: ' . json_encode($this->width, JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    height: ' . json_encode($this->height, JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
@@ -244,6 +246,33 @@ class FormSCEditor extends XoopsEditor
         return $html;
     }
 
+    /**
+     * Build the SCEditor emoticon map from the site's configured XOOPS smileys.
+     * SCEditor otherwise falls back to its demo paths, which are not shipped by XOOPS.
+     *
+     * @return array{dropdown: array<string, string>, more: array<string, string>, hidden: array<string, string>}
+     */
+    protected function emoticonsConfig(): array
+    {
+        $config = ['dropdown' => [], 'more' => [], 'hidden' => []];
+        if (!class_exists('MyTextSanitizer') || !defined('XOOPS_UPLOAD_URL')) {
+            return $config;
+        }
+        try {
+            $smileys = MyTextSanitizer::getInstance()->getSmileys(false);
+        } catch (Throwable $e) {
+            return $config;
+        }
+        foreach ($smileys as $smiley) {
+            $code = trim((string) ($smiley['code'] ?? ''));
+            $file = ltrim((string) ($smiley['smile_url'] ?? ''), '/');
+            if ($code === '' || $file === '') {
+                continue;
+            }
+            $config['dropdown'][$code] = XOOPS_UPLOAD_URL . '/' . $file;
+        }
+        return $config;
+    }
     /**
      * Localized command labels/prompts for js/xoops-bbcode.js, keyed by the names that file
      * looks up. Constants are guarded because a direct instantiation may not have loaded the

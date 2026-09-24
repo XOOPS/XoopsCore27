@@ -57,6 +57,9 @@ final class Upgrade274Test extends TestCase
     private bool $lockReleased = true;
     private array $queries = [];
 
+    /** When set, answers fetchRow() for ordinary queries from the last SQL instead of $rows. */
+    private ?\Closure $answer = null;
+
     protected function setUp(): void
     {
         if (!class_exists(\mysqli_result::class)) {
@@ -100,6 +103,9 @@ final class Upgrade274Test extends TestCase
             }
             if (str_contains((string) end($this->queries), 'RELEASE_LOCK(')) {
                 return [$this->lockReleased ? 1 : 0];
+            }
+            if (null !== $this->answer) {
+                return ($this->answer)((string) end($this->queries));
             }
             $row = array_shift($this->rows);
 
@@ -310,5 +316,108 @@ final class Upgrade274Test extends TestCase
 
         self::assertTrue($patch->apply_twofactormode());
         self::assertSame([], $this->exec);
+    }
+
+    /**
+     * Answer the editorprefs lookups from SQL: the category and every option
+     * count $present; a preference exists once its row was inserted (or always
+     * when $present is 1).
+     */
+    private function editorPatch(int $present): Upgrade_274
+    {
+        class_exists('SCEditorConfig', false)
+            || require_once dirname(__DIR__, 3) . '/htdocs/class/xoopseditor/sceditor/class/SCEditorConfig.php';
+        $patch = $this->patch();
+        $this->rows = [];
+        $this->answer = function (string $sql) use ($present): array|false {
+            if (str_contains($sql, 'SELECT `conf_id`')) {
+                preg_match("/conf_name = '([a-z_]+)'/", $sql, $name);
+                $inserted = [] !== preg_grep("/'" . $name[1] . "'/", $this->exec);
+
+                return 1 === $present || $inserted ? [100 + crc32($name[1]) % 100] : false;
+            }
+
+            return [$present];
+        };
+
+        return $patch;
+    }
+
+    #[Test]
+    public function editorPrefsInsertsTheCategoryEveryPreferenceAndItsOptions(): void
+    {
+        $patch = $this->editorPatch(0);
+
+        self::assertFalse($patch->check_editorprefs());
+        self::assertTrue($patch->apply_editorprefs(), implode("\n", $patch->logs));
+        $items   = \SCEditorConfig::items();
+        $options = array_sum(array_map(static fn (array $item): int => count($item['options']), $items));
+        self::assertStringContainsString('INSERT INTO `xoops_configcategory`', $this->exec[0]);
+        self::assertCount(count($items), preg_grep('/^INSERT INTO `xoops_config` /', $this->exec));
+        self::assertCount($options, preg_grep('/^INSERT INTO `xoops_configoption`/', $this->exec));
+        self::assertContains(
+            "INSERT INTO `xoops_configoption` (confop_name, confop_value, conf_id) VALUES ('autosave', 'autosave', "
+                . (100 + crc32('sceditor_plugins') % 100) . ')',
+            $this->exec,
+        );
+    }
+
+    #[Test]
+    public function editorPrefsIsIdempotentAndMatchesAnOptionByNameAndValue(): void
+    {
+        $patch = $this->editorPatch(1);
+
+        self::assertTrue($patch->check_editorprefs());
+        self::assertTrue($patch->apply_editorprefs());
+        self::assertSame([], $this->exec);
+        self::assertNotSame([], preg_grep("/confop_name = 'autosave' AND confop_value = 'autosave'/", $this->queries));
+    }
+
+    #[Test]
+    public function editorPrefsRefusesAnUnacquiredLockWithoutWriting(): void
+    {
+        $patch = $this->editorPatch(0);
+        $this->lockGranted = false;
+
+        self::assertFalse($patch->apply_editorprefs());
+        self::assertSame([], $this->exec);
+        self::assertNotSame([], $patch->logs);
+    }
+
+    #[Test]
+    public function editorPrefsReleasesItsLockWhenALookupFails(): void
+    {
+        $patch = $this->editorPatch(0);
+        $this->queryFailsFor = '`xoops_config`';
+
+        self::assertFalse($patch->check_editorprefs());
+        self::assertFalse($patch->apply_editorprefs());
+        self::assertStringContainsString('RELEASE_LOCK(', end($this->queries));
+        self::assertSame([], $this->exec);
+    }
+
+    #[Test]
+    public function editorPrefsStopsWhenAnInsertFails(): void
+    {
+        $patch = $this->editorPatch(0);
+        $this->execFails = true;
+
+        self::assertFalse($patch->apply_editorprefs());
+        self::assertCount(1, $this->exec, 'nothing after the failed category insert');
+        self::assertStringContainsString('RELEASE_LOCK(', end($this->queries));
+    }
+
+    #[Test]
+    public function emoticonsReportAnUnreadableSmilesTableWithoutWriting(): void
+    {
+        class_exists('SCEditorEmoticons', false)
+            || require_once dirname(__DIR__, 3) . '/htdocs/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+        $patch = $this->patch();
+        $this->queryFailsFor = 'smiles';
+
+        self::assertFalse($patch->check_emoticons());
+        self::assertFalse($patch->apply_emoticons());
+        self::assertSame([], $this->exec);
+        self::assertNotSame([], $patch->logs);
     }
 }

@@ -61,7 +61,7 @@ final class SCEditorEmoticonsTest extends TestCase
         mkdir($this->uploads . '/smilies', 0777, true);
         $logs = [];
 
-        $this->assertTrue(SCEditorEmoticons::install($this->db([':sick:', '<3']), $logs, $this->uploads), implode("\n", $logs));
+        $this->assertTrue(SCEditorEmoticons::install($this->db([':sick:', ':heart:']), $logs, $this->uploads), implode("\n", $logs));
 
         $this->assertFileExists($this->uploads . '/smilies/sceditor_wub.png');
         $this->assertCount(30, $this->exec, 'the two existing codes are left alone');

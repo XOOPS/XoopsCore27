@@ -43,9 +43,10 @@ final class SCEditorConfig
     /**
      * Bundled plugins (minified/plugins/<name>.js) that work without further setup.
      * Not offered: format (switches itself off in BBCode mode), dragdrop (needs an
-     * upload handler), emojis (needs its own data set), v1compat (old integrations).
+     * upload handler), emojis (needs its own data set), v1compat (old integrations),
+     * alternative-lists (writes [list]/[*], which XOOPS does not decode).
      */
-    public const PLUGINS = ['alternative-lists', 'autosave', 'autoyoutube', 'plaintext', 'undo'];
+    public const PLUGINS = ['autosave', 'autoyoutube', 'plaintext', 'undo'];
 
     /**
      * The preference rows: name => [title, formtype, valuetype, default, order].

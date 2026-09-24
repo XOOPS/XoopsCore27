@@ -340,7 +340,7 @@ class Upgrade_274 extends XoopsUpgrade
      */
     public function check_emoticons(): bool
     {
-        require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+        class_exists('SCEditorEmoticons', false) || require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
         $missing = \SCEditorEmoticons::missing($this->db);
         if (null === $missing) {
             $this->logs[] = 'Could not read the smiles table to check the SCEditor emoticons';
@@ -358,7 +358,7 @@ class Upgrade_274 extends XoopsUpgrade
      */
     public function apply_emoticons(): bool
     {
-        require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+        class_exists('SCEditorEmoticons', false) || require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
 
         return \SCEditorEmoticons::install($this->db, $this->logs);
     }
@@ -402,7 +402,6 @@ class Upgrade_274 extends XoopsUpgrade
 
             return false;
         }
-        $success = false;
         try {
             $success = $this->applyEditorRows();
         } finally {
@@ -465,7 +464,7 @@ class Upgrade_274 extends XoopsUpgrade
      */
     private function missingEditorRows(): ?array
     {
-        require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
+        class_exists('SCEditorConfig', false) || require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
         $missing  = [];
         $category = $this->countRows('configcategory', 'confcat_id = ' . \SCEditorConfig::CATEGORY);
         if (null === $category) {
@@ -485,7 +484,8 @@ class Upgrade_274 extends XoopsUpgrade
             foreach ($item['options'] as $option) {
                 $count = 0 === $confId ? 0 : $this->countRows(
                     'configoption',
-                    'conf_id = ' . $confId . ' AND confop_value = ' . $this->db->quote($option),
+                    'conf_id = ' . $confId . ' AND confop_name = ' . $this->db->quote($option)
+                    . ' AND confop_value = ' . $this->db->quote($option),
                 );
                 if (null === $count) {
                     return null;

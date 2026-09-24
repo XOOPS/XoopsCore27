@@ -142,7 +142,9 @@ class FormSCEditor extends XoopsEditor
             return [];
         }
         try {
-            $saved = xoops_getHandler('config')->getConfigsByCat(XOOPS_CONF_EDITOR);
+            /** @var XoopsConfigHandler $configHandler */
+            $configHandler = xoops_getHandler('config');
+            $saved = $configHandler->getConfigsByCat(XOOPS_CONF_EDITOR);
         } catch (Throwable $e) {
             return [];
         }

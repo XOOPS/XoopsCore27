@@ -53,13 +53,14 @@ NewBB's normal Preview remains available and uses the same XOOPS sanitizer as
 the normal post view, including the selected smiley, XOOPS-code, image and
 line-break options.
 
-The rest of `minified/` (`plugins/`, `icons/`, the xhtml format, the jQuery
-builds, the extra themes) is not loaded by the integration. It ships anyway,
-deliberately: keeping the upstream release layout intact means an upgrade is
-a wholesale replacement of `minified/` with no per-file curation, and the
-unused files give site integrators the standard upstream options (an
-alternative theme or icon set, the autosave plugin) without a separate
-download.
+System > Preferences > Editors chooses the toolbar buttons and which of the
+plugins in `SCEditorConfig::PLUGINS` (autosave, autoyoutube, plaintext, undo)
+load from `minified/plugins/`. The other plugins, `icons/`, the xhtml format,
+the jQuery builds and the extra themes are not loaded by the integration. They
+ship anyway, deliberately: keeping the upstream release layout intact means an
+upgrade is a wholesale replacement of `minified/` with no per-file curation,
+and the unused files give site integrators the standard upstream options (an
+alternative theme or icon set) without a separate download.
 
 ## After adding or removing files
 

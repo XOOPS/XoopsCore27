@@ -180,8 +180,10 @@ final class XoopsMarkdown
                 $changed = self::fingerprint($value) !== $state['initial'];
                 if ($marked || $changed) {
                     // Also under the trimmed text: Request::getString() trims, and
-                    // a module may preview with that value.
-                    self::$previews[$value] = self::$previews[trim($value)] = self::wrap($value);
+                    // a module may preview with that value. A field's exact text
+                    // always wins over another field's trimmed alias.
+                    self::$previews[$value] = self::wrap($value);
+                    self::$previews[trim($value)] ??= self::$previews[$value];
                 }
                 // Restore an existing marker on round trips; introduce a NEW
                 // marker only after an edit and an explicit Save submission.

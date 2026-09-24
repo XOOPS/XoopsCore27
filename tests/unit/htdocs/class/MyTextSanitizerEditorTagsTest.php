@@ -52,6 +52,16 @@ final class MyTextSanitizerEditorTagsTest extends TestCase
     }
 
     #[Test]
+    public function authoredBreaksSurviveWithoutLineBreakConversion(): void
+    {
+        $myts = (new ReflectionClass(MyTextSanitizer::class))->newInstanceWithoutConstructor();
+        $myts->config = ['extensions' => []];
+        $html = '<table class="table"><tr><td>a</td><br></tr></table><hr><br>b';
+
+        $this->assertSame($html, $myts->displayTarea($html, 1, 0, 0, 0, 0));
+    }
+
+    #[Test]
     public function unclosedStructureStaysText(): void
     {
         $out = $this->display('[table]open [ol]list [sub]x');

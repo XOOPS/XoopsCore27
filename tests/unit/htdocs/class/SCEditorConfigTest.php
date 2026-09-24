@@ -65,7 +65,7 @@ final class SCEditorConfigTest extends TestCase
     {
         $items = SCEditorConfig::items();
 
-        $this->assertSame(SCEditorConfig::buttons(), unserialize($items['sceditor_toolbar']['value']));
+        $this->assertSame(SCEditorConfig::buttons(), unserialize($items['sceditor_toolbar']['value'], ['allowed_classes' => false]));
         $this->assertSame(SCEditorConfig::buttons(), $items['sceditor_toolbar']['options']);
         $this->assertSame(serialize([]), $items['sceditor_plugins']['value']);
         $this->assertSame(SCEditorConfig::PLUGINS, $items['sceditor_plugins']['options']);

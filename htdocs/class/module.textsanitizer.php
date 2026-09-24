@@ -679,17 +679,18 @@ class MyTextSanitizer
         }
         if ($br != 0) {
             $text = $this->nl2Br($text);
+            // Newlines used to format XOOPS [ul]/[li] and [table] source are not
+            // content between list items or table cells. Do not turn them into
+            // visible empty rows (a <br> inside a table is moved above it).
+            // Only after nl2Br(): without it, every <br> here was authored.
+            $text = preg_replace([
+                '/(<(?:ul|ol)>)\s*<br\s*\/?>(?=<li>)/i',
+                '/<br\s*\/?>(?=\s*<\/\s*(?:ul|ol)>)/i',
+                '/<\/li>\s*<br\s*\/?>\s*(?=<li>)/i',
+                '/(<table class="table">|<\/?tr>|<\/t[hd]>|<hr>)\s*<br\s*\/?>/i',
+                '/<br\s*\/?>\s*(?=<\/(?:table|tr)>)/i',
+            ], ['$1', '', '</li>', '$1', ''], $text);
         }
-        // Newlines used to format XOOPS [ul]/[li] and [table] source are not
-        // content between list items or table cells. Do not turn them into
-        // visible empty rows (a <br> inside a table is moved above it).
-        $text = preg_replace([
-            '/(<(?:ul|ol)>)\s*<br\s*\/?>(?=<li>)/i',
-            '/<br\s*\/?>(?=\s*<\/\s*(?:ul|ol)>)/i',
-            '/<\/li>\s*<br\s*\/?>\s*(?=<li>)/i',
-            '/(<table class="table">|<\/?tr>|<\/t[hd]>|<hr>)\s*<br\s*\/?>/i',
-            '/<br\s*\/?>\s*(?=<\/(?:table|tr)>)/i',
-        ], ['$1', '', '</li>', '$1', ''], $text);
         $text = $this->codeConv($text, $xcode);
         $text = $this->trimBlockBreaks($text);
         $text = $this->makeClickable($text);

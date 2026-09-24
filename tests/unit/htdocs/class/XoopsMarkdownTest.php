@@ -166,4 +166,27 @@ final class XoopsMarkdownTest extends TestCase
         $this->assertSame($edited, XoopsMarkdown::source(XoopsMarkdown::previewSource($edited)));
         $this->assertSame($edited, XoopsMarkdown::source(XoopsMarkdown::previewSource(trim($edited))));
     }
+
+    #[Test]
+    public function aFieldsExactTextWinsOverAnotherFieldsTrimmedText(): void
+    {
+        $state = ['initial' => XoopsMarkdown::fingerprint('original'), 'marked' => '0'];
+        foreach ([['a', 'b'], ['b', 'a']] as $order) {
+            $post = [
+                'a' => 'hello',
+                'b' => "hello
+",
+                '_xoops_markdown' => $order,
+                '_xoops_markdown_state' => [hash('sha256', 'a') => $state, hash('sha256', 'b') => $state],
+            ];
+            $request = $post;
+
+            XoopsMarkdown::preparePost($post, $request);
+
+            $this->assertSame('hello', XoopsMarkdown::source(XoopsMarkdown::previewSource('hello')));
+            $this->assertSame("hello
+", XoopsMarkdown::source(XoopsMarkdown::previewSource("hello
+")));
+        }
+    }
 }

@@ -324,7 +324,7 @@ define('_MD_AM_EDITORS', 'Editors');
 define('_MD_AM_SCEDITOR_TOOLBAR', 'SCEditor toolbar buttons');
 define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it.');
 define('_MD_AM_SCEDITOR_PLUGINS', 'SCEditor plugins');
-define('_MD_AM_SCEDITOR_PLUGINSDSC', 'Optional SCEditor plugins to load: alternative-lists (list styles), autosave (restores unsent text), autoyoutube (turns pasted YouTube links into videos), plaintext (paste as plain text), undo (undo/redo history).');
+define('_MD_AM_SCEDITOR_PLUGINSDSC', 'Optional SCEditor plugins to load: autosave (restores unsent text), autoyoutube (turns pasted YouTube links into videos), plaintext (paste as plain text), undo (undo/redo history).');
 define('_MD_AM_SCEDITOR_EMOTICONS', 'Enable emoticons in SCEditor?');
 define('_MD_AM_SCEDITOR_EMOTICONSDSC', 'Shows the emoticon button and turns smiley codes into images while typing. The smileys come from System > Smilies.');
 define('_MD_AM_SCEDITOR_RESIZE', 'Allow resizing SCEditor?');

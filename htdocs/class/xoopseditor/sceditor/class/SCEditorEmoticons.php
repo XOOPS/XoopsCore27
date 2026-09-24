@@ -28,19 +28,21 @@ final class SCEditorEmoticons
      * code => [image file in sceditor/emoticons, description, display].
      * Order and grouping follow SCEditor's defaults: display 1 = its dropdown,
      * 0 = its "more" and hidden sets. '8-)' is absent: XOOPS ships it already.
+     * Codes are :name: only: smiley() replaces codes anywhere in a message, so
+     * SCEditor's short codes would change text such as Re:Post (:P) or x<3.
      */
     private const LIST = [
-        ':)'          => ['smile.png', 'Smile', 1],
+        ':smile:'     => ['smile.png', 'Smile', 1],
         ':angel:'     => ['angel.png', 'Angel', 1],
         ':angry:'     => ['angry.png', 'Angry', 1],
-        ":'("         => ['cwy.png', 'Crying', 1],
+        ':crying:'    => ['cwy.png', 'Crying', 1],
         ':ermm:'      => ['ermm.png', 'Ermm', 1],
-        ':D'          => ['grin.png', 'Grin', 1],
-        '<3'          => ['heart.png', 'Heart', 1],
-        ':('          => ['sad.png', 'Sad', 1],
-        ':O'          => ['shocked.png', 'Shocked', 1],
-        ':P'          => ['tongue.png', 'Tongue', 1],
-        ';)'          => ['wink.png', 'Wink', 1],
+        ':grin:'      => ['grin.png', 'Grin', 1],
+        ':heart:'     => ['heart.png', 'Heart', 1],
+        ':sad:'       => ['sad.png', 'Sad', 1],
+        ':shocked:'   => ['shocked.png', 'Shocked', 1],
+        ':tongue:'    => ['tongue.png', 'Tongue', 1],
+        ':wink:'      => ['wink.png', 'Wink', 1],
         ':alien:'     => ['alien.png', 'Alien', 0],
         ':blink:'     => ['blink.png', 'Blink', 0],
         ':blush:'     => ['blush.png', 'Blush', 0],

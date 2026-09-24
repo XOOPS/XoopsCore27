@@ -66,6 +66,21 @@ final class YoutubeTagTest extends TestCase
     }
 
     #[Test]
+    public function overlongIdInAUrlIsNotAVideo(): void
+    {
+        $tag = '[youtube]https://youtu.be/s4I4zaY5B6sX[/youtube]';
+        self::assertSame($tag, $this->render($tag));
+    }
+
+    #[Test]
+    public function idFollowedByAUrlSuffixStillRenders(): void
+    {
+        foreach (['https://youtu.be/s4I4zaY5B6s?t=30', 'https://www.youtube.com/watch?v=s4I4zaY5B6s&amp;t=30', 'https://youtu.be/s4I4zaY5B6s#t=30'] as $url) {
+            self::assertStringContainsString('youtube.com/embed/s4I4zaY5B6s"', $this->render("[youtube]{$url}[/youtube]"), $url);
+        }
+    }
+
+    #[Test]
     public function quotedSizeStillRenders(): void
     {
         $html = $this->render('[youtube="16,9"]s4I4zaY5B6s[/youtube]');

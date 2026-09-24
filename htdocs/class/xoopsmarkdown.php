@@ -147,6 +147,7 @@ final class XoopsMarkdown
     public static function preparePost(array &$post, array &$request): void
     {
         self::$previews = [];
+        $aliases = [];
         $fields = $post['_xoops_markdown'] ?? [];
         if (!is_array($fields)) {
             return;
@@ -179,11 +180,8 @@ final class XoopsMarkdown
                 $marked = ($state['marked'] ?? null) === '1';
                 $changed = self::fingerprint($value) !== $state['initial'];
                 if ($marked || $changed) {
-                    // Also under the trimmed text: Request::getString() trims, and
-                    // a module may preview with that value. A field's exact text
-                    // always wins over another field's trimmed alias.
                     self::$previews[$value] = self::wrap($value);
-                    self::$previews[trim($value)] ??= self::$previews[$value];
+                    $aliases[trim($value)][$value] = true;
                 }
                 // Restore an existing marker on round trips; introduce a NEW
                 // marker only after an edit and an explicit Save submission.
@@ -195,6 +193,17 @@ final class XoopsMarkdown
                 }
             }
             unset($value);
+        }
+        // Also under the trimmed text: Request::getString() trims, and a module
+        // may preview with that value. A field's exact text wins; a trimmed text
+        // shared by different fields previews as itself.
+        foreach ($aliases as $trimmed => $originals) {
+            $trimmed = (string) $trimmed;
+            if (!isset(self::$previews[$trimmed])) {
+                self::$previews[$trimmed] = 1 === count($originals)
+                    ? self::$previews[(string) array_key_first($originals)]
+                    : self::wrap($trimmed);
+            }
         }
     }
 

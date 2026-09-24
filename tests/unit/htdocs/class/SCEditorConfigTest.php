@@ -69,6 +69,7 @@ final class SCEditorConfigTest extends TestCase
         $this->assertSame(SCEditorConfig::buttons(), $items['sceditor_toolbar']['options']);
         $this->assertSame(serialize([]), $items['sceditor_plugins']['value']);
         $this->assertSame(SCEditorConfig::PLUGINS, $items['sceditor_plugins']['options']);
+        $this->assertNotContains('alternative-lists', SCEditorConfig::PLUGINS, 'it writes [list], which XOOPS does not decode');
         $this->assertSame('_MD_AM_SCEDITOR_WIDTHDSC', $items['sceditor_width']['desc']);
         foreach (SCEditorConfig::PLUGINS as $plugin) {
             $this->assertFileExists(XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/minified/plugins/' . $plugin . '.js');

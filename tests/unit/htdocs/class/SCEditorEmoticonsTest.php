@@ -48,6 +48,8 @@ final class SCEditorEmoticonsTest extends TestCase
         $this->assertCount(32, $rows);
         $this->assertSame($codes, array_unique($codes));
         $this->assertNotContains('8-)', $codes, 'XOOPS ships 8-) already');
+        // smiley() replaces codes anywhere in a message: short codes changed Re:Post.
+        $this->assertSame([], preg_grep('/\A:[a-z]+:\z/', $codes, PREG_GREP_INVERT));
         foreach ($rows as $row) {
             $this->assertFileExists(XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/emoticons/' . $row['file']);
             $this->assertSame('smilies/sceditor_' . $row['file'], $row['smile_url']);

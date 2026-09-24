@@ -72,6 +72,24 @@ final class SCEditorEmoticonsTest extends TestCase
     }
 
     #[Test]
+    public function anAdminsOwnSmileyKeepsItsImageAndCountsAsPresent(): void
+    {
+        $this->uploads = sys_get_temp_dir() . '/sce' . bin2hex(random_bytes(4));
+        mkdir($this->uploads . '/smilies', 0777, true);
+        $existing            = array_column(SCEditorEmoticons::list(), 'smile_url', 'code');
+        $existing[':smile:'] = 'smilies/mine.gif';
+        $logs = [];
+
+        $this->assertTrue(SCEditorEmoticons::install($this->db($existing), $logs, $this->uploads), implode("
+", $logs));
+
+        $this->assertSame([], $this->exec, 'no row is inserted or changed');
+        $this->assertFileDoesNotExist($this->uploads . '/smilies/sceditor_smile.png', 'the bundled image is not needed');
+        $this->assertFileExists($this->uploads . '/smilies/sceditor_wub.png');
+        $this->assertSame([], SCEditorEmoticons::missing($this->db($existing), $this->uploads));
+    }
+
+    #[Test]
     public function unreadableSmilesTableIsReportedNotTreatedAsEmpty(): void
     {
         $logs = [];
@@ -102,11 +120,18 @@ final class SCEditorEmoticonsTest extends TestCase
     }
 
     /**
-     * @param list<string>|null $codes existing smiles codes; null makes the SELECT fail
+     * @param array<int|string, string>|null $codes existing smiles codes; a list entry uses the
+     *                                             bundled image, code => url sets its own; null makes the SELECT fail
      */
     private function db(?array $codes): XoopsMySQLDatabase
     {
-        $rows = array_map(static fn (string $code): array => ['code' => $code], $codes ?? []);
+        $bundled = array_column(SCEditorEmoticons::list(), 'smile_url', 'code');
+        $rows    = [];
+        foreach ($codes ?? [] as $key => $value) {
+            $rows[] = is_int($key)
+                ? ['code' => $value, 'smile_url' => $bundled[$value] ?? 'smilies/' . $value . '.png']
+                : ['code' => $key, 'smile_url' => $value];
+        }
         $db   = $this->createMock(XoopsMySQLDatabase::class);
         $db->method('prefix')->willReturnCallback(static fn ($table = ''): string => 'xoops_' . $table);
         $db->method('quote')->willReturnCallback(static fn ($value): string => "'" . addslashes((string) $value) . "'");

@@ -408,16 +408,32 @@ final class Upgrade274Test extends TestCase
     }
 
     #[Test]
+    public function emoticonsRefuseAnUnacquiredLockWithoutWriting(): void
+    {
+        class_exists('SCEditorEmoticons', false)
+            || require_once dirname(__DIR__, 3) . '/htdocs/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+        $this->lockGranted = false;
+        $patch             = $this->patch();
+
+        self::assertFalse($patch->apply_emoticons());
+        self::assertSame([], $this->exec);
+        self::assertCount(1, $this->queries);
+        self::assertStringContainsString('GET_LOCK(', $this->queries[0]);
+        self::assertStringContainsString('xoops_smiles:emoticons', $this->queries[0]);
+    }
+
+    #[Test]
     public function emoticonsReportAnUnreadableSmilesTableWithoutWriting(): void
     {
         class_exists('SCEditorEmoticons', false)
             || require_once dirname(__DIR__, 3) . '/htdocs/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
         $patch = $this->patch();
-        $this->queryFailsFor = 'smiles';
+        $this->queryFailsFor = 'FROM xoops_smiles';
 
         self::assertFalse($patch->check_emoticons());
         self::assertFalse($patch->apply_emoticons());
         self::assertSame([], $this->exec);
         self::assertNotSame([], $patch->logs);
+        self::assertStringContainsString('RELEASE_LOCK(', end($this->queries), 'the lock is released after the failure');
     }
 }

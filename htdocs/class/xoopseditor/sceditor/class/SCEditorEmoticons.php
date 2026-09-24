@@ -88,7 +88,9 @@ final class SCEditorEmoticons
     }
 
     /**
-     * Codes from list() that have no smiles row yet, or whose image is not in uploads.
+     * Codes from list() that have no smiles row yet, or whose row uses the bundled
+     * image and that image is not in uploads. A row with its own image is the
+     * admin's smiley and counts as present.
      *
      * @param XoopsMySQLDatabase $db         database connection
      * @param string             $uploadPath uploads directory; '' = the site's
@@ -105,7 +107,8 @@ final class SCEditorEmoticons
         }
         $missing = [];
         foreach (self::list() as $row) {
-            if (!isset($existing[$row['code']]) || !is_file($uploadPath . '/' . $row['smile_url'])) {
+            $url = $existing[$row['code']] ?? null;
+            if (null === $url || ($url === $row['smile_url'] && !is_file($uploadPath . '/' . $row['smile_url']))) {
                 $missing[] = $row;
             }
         }
@@ -115,7 +118,8 @@ final class SCEditorEmoticons
 
     /**
      * Copy missing images to uploads/smilies and insert missing smiles rows.
-     * Idempotent; an existing code (an admin's own smiley included) is never touched.
+     * Idempotent; an existing row is never changed. Its image is copied only when
+     * the row uses the bundled one, so an admin's own smiley is left alone.
      *
      * @param XoopsMySQLDatabase $db         database connection
      * @param list<string>       $logs       receives one line per failure
@@ -134,6 +138,10 @@ final class SCEditorEmoticons
         }
         $ok = true;
         foreach (self::list() as $row) {
+            $url = $existing[$row['code']] ?? null;
+            if (null !== $url && $url !== $row['smile_url']) {
+                continue;
+            }
             $target = $uploadPath . '/' . $row['smile_url'];
             $source = XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/emoticons/' . $row['file'];
             if (!is_file($target) && !copy($source, $target)) {
@@ -141,7 +149,7 @@ final class SCEditorEmoticons
                 $ok     = false;
                 continue;
             }
-            if (isset($existing[$row['code']])) {
+            if (null !== $url) {
                 continue;
             }
             $sql = 'INSERT INTO ' . $db->prefix('smiles') . ' (code, smile_url, emotion, display) VALUES ('
@@ -159,17 +167,17 @@ final class SCEditorEmoticons
     /**
      * @param XoopsMySQLDatabase $db database connection
      *
-     * @return array<string, true>|null codes already in the smiles table
+     * @return array<string, string>|null smile_url of each code already in the smiles table
      */
     private static function existingCodes(XoopsMySQLDatabase $db): ?array
     {
-        $result = $db->query('SELECT code FROM ' . $db->prefix('smiles'));
+        $result = $db->query('SELECT code, smile_url FROM ' . $db->prefix('smiles'));
         if (!$db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return null;
         }
         $codes = [];
         while (is_array($row = $db->fetchArray($result))) {
-            $codes[(string) $row['code']] = true;
+            $codes[(string) $row['code']] = (string) $row['smile_url'];
         }
 
         return $codes;

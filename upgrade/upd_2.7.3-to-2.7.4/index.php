@@ -163,24 +163,40 @@ class Upgrade_274 extends XoopsUpgrade
      */
     public function apply_twofactormode(): bool
     {
-        // Config has no unique key for a preference or its options. Serialize
-        // this patch across connections; DDL in other tasks must not release it.
-        // Hash database + table + purpose to stay within MySQL's 64-byte limit.
-        $lock = 'SHA2(CONCAT(DATABASE(), ' . $this->db->quote(':' . $this->db->prefix('config') . ':twofactor_mode') . '), 256)';
+        // Config has no unique key for a preference or its options.
+        return $this->withLock('config', 'twofactor_mode', fn (): bool => $this->applyModeRows());
+    }
+
+    /**
+     * Run $work while holding a site-wide lock, so two upgrade requests cannot
+     * both see a row missing and insert it twice. DDL in other tasks must not
+     * release it. Database + table + purpose are hashed to stay within MySQL's
+     * 64-byte lock-name limit.
+     *
+     * @param string          $table   unprefixed table the work writes to
+     * @param string          $purpose lock name suffix, also used in the log lines
+     * @param callable(): bool $work    the check-then-insert step
+     *
+     * @return bool false when the lock is not acquired or released, or $work fails
+     */
+    private function withLock(string $table, string $purpose, callable $work): bool
+    {
+        $lock = 'SHA2(CONCAT(DATABASE(), ' . $this->db->quote(':' . $this->db->prefix($table) . ':' . $purpose) . '), 256)';
         $result = $this->db->query('SELECT GET_LOCK(' . $lock . ', 10)');
         $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
         if (!is_array($row) || 1 !== (int) $row[0]) {
-            $this->logs[] = 'Could not acquire the twofactor_mode migration lock; retry the upgrade';
+            $this->logs[] = 'Could not acquire the ' . $purpose . ' migration lock; retry the upgrade';
+
             return false;
         }
         $success = false;
         try {
-            $success = $this->applyModeRows();
+            $success = $work();
         } finally {
             $result = $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
             $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
             if (!is_array($row) || 1 !== (int) $row[0]) {
-                $this->logs[] = 'Could not release the twofactor_mode migration lock';
+                $this->logs[] = 'Could not release the ' . $purpose . ' migration lock';
                 $success = false;
             }
         }
@@ -360,7 +376,8 @@ class Upgrade_274 extends XoopsUpgrade
     {
         class_exists('SCEditorEmoticons', false) || require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
 
-        return \SCEditorEmoticons::install($this->db, $this->logs);
+        // smiles has no unique key on code; serialize concurrent runs.
+        return $this->withLock('smiles', 'emoticons', fn (): bool => \SCEditorEmoticons::install($this->db, $this->logs));
     }
 
     // =========================================================================
@@ -392,28 +409,8 @@ class Upgrade_274 extends XoopsUpgrade
      */
     public function apply_editorprefs(): bool
     {
-        // Same reason and shape as apply_twofactormode(): the config tables have no
-        // unique key, so serialize concurrent runs.
-        $lock = 'SHA2(CONCAT(DATABASE(), ' . $this->db->quote(':' . $this->db->prefix('config') . ':editorprefs') . '), 256)';
-        $result = $this->db->query('SELECT GET_LOCK(' . $lock . ', 10)');
-        $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
-        if (!is_array($row) || 1 !== (int) $row[0]) {
-            $this->logs[] = 'Could not acquire the editorprefs migration lock; retry the upgrade';
-
-            return false;
-        }
-        try {
-            $success = $this->applyEditorRows();
-        } finally {
-            $result = $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
-            $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
-            if (!is_array($row) || 1 !== (int) $row[0]) {
-                $this->logs[] = 'Could not release the editorprefs migration lock';
-                $success = false;
-            }
-        }
-
-        return $success;
+        // The config tables have no unique key either.
+        return $this->withLock('config', 'editorprefs', fn (): bool => $this->applyEditorRows());
     }
 
     /** Insert missing rows while apply_editorprefs() holds the site lock. */

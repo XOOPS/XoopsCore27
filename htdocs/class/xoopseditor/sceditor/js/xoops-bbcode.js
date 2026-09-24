@@ -113,6 +113,49 @@
         return (lang && typeof lang[key] === 'string' && lang[key]) ? lang[key] : fallback;
     }
 
+    /**
+     * bbcode.set() MERGES into an existing definition, so a stock tags/styles claim
+     * survives next to ours and the element is serialised twice
+     * ([center][center]x[/center][/center], growing on every save). Tags whose stock
+     * claims conflict with the XOOPS dialect are replaced, not merged.
+     */
+    function define(name, definition) {
+        bbcode.remove(name);
+        bbcode.set(name, definition);
+    }
+
+    /** Site root, derived from this script's own URL (for image.php?id= previews). */
+    var SITE_URL = ((document.currentScript && document.currentScript.src) || '')
+        .replace(/\/class\/xoopseditor\/sceditor\/js\/xoops-bbcode\.js.*$/, '');
+
+    /**
+     * Anchors that belong to a XOOPS tag ([siteurl], [youtube], media tags) also match
+     * the generic 'url' claim; 'url' must leave those to their own definition.
+     */
+    function isXoopsOwned(element) {
+        return !!(element.hasAttribute && (element.hasAttribute('data-xoops-tag')
+            || element.hasAttribute('data-siteurl') || element.hasAttribute('data-youtube')));
+    }
+
+    /** Tag content is already entity-encoded text; only '"' still needs escaping for an attribute. */
+    function quoteAttr(value) {
+        return String(value || '').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * XOOPS writes colours as bare hex ([color=FF0000]; the server adds the '#').
+     * Browsers report rgb(); convert back so DHTML and SCEditor posts look alike.
+     */
+    function toXoopsColor(value) {
+        var rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(String(value || ''));
+        if (!rgb) {
+            return String(value || '').replace(/^#/, '');
+        }
+        return [rgb[1], rgb[2], rgb[3]].map(function (n) {
+            return ('0' + parseInt(n, 10).toString(16)).slice(-2);
+        }).join('').toUpperCase();
+    }
+
     // ------------------------------------------------------------------
     // Core tags — module.textsanitizer.php:419-424 (xoopsCodeDecode()).
     // NOTE on registry keys: bbcode.set()'s first argument is the literal
@@ -147,26 +190,33 @@
     // are claimed here after the stock file loads, so they serialise to [d],
     // not to the [s] tag MyTextSanitizer never decodes.
     bbcode.set('d', {
-        tags: { del: null, s: null, strike: null },
+        tags: { del: null, strike: null },
         format: '[d]{0}[/d]',
         html: '<del>{0}</del>'
+    });
+    // The stock [s] also claims <strike>; left alone, every strike element became
+    // [d][s]..[/s][/d]. [s] keeps only its own <s> so typed [s] round-trips.
+    define('s', {
+        tags: { s: null },
+        format: '[s]{0}[/s]',
+        html: '<s>{0}</s>'
     });
 
     // --- Alignment: [center] [left] [right], not [align=] --------------
     // module.textsanitizer.php:427-432. Registered explicitly (rather than
     // relying on whatever SCEditor's own default alignment dialect happens to
     // be) so this is correct regardless of upstream default drift.
-    bbcode.set('left', {
+    define('left', {
         tags: { div: { style: { 'text-align': ['left'] } } },
         format: '[left]{0}[/left]',
         html: '<div style="text-align: left;">{0}</div>'
     });
-    bbcode.set('center', {
+    define('center', {
         tags: { div: { style: { 'text-align': ['center'] } } },
         format: '[center]{0}[/center]',
         html: '<div style="text-align: center;">{0}</div>'
     });
-    bbcode.set('right', {
+    define('right', {
         tags: { div: { style: { 'text-align': ['right'] } } },
         format: '[right]{0}[/right]',
         html: '<div style="text-align: right;">{0}</div>'
@@ -178,13 +228,24 @@
     // completeness.
     bbcode.set('url', {
         tags: { a: { href: null } },
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
-            var href = element.getAttribute ? element.getAttribute('href') : '';
+            if (isXoopsOwned(element)) {
+                return content;
+            }
+            var href = element.getAttribute ? element.getAttribute('href') || '' : '';
+            // The server has only the bare [email]address[/email] form; a
+            // [url=mailto:] would render as http://mailto:...
+            if (/^mailto:/i.test(href)) {
+                return '[email]' + href.slice(7) + '[/email]';
+            }
+            if (href === content) {
+                return '[url]' + content + '[/url]';
+            }
             return '[url=' + href + ']' + content + '[/url]';
         },
         html: function (token, attrs, content) {
-            var href = (attrs && attrs.defaultattr) || '';
+            var href = (attrs && attrs.defaultattr) || content;
             // Match the stock format's handling: scheme-check then entity-escape,
             // so a [url=javascript:...] can never become a live link if the
             // conversion path ever runs.
@@ -200,7 +261,7 @@
         // The data-siteurl attribute claim makes the converter route these
         // anchors here instead of to the generic 'url' handler.
         tags: { a: { 'data-siteurl': null } },
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
             return '[siteurl=' + (element.getAttribute('data-siteurl') || '') + ']' + content + '[/siteurl]';
         },
@@ -217,8 +278,7 @@
     // Deliberately NO tags: claim — SCEditor's attribute constraints accept
     // only null or an array of values, and a RegExp here makes the converter
     // call .includes() on it and throw for EVERY anchor. A mailto anchor is
-    // instead claimed by 'url' and serialises as [url=mailto:...], which
-    // MyTextSanitizer decodes fine.
+    // instead claimed by 'url', whose format() writes it back as [email].
     bbcode.set('email', {
         format: '[email]{0}[/email]',
         html: '<a href="mailto:{0}">{0}</a>'
@@ -259,7 +319,7 @@
         // without the styles claim the tag would not round-trip.
         tags: { font: { face: null } },
         styles: { 'font-family': null },
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
             var face = (element.getAttribute && element.getAttribute('face'))
                 || (element.style && element.style.fontFamily)
@@ -278,15 +338,19 @@
         // Both shapes claimed for the same round-trip reason as 'font' above.
         tags: { font: { color: null } },
         styles: { color: null },
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
             var color = (element.getAttribute && element.getAttribute('color'))
                 || (element.style && element.style.color)
                 || '';
-            return '[color=' + color + ']' + content + '[/color]';
+            return '[color=' + toXoopsColor(color) + ']' + content + '[/color]';
         },
         html: function (token, attrs, content) {
             var color = (attrs && attrs.defaultattr) || '';
+            // Bare hex is the XOOPS form; CSS needs the '#' or the colour is dropped.
+            if (/^[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(color)) {
+                color = '#' + color;
+            }
             return '<span style="color: ' + escapeEntities(color) + ';">' + content + '</span>';
         }
     });
@@ -300,7 +364,7 @@
         // The styles claim is what lets format() ever run: without it no HTML
         // element maps back to [size=] and the tag would not round-trip.
         styles: { 'font-size': null },
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
             var size = element.style ? element.style.fontSize : '';
             var htmlSize = element.getAttribute ? element.getAttribute('size') : '';
@@ -324,14 +388,28 @@
     bbcode.set('img', {
         tags: { img: { src: null } },
         allowsEmpty: true,
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
+            // An emoticon image also matches this img claim. The stock 'emoticon'
+            // definition turns it back into its code (:sick:); returning [img]url
+            // here stored every inserted emoticon as an image link.
+            if (element.hasAttribute && element.hasAttribute('data-sceditor-emoticon')) {
+                return content;
+            }
             var src = element.getAttribute ? element.getAttribute('src') : '';
             var width = element.getAttribute ? element.getAttribute('width') : '';
-            var align = element.style ? element.style.float : '';
+            var id = element.getAttribute ? element.getAttribute('data-xoops-id') : '';
+            // center has no float, so it travels on data-xoops-align.
+            var align = (element.getAttribute && element.getAttribute('data-xoops-align'))
+                || (element.style ? element.style.float : '');
             var attrs = '';
             if (align) {
                 attrs += ' align=' + align;
+            }
+            // [img id=N]caption[/img]: an image-manager image; the body is its
+            // caption, not a URL, and the server has no width= variant for it.
+            if (id) {
+                return '[img' + attrs + ' id=' + id + ']' + (element.getAttribute('alt') || '') + '[/img]';
             }
             if (width) {
                 attrs += ' width=' + width;
@@ -342,11 +420,19 @@
             // Re-emit width/align so format() (which reads the width attribute and
             // the float style) can rebuild the original tag instead of a bare [img].
             var extra = '';
+            var align = attrs && attrs.align ? String(attrs.align).toLowerCase() : '';
+            if (/^(left|center|right)$/.test(align)) {
+                extra += ' data-xoops-align="' + align + '"';
+                if (align !== 'center') {
+                    extra += ' style="float: ' + align + ';"';
+                }
+            }
+            if (attrs && attrs.id && /^\d+$/.test(attrs.id)) {
+                return '<img src="' + escapeEntities(SITE_URL + '/image.php?id=' + attrs.id) + '"'
+                    + ' data-xoops-id="' + attrs.id + '"' + extra + ' alt="' + quoteAttr(content) + '" />';
+            }
             if (attrs && attrs.width) {
                 extra += ' width="' + escapeEntities(attrs.width) + '"';
-            }
-            if (attrs && attrs.align && /^(left|right)$/i.test(attrs.align)) {
-                extra += ' style="float: ' + attrs.align.toLowerCase() + ';"';
             }
             return '<img src="' + escapeEntities(escapeUriScheme(content)) + '"' + extra + ' alt="" />';
         }
@@ -358,11 +444,13 @@
         // dimensions through a conversion, so format() rebuilds the original tag
         // instead of the anchor being claimed by 'url'.
         tags: { a: { 'data-youtube': null } },
-        quoteType: QuoteType.always,
+        quoteType: QuoteType.auto,
         format: function (element, content) {
             var width = element.getAttribute ? element.getAttribute('data-width') : '';
             var height = element.getAttribute ? element.getAttribute('data-height') : '';
-            return '[youtube=' + (width || '') + ',' + (height || '') + ']' + content + '[/youtube]';
+            // A bare [youtube] must not come back as [youtube=,].
+            var dims = (width || height) ? '=' + (width || '') + ',' + (height || '') : '';
+            return '[youtube' + dims + ']' + content + '[/youtube]';
         },
         html: function (token, attrs, content) {
             var dims = String((attrs && attrs.defaultattr) || '').split(',');
@@ -404,72 +492,33 @@
     // that here.
     // ------------------------------------------------------------------
 
-    // [iframe=height]https://...[/iframe] — class/textsanitizer/iframe/iframe.php:38.
-    bbcode.set('iframe', {
-        quoteType: QuoteType.always,
-        format: function (element, content) {
-            var height = element.getAttribute ? element.getAttribute('height') : '';
-            return '[iframe=' + (height || '') + ']' + content + '[/iframe]';
-        },
-        html: function (token, attrs, content) {
-            return '<iframe src="' + escapeEntities(escapeUriScheme(content)) + '"></iframe>';
-        }
-    });
-
-    // [mp3]url[/mp3] — class/textsanitizer/mp3/mp3.php:59.
-    bbcode.set('mp3', {
-        format: '[mp3]{0}[/mp3]',
-        html: function (token, attrs, content) {
-            return '<audio controls><source src="' + escapeEntities(escapeUriScheme(content)) + '"></audio>';
-        }
-    });
-
-    // [soundcloud]url[/soundcloud] — class/textsanitizer/soundcloud/soundcloud.php:47.
-    bbcode.set('soundcloud', {
-        format: '[soundcloud]{0}[/soundcloud]',
-        html: function (token, attrs, content) {
-            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
-        }
-    });
-
-    // [mms=w,h]url[/mms] — class/textsanitizer/mms/mms.php:80 (deprecated since 2.5.9).
-    bbcode.set('mms', {
-        quoteType: QuoteType.always,
-        format: function (element, content) {
-            var width = element.getAttribute ? element.getAttribute('data-width') : '';
-            var height = element.getAttribute ? element.getAttribute('data-height') : '';
-            return '[mms=' + (width || '') + ',' + (height || '') + ']' + content + '[/mms]';
-        },
-        html: function (token, attrs, content) {
-            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
-        }
-    });
-
-    // [rtsp=w,h]url[/rtsp] — class/textsanitizer/rtsp/rtsp.php:74 (deprecated since 2.5.9).
-    bbcode.set('rtsp', {
-        quoteType: QuoteType.always,
-        format: function (element, content) {
-            var width = element.getAttribute ? element.getAttribute('data-width') : '';
-            var height = element.getAttribute ? element.getAttribute('data-height') : '';
-            return '[rtsp=' + (width || '') + ',' + (height || '') + ']' + content + '[/rtsp]';
-        },
-        html: function (token, attrs, content) {
-            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
-        }
-    });
-
-    // [wmp=w,h]url[/wmp] — class/textsanitizer/wmp/wmp.php:77.
-    bbcode.set('wmp', {
-        quoteType: QuoteType.always,
-        format: function (element, content) {
-            var width = element.getAttribute ? element.getAttribute('data-width') : '';
-            var height = element.getAttribute ? element.getAttribute('data-height') : '';
-            return '[wmp=' + (width || '') + ',' + (height || '') + ']' + content + '[/wmp]';
-        },
-        html: function (token, attrs, content) {
-            return '<a href="' + escapeEntities(escapeUriScheme(content)) + '">' + content + '</a>';
-        }
-    });
+    // Media tags — class/textsanitizer/{iframe,mp3,soundcloud,mms,rtsp,wmp}/*.php:
+    // [iframe=height]url[/iframe], [mp3]url[/mp3], [soundcloud]url[/soundcloud],
+    // [mms=w,h]url[/mms] (deprecated since 2.5.9), [rtsp=w,h]url[/rtsp] (deprecated
+    // since 2.5.9), [wmp=w,h]url[/wmp].
+    // Shown as links in the visual view: SCEditor's sanitizer strips <iframe> and
+    // empties <audio>. The link carries the tag name, the raw attribute and the raw
+    // URL (escapeUriScheme() rewrites mms:/rtsp: into page-relative links), so
+    // format() never reconstructs them. Without the tags: claim these came back
+    // empty or as [url].
+    function mediaTag(name) {
+        define(name, {
+            tags: { a: { 'data-xoops-tag': [name] } },
+            format: function (element) {
+                var attr = element.getAttribute('data-xoops-attr') || '';
+                return '[' + name + (attr ? '=' + attr : '') + ']'
+                    + (element.getAttribute('data-xoops-src') || '') + '[/' + name + ']';
+            },
+            html: function (token, attrs, content) {
+                var attr = (attrs && attrs.defaultattr) || '';
+                return '<a data-xoops-tag="' + name + '"'
+                    + (attr ? ' data-xoops-attr="' + escapeEntities(attr) + '"' : '')
+                    + ' data-xoops-src="' + quoteAttr(content) + '"'
+                    + ' href="' + quoteAttr(escapeUriScheme(content)) + '">' + content + '</a>';
+            }
+        });
+    }
+    ['iframe', 'mp3', 'soundcloud', 'mms', 'rtsp', 'wmp'].forEach(mediaTag);
 
     // ------------------------------------------------------------------
     // Toolbar command overrides (txtExec) — these are what actually run while

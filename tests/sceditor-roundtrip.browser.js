@@ -31,6 +31,9 @@
         '[url=https://x.test/?a=1&b=2]q[/url]': '[url="https://x.test/?a=1&b=2"]q[/url]',
         '[youtube]dQw4w9WgXcQ[/youtube]': null,
         '[youtube=640,360]dQw4w9WgXcQ[/youtube]': null,
+        '[youtube=16,9]dQw4w9WgXcQ[/youtube]': null,
+        '[youtube]https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5[/youtube]': null,
+        '[youtube]not a video[/youtube]': null,
         '[quote]hi[/quote]': null,
         '[code]<b>x</b>[/code]': null,
         '[color=FF0000]r[/color]': null,
@@ -60,6 +63,9 @@
         inst.sourceMode(false);
         if (inst.getBody().querySelector('[onerror], a[href^="javascript"]')) {
             failures.push('markup or script link injected in visual view: ' + input);
+        }
+        if (/^\[youtube[^\]]*\]dQw4w9WgXcQ/.test(input) && !inst.getBody().querySelector('iframe[data-youtube-id="dQw4w9WgXcQ"]')) {
+            failures.push('no video player in visual view: ' + input);
         }
         inst.sourceMode(true);
         var actual = inst.val().trim();

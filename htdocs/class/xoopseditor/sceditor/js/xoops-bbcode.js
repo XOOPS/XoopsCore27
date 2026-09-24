@@ -439,18 +439,38 @@
         tags: { a: { 'data-youtube': null }, iframe: { 'data-youtube-id': null } },
         quoteType: QuoteType.auto,
         format: function (element, content) {
-            var videoId = element.getAttribute ? element.getAttribute('data-youtube-id') : '';
-            if (videoId) {
-                return '[youtube]' + videoId + '[/youtube]';
-            }
-            var width = element.getAttribute ? element.getAttribute('data-width') : '';
-            var height = element.getAttribute ? element.getAttribute('data-height') : '';
+            var get = function (name) {
+                return (element.getAttribute && element.getAttribute(name)) || '';
+            };
+            var width = get('data-width');
+            var height = get('data-height');
             // A bare [youtube] must not come back as [youtube=,].
-            var dims = (width || height) ? '=' + (width || '') + ',' + (height || '') : '';
+            var dims = (width || height) ? '=' + width + ',' + height : '';
+            if (get('data-youtube-id')) {
+                // The player: data-youtube-src keeps the URL or id as written;
+                // an autoyoutube iframe has only the id.
+                return '[youtube' + dims + ']' + (get('data-youtube-src') || get('data-youtube-id')) + '[/youtube]';
+            }
             return '[youtube' + dims + ']' + content + '[/youtube]';
         },
         html: function (token, attrs, content) {
             var dims = String((attrs && attrs.defaultattr) || '').split(',');
+            // Same id rules as MytsYoutube::decode(); content is entity-encoded, so
+            // '&' arrives as '&amp;' and still ends the id.
+            var match = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i.exec(content)
+                || /^([^"&?\/ ]{11})$/.exec(content);
+            if (match) {
+                // Show the player. Sizes below 17 are an aspect ratio (16,9), not pixels.
+                var width = parseInt(dims[0], 10) > 16 ? parseInt(dims[0], 10) : 560;
+                var height = parseInt(dims[1], 10) > 9 ? parseInt(dims[1], 10) : Math.round(width * 9 / 16);
+                return '<iframe width="' + width + '" height="' + height + '" frameborder="0" allowfullscreen'
+                    + ' src="https://www.youtube-nocookie.com/embed/' + match[1] + '?wmode=opaque"'
+                    + ' data-youtube-id="' + match[1] + '"'
+                    + ' data-youtube-src="' + quoteAttr(content) + '"'
+                    + ' data-width="' + escapeEntities(dims[0] || '') + '"'
+                    + ' data-height="' + escapeEntities(dims[1] || '') + '"></iframe>';
+            }
+            // Not a recognisable video: keep it as a link so nothing is lost.
             return '<a data-youtube="1"'
                 + ' data-width="' + escapeEntities(dims[0] || '') + '"'
                 + ' data-height="' + escapeEntities(dims[1] || '') + '"'

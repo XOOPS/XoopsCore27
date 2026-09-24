@@ -76,7 +76,9 @@ EOH;
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->callbackPatterns[] = "/\[youtube=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/youtube\]/sU";
+        // The size is optional: SCEditor writes a bare [youtube]id[/youtube]
+        // for a pasted link, and decode() defaults empty dimensions.
+        $myts->callbackPatterns[] = "/\[youtube(?:=(['\"]?)([^\"']*),([^\"']*)\\1)?]([^\"]*)\[\/youtube\]/sU";
         $myts->callbacks[]        = self::class . '::myCallback';
     }
 

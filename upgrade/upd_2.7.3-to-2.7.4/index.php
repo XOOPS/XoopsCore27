@@ -24,6 +24,9 @@ use Xoops\Upgrade\XoopsUpgrade;
  *  2. twofactormode  — insert the twofactor_mode core preference, default 'off', with
  *                      its two options; each row is checked and inserted on its own so
  *                      an interrupted run resumes where it stopped.
+ *  3. emoticons      — register SCEditor's emoticons as smileys: copy each image to
+ *                      uploads/smilies and insert its smiles row; codes that already
+ *                      exist (an admin's own smiley included) are left alone.
  *
  * The order is deliberate and must stay: common.php treats the presence of the
  * twofactor_mode row in the database-loaded configuration as the "installed" signal,
@@ -60,6 +63,7 @@ class Upgrade_274 extends XoopsUpgrade
         $this->tasks = [
             'user2fatable',
             'twofactormode',
+            'emoticons',
         ];
     }
 
@@ -322,6 +326,40 @@ class Upgrade_274 extends XoopsUpgrade
      * @param string $sql statement
      * @return bool
      */
+    // =========================================================================
+    // Task 3: emoticons
+    // =========================================================================
+
+    /**
+     * Does every SCEditor emoticon have its smiles row and its image in uploads?
+     *
+     * @return bool
+     */
+    public function check_emoticons(): bool
+    {
+        require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+        $missing = \SCEditorEmoticons::missing($this->db);
+        if (null === $missing) {
+            $this->logs[] = 'Could not read the smiles table to check the SCEditor emoticons';
+
+            return false;
+        }
+
+        return [] === $missing;
+    }
+
+    /**
+     * Copy missing emoticon images and insert missing smiles rows.
+     *
+     * @return bool true when every emoticon is registered afterwards
+     */
+    public function apply_emoticons(): bool
+    {
+        require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+
+        return \SCEditorEmoticons::install($this->db, $this->logs);
+    }
+
     private function execOrFail(string $sql): bool
     {
         if ($this->db->exec($sql)) {

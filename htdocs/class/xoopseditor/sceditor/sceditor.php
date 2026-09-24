@@ -272,15 +272,11 @@ class FormSCEditor extends XoopsEditor
             $bucket = !empty($smiley['display']) ? 'dropdown' : 'more';
             $config[$bucket][$code] = XOOPS_UPLOAD_URL . '/' . $file;
         }
-        $defaults = [':alien:' => 'alien.png', ':angel:' => 'angel.png', ':angry:' => 'angry.png', ':blink:' => 'blink.png', ':blush:' => 'blush.png', ':cheerful:' => 'cheerful.png', '8-)' => 'cool.png', ':devil:' => 'devil.png', ':dizzy:' => 'dizzy.png', ':ermm:' => 'ermm.png', ':D' => 'grin.png', ':happy:' => 'happy.png', '<3' => 'heart.png', ':kissing:' => 'kissing.png', ':ninja:' => 'ninja.png', ':pinch:' => 'pinch.png', ':pouty:' => 'pouty.png', ':(' => 'sad.png', ':O' => 'shocked.png', ':sick:' => 'sick.png', ':sideways:' => 'sideways.png', ':silly:' => 'silly.png', ':sleeping:' => 'sleeping.png', ':P' => 'tongue.png', ':unsure:' => 'unsure.png', ':woot:' => 'w00t.png', ':wassat:' => 'wassat.png', ':whistling:' => 'whistling.png', ';)' => 'wink.png', ':love:' => 'wub.png'];
-        $emoticonUrl = XOOPS_URL . $this->rootPath . '/emoticons/';
-        foreach ($defaults as $code => $file) {
-            if (!isset($config['dropdown'][$code]) && !isset($config['more'][$code])) {
-                $config['more'][$code] = $emoticonUrl . $file;
-            }
-        }
+        // SCEditor's own emoticons are ordinary smileys (SCEditorEmoticons, installed
+        // by the installer and the 2.7.4 upgrade), so posts store codes, not images.
         return $config;
     }
+
     /**
      * Localized command labels/prompts for js/xoops-bbcode.js, keyed by the names that file
      * looks up. Constants are guarded because a direct instantiation may not have loaded the

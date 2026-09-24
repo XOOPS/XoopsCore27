@@ -284,12 +284,22 @@ class MyTextSanitizer
      */
     public function smiley($message)
     {
-        $smileys = $this->getSmileys();
-        foreach ($smileys as $smile) {
-            $message = str_replace($smile['code'], '<img class="imgsmile" src="' . XOOPS_UPLOAD_URL . '/' . htmlspecialchars($smile['smile_url'], ENT_QUOTES | ENT_HTML5) . '" alt="" />', $message);
+        $map = [];
+        foreach ($this->getSmileys() as $smile) {
+            $code = (string) $smile['code'];
+            if ($code === '') {
+                continue;
+            }
+            $img = '<img class="imgsmile" src="' . XOOPS_UPLOAD_URL . '/' . htmlspecialchars($smile['smile_url'], ENT_QUOTES | ENT_HTML5) . '" alt="" />';
+            // displayTarea() escapes before this runs, so <3 arrives as &lt;3.
+            $map[$code] = $img;
+            $map[htmlspecialchars($code, ENT_COMPAT)] = $img;
+            $map[htmlspecialchars($code, ENT_QUOTES)] = $img;
         }
 
-        return $message;
+        // One pass, longest code first: no code matches part of another code, or
+        // markup inserted for an earlier smiley.
+        return $map === [] ? $message : strtr($message, $map);
     }
 
     /**

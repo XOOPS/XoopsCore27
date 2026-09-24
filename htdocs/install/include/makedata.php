@@ -531,5 +531,13 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional', 140)");
     ++$conf;
 
+    // SCEditor's emoticons as regular smileys. Optional content: a failure (for
+    // example an unwritable uploads/smilies) is reported but does not stop the install.
+    require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
+    $emoticonLogs = [];
+    if (!SCEditorEmoticons::install($dbm->db, $emoticonLogs)) {
+        trigger_error('SCEditor emoticons: ' . implode('; ', $emoticonLogs), E_USER_WARNING);
+    }
+
     return $groups;
 }

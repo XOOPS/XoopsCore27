@@ -72,7 +72,7 @@ final class XoopsMarkdown
         if (str_contains($text, '[xoops:markdown=') && preg_match('/\A\[quote\](.*)\[\/quote\]\z/s', $text, $quote)) {
             $body = preg_replace_callback(
                 '/\[xoops:markdown=(?:"1"|&quot;1&quot;)\]\r?\n.*?\r?\n\[\/xoops:markdown\]/s',
-                static fn(array $match): string => self::source($match[0]),
+                static fn(array $match): string => self::source($match[0]) ?? $match[0],
                 $quote[1],
             );
             if ($body !== null) {
@@ -168,12 +168,39 @@ final class XoopsMarkdown
                 if ($match[1] !== '') {
                     return $match[0];
                 }
+                $source = self::source($match[2]);
+                if ($source === null) {
+                    // Nested or malformed markers stay ordinary escaped text.
+                    return $match[0];
+                }
                 $token = $prefix . count($rendered) . 'END';
-                $rendered[$token] = self::render(self::source($match[2]), $images);
+                $rendered[$token] = self::render($source, $images);
                 return $token;
             },
             $text,
         ) ?? $text;
         return $rendered;
+    }
+
+    /**
+     * Swap protected documents back in, but only in text content. BBCode may
+     * have copied a placeholder into a generated attribute ([url=...]); rendered
+     * HTML there would break out of the attribute, so drop it instead.
+     *
+     * @param string                $text     sanitizer output holding placeholders
+     * @param array<string, string> $rendered placeholder => rendered HTML, from protect()
+     *
+     * @return string
+     */
+    public static function restore(string $text, array $rendered): string
+    {
+        $tokens = implode('|', array_map('preg_quote', array_keys($rendered)));
+        return preg_replace_callback(
+            '/<[^>]*>|' . $tokens . '/',
+            static fn(array $match): string => $match[0][0] === '<'
+                ? str_replace(array_keys($rendered), '', $match[0])
+                : $rendered[$match[0]],
+            $text,
+        ) ?? $text;
     }
 }

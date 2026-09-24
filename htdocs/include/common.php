@@ -148,11 +148,8 @@ include_once $xoops->path('include/functions.php');
 // read input. This does not authorize a save or enable raw HTML.
 if (\Xmf\Request::hasVar('_xoops_markdown', 'POST')) {
     require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
-    $markdownPost = \Xmf\Request::get('POST', \Xmf\Request::MASK_ALLOW_RAW);
-    $markdownRequest = \Xmf\Request::get('REQUEST', \Xmf\Request::MASK_ALLOW_RAW);
-    XoopsMarkdown::preparePost($markdownPost, $markdownRequest);
-    \Xmf\Request::set($markdownPost, 'POST');
-    \Xmf\Request::set($markdownRequest, 'REQUEST');
+    // In place: a Request::get()/set() round trip would trim every other field.
+    XoopsMarkdown::preparePost($_POST, $_REQUEST);
 }
 
 /* new installs should create this in mainfile */

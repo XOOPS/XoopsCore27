@@ -595,12 +595,6 @@ class MyTextSanitizer
     public function &displayTarea($text, $html = 0, $smiley = 1, $xcode = 1, $image = 1, $br = 1)
     {
         $text = (string) $text;
-        // Visual BBCode editors may serialize quoted attributes as entities
-        // (for example [size=&quot;x-large&quot;]). Decode entities only inside
-        // BBCode tags; body text must retain its literal entity content.
-        $text = preg_replace_callback('/\[([^\]\r\n]*)\]/', static function (array $match): string {
-            return '[' . html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8') . ']';
-        }, $text) ?? $text;
         $markdown = [];
         if (str_contains($text, '[xoops:markdown=')) {
             require_once __DIR__ . '/xoopsmarkdown.php';
@@ -627,12 +621,12 @@ class MyTextSanitizer
             $text = $this->htmlSpecialChars($text, ENT_COMPAT, $charset);
         }
         if ($xcode != 0) {
-            // htmlSpecialChars() encoded the tag again; unwrap only tag syntax
-            // so the BBCode decoder can recognize quoted attributes.
-            $text = preg_replace_callback('/\[([^\]\r\n]*)\]/', static function (array $match): string {
-                $value = html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                return '[' . $value . ']';
+            // Visual editors quote attributes ([size="x-large"]), and storage or
+            // htmlSpecialChars() may have encoded those quotes. Restore only a
+            // quote pair around a plain value inside a tag; never <, > or &.
+            // Every attribute pattern in xoopsCodeDecode() excludes '"'.
+            $text = preg_replace_callback('/\[[a-z][^\]\r\n]*\]/i', static function (array $match): string {
+                return preg_replace('/=(?:&amp;)?&quot;([^"&<>]*)(?:&amp;)?&quot;/', '="$1"', $match[0]) ?? $match[0];
             }, $text) ?? $text;
         }
         $text = $this->codePreConv($text, $xcode); // Ryuji_edit(2003-11-18)
@@ -668,7 +662,7 @@ class MyTextSanitizer
         }
 
         if ($markdown !== []) {
-            $text = strtr($text, $markdown);
+            $text = XoopsMarkdown::restore($text, $markdown);
         }
 
         return $text;

@@ -1,9 +1,14 @@
-// Exercise the generated adapter script, without a browser or external packages.
-/* XOOPS editor submit-intent regression. Copyright (c) 2000-2026 XOOPS Project. */
+/*
+ * Runs the inline script FormEasyMDE generates (file path in argv[2]) against a
+ * minimal fake form and checks which submits count as Save.
+ * Called by XoopsMarkdownEditorTest; no browser or npm packages needed.
+ * Copyright (c) 2000-2026 XOOPS Project (https://xoops.org). GNU GPL 2 or later.
+ */
 const assert = require('node:assert/strict');
-const {execFileSync} = require('node:child_process');
+const {readFileSync} = require('node:fs');
 const {runInNewContext} = require('node:vm');
-const script = execFileSync('php', [__dirname + '/markdown.php', '--javascript'], {encoding: 'utf8'});
+
+const script = readFileSync(process.argv[2], 'utf8');
 const listeners = {};
 const controls = [{value: '0'}, {value: '0'}];
 const form = {
@@ -20,6 +25,7 @@ const context = {
 runInNewContext(script, context);
 const emit = (type, event = {}) => (listeners[type] ?? []).forEach(listener => listener(event));
 const values = () => controls.map(input => input.value);
+
 assert.deepEqual(values(), ['0', '0'], 'Opening/programmatic editor-switch submission does not signal Save');
 for (const name of ['preview', 'contents_upload', 'cancel']) {
     emit('submit', {submitter: {name, id: '', getAttribute: () => null}});
@@ -39,4 +45,3 @@ emit('submit', {submitter: {name: 'custom', id: '', getAttribute: () => 'preview
 assert.deepEqual(values(), ['0', '0'], 'Explicit custom preview action');
 runInNewContext(script, context);
 assert.equal(listeners.submit.length, 1, 'Multiple editors share one form submit handler');
-console.log('PASS: generated EasyMDE save intent and non-saving actions');

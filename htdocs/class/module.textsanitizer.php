@@ -654,9 +654,11 @@ class MyTextSanitizer
             // html not allowed
             $text = $this->htmlSpecialChars($text, ENT_COMPAT, $charset);
         }
-        if ($xcode != 0) {
+        if ($xcode != 0 && $html != 1) {
             // Visual editors quote attributes ([size="x-large"]), and storage or
-            // htmlSpecialChars() may have encoded those quotes. Restore only a
+            // htmlSpecialChars() may have encoded those quotes. Only with HTML
+            // off: then no raw tag exists, so a restored quote cannot close an
+            // HTML attribute (title="[a=&quot; onerror=...&quot;]"). Restore only a
             // quote pair around a plain value inside a tag; never <, > or an
             // encoded quote ('&' stays: URL query strings need it).
             // Every attribute pattern in xoopsCodeDecode() excludes '"'.

@@ -78,6 +78,21 @@ final class MyTextSanitizerEditorTagsTest extends TestCase
     }
 
     #[Test]
+    public function encodedQuotesInsideAnHtmlAttributeStayEncoded(): void
+    {
+        $myts = (new ReflectionClass(MyTextSanitizer::class))->newInstanceWithoutConstructor();
+        $myts->config = ['extensions' => []];
+        $html = '<img src="x" title="[a=&quot; onerror=alert(1) x=&quot;]">';
+
+        $this->assertSame($html, $myts->displayTarea($html, 1, 0, 1, 1, 0));
+        $this->assertStringContainsString(
+            '<span style="font-size: x-large;">s</span>',
+            $myts->displayTarea('[size="x-large"]s[/size]', 1, 0, 1, 1, 0),
+            'raw quotes still decode with HTML on',
+        );
+    }
+
+    #[Test]
     public function aColorWithItsOwnHashIsNotDoubled(): void
     {
         $this->assertStringContainsString('<span style="color: #000000;">c</span>', $this->display('[color=#000000]c[/color]'));

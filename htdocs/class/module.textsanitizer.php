@@ -419,7 +419,8 @@ class MyTextSanitizer
         $replacements[] = '<a href="http://\\2" rel="noopener external" title="">\\3</a>';
         $patterns[]     = "/\[color=(['\"]?)(rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))\\1?](.*)\[\/color\]/sU";
         $replacements[] = '<span style="color: \\2;">\\3</span>';
-        $patterns[]     = "/\[color=(['\"]?)([a-zA-Z0-9#]+)\\1?](.*)\[\/color\]/sU";
+        // The '#' is added here; one written by an editor is dropped, not doubled.
+        $patterns[]     = "/\[color=(['\"]?)#?([a-zA-Z0-9]+)\\1?](.*)\[\/color\]/sU";
         $replacements[] = '<span style="color: #\\2;">\\3</span>';
         $patterns[]     = "/\[size=(['\"]?)([a-zA-Z0-9-]+)\\1?](.*)\[\/size\]/sU";
         $replacements[] = '<span style="font-size: \\2;">\\3</span>';
@@ -656,10 +657,11 @@ class MyTextSanitizer
         if ($xcode != 0) {
             // Visual editors quote attributes ([size="x-large"]), and storage or
             // htmlSpecialChars() may have encoded those quotes. Restore only a
-            // quote pair around a plain value inside a tag; never <, > or &.
+            // quote pair around a plain value inside a tag; never <, > or an
+            // encoded quote ('&' stays: URL query strings need it).
             // Every attribute pattern in xoopsCodeDecode() excludes '"'.
             $text = preg_replace_callback('/\[[a-z][^\]\r\n]*\]/i', static function (array $match): string {
-                return preg_replace('/=(?:&amp;)?&quot;([^"&<>]*)(?:&amp;)?&quot;/', '="$1"', $match[0]) ?? $match[0];
+                return preg_replace('/=(?:&amp;)?&quot;((?:(?!(?:&amp;)?&quot;)[^"<>])*)(?:&amp;)?&quot;/', '="$1"', $match[0]) ?? $match[0];
             }, $text) ?? $text;
         }
         $text = $this->codePreConv($text, $xcode); // Ryuji_edit(2003-11-18)

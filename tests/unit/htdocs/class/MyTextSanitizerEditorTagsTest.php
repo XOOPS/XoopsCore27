@@ -62,6 +62,29 @@ final class MyTextSanitizerEditorTagsTest extends TestCase
     }
 
     #[Test]
+    public function quotedUrlKeepsItsQueryString(): void
+    {
+        $out = $this->display('[url="https://x.test/?a=1&b=2"]q[/url]');
+
+        $this->assertStringContainsString('<a href="https://x.test/?a=1&b=2"', $out);
+    }
+
+    #[Test]
+    public function quotesAroundAnInjectedAttributeStayText(): void
+    {
+        $out = $this->display('[url=&quot;x&quot; onmouseover=&quot;alert(1)&quot;]q[/url]');
+
+        $this->assertStringNotContainsString('<a', $out);
+    }
+
+    #[Test]
+    public function aColorWithItsOwnHashIsNotDoubled(): void
+    {
+        $this->assertStringContainsString('<span style="color: #000000;">c</span>', $this->display('[color=#000000]c[/color]'));
+        $this->assertStringContainsString('<span style="color: #FF0000;">c</span>', $this->display('[color=FF0000]c[/color]'));
+    }
+
+    #[Test]
     public function unclosedStructureStaysText(): void
     {
         $out = $this->display('[table]open [ol]list [sub]x');

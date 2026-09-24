@@ -12,27 +12,10 @@
  *
  * SCEditor starts visually and exposes its built-in source switch (see
  * ../sceditor.php render()). The format definitions below cover the XOOPS
- * tags rendered by the server; source mode remains available for other tags:
- *
- *   SCEditor only rewrites text when it converts between its BBCode source and
- *   its WYSIWYG HTML representation (using the `format`/`html`/`tags`
- *   definitions below). In source mode that conversion never runs — the
- *   textarea's value is the literal BBCode the user is editing, untouched. A
- *   toolbar button in source mode only inserts/wraps text at the caret via
- *   insertText(); it never re-serialises the rest of the document. So a tag
- *   this file does not know about (`[siteurl]` chained oddly, `[img id=]`,
- *   `[[Wiki]]`, or — the case that matters most — an arbitrary smilie text
- *   code from the `smiles` DB table such as `:wink:` or a custom multi-word
- *   code) is never parsed, never matched against a format definition, and
- *   therefore can never be dropped.
- *
- *   SCEditor has NO separate "pass unknown BBCode through verbatim" switch to
- *   turn on — there is nothing to configure for that. The safety instead comes
- *   entirely from never leaving source mode (enforced in sceditor.php), so the
- *   format/html functions below are effectively inert in normal operation.
- *   They are still declared correctly (best-effort) below for API completeness
- *   and so a future maintainer who adds a preview/WYSIWYG toggle does not
- *   inherit a silently-wrong conversion table.
+ * tags rendered by the server. A tag without a definition (`[[Wiki]]`, an
+ * unknown `[tag]`) or a smiley code SCEditor does not know is kept as text by
+ * SCEditor's BBCode parser and saved unchanged (tests/sceditor-roundtrip.browser.js
+ * round-trips [unknowntag] and [[WikiPage]]).
  */
 (function () {
     'use strict';

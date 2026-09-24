@@ -172,7 +172,8 @@ final class XoopsMarkdown
                 $value = &$value[$key];
             }
             if (is_string($value)) {
-                $state = $post['_xoops_markdown_state'][hash('sha256', $field)] ?? null;
+                $states = $post['_xoops_markdown_state'] ?? null;
+                $state = is_array($states) ? $states[hash('sha256', $field)] ?? null : null;
                 if (!is_array($state) || !is_string($state['initial'] ?? null)) {
                     unset($value);
                     continue;

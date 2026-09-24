@@ -191,6 +191,19 @@ final class XoopsMarkdownTest extends TestCase
     }
 
     #[Test]
+    public function aMalformedStateIsIgnored(): void
+    {
+        foreach (['bad', [hash('sha256', 'm') => 'bad']] as $state) {
+            $post = ['m' => 'x', '_xoops_markdown' => ['m'], '_xoops_markdown_state' => $state];
+            $request = $post;
+
+            XoopsMarkdown::preparePost($post, $request);
+
+            $this->assertSame('x', $post['m']);
+        }
+    }
+
+    #[Test]
     public function aTrimmedTextSharedByTwoFieldsPreviewsAsItself(): void
     {
         $state = ['initial' => XoopsMarkdown::fingerprint('original'), 'marked' => '0'];

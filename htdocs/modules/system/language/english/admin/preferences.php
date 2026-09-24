@@ -318,3 +318,22 @@ define('_MD_AM_TWOFACTORMODE', 'Two-factor authentication');
 define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol an authenticator app or e-mail codes, and challenges members who have enrolled.');
 define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
 define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
+
+// 2.7.4 Editors (SCEditor)
+define('_MD_AM_EDITORS', 'Editors');
+define('_MD_AM_SCEDITOR_TOOLBAR', 'SCEditor toolbar buttons');
+define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it.');
+define('_MD_AM_SCEDITOR_PLUGINS', 'SCEditor plugins');
+define('_MD_AM_SCEDITOR_PLUGINSDSC', 'Optional SCEditor plugins to load: alternative-lists (list styles), autosave (restores unsent text), autoyoutube (turns pasted YouTube links into videos), plaintext (paste as plain text), undo (undo/redo history).');
+define('_MD_AM_SCEDITOR_EMOTICONS', 'Enable emoticons in SCEditor?');
+define('_MD_AM_SCEDITOR_EMOTICONSDSC', 'Shows the emoticon button and turns smiley codes into images while typing. The smileys come from System > Smilies.');
+define('_MD_AM_SCEDITOR_RESIZE', 'Allow resizing SCEditor?');
+define('_MD_AM_SCEDITOR_RESIZEDSC', 'Lets users drag the lower edge to resize the editor.');
+define('_MD_AM_SCEDITOR_AUTOEXPAND', 'Grow SCEditor with its content?');
+define('_MD_AM_SCEDITOR_AUTOEXPANDDSC', 'Makes the editor taller automatically as the text grows.');
+define('_MD_AM_SCEDITOR_SPELLCHECK', 'Enable spellcheck in SCEditor?');
+define('_MD_AM_SCEDITOR_SPELLCHECKDSC', 'Uses the browser spellchecker while typing.');
+define('_MD_AM_SCEDITOR_WIDTH', 'SCEditor width');
+define('_MD_AM_SCEDITOR_WIDTHDSC', 'Default width, for example 100% or 600px. A module that sets its own width keeps it.');
+define('_MD_AM_SCEDITOR_HEIGHT', 'SCEditor height');
+define('_MD_AM_SCEDITOR_HEIGHTDSC', 'Default height, for example 400px. A module that sets its own height keeps it.');

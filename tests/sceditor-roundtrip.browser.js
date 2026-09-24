@@ -61,6 +61,14 @@
             failures.push(input + '  =>  ' + actual);
         }
     });
+    // The autoyoutube plugin inserts an iframe instead of going through [youtube].
+    inst.sourceMode(false);
+    inst.val('');
+    inst.wysiwygEditorInsertHtml('<iframe data-youtube-id="dQw4w9WgXcQ" src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"></iframe>');
+    inst.sourceMode(true);
+    if (inst.val().trim() !== '[youtube]dQw4w9WgXcQ[/youtube]') {
+        failures.push('autoyoutube iframe  =>  ' + inst.val().trim());
+    }
     inst.val(original);
     inst.updateOriginal();
     console.log(failures.length ? 'FAIL\n' + failures.join('\n') : 'PASS: ' + Object.keys(cases).length + ' SCEditor round trips');

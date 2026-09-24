@@ -27,6 +27,8 @@ use Xoops\Upgrade\XoopsUpgrade;
  *  3. emoticons      — register SCEditor's emoticons as smileys: copy each image to
  *                      uploads/smilies and insert its smiles row; codes that already
  *                      exist (an admin's own smiley included) are left alone.
+ *  4. editorprefs    — add the Editors preference category (8) and the SCEditor
+ *                      preferences with their options, each row checked on its own.
  *
  * The order is deliberate and must stay: common.php treats the presence of the
  * twofactor_mode row in the database-loaded configuration as the "installed" signal,
@@ -64,6 +66,7 @@ class Upgrade_274 extends XoopsUpgrade
             'user2fatable',
             'twofactormode',
             'emoticons',
+            'editorprefs',
         ];
     }
 
@@ -358,6 +361,169 @@ class Upgrade_274 extends XoopsUpgrade
         require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';
 
         return \SCEditorEmoticons::install($this->db, $this->logs);
+    }
+
+    // =========================================================================
+    // Task 4: editorprefs
+    // =========================================================================
+
+    /**
+     * Do the Editors preference category, every SCEditor preference and all of
+     * their options exist?
+     *
+     * @return bool
+     */
+    public function check_editorprefs(): bool
+    {
+        $missing = $this->missingEditorRows();
+        if (null === $missing) {
+            $this->logs[] = 'Could not read the config tables to check the Editors preferences';
+
+            return false;
+        }
+
+        return [] === $missing;
+    }
+
+    /**
+     * Insert whichever category, preference or option rows are missing.
+     *
+     * @return bool true when every row exists afterwards
+     */
+    public function apply_editorprefs(): bool
+    {
+        // Same reason and shape as apply_twofactormode(): the config tables have no
+        // unique key, so serialize concurrent runs.
+        $lock = 'SHA2(CONCAT(DATABASE(), ' . $this->db->quote(':' . $this->db->prefix('config') . ':editorprefs') . '), 256)';
+        $result = $this->db->query('SELECT GET_LOCK(' . $lock . ', 10)');
+        $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
+        if (!is_array($row) || 1 !== (int) $row[0]) {
+            $this->logs[] = 'Could not acquire the editorprefs migration lock; retry the upgrade';
+
+            return false;
+        }
+        $success = false;
+        try {
+            $success = $this->applyEditorRows();
+        } finally {
+            $result = $this->db->query('SELECT RELEASE_LOCK(' . $lock . ')');
+            $row = $this->db->isResultSet($result) && $result instanceof \mysqli_result ? $this->db->fetchRow($result) : false;
+            if (!is_array($row) || 1 !== (int) $row[0]) {
+                $this->logs[] = 'Could not release the editorprefs migration lock';
+                $success = false;
+            }
+        }
+
+        return $success;
+    }
+
+    /** Insert missing rows while apply_editorprefs() holds the site lock. */
+    private function applyEditorRows(): bool
+    {
+        $missing = $this->missingEditorRows();
+        if (null === $missing) {
+            $this->logs[] = 'Could not read the config tables; the Editors preferences were not inserted';
+
+            return false;
+        }
+        foreach ($missing as $item) {
+            if ('category' === $item['type']) {
+                $sql = 'INSERT INTO `' . $this->db->prefix('configcategory') . '` (confcat_id, confcat_name, confcat_order)'
+                     . ' VALUES (' . \SCEditorConfig::CATEGORY . ", '_MD_AM_EDITORS', 0)";
+            } elseif ('config' === $item['type']) {
+                $def = $item['item'];
+                $sql = 'INSERT INTO `' . $this->db->prefix('config') . '`'
+                     . ' (conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc,'
+                     . ' conf_formtype, conf_valuetype, conf_order) VALUES (0, ' . \SCEditorConfig::CATEGORY . ', '
+                     . $this->db->quote($item['name']) . ', ' . $this->db->quote($def['title']) . ', '
+                     . $this->db->quote($def['value']) . ', ' . $this->db->quote($def['desc']) . ', '
+                     . $this->db->quote($def['formtype']) . ', ' . $this->db->quote($def['valuetype']) . ', ' . $def['order'] . ')';
+            } else {
+                // An option's conf_id exists only after its preference row: look it up now.
+                $confId = $this->editorConfId($item['name']);
+                if (null === $confId || 0 === $confId) {
+                    $this->logs[] = sprintf('Could not find the %s preference for its options', $item['name']);
+
+                    return false;
+                }
+                $sql = 'INSERT INTO `' . $this->db->prefix('configoption') . '` (confop_name, confop_value, conf_id) VALUES ('
+                     . $this->db->quote($item['option']) . ', ' . $this->db->quote($item['option']) . ', ' . $confId . ')';
+            }
+            if (!$this->execOrFail($sql)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Rows still to insert, in insert order: the category, then each preference
+     * followed by its options.
+     *
+     * @return list<array{type: string, name?: string, item?: array, option?: string}>|null null when a lookup failed
+     */
+    private function missingEditorRows(): ?array
+    {
+        require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
+        $missing  = [];
+        $category = $this->countRows('configcategory', 'confcat_id = ' . \SCEditorConfig::CATEGORY);
+        if (null === $category) {
+            return null;
+        }
+        if (0 === $category) {
+            $missing[] = ['type' => 'category'];
+        }
+        foreach (\SCEditorConfig::items() as $name => $item) {
+            $confId = $this->editorConfId($name);
+            if (null === $confId) {
+                return null;
+            }
+            if (0 === $confId) {
+                $missing[] = ['type' => 'config', 'name' => $name, 'item' => $item];
+            }
+            foreach ($item['options'] as $option) {
+                $count = 0 === $confId ? 0 : $this->countRows(
+                    'configoption',
+                    'conf_id = ' . $confId . ' AND confop_value = ' . $this->db->quote($option),
+                );
+                if (null === $count) {
+                    return null;
+                }
+                if (0 === $count) {
+                    $missing[] = ['type' => 'option', 'name' => $name, 'option' => $option];
+                }
+            }
+        }
+
+        return $missing;
+    }
+
+    /** conf_id of an Editors preference, 0 when absent, null when the lookup failed. */
+    private function editorConfId(string $name): ?int
+    {
+        $sql    = 'SELECT `conf_id` FROM `' . $this->db->prefix('config') . '`'
+                . ' WHERE conf_modid = 0 AND conf_catid = ' . \SCEditorConfig::CATEGORY
+                . ' AND conf_name = ' . $this->db->quote($name);
+        $result = $this->db->query($sql);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+        $row = $this->db->fetchRow($result);
+
+        return is_array($row) ? (int) $row[0] : 0;
+    }
+
+    /** COUNT(*) of a table under a condition, null when the lookup failed. */
+    private function countRows(string $table, string $where): ?int
+    {
+        $result = $this->db->query('SELECT COUNT(*) FROM `' . $this->db->prefix($table) . '` WHERE ' . $where);
+        if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
+            return null;
+        }
+        $row = $this->db->fetchRow($result);
+
+        return is_array($row) ? (int) $row[0] : null;
     }
 
     private function execOrFail(string $sql): bool

@@ -531,6 +531,21 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '_MD_AM_TWOFACTORMODE_OPTIONAL', 'optional', 140)");
     ++$conf;
 
+    // Editors preferences (category 8, conf_id 141+): SCEditorConfig is the single
+    // definition, shared with the 2.7.4 upgrade and the editor itself.
+    require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
+    $confId = 141;
+    foreach (SCEditorConfig::items() as $name => $item) {
+        $dbm->insert('config', $cfgCols . ' VALUES (' . $confId . ', 0, ' . SCEditorConfig::CATEGORY . ", '" . $name . "', '"
+            . $item['title'] . "', '" . addslashes($item['value']) . "', '" . $item['desc'] . "', '"
+            . $item['formtype'] . "', '" . $item['valuetype'] . "', " . $item['order'] . ')');
+        foreach ($item['options'] as $option) {
+            $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '" . $option . "', '" . $option . "', $confId)");
+            ++$conf;
+        }
+        ++$confId;
+    }
+
     // SCEditor's emoticons as regular smileys. Optional content: a failure (for
     // example an unwritable uploads/smilies) is reported but does not stop the install.
     require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorEmoticons.php';

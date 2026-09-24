@@ -14,6 +14,32 @@ Below are language differences from a version to next version.
 - added define('_MD_AM_TWOFACTORMODEDSC', 'Off pauses every second-factor challenge while keeping each member\'s enrolment. Optional lets members enrol an authenticator app or e-mail codes, and challenges members who have enrolled.');
 - added define('_MD_AM_TWOFACTORMODE_OFF', 'Off (paused)');
 - added define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
+- added define('_MD_AM_EDITORS', 'Editors');
+- added define('_MD_AM_SCEDITOR_TOOLBAR', 'SCEditor toolbar buttons');
+- added define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it.');
+- added define('_MD_AM_SCEDITOR_PLUGINS', 'SCEditor plugins');
+- added define('_MD_AM_SCEDITOR_PLUGINSDSC', 'Optional SCEditor plugins to load: alternative-lists (list styles), autosave (restores unsent text), autoyoutube (turns pasted YouTube links into videos), plaintext (paste as plain text), undo (undo/redo history).');
+- added define('_MD_AM_SCEDITOR_EMOTICONS', 'Enable emoticons in SCEditor?');
+- added define('_MD_AM_SCEDITOR_EMOTICONSDSC', 'Shows the emoticon button and turns smiley codes into images while typing. The smileys come from System > Smilies.');
+- added define('_MD_AM_SCEDITOR_RESIZE', 'Allow resizing SCEditor?');
+- added define('_MD_AM_SCEDITOR_RESIZEDSC', 'Lets users drag the lower edge to resize the editor.');
+- added define('_MD_AM_SCEDITOR_AUTOEXPAND', 'Grow SCEditor with its content?');
+- added define('_MD_AM_SCEDITOR_AUTOEXPANDDSC', 'Makes the editor taller automatically as the text grows.');
+- added define('_MD_AM_SCEDITOR_SPELLCHECK', 'Enable spellcheck in SCEditor?');
+- added define('_MD_AM_SCEDITOR_SPELLCHECKDSC', 'Uses the browser spellchecker while typing.');
+- added define('_MD_AM_SCEDITOR_WIDTH', 'SCEditor width');
+- added define('_MD_AM_SCEDITOR_WIDTHDSC', 'Default width, for example 100% or 600px. A module that sets its own width keeps it.');
+- added define('_MD_AM_SCEDITOR_HEIGHT', 'SCEditor height');
+- added define('_MD_AM_SCEDITOR_HEIGHTDSC', 'Default height, for example 400px. A module that sets its own height keeps it.');
+
+/htdocs/modules/system/themes/dark/language/english/admin.php
+- added define('_OXYGEN_EDITORS', 'Editors');
+
+/htdocs/modules/system/themes/default/language/english/admin.php
+- added define('_OXYGEN_EDITORS', 'Editors');
+
+/htdocs/modules/system/themes/transition/language/english/admin.php
+- added define('_OXYGEN_EDITORS', 'Editors');
 
 /htdocs/language/english/user2fa.php (new file)
 - added define('_US_2FA_HTTP_LOGIN', 'This popup cannot complete a two-factor login over HTTP because your password would be sent without encryption. Use the site login instead, or ask the administrator to enable HTTPS for the site.');

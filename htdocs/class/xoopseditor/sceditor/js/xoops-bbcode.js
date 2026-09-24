@@ -443,9 +443,15 @@
         // data-youtube claim + data-width/data-height carry the tag identity and
         // dimensions through a conversion, so format() rebuilds the original tag
         // instead of the anchor being claimed by 'url'.
-        tags: { a: { 'data-youtube': null } },
+        // The iframe claim is the stock one: the autoyoutube plugin inserts
+        // <iframe data-youtube-id>, and this definition replaced the stock tags.
+        tags: { a: { 'data-youtube': null }, iframe: { 'data-youtube-id': null } },
         quoteType: QuoteType.auto,
         format: function (element, content) {
+            var videoId = element.getAttribute ? element.getAttribute('data-youtube-id') : '';
+            if (videoId) {
+                return '[youtube]' + videoId + '[/youtube]';
+            }
             var width = element.getAttribute ? element.getAttribute('data-width') : '';
             var height = element.getAttribute ? element.getAttribute('data-height') : '';
             // A bare [youtube] must not come back as [youtube=,].
@@ -487,7 +493,7 @@
     // ------------------------------------------------------------------
     // Default-off extension tags — registered so the BBCode is understood if
     // present in existing content, but NOT added to the default toolbar (see
-    // xoopsBBCodeToolbar below). Module/admin configuration decides whether
+    // SCEditorConfig::TOOLBAR). Module/admin configuration decides whether
     // these are actually offered to users; this plugin does not second-guess
     // that here.
     // ------------------------------------------------------------------
@@ -618,24 +624,6 @@
         tooltip: L('wiki', 'Wiki link')
     });
 
-    /**
-     * Default toolbar: only groups/commands for tags XOOPS can actually
-     * render (per the registrations above). The default-off extension tags
-     * (iframe/mp3/soundcloud/mms/rtsp/wmp) are intentionally NOT here — they
-     * are understood if already present in content, but not offered by
-     * default. sceditor.php reads this global when creating the instance.
-     */
-    // Keep SCEditor's complete command set, including its visual/source switch.
-    // XOOPS overrides above supply the server-compatible output for commands whose
-    // stock BBCode differs; stock commands remain available for the standard tags.
-    window.xoopsBBCodeToolbar =
-        'bold,italic,underline,strike,subscript,superscript|' +
-        'left,center,right,justify|' +
-        'font,size,color,removeformat|' +
-        'cut,copy,paste|' +
-        'bulletlist,orderedlist,table|' +
-        'link,siteurl,email,image,youtube|' +
-        'quote,code,wikipage|' +
-        'horizontalrule,emoticon|' +
-        'print,maximize,source';
+    // The toolbar is built server-side from SCEditorConfig::TOOLBAR and the
+    // System > Preferences > Editors settings (see ../class/SCEditorConfig.php).
 }());

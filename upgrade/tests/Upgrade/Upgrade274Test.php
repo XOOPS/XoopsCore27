@@ -150,7 +150,7 @@ final class Upgrade274Test extends TestCase
     #[Test]
     public function tasksCreateTheTableBeforeTheConfigRow(): void
     {
-        self::assertSame(['user2fatable', 'twofactormode', 'emoticons'], $this->patch()->tasks);
+        self::assertSame(['user2fatable', 'twofactormode', 'emoticons', 'editorprefs'], $this->patch()->tasks);
     }
 
     #[Test]

@@ -48,6 +48,9 @@ class FormSCEditor extends XoopsEditor
     public string $width  = '100%';
     public string $height = '400px';
 
+    /** @var array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string} */
+    private array $settings;
+
     /**
      * Normalize a configured width before it reaches the typed property.
      * XoopsEditor::__construct() routes config keys through set*() methods when they exist,
@@ -118,7 +121,33 @@ class FormSCEditor extends XoopsEditor
     public function __construct(array $configs = [])
     {
         $this->rootPath = '/class/xoopseditor/sceditor';
+        require_once __DIR__ . '/class/SCEditorConfig.php';
+        $this->settings = SCEditorConfig::settings($this->savedPreferences());
+        // Site defaults first; a width/height the calling module passes still wins,
+        // because parent::__construct() routes it through setWidth()/setHeight().
+        $this->setWidth($this->settings['width']);
+        $this->setHeight($this->settings['height']);
         parent::__construct($configs);
+    }
+
+    /**
+     * The saved System > Preferences > Editors values; empty (defaults apply) before
+     * the 2.7.4 upgrade has added the category, or without a database.
+     *
+     * @return array<string, mixed>
+     */
+    private function savedPreferences(): array
+    {
+        if (!defined('XOOPS_CONF_EDITOR') || !function_exists('xoops_getHandler')) {
+            return [];
+        }
+        try {
+            $saved = xoops_getHandler('config')->getConfigsByCat(XOOPS_CONF_EDITOR);
+        } catch (Throwable $e) {
+            return [];
+        }
+
+        return is_array($saved) ? $saved : [];
     }
 
     /**
@@ -204,6 +233,11 @@ class FormSCEditor extends XoopsEditor
             // xoops-bbcode.js loads because that file reads them at registration time.
             $html .= '<script>window.xoopsSCEditorLang = ' . json_encode($this->commandLanguage(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ';</script>' . "\n";
             $html .= '<script src="' . $editorPath . '/js/xoops-bbcode.js"></script>' . "\n";
+            // Plugins enabled in System > Preferences > Editors; names come from the
+            // SCEditorConfig::PLUGINS allowlist, never from request data.
+            foreach ($this->settings['plugins'] as $plugin) {
+                $html .= '<script src="' . $editorPath . '/minified/plugins/' . $plugin . '.js"></script>' . "\n";
+            }
             $assetsIncluded = true;
         }
 
@@ -233,10 +267,13 @@ class FormSCEditor extends XoopsEditor
         $html .= '    autoUpdate: true,' . "\n";
         // Content stylesheet for the editing area, per the upstream usage docs.
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
-        $html .= '    toolbar: (typeof xoopsBBCodeToolbar !== "undefined") ? xoopsBBCodeToolbar : "bold,italic,underline,strike",' . "\n";
-        $html .= '    emoticonsEnabled: ' . (!empty($emoticons['dropdown']) ? 'true' : 'false') . ",\n";
+        $html .= '    toolbar: ' . json_encode(SCEditorConfig::toolbar($this->settings)) . ',' . "\n";
+        $html .= '    plugins: ' . json_encode(implode(',', $this->settings['plugins'])) . ',' . "\n";
+        $html .= '    emoticonsEnabled: ' . ($this->settings['emoticons'] && !empty($emoticons['dropdown']) ? 'true' : 'false') . ",\n";
         $html .= '    emoticons: ' . json_encode($emoticons, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ",\n";
-        $html .= '    resizeEnabled: true,' . "\n";
+        $html .= '    resizeEnabled: ' . ($this->settings['resize'] ? 'true' : 'false') . ',' . "\n";
+        $html .= '    autoExpand: ' . ($this->settings['autoexpand'] ? 'true' : 'false') . ',' . "\n";
+        $html .= '    spellcheck: ' . ($this->settings['spellcheck'] ? 'true' : 'false') . ',' . "\n";
         $html .= '    width: ' . json_encode($this->width, JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    height: ' . json_encode($this->height, JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
         $html .= '  });' . "\n";

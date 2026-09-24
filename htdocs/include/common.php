@@ -148,8 +148,21 @@ include_once $xoops->path('include/functions.php');
 // read input. This does not authorize a save or enable raw HTML.
 if (\Xmf\Request::hasVar('_xoops_markdown', 'POST')) {
     require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
-    // In place: a Request::get()/set() round trip would trim every other field.
-    XoopsMarkdown::preparePost($_POST, $_REQUEST);
+    // Raw and untrimmed, and only the fields preparePost() changed are written
+    // back: a full Request::set() would rewrite (and by default trim) every field.
+    $markdownMask    = \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM;
+    $markdownPost    = \Xmf\Request::get('POST', $markdownMask);
+    $markdownRequest = \Xmf\Request::get('REQUEST', $markdownMask);
+    $markdownBefore  = $markdownPost;
+    XoopsMarkdown::preparePost($markdownPost, $markdownRequest);
+    foreach ($markdownPost as $markdownName => $markdownValue) {
+        if ($markdownValue !== $markdownBefore[$markdownName]) {
+            \Xmf\Request::setVar($markdownName, $markdownValue, 'POST');
+            // setVar(POST) also overwrites REQUEST; keep its own precedence.
+            \Xmf\Request::setVar($markdownName, $markdownRequest[$markdownName] ?? $markdownValue, 'REQUEST');
+        }
+    }
+    unset($markdownMask, $markdownPost, $markdownRequest, $markdownBefore, $markdownName, $markdownValue);
 }
 
 /* new installs should create this in mainfile */

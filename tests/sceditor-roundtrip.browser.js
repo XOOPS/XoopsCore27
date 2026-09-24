@@ -8,7 +8,9 @@
 (function () {
     var inst = sceditor.instance(document.getElementById('message'));
     var original = inst.val();
-    // Differences allowed: SCEditor quotes values containing spaces or '='.
+    // null = must come back unchanged. Other expected values: SCEditor quotes
+    // values containing spaces or '='; a bare [url] becomes the attribute form the
+    // server decodes; image-manager captions lose characters image.php rejects.
     var cases = {
         '[mp3]https://example.test/a.mp3[/mp3]': null,
         '[img id=123]caption[/img]': null,
@@ -21,7 +23,11 @@
         '[email]a@example.test[/email]': null,
         '[siteurl=modules/news/]News[/siteurl]': null,
         '[url=https://xoops.org]XOOPS[/url]': null,
-        '[url]https://xoops.org[/url]': null,
+        '[url]https://xoops.org[/url]': '[url=https://xoops.org]https://xoops.org[/url]',
+        '[url]https://x.test/?a=1&b=2[/url]': '[url="https://x.test/?a=1&b=2"]https://x.test/?a=1&b=2[/url]',
+        '[img]https://x.test/p.png?a=1&b=2[/img]': null,
+        '[siteurl=javascript:alert(1)]x[/siteurl]': null,
+        '[img id=9]Tom & "Jerry" (1)?[/img]': '[img id=9]Tom  Jerry 1[/img]',
         '[url=https://x.test/?a=1&b=2]q[/url]': '[url="https://x.test/?a=1&b=2"]q[/url]',
         '[youtube]dQw4w9WgXcQ[/youtube]': null,
         '[youtube=640,360]dQw4w9WgXcQ[/youtube]': null,
@@ -44,7 +50,7 @@
         '[[WikiPage]]': null,
         '[unknowntag]x[/unknowntag]': null,
         '[mp3]https://x.test/a"onerror="alert(1).mp3[/mp3]': null,
-        '[img id=1]x" onerror="alert(2)[/img]': null
+        '[img id=1]x" onerror="alert(2)[/img]': '[img id=1]x onerror=alert2[/img]'
     };
     var failures = [];
     Object.keys(cases).forEach(function (input) {
@@ -52,8 +58,8 @@
         inst.sourceMode(true);
         inst.val(input);
         inst.sourceMode(false);
-        if (inst.getBody().querySelector('[onerror]')) {
-            failures.push('markup injected in visual view: ' + input);
+        if (inst.getBody().querySelector('[onerror], a[href^="javascript"]')) {
+            failures.push('markup or script link injected in visual view: ' + input);
         }
         inst.sourceMode(true);
         var actual = inst.val().trim();

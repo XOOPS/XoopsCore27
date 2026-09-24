@@ -20,7 +20,6 @@ use PHPUnit\Framework\TestCase;
 require_once XOOPS_ROOT_PATH . '/class/module.textsanitizer.php';
 require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
 
-defined('_QUOTEC') || define('_QUOTEC', 'Quote:');
 
 #[CoversClass(XoopsMarkdown::class)]
 #[CoversClass(MyTextSanitizer::class)]
@@ -138,5 +137,33 @@ final class XoopsMarkdownTest extends TestCase
 
         $this->assertSame("# edited\n", XoopsMarkdown::source($post['message']));
         $this->assertSame($post['message'], $request['message']);
+    }
+
+    #[Test]
+    public function restoreWithNoPlaceholdersReturnsTheTextUnchanged(): void
+    {
+        $this->assertSame('<p>a</p> b', XoopsMarkdown::restore('<p>a</p> b', []));
+    }
+
+    #[Test]
+    public function previewFindsTheDocumentByTrimmedTextToo(): void
+    {
+        $edited = "    indented code\n";
+        $post = [
+            'message' => $edited,
+            '_xoops_markdown' => ['message'],
+            '_xoops_markdown_state' => [hash('sha256', 'message') => [
+                'initial' => XoopsMarkdown::fingerprint('original'),
+                'marked'  => '0',
+            ]],
+            '_xoops_markdown_save' => '0',
+        ];
+        $request = $post;
+
+        XoopsMarkdown::preparePost($post, $request);
+
+        $this->assertSame($edited, $post['message'], 'a preview never wraps the submitted field');
+        $this->assertSame($edited, XoopsMarkdown::source(XoopsMarkdown::previewSource($edited)));
+        $this->assertSame($edited, XoopsMarkdown::source(XoopsMarkdown::previewSource(trim($edited))));
     }
 }

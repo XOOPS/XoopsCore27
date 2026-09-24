@@ -239,17 +239,17 @@
             if (/^mailto:/i.test(href)) {
                 return '[email]' + href.slice(7) + '[/email]';
             }
-            if (href === content) {
-                return '[url]' + content + '[/url]';
-            }
+            // Always the attribute form: xoopsCodeDecode() has no bare [url]x[/url].
             return '[url=' + href + ']' + content + '[/url]';
         },
         html: function (token, attrs, content) {
-            var href = (attrs && attrs.defaultattr) || content;
-            // Match the stock format's handling: scheme-check then entity-escape,
-            // so a [url=javascript:...] can never become a live link if the
-            // conversion path ever runs.
-            return '<a href="' + escapeEntities(escapeUriScheme(href)) + '">' + content + '</a>';
+            // Scheme-check before use, so [url=javascript:...] never becomes a live
+            // link. The attribute arrives raw and is escaped once; a bare [url] uses
+            // the content, which is already entity-encoded.
+            var href = attrs && attrs.defaultattr
+                ? escapeEntities(escapeUriScheme(attrs.defaultattr))
+                : quoteAttr(escapeUriScheme(content));
+            return '<a href="' + href + '">' + content + '</a>';
         }
     });
 
@@ -266,8 +266,12 @@
             return '[siteurl=' + (element.getAttribute('data-siteurl') || '') + ']' + content + '[/siteurl]';
         },
         html: function (token, attrs, content) {
-            var path = escapeEntities((attrs && attrs.defaultattr) || '');
-            return '<a data-siteurl="' + path + '" href="' + path + '">' + content + '</a>';
+            var path = (attrs && attrs.defaultattr) || '';
+            // The server always prefixes XOOPS_URL, so the visual link does too: a
+            // stored [siteurl=javascript:...] stays a harmless site path here.
+            // format() reads the raw path back from data-siteurl.
+            return '<a data-siteurl="' + escapeEntities(path) + '"'
+                + ' href="' + escapeEntities(SITE_URL + '/' + path.replace(/^\/+/, '')) + '">' + content + '</a>';
         }
     });
 
@@ -409,7 +413,9 @@
             // [img id=N]caption[/img]: an image-manager image; the body is its
             // caption, not a URL, and the server has no width= variant for it.
             if (id) {
-                return '[img' + attrs + ' id=' + id + ']' + (element.getAttribute('alt') || '') + '[/img]';
+                // image.php only decodes a caption without " ' ( ) ? & < >.
+                var caption = (element.getAttribute('alt') || '').replace(/["'()?&<>]/g, '');
+                return '[img' + attrs + ' id=' + id + ']' + caption + '[/img]';
             }
             if (width) {
                 attrs += ' width=' + width;
@@ -434,7 +440,9 @@
             if (attrs && attrs.width) {
                 extra += ' width="' + escapeEntities(attrs.width) + '"';
             }
-            return '<img src="' + escapeEntities(escapeUriScheme(content)) + '"' + extra + ' alt="" />';
+            // content is already entity-encoded; escaping it again would add an
+            // &amp; on every visual/source round trip.
+            return '<img src="' + quoteAttr(escapeUriScheme(content)) + '"' + extra + ' alt="" />';
         }
     });
 

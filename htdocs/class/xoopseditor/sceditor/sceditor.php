@@ -209,11 +209,11 @@ class FormSCEditor extends XoopsEditor
 
         $htmlName     = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         // XOOPS form builders commonly pass the edit value through one
-        // htmlspecialchars() layer before constructing the editor. Remove that
-        // presentation layer once; the textarea escaping below adds exactly one
-        // layer back, preventing BBCode such as [size="xx-large"] from becoming
-        // literal &quot; text during a visual/source round-trip.
-        $value = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // htmlspecialchars() layer before constructing the editor. Remove exactly
+        // that layer, as the core renderers do (XoopsFormRendererValueEscapeTrait);
+        // the textarea escaping below adds it back. html_entity_decode() would also
+        // turn literal text such as &eacute; or &colon; into characters.
+        $value = htmlspecialchars_decode((string) $value, ENT_QUOTES | ENT_HTML5);
         $escapedValue = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $jsId         = json_encode($name, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
         $emoticons    = $this->emoticonsConfig();
@@ -269,7 +269,7 @@ class FormSCEditor extends XoopsEditor
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    toolbar: ' . json_encode(SCEditorConfig::toolbar($this->settings)) . ',' . "\n";
         $html .= '    plugins: ' . json_encode(implode(',', $this->settings['plugins'])) . ',' . "\n";
-        $html .= '    emoticonsEnabled: ' . ($this->settings['emoticons'] && !empty($emoticons['dropdown']) ? 'true' : 'false') . ",\n";
+        $html .= '    emoticonsEnabled: ' . ($this->settings['emoticons'] && ($emoticons['dropdown'] !== [] || $emoticons['more'] !== []) ? 'true' : 'false') . ",\n";
         $html .= '    emoticons: ' . json_encode($emoticons, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ",\n";
         $html .= '    resizeEnabled: ' . ($this->settings['resize'] ? 'true' : 'false') . ',' . "\n";
         $html .= '    autoExpand: ' . ($this->settings['autoexpand'] ? 'true' : 'false') . ',' . "\n";

@@ -1,33 +1,72 @@
 <?php
+
 declare(strict_types=1);
 
 /**
  * Markdown transport and rendering shared by XOOPS editors and text fields.
- * @copyright Copyright (c) XOOPS Project (https://xoops.org)
- * @license GNU GPL 2 or later
+ *
+ * @category  Xoops
+ * @package   Xoops\Editor
+ * @author    XOOPS Development Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
+
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
+/**
+ * A Markdown document is stored in an existing text column between OPEN and
+ * CLOSE markers, so modules need no schema change. MyTextSanitizer renders it
+ * with Parsedown in safe mode instead of the BBCode pipeline.
+ *
+ * @category  Xoops
+ * @package   Xoops\Editor
+ * @author    XOOPS Development Team
+ * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
+ */
 final class XoopsMarkdown
 {
     public const OPEN = '[xoops:markdown="1"]';
     public const CLOSE = '[/xoops:markdown]';
 
+    /** @var array<string, string> submitted text => wrapped document, for previewSource() */
     private static array $previews = [];
 
-    /** Browser form submissions normalize line endings. */
+    /**
+     * Fingerprint of an editor value; browser form submissions normalize line endings.
+     *
+     * @param string $text editor value
+     *
+     * @return string sha256 hex digest
+     */
     public static function fingerprint(string $text): string
     {
         return hash('sha256', str_replace(["\r\n", "\r"], "\n", $text));
     }
 
-    /** Unsaved previews must not add format markers to the submitted source. */
+    /**
+     * The wrapped document for an unsaved preview. Previews must not add format
+     * markers to the submitted source, so preparePost() records them here.
+     *
+     * @param string $text submitted field value
+     *
+     * @return string the wrapped document, or $text when it is not a Markdown field
+     */
     public static function previewSource(string $text): string
     {
         return self::$previews[$text] ?? $text;
     }
 
-    /** Return editable source, or null for an ordinary legacy text field. */
+    /**
+     * Editable source of a stored document.
+     *
+     * @param string $text stored value, raw or escaped by getVar('e')
+     *
+     * @return string|null the Markdown source, or null for an ordinary legacy text field
+     */
     public static function source(string $text): ?string
     {
         // A quoted marker distinguishes getVar('e') from raw source. Decode
@@ -48,7 +87,14 @@ final class XoopsMarkdown
         return strtr($source, ['%3C' => '<', '%3E' => '>', '%26' => '&', '%5B' => '[', '%25' => '%']);
     }
 
-    /** Keep source searchable in existing columns; never tag empty input. */
+    /**
+     * Wrap Markdown source for storage. Source stays searchable in existing
+     * columns; empty input is never tagged.
+     *
+     * @param string $text Markdown source (an already wrapped value is re-wrapped from its source)
+     *
+     * @return string the stored document
+     */
     public static function wrap(string $text): string
     {
         if (trim($text) === '') {
@@ -62,7 +108,13 @@ final class XoopsMarkdown
         return self::OPEN . "\n" . $source . "\n" . self::CLOSE;
     }
 
-    /** Restore source for EasyMDE, including a legacy forum's quoted document. */
+    /**
+     * Source for EasyMDE, including a legacy forum's quoted document.
+     *
+     * @param string $text stored value
+     *
+     * @return string editable text
+     */
     public static function editorSource(string $text): string
     {
         $source = self::source($text);
@@ -86,6 +138,11 @@ final class XoopsMarkdown
      * Tag editor fields before module handlers read POST. Mirror only matching
      * REQUEST values for legacy readers, preserving request-source precedence.
      * This does not authorize saves or change permission, CSRF, or HTML flags.
+     *
+     * @param array<string, mixed> $post    POST input, modified in place
+     * @param array<string, mixed> $request REQUEST input, modified in place
+     *
+     * @return void
      */
     public static function preparePost(array &$post, array &$request): void
     {
@@ -122,7 +179,9 @@ final class XoopsMarkdown
                 $marked = ($state['marked'] ?? null) === '1';
                 $changed = self::fingerprint($value) !== $state['initial'];
                 if ($marked || $changed) {
-                    self::$previews[$value] = self::wrap($value);
+                    // Also under the trimmed text: Request::getString() trims, and
+                    // a module may preview with that value.
+                    self::$previews[$value] = self::$previews[trim($value)] = self::wrap($value);
                 }
                 // Restore an existing marker on round trips; introduce a NEW
                 // marker only after an edit and an explicit Save submission.
@@ -137,7 +196,14 @@ final class XoopsMarkdown
         }
     }
 
-    /** Render untrusted source independently of legacy HTML/BBCode flags. */
+    /**
+     * Render untrusted source independently of legacy HTML/BBCode flags.
+     *
+     * @param string $source Markdown source
+     * @param bool   $images false renders images as their alternative text (doimage=0)
+     *
+     * @return string safe HTML (Parsedown safe mode)
+     */
     public static function render(string $source, bool $images = true): string
     {
         if (!class_exists(\Parsedown::class)) {
@@ -154,7 +220,17 @@ final class XoopsMarkdown
         return $html;
     }
 
-    /** Protect marked documents inside legacy replies until BBCode completes. */
+    /**
+     * Replace marked documents inside legacy replies with placeholders until the
+     * BBCode pipeline completes; restore() swaps the rendered HTML back in.
+     *
+     * @param string $text   sanitizer input, modified in place
+     * @param bool   $images false renders images as their alternative text
+     *
+     * @return array<string, string> placeholder => rendered HTML
+     *
+     * @throws \Exception when random_bytes() cannot gather entropy for the placeholder prefix
+     */
     public static function protect(string &$text, bool $images = true): array
     {
         $rendered = [];
@@ -194,6 +270,10 @@ final class XoopsMarkdown
      */
     public static function restore(string $text, array $rendered): string
     {
+        if ($rendered === []) {
+            // An empty alternation would match at every position.
+            return $text;
+        }
         $tokens = implode('|', array_map('preg_quote', array_keys($rendered)));
         return preg_replace_callback(
             '/<[^>]*>|' . $tokens . '/',

@@ -68,7 +68,31 @@ EOH;
      */
     public static function myCallback($match)
     {
+        // A tag around something that is not a video stays as the author wrote it.
+        if (null === self::videoId($match[4])) {
+            return $match[0];
+        }
+
         return self::decode($match[4], $match[2], $match[3]);
+    }
+
+    /**
+     * @param string $url a YouTube URL or a bare 11-character video id
+     *
+     * @return string|null the video id, or null when $url is neither
+     */
+    private static function videoId($url): ?string
+    {
+        // match known youtube urls
+        // from: https://stackoverflow.com/questions/2936467/parse-youtube-video-id-using-preg-match/6382259#6382259
+        $youtubeRegex = '%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)'
+            . '([^"&?/ ]{11})%i';
+
+        if (preg_match($youtubeRegex, (string) $url, $match)) {
+            return $match[1]; // extract just the video id from a URL
+        }
+
+        return preg_match('%^[^"&?/ ]{11}$%', (string) $url) ? (string) $url : null;
     }
 
     /**
@@ -94,16 +118,8 @@ EOH;
         // modernized responsive YouTube handling suggested by XOOPS user xd9527 -- thanks!
         // https://xoops.org/modules/newbb/viewtopic.php?post_id=359913
 
-        // match known youtube urls
-        // from: https://stackoverflow.com/questions/2936467/parse-youtube-video-id-using-preg-match/6382259#6382259
-        $youtubeRegex = '%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)'
-            . '([^"&?/ ]{11})%i';
-
-        if (preg_match($youtubeRegex, $url, $match)) {
-            $videoId = $match[1]; // extract just the video id from a URL
-        } elseif (preg_match('%^[^"&?/ ]{11}$%', $url)) {
-            $videoId = $url; // have a bare video id
-        } else {
+        $videoId = self::videoId($url);
+        if (null === $videoId) {
             trigger_error("Not matched: {$url} {$width} {$height}", E_USER_WARNING);
             return '';
         }

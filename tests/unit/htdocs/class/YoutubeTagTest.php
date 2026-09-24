@@ -59,6 +59,13 @@ final class YoutubeTagTest extends TestCase
     }
 
     #[Test]
+    public function textThatIsNotAVideoStaysAsWritten(): void
+    {
+        self::assertSame('[youtube]not a video[/youtube]', $this->render('[youtube]not a video[/youtube]'));
+        self::assertSame('[youtube=4,3]nope[/youtube]', $this->render('[youtube=4,3]nope[/youtube]'));
+    }
+
+    #[Test]
     public function quotedSizeStillRenders(): void
     {
         $html = $this->render('[youtube="16,9"]s4I4zaY5B6s[/youtube]');

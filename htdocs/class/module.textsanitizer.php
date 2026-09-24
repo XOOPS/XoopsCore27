@@ -442,6 +442,29 @@ class MyTextSanitizer
         $replacements[] = '<div style="text-align: left;">\\1</div>';
         $patterns[]     = '/\[right](.*)\[\/right\]/sU';
         $replacements[] = '<div style="text-align: right;">\\1</div>';
+        // Tags written by SCEditor's toolbar. Paired tags only, so an unclosed
+        // [table] or [ol] stays text instead of leaving an open element. List
+        // items are [li], decoded by the li extension.
+        $patterns[]     = '/\[justify](.*)\[\/justify\]/sU';
+        $replacements[] = '<div style="text-align: justify;">\\1</div>';
+        $patterns[]     = '/\[sub](.*)\[\/sub\]/sU';
+        $replacements[] = '<sub>\\1</sub>';
+        $patterns[]     = '/\[sup](.*)\[\/sup\]/sU';
+        $replacements[] = '<sup>\\1</sup>';
+        $patterns[]     = '/\[s](.*)\[\/s\]/sU';
+        $replacements[] = '<s>\\1</s>';
+        $patterns[]     = '/\[hr]/';
+        $replacements[] = '<hr>';
+        $patterns[]     = '/\[ol](.*)\[\/ol\]/sU';
+        $replacements[] = '<ol>\\1</ol>';
+        $patterns[]     = '/\[table](.*)\[\/table\]/sU';
+        $replacements[] = '<table class="table">\\1</table>';
+        $patterns[]     = '/\[tr](.*)\[\/tr\]/sU';
+        $replacements[] = '<tr>\\1</tr>';
+        $patterns[]     = '/\[th](.*)\[\/th\]/sU';
+        $replacements[] = '<th>\\1</th>';
+        $patterns[]     = '/\[td](.*)\[\/td\]/sU';
+        $replacements[] = '<td>\\1</td>';
 
         $this->text         = $text;
         $this->patterns     = $patterns;
@@ -657,13 +680,16 @@ class MyTextSanitizer
         if ($br != 0) {
             $text = $this->nl2Br($text);
         }
-        // Newlines used to format XOOPS [ul]/[li] source are not content
-        // between list items. Do not turn them into visible empty rows.
+        // Newlines used to format XOOPS [ul]/[li] and [table] source are not
+        // content between list items or table cells. Do not turn them into
+        // visible empty rows (a <br> inside a table is moved above it).
         $text = preg_replace([
             '/(<(?:ul|ol)>)\s*<br\s*\/?>(?=<li>)/i',
             '/<br\s*\/?>(?=\s*<\/\s*(?:ul|ol)>)/i',
             '/<\/li>\s*<br\s*\/?>\s*(?=<li>)/i',
-        ], ['$1', '', '</li>'], $text);
+            '/(<table class="table">|<\/?tr>|<\/t[hd]>|<hr>)\s*<br\s*\/?>/i',
+            '/<br\s*\/?>\s*(?=<\/(?:table|tr)>)/i',
+        ], ['$1', '', '</li>', '$1', ''], $text);
         $text = $this->codeConv($text, $xcode);
         $text = $this->trimBlockBreaks($text);
         $text = $this->makeClickable($text);

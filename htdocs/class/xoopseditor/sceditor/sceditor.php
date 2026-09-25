@@ -321,9 +321,9 @@ class FormSCEditor extends XoopsEditor
             return null;
         }
         try {
-            $imgcat = xoops_getHandler('imagecategory')->get($imgcatId);
+            $imgcat = $this->handler('imagecategory')->get($imgcatId);
             if (!($imgcat instanceof XoopsImagecategory)
-                || !xoops_getHandler('groupperm')->checkRight('imgcat_write', $imgcatId, $user->getGroups())) {
+                || !$this->handler('groupperm')->checkRight('imgcat_write', $imgcatId, $user->getGroups())) {
                 return null;
             }
             XoopsLoad::load('fineuploadhandler', 'system');
@@ -338,6 +338,19 @@ class FormSCEditor extends XoopsEditor
             'token'    => $token,
             'maxSize'  => (int) $imgcat->getVar('imgcat_maxsize'),
         ];
+    }
+
+    /**
+     * Kernel handler lookup; tests override it to stub the category and
+     * permission checks.
+     *
+     * @param string $name handler name
+     *
+     * @return object
+     */
+    protected function handler(string $name): object
+    {
+        return xoops_getHandler($name);
     }
 
     /**

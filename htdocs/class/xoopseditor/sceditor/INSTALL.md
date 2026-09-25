@@ -55,7 +55,9 @@ line-break options.
 
 System > Preferences > Editors chooses the toolbar buttons and which of the
 plugins in `SCEditorConfig::PLUGINS` (autosave, autoyoutube, plaintext, undo)
-load from `minified/plugins/`. The other plugins, `icons/`, the xhtml format,
+load from `minified/plugins/`. `minified/plugins/dragdrop.js` and
+`js/xoops-dragdrop.js` also load when "SCEditor image drop category" names a
+category the logged-in user may upload to. The other plugins, `icons/`, the xhtml format,
 the jQuery builds and the extra themes are not loaded by the integration. They
 ship anyway, deliberately: keeping the upstream release layout intact means an
 upgrade is a wholesale replacement of `minified/` with no per-file curation,

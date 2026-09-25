@@ -44,7 +44,7 @@ final class AdminUserDeleteOrderTest extends TestCase
         // One case runs without the constant, as a translated pack that
         // predates it would; each test is its own process, so this holds.
         if ('theFailureMessageFallsBackWhenTheConstantIsUndefined' !== $this->name()) {
-            defined('_PROFILE_AM_DELETEFAILED') || define('_PROFILE_AM_DELETEFAILED', 'Deleting %s failed');
+            defined('_PROFILE_AM_DELETE_FAILED') || define('_PROFILE_AM_DELETE_FAILED', 'Deleting %s failed');
         }
         $GLOBALS['userErrors'] = [];
         $GLOBALS['deleteOrderLog']       = [];
@@ -84,7 +84,7 @@ final class AdminUserDeleteOrderTest extends TestCase
     #[PreserveGlobalState(false)]
     public function theFailureMessageFallsBackWhenTheConstantIsUndefined(): void
     {
-        self::assertFalse(defined('_PROFILE_AM_DELETEFAILED'));
+        self::assertFalse(defined('_PROFILE_AM_DELETE_FAILED'));
         $GLOBALS['deleteUserResult'] = false;
         $out = $this->runBranch();
         self::assertNull($out['redirect']);

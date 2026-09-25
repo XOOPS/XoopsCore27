@@ -228,7 +228,7 @@ switch ($op) {
                 // always leave an error on the object; say what failed.
                 $errors = $obj->getErrors();
                 // A translated pack that predates this constant leaves it undefined.
-                $failed = defined('_PROFILE_AM_DELETEFAILED') ? _PROFILE_AM_DELETEFAILED : 'Deleting %s failed; the account was not removed';
+                $failed = defined('_PROFILE_AM_DELETE_FAILED') ? _PROFILE_AM_DELETE_FAILED : 'Deleting %s failed; the account was not removed';
                 xoops_error([] === $errors ? sprintf($failed, (string) $obj->getVar('uname')) : $errors);
             } elseif ($profile && !$profile->isNew() && !$profile_handler->delete($profile)) {
                 echo $profile->getHtmlErrors();

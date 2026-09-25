@@ -126,6 +126,8 @@ final class SCEditorEmoticons
      * @param string             $uploadPath uploads directory; '' = the site's
      *
      * @return bool true when every emoticon has its row and image afterwards
+     *
+     * @throws \mysqli_sql_exception when MySQLi is set to throw and an INSERT fails
      */
     public static function install(XoopsMySQLDatabase $db, array &$logs = [], string $uploadPath = ''): bool
     {

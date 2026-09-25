@@ -373,6 +373,8 @@ class Upgrade_274 extends XoopsUpgrade
      * Copy missing emoticon images and insert missing smiles rows.
      *
      * @return bool true when every emoticon is registered afterwards
+     *
+     * @throws \mysqli_sql_exception when MySQLi is set to throw and an INSERT fails
      */
     public function apply_emoticons(): bool
     {
@@ -408,6 +410,8 @@ class Upgrade_274 extends XoopsUpgrade
      * Insert whichever category, preference or option rows are missing.
      *
      * @return bool true when every row exists afterwards
+     *
+     * @throws \mysqli_sql_exception when MySQLi is set to throw and an INSERT fails
      */
     public function apply_editorprefs(): bool
     {

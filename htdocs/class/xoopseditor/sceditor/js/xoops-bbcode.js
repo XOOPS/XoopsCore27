@@ -457,8 +457,8 @@
             var dims = String((attrs && attrs.defaultattr) || '').split(',');
             // Same id rules as MytsYoutube::decode(); content is entity-encoded, so
             // '&' arrives as '&amp;' and still ends the id.
-            var match = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i.exec(content)
-                || /^([^"&?\/ ]{11})$/.exec(content);
+            var match = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([A-Za-z0-9_-]{11})(?![\w-])/i.exec(content)
+                || /^([A-Za-z0-9_-]{11})$/.exec(content);
             if (match) {
                 // Show the player. Sizes below 17 are an aspect ratio (16,9), not pixels.
                 var width = parseInt(dims[0], 10) > 16 ? parseInt(dims[0], 10) : 560;

@@ -34,6 +34,8 @@
         '[youtube=16,9]dQw4w9WgXcQ[/youtube]': null,
         '[youtube]https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5[/youtube]': null,
         '[youtube]not a video[/youtube]': null,
+        '[youtube]abc.def:ghi[/youtube]': null,
+        '[youtube]https://youtu.be/s4I4zaY5B6sX[/youtube]': null,
         '[quote]hi[/quote]': null,
         '[code]<b>x</b>[/code]': null,
         '[color=FF0000]r[/color]': null,
@@ -66,6 +68,9 @@
         }
         if (/^\[youtube[^\]]*\]dQw4w9WgXcQ/.test(input) && !inst.getBody().querySelector('iframe[data-youtube-id="dQw4w9WgXcQ"]')) {
             failures.push('no video player in visual view: ' + input);
+        }
+        if (/^\[youtube\](abc\.def|https:\/\/youtu\.be\/s4I4zaY5B6sX)/.test(input) && inst.getBody().querySelector('iframe')) {
+            failures.push('video player for an id the server rejects: ' + input);
         }
         inst.sourceMode(true);
         var actual = inst.val().trim();

@@ -124,7 +124,12 @@ EOH;
             return '';
         }
 
-        $width = empty($width) ? 426 : (int) $width;
+        // Check the coerced number: a non-numeric size such as "x" becomes 0,
+        // which would divide by zero below.
+        $width = (int) $width;
+        if ($width <= 0) {
+            $width = 426;
+        }
         switch ($width) {
             case 4:
                 $height = 3;
@@ -133,7 +138,10 @@ EOH;
                 $height = 9;
                 break;
             default:
-                $height = empty($height) ? 240 : (int) $height;
+                $height = (int) $height;
+                if ($height <= 0) {
+                    $height = 240;
+                }
                 break;
         }
 

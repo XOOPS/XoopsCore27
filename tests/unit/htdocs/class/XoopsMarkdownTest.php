@@ -80,6 +80,16 @@ final class XoopsMarkdownTest extends TestCase
     }
 
     #[Test]
+    public function markdownPlaceholderCannotBreakOutOfAQuotedAttributeHoldingAGreaterThan(): void
+    {
+        $text = '<img title="a>' . XoopsMarkdown::wrap('[x](http://e.test)') . '">';
+        $out  = $this->myts->displayTarea($text, 1, 0, 1, 1, 1);
+
+        $this->assertStringNotContainsString('href=', $out);
+        $this->assertStringNotContainsString('XOOPSMARKDOWN', $out);
+    }
+
+    #[Test]
     public function embeddedMarkdownInAQuotedReplyStillRenders(): void
     {
         $out = $this->display("[quote]\n" . XoopsMarkdown::wrap('**bold**') . "\n[/quote]\nreply");

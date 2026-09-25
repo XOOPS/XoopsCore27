@@ -288,7 +288,8 @@ final class XoopsMarkdown
         }
         $tokens = implode('|', array_map('preg_quote', array_keys($rendered)));
         return preg_replace_callback(
-            '/<[^>]*>|' . $tokens . '/',
+            // Quote-aware: a '>' inside a quoted attribute does not end the tag.
+            '/<(?:[^>"\']++|"[^"]*+"|\'[^\']*+\')*+>|' . $tokens . '/',
             static fn(array $match): string => $match[0][0] === '<'
                 ? str_replace(array_keys($rendered), '', $match[0])
                 : $rendered[$match[0]],

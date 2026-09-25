@@ -536,11 +536,17 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
     $confId = 141;
     foreach (SCEditorConfig::items() as $name => $item) {
-        $dbm->insert('config', $cfgCols . ' VALUES (' . $confId . ', 0, ' . SCEditorConfig::CATEGORY . ", '" . $name . "', '"
+        if (false === $dbm->insert('config', $cfgCols . ' VALUES (' . $confId . ', 0, ' . SCEditorConfig::CATEGORY . ", '" . $name . "', '"
             . $item['title'] . "', '" . addslashes($item['value']) . "', '" . $item['desc'] . "', '"
-            . $item['formtype'] . "', '" . $item['valuetype'] . "', " . $item['order'] . ')');
+            . $item['formtype'] . "', '" . $item['valuetype'] . "', " . $item['order'] . ')')) {
+            trigger_error(sprintf('Failed to seed editor preference "%s" during install.', $name), E_USER_WARNING);
+            return false;
+        }
         foreach ($item['options'] as $option) {
-            $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '" . $option . "', '" . $option . "', $confId)");
+            if (false === $dbm->insert('configoption', " (confop_id, confop_name, confop_value, conf_id) VALUES ($conf, '" . $option . "', '" . $option . "', $confId)")) {
+                trigger_error(sprintf('Failed to seed editor preference option "%s" during install.', $option), E_USER_WARNING);
+                return false;
+            }
             ++$conf;
         }
         ++$confId;

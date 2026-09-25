@@ -319,9 +319,8 @@ final class Upgrade274Test extends TestCase
     }
 
     /**
-     * Answer the editorprefs lookups from SQL: the category and every option
-     * count $present; a preference exists once its row was inserted (or always
-     * when $present is 1).
+     * Answer the editorprefs lookups from SQL: the category, each preference and
+     * each option exist once their row was inserted (or always when $present is 1).
      */
     private function editorPatch(int $present): Upgrade_274
     {
@@ -335,6 +334,14 @@ final class Upgrade274Test extends TestCase
                 $inserted = [] !== preg_grep("/'" . $name[1] . "'/", $this->exec);
 
                 return 1 === $present || $inserted ? [100 + crc32($name[1]) % 100] : false;
+            }
+            if (str_contains($sql, 'configcategory')) {
+                return [1 === $present || [] !== preg_grep('/^INSERT INTO `xoops_configcategory`/', $this->exec) ? 1 : 0];
+            }
+            if (preg_match("/conf_id = (\d+) AND confop_name = '([^']*)'/", $sql, $option)) {
+                $row = "VALUES ('" . $option[2] . "', '" . $option[2] . "', " . $option[1] . ')';
+
+                return [1 === $present || [] !== array_filter($this->exec, static fn (string $w): bool => str_contains($w, $row)) ? 1 : 0];
             }
 
             return [$present];
@@ -360,6 +367,14 @@ final class Upgrade274Test extends TestCase
                 . (100 + crc32('sceditor_plugins') % 100) . ')',
             $this->exec,
         );
+
+        // Everything is now present: the check passes and a second run writes nothing.
+        $written = count($this->exec);
+        self::assertTrue($patch->check_editorprefs(), implode("
+", $patch->logs));
+        self::assertTrue($patch->apply_editorprefs(), implode("
+", $patch->logs));
+        self::assertCount($written, $this->exec);
     }
 
     #[Test]

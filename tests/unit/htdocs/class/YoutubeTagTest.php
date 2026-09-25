@@ -89,6 +89,15 @@ final class YoutubeTagTest extends TestCase
     }
 
     #[Test]
+    public function nonNumericOrZeroSizeFallsBackToTheDefault(): void
+    {
+        foreach (['100,x', '100,0x', 'x,x', '0,0', '-5,-5'] as $size) {
+            $html = $this->render("[youtube={$size}]s4I4zaY5B6s[/youtube]");
+            self::assertStringContainsString('youtube.com/embed/s4I4zaY5B6s', $html, $size);
+        }
+    }
+
+    #[Test]
     public function quotedSizeStillRenders(): void
     {
         $html = $this->render('[youtube="16,9"]s4I4zaY5B6s[/youtube]');

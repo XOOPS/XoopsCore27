@@ -6,4 +6,4 @@ Andy Fedosjeenko, aka Nightwolf -> bobo@animevanguard.com
 
 Copyright (C) 2001-Infinity, Oscar Gruno & Andy Fedosjeenko
 
-You can redistribute these files as much as you like, as long as you keep this file with them and give us the proper credit. You may even rape them if you please, just give us credit for our work.
+You can redistribute these files as much as you like, as long as you keep this file with them and give us the proper credit. You may also modify them, as long as you give us credit for our work.

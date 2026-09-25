@@ -60,7 +60,7 @@ switch ($op) {
             redirect_header('admin.php?fct=preferences', 1);
         }
         $confcatName  = (string) $confcat->getVar('confcat_name');
-        $confcatTitle = defined($confcatName) ? (string) constant($confcatName) : $confcatName;
+        $confcatTitle = defined($confcatName) ? (string) constant($confcatName) : htmlspecialchars($confcatName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $xoBreadCrumb->addLink($confcatTitle);
         $xoBreadCrumb->addHelp(system_adminVersion('preferences', 'help'));
         $xoBreadCrumb->render();
@@ -573,7 +573,7 @@ switch ($op) {
             $preferences['id']    = $confcats[$i]->getVar('confcat_id');
             $preferences['image'] = system_AdminIcons('xoops/' . $image[$i]);
             $confcatName          = (string) $confcats[$i]->getVar('confcat_name');
-            $preferences['name']  = defined($confcatName) ? constant($confcatName) : $confcatName;
+            $preferences['name']  = defined($confcatName) ? constant($confcatName) : htmlspecialchars($confcatName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             ++$count_prefs;
             $preferences['newline'] = ($count_prefs % $nbcolonnes_pref == 1);// ? true : false;
             $xoopsTpl->assign('newline', $preferences['newline']);

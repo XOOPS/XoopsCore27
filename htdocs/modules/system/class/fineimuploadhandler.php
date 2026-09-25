@@ -101,7 +101,7 @@ class SystemFineImUploadHandler extends SystemFineUploadHandler
         $imgcatHandler = xoops_getHandler('imagecategory');
         $imgcat = $imgcatHandler->get((int) ($this->claims->cat ?? 0));
 
-        return ($imgcat instanceof XoopsImagecategory) ? $imgcat : null;
+        return $imgcat ?: null;
     }
 
     /**

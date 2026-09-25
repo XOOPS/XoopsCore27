@@ -36,6 +36,7 @@
         '[youtube]not a video[/youtube]': null,
         '[youtube]abc.def:ghi[/youtube]': null,
         '[youtube]https://youtu.be/s4I4zaY5B6sX[/youtube]': null,
+        '[youtube]https://notyoutube.com/watch?v=s4I4zaY5B6s[/youtube]': null,
         '[quote]hi[/quote]': null,
         '[code]<b>x</b>[/code]': null,
         '[color=FF0000]r[/color]': null,
@@ -71,7 +72,7 @@
         if (/^\[youtube[^\]]*\]dQw4w9WgXcQ/.test(input) && !inst.getBody().querySelector('iframe[data-youtube-id="dQw4w9WgXcQ"]')) {
             failures.push('no video player in visual view: ' + input);
         }
-        if (/^\[youtube\](abc\.def|https:\/\/youtu\.be\/s4I4zaY5B6sX)/.test(input) && inst.getBody().querySelector('iframe')) {
+        if (/^\[youtube\](abc\.def|https:\/\/youtu\.be\/s4I4zaY5B6sX|https:\/\/notyoutube\.com)/.test(input) && inst.getBody().querySelector('iframe')) {
             failures.push('video player for an id the server rejects: ' + input);
         }
         inst.sourceMode(true);

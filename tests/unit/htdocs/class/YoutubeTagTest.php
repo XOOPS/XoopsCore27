@@ -99,6 +99,38 @@ final class YoutubeTagTest extends TestCase
         }
     }
 
+    /**
+     * SCEditor's preview uses its own copy of the URL pattern; if the two
+     * disagree, the editor shows a player the saved post will not (or hides one it will).
+     */
+    #[Test]
+    public function editorPreviewPatternAgreesWithTheServer(): void
+    {
+        $js = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/js/xoops-bbcode.js');
+        self::assertSame(1, preg_match('~var match = /(.+?)/i\.exec\(content\)~', $js, $m), 'youtube pattern not found in xoops-bbcode.js');
+        $editorPattern = '%' . str_replace('\/', '/', $m[1]) . '%i';
+
+        $this->render(''); // loads MytsYoutube
+        $videoId = (new ReflectionClass(MytsYoutube::class))->getMethod('videoId');
+
+        foreach ([
+            'https://www.youtube.com/watch?v=s4I4zaY5B6s',
+            'https://youtube.com/watch?v=s4I4zaY5B6s&amp;t=30',
+            'http://m.youtube.com/watch?v=s4I4zaY5B6s',
+            '//www.youtube-nocookie.com/embed/s4I4zaY5B6s',
+            'www.youtube.com/v/s4I4zaY5B6s',
+            'https://youtu.be/s4I4zaY5B6s?t=30',
+            'youtu.be/s4I4zaY5B6s',
+            'https://youtu.be/s4I4zaY5B6sX',
+            'https://notyoutube.com/watch?v=s4I4zaY5B6s',
+            'https://evil.example/youtube.com/watch?v=s4I4zaY5B6s',
+            'https://notyoutu.be/s4I4zaY5B6s',
+        ] as $url) {
+            $editorId = preg_match($editorPattern, $url, $hit) ? $hit[1] : null;
+            self::assertSame($videoId->invoke(null, $url), $editorId, $url);
+        }
+    }
+
     #[Test]
     public function idOutsideTheYoutubeAlphabetIsNotAVideo(): void
     {

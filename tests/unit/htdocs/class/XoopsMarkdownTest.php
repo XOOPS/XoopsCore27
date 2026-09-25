@@ -231,4 +231,22 @@ final class XoopsMarkdownTest extends TestCase
         $this->assertSame('**hello**', XoopsMarkdown::source(XoopsMarkdown::previewSource('**hello**')));
         $this->assertSame('    **hello**', XoopsMarkdown::source(XoopsMarkdown::previewSource('    **hello**')));
     }
+
+    #[Test]
+    public function renderFallsBackToEscapedTextWithoutParsedown(): void
+    {
+        // Parsedown is already loaded here, so render in a PHP whose trust path has no vendor tree.
+        $code = 'define("XOOPS_ROOT_PATH", ' . var_export(XOOPS_ROOT_PATH, true) . ');'
+              . 'define("XOOPS_TRUST_PATH", ' . var_export(sys_get_temp_dir() . '/no-vendor-' . getmypid(), true) . ');'
+              . 'require XOOPS_ROOT_PATH . "/class/xoopsmarkdown.php";'
+              . 'echo XoopsMarkdown::render("**<b>x</b>**");';
+        $proc = proc_open([PHP_BINARY, '-d', 'display_errors=stdout', '-r', $code], [1 => ['pipe', 'w']], $pipes);
+        $out  = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $status = proc_close($proc);
+
+        $this->assertSame(0, $status, $out);
+        $this->assertStringContainsString('Parsedown is not installed', $out);
+        $this->assertStringContainsString('<pre>**&lt;b&gt;x&lt;/b&gt;**</pre>', $out);
+    }
 }

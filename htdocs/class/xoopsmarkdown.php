@@ -218,8 +218,14 @@ final class XoopsMarkdown
      */
     public static function render(string $source, bool $images = true): string
     {
-        if (!class_exists(\Parsedown::class)) {
+        if (!class_exists(\Parsedown::class) && is_readable(XOOPS_TRUST_PATH . '/vendor/autoload.php')) {
             require_once XOOPS_TRUST_PATH . '/vendor/autoload.php';
+        }
+        if (!class_exists(\Parsedown::class)) {
+            // A site upgraded without refreshing xoops_lib/vendor has no Parsedown yet.
+            trigger_error('Parsedown is not installed; Markdown is shown as plain text', E_USER_WARNING);
+
+            return '<pre>' . htmlspecialchars($source, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
         }
         $parser = new \Parsedown();
         $parser->setSafeMode(true);

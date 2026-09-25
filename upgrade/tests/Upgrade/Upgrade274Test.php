@@ -321,14 +321,18 @@ final class Upgrade274Test extends TestCase
     /**
      * Answer the editorprefs lookups from SQL: the category, each preference and
      * each option exist once their row was inserted (or always when $present is 1).
+     * $foreign puts an unrelated category at the Editors category ID.
      */
-    private function editorPatch(int $present): Upgrade_274
+    private function editorPatch(int $present, bool $foreign = false): Upgrade_274
     {
         class_exists('SCEditorConfig', false)
             || require_once dirname(__DIR__, 3) . '/htdocs/class/xoopseditor/sceditor/class/SCEditorConfig.php';
         $patch = $this->patch();
         $this->rows = [];
-        $this->answer = function (string $sql) use ($present): array|false {
+        $this->answer = function (string $sql) use ($present, $foreign): array|false {
+            if (str_contains($sql, "confcat_name <> '_MD_AM_EDITORS'")) {
+                return [$foreign ? 1 : 0];
+            }
             if (str_contains($sql, 'SELECT `conf_id`')) {
                 preg_match("/conf_name = '([a-z_]+)'/", $sql, $name);
                 $inserted = [] !== preg_grep("/'" . $name[1] . "'/", $this->exec);
@@ -386,6 +390,18 @@ final class Upgrade274Test extends TestCase
         self::assertTrue($patch->apply_editorprefs());
         self::assertSame([], $this->exec);
         self::assertNotSame([], preg_grep("/confop_name = 'autosave' AND confop_value = 'autosave'/", $this->queries));
+    }
+
+    #[Test]
+    public function editorPrefsRefusesACategoryIdTakenByAnotherCategory(): void
+    {
+        $patch = $this->editorPatch(1, true);
+
+        self::assertFalse($patch->check_editorprefs());
+        self::assertFalse($patch->apply_editorprefs());
+        self::assertSame([], $this->exec);
+        self::assertStringContainsString('already used by another category', $patch->logs[0]);
+        self::assertStringContainsString('RELEASE_LOCK(', end($this->queries));
     }
 
     #[Test]

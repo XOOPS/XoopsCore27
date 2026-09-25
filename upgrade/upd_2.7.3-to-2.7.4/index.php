@@ -398,7 +398,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $missing = $this->missingEditorRows();
         if (null === $missing) {
-            $this->logs[] = 'Could not read the config tables to check the Editors preferences';
+            $this->logs[] = 'The Editors preferences could not be checked';
 
             return false;
         }
@@ -424,7 +424,7 @@ class Upgrade_274 extends XoopsUpgrade
     {
         $missing = $this->missingEditorRows();
         if (null === $missing) {
-            $this->logs[] = 'Could not read the config tables; the Editors preferences were not inserted';
+            $this->logs[] = 'The Editors preferences were not inserted';
 
             return false;
         }
@@ -469,7 +469,13 @@ class Upgrade_274 extends XoopsUpgrade
     {
         class_exists('SCEditorConfig', false) || require_once XOOPS_ROOT_PATH . '/class/xoopseditor/sceditor/class/SCEditorConfig.php';
         $missing  = [];
-        $category = $this->countRows('configcategory', 'confcat_id = ' . \SCEditorConfig::CATEGORY);
+        $foreign  = $this->countRows('configcategory', 'confcat_id = ' . \SCEditorConfig::CATEGORY . " AND confcat_name <> '_MD_AM_EDITORS'");
+        if (0 < $foreign) {
+            $this->logs[] = sprintf('Preference category %d is already used by another category; the Editors preferences need that ID', \SCEditorConfig::CATEGORY);
+
+            return null;
+        }
+        $category = null === $foreign ? null : $this->countRows('configcategory', 'confcat_id = ' . \SCEditorConfig::CATEGORY);
         if (null === $category) {
             return null;
         }

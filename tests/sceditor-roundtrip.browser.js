@@ -44,6 +44,8 @@
         '[font=Times New Roman]t[/font]': '[font="Times New Roman"]t[/font]',
         '[left]l[/left]': null,
         '[center]c[/center]': null,
+        '[rtl]r[/rtl]': null,
+        '[ltr]l[/ltr]': null,
         '[right]r[/right]': null,
         '[u]u[/u] [s]s[/s] [d]d[/d]': null,
         '[iframe=400]https://example.test/?a=1&b=2[/iframe]': null,

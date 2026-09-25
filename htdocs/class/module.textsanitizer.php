@@ -448,6 +448,8 @@ class MyTextSanitizer
         // items are [li], decoded by the li extension.
         $patterns[]     = '/\[justify](.*)\[\/justify\]/sU';
         $replacements[] = '<div style="text-align: justify;">\\1</div>';
+        $patterns[]     = '/\[(ltr|rtl)](.*)\[\/\\1\]/sU';
+        $replacements[] = '<div dir="\\1">\\2</div>';
         $patterns[]     = '/\[sub](.*)\[\/sub\]/sU';
         $replacements[] = '<sub>\\1</sub>';
         $patterns[]     = '/\[sup](.*)\[\/sup\]/sU';

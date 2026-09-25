@@ -44,6 +44,16 @@ final class MyTextSanitizerEditorTagsTest extends TestCase
     }
 
     #[Test]
+    public function textDirectionTagsRender(): void
+    {
+        $out = $this->display('[rtl]r[/rtl] [ltr]l[/ltr] [rtl]open');
+
+        $this->assertStringContainsString('<div dir="rtl">r</div>', $out);
+        $this->assertStringContainsString('<div dir="ltr">l</div>', $out);
+        $this->assertStringContainsString('[rtl]open', $out, 'an unclosed tag stays text');
+    }
+
+    #[Test]
     public function tableSourceLineBreaksDoNotLeakIntoTheTable(): void
     {
         $out = $this->display("[table][tr][th]h[/th]\n[/tr]\n[tr][td]c[/td]\n[/tr]\n[/table]");

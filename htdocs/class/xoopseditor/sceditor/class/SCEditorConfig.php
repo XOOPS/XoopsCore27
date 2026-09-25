@@ -30,20 +30,20 @@ final class SCEditorConfig
      */
     public const TOOLBAR = [
         ['bold', 'italic', 'underline', 'strike', 'subscript', 'superscript'],
-        ['left', 'center', 'right', 'justify'],
+        ['left', 'center', 'right', 'justify', 'ltr', 'rtl'],
         ['font', 'size', 'color', 'removeformat'],
-        ['cut', 'copy', 'paste'],
-        ['bulletlist', 'orderedlist', 'table'],
-        ['link', 'siteurl', 'email', 'image', 'youtube'],
+        ['cut', 'copy', 'paste', 'pastetext'],
+        ['bulletlist', 'orderedlist', 'indent', 'outdent', 'table'],
+        ['link', 'unlink', 'siteurl', 'email', 'image', 'youtube', 'mp3'],
         ['quote', 'code', 'wikipage'],
-        ['horizontalrule', 'emoticon'],
+        ['horizontalrule', 'date', 'time', 'emoticon'],
         ['print', 'maximize', 'source'],
     ];
 
     /**
      * Bundled plugins (minified/plugins/<name>.js) that work without further setup.
-     * Not offered: format (switches itself off in BBCode mode), dragdrop (needs an
-     * upload handler), emojis (needs its own data set), v1compat (old integrations),
+     * Not offered: format (switches itself off in BBCode mode), dragdrop (loaded
+     * when sceditor_dragdrop_cat names an image category), emojis (needs its own data set), v1compat (old integrations),
      * alternative-lists (writes [list]/[*], which XOOPS does not decode).
      */
     public const PLUGINS = ['autosave', 'autoyoutube', 'plaintext', 'undo'];
@@ -61,6 +61,7 @@ final class SCEditorConfig
         'sceditor_spellcheck' => ['_MD_AM_SCEDITOR_SPELLCHECK', 'yesno', 'int', 1, 6],
         'sceditor_width'      => ['_MD_AM_SCEDITOR_WIDTH', 'textbox', 'text', '100%', 7],
         'sceditor_height'     => ['_MD_AM_SCEDITOR_HEIGHT', 'textbox', 'text', '400px', 8],
+        'sceditor_dragdrop_cat' => ['_MD_AM_SCEDITOR_DRAGDROPCAT', 'textbox', 'int', 0, 9],
     ];
 
     /**
@@ -109,7 +110,7 @@ final class SCEditorConfig
      *
      * @param array<string, mixed> $saved getConfigsByCat(XOOPS_CONF_EDITOR)
      *
-     * @return array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string}
+     * @return array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int}
      */
     public static function settings(array $saved): array
     {
@@ -127,6 +128,8 @@ final class SCEditorConfig
             // Raw: FormSCEditor validates CSS lengths (normalizeCssLength()).
             'width'      => (string) ($saved['sceditor_width'] ?? '100%'),
             'height'     => (string) ($saved['sceditor_height'] ?? '400px'),
+            // Image category for drag-and-drop uploads; 0 switches them off.
+            'dragdrop_cat' => max(0, (int) ($saved['sceditor_dragdrop_cat'] ?? 0)),
         ];
     }
 

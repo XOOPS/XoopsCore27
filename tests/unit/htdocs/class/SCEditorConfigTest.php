@@ -28,9 +28,10 @@ final class SCEditorConfigTest extends TestCase
         $settings = SCEditorConfig::settings([]);
 
         $this->assertSame(
-            'bold,italic,underline,strike,subscript,superscript|left,center,right,justify|'
-            . 'font,size,color,removeformat|cut,copy,paste|bulletlist,orderedlist,table|'
-            . 'link,siteurl,email,image,youtube|quote,code,wikipage|horizontalrule,emoticon|print,maximize,source',
+            'bold,italic,underline,strike,subscript,superscript|left,center,right,justify,ltr,rtl|'
+            . 'font,size,color,removeformat|cut,copy,paste,pastetext|bulletlist,orderedlist,indent,outdent,table|'
+            . 'link,unlink,siteurl,email,image,youtube,mp3|quote,code,wikipage|horizontalrule,date,time,emoticon|'
+            . 'print,maximize,source',
             SCEditorConfig::toolbar($settings),
         );
         $this->assertSame([], $settings['plugins']);

@@ -577,15 +577,29 @@
         tooltip: L('size', 'Font Size')
     });
 
-    sceditor.command.set('siteurl', {
-        txtExec: function (caller) {
-            var path = window.prompt(L('siteurlPrompt', 'Site-relative path:'), '');
-            if (path) {
-                this.insertText('[siteurl=' + path + ']', '[/siteurl]');
-            }
-        },
-        tooltip: L('siteurl', 'Site URL')
-    });
+    // XOOPS-only commands have no stock exec, so they need one for the visual
+    // view too. insert() runs the BBCode through the format in visual mode and
+    // inserts it verbatim in source mode.
+    function both(fn) {
+        return { exec: fn, txtExec: fn };
+    }
+
+    sceditor.command.set('siteurl', Object.assign(both(function () {
+        var path = window.prompt(L('siteurlPrompt', 'Site-relative path:'), '');
+        if (path) {
+            this.insert('[siteurl=' + path + ']', '[/siteurl]');
+        }
+    }), { tooltip: L('siteurl', 'Site URL') }));
+
+    // [mp3]url[/mp3] — class/textsanitizer/mp3/mp3.php; same URL rule as its own button.
+    // sceditor.php drops the button while that extension is off.
+    sceditor.command.set('mp3', Object.assign(both(function () {
+        var url = window.prompt(L('mp3Prompt', 'MP3 URL (https://.../file.mp3):'), 'https://');
+        url = url ? url.trim() : '';
+        if (/^https?:\/\/[\w\-.]+(:\d+)?\/.+\.mp3(\?.*)?$/i.test(url)) {
+            this.insert('[mp3]' + url + '[/mp3]');
+        }
+    }), { tooltip: L('mp3', 'MP3 audio') }));
 
     sceditor.command.set('quote', {
         txtExec: ['[quote]', '[/quote]'],
@@ -625,15 +639,12 @@
         tooltip: L('youtube', 'YouTube')
     });
 
-    sceditor.command.set('wikipage', {
-        txtExec: function (caller) {
-            var term = window.prompt(L('wikiPrompt', 'Wiki page:'), '');
-            if (term) {
-                this.insertText('[[' + term + ']]');
-            }
-        },
-        tooltip: L('wiki', 'Wiki link')
-    });
+    sceditor.command.set('wikipage', Object.assign(both(function () {
+        var term = window.prompt(L('wikiPrompt', 'Wiki page:'), '');
+        if (term) {
+            this.insertText('[[' + term + ']]');
+        }
+    }), { tooltip: L('wiki', 'Wiki link') }));
 
     // The toolbar is built server-side from SCEditorConfig::TOOLBAR and the
     // System > Preferences > Editors settings (see ../class/SCEditorConfig.php).

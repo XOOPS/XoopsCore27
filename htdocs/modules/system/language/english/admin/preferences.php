@@ -322,7 +322,7 @@ define('_MD_AM_TWOFACTORMODE_OPTIONAL', 'Optional');
 // 2.7.4 Editors (SCEditor)
 define('_MD_AM_EDITORS', 'Editors');
 define('_MD_AM_SCEDITOR_TOOLBAR', 'SCEditor toolbar buttons');
-define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it.');
+define('_MD_AM_SCEDITOR_TOOLBARDSC', 'Buttons shown in the SCEditor toolbar. They keep their standard order and grouping; deselect a button to hide it. The mp3 button only appears while the mp3 extension is on in the textsanitizer config.php (xoops_data/configs/textsanitizer/).');
 define('_MD_AM_SCEDITOR_PLUGINS', 'SCEditor plugins');
 define('_MD_AM_SCEDITOR_PLUGINSDSC', 'Optional SCEditor plugins to load: autosave (restores unsent text), autoyoutube (turns pasted YouTube links into videos), plaintext (paste as plain text), undo (undo/redo history).');
 define('_MD_AM_SCEDITOR_EMOTICONS', 'Enable emoticons in SCEditor?');
@@ -337,3 +337,5 @@ define('_MD_AM_SCEDITOR_WIDTH', 'SCEditor width');
 define('_MD_AM_SCEDITOR_WIDTHDSC', 'Default width, for example 100% or 600px. A module that sets its own width keeps it.');
 define('_MD_AM_SCEDITOR_HEIGHT', 'SCEditor height');
 define('_MD_AM_SCEDITOR_HEIGHTDSC', 'Default height, for example 400px. A module that sets its own height keeps it.');
+define('_MD_AM_SCEDITOR_DRAGDROPCAT', 'SCEditor image drop category');
+define('_MD_AM_SCEDITOR_DRAGDROPCATDSC', 'ID of the image category that receives images dropped or pasted into the editor (see System > Images). 0 turns this off. Only logged-in users who may upload to that category can drop images.');

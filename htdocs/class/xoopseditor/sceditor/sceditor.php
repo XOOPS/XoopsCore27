@@ -48,7 +48,7 @@ class FormSCEditor extends XoopsEditor
     public string $width  = '100%';
     public string $height = '400px';
 
-    /** @var array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string} */
+    /** @var array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int} */
     private array $settings;
 
     /**
@@ -123,6 +123,12 @@ class FormSCEditor extends XoopsEditor
         $this->rootPath = '/class/xoopseditor/sceditor';
         require_once __DIR__ . '/class/SCEditorConfig.php';
         $this->settings = SCEditorConfig::settings($this->savedPreferences());
+        // [mp3] is decoded only while its sanitizer extension is on (class/textsanitizer/
+        // config.php); otherwise the button would publish literal BBCode.
+        $extensions = class_exists('MyTextSanitizer') ? (MyTextSanitizer::getInstance()->config['extensions'] ?? []) : [];
+        if (empty($extensions['mp3'])) {
+            $this->settings['toolbar'] = array_values(array_diff($this->settings['toolbar'], ['mp3']));
+        }
         // Site defaults first; a width/height the calling module passes still wins,
         // because parent::__construct() routes it through setWidth()/setHeight().
         $this->setWidth($this->settings['width']);
@@ -223,12 +229,20 @@ class FormSCEditor extends XoopsEditor
         $editorPath = XOOPS_URL . $this->rootPath;
         $html = '';
 
+        $plugins  = $this->settings['plugins'];
+        $dragdrop = $this->dragdropConfig($this->settings['dragdrop_cat']);
+        if (null !== $dragdrop) {
+            $plugins[] = 'dragdrop';
+        }
+
         // Include CSS/JS assets only once per page
         if (!$assetsIncluded) {
             // Load order matters: core, then the stock bbcode format, then our overrides.
             // js/xoops-bbcode.js redefines tags on sceditor.formats.bbcode, so the stock
             // format must already exist when it runs.
             $html .= '<link rel="stylesheet" href="' . $editorPath . '/minified/themes/default.min.css">' . "\n";
+            // Icons for the XOOPS-only buttons, which the stock sprite does not have.
+            $html .= '<link rel="stylesheet" href="' . $editorPath . '/css/xoops-icons.css">' . "\n";
             $html .= '<script src="' . $editorPath . '/minified/sceditor.min.js"></script>' . "\n";
             $html .= '<script src="' . $editorPath . '/minified/formats/bbcode.js"></script>' . "\n";
             // Localized labels/prompts for the toolbar commands; must be published before
@@ -237,8 +251,11 @@ class FormSCEditor extends XoopsEditor
             $html .= '<script src="' . $editorPath . '/js/xoops-bbcode.js"></script>' . "\n";
             // Plugins enabled in System > Preferences > Editors; names come from the
             // SCEditorConfig::PLUGINS allowlist, never from request data.
-            foreach ($this->settings['plugins'] as $plugin) {
+            foreach ($plugins as $plugin) {
                 $html .= '<script src="' . $editorPath . '/minified/plugins/' . $plugin . '.js"></script>' . "\n";
+            }
+            if (null !== $dragdrop) {
+                $html .= '<script src="' . $editorPath . '/js/xoops-dragdrop.js"></script>' . "\n";
             }
             $assetsIncluded = true;
         }
@@ -270,7 +287,10 @@ class FormSCEditor extends XoopsEditor
         // Content stylesheet for the editing area, per the upstream usage docs.
         $html .= '    style: ' . json_encode($editorPath . '/minified/themes/content/default.min.css', JSON_INVALID_UTF8_SUBSTITUTE) . ',' . "\n";
         $html .= '    toolbar: ' . json_encode(SCEditorConfig::toolbar($this->settings)) . ',' . "\n";
-        $html .= '    plugins: ' . json_encode(implode(',', $this->settings['plugins'])) . ',' . "\n";
+        $html .= '    plugins: ' . json_encode(implode(',', $plugins)) . ',' . "\n";
+        if (null !== $dragdrop) {
+            $html .= '    dragdrop: xoopsSCEditorDragdrop(' . json_encode($dragdrop, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . '),' . "\n";
+        }
         $html .= '    emoticonsEnabled: ' . ($this->settings['emoticons'] && ($emoticons['dropdown'] !== [] || $emoticons['more'] !== []) ? 'true' : 'false') . ",\n";
         $html .= '    emoticons: ' . json_encode($emoticons, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) . ",\n";
         $html .= '    resizeEnabled: ' . ($this->settings['resize'] ? 'true' : 'false') . ',' . "\n";
@@ -283,6 +303,41 @@ class FormSCEditor extends XoopsEditor
         $html .= '</script>' . "\n";
 
         return $html;
+    }
+
+    /**
+     * Upload settings for the dragdrop plugin, or null when it must stay off: no
+     * category chosen, a guest, an unknown category, or no imgcat_write right on it.
+     * Guests never get it, even where the category grants anonymous uploads.
+     *
+     * @param int $imgcatId sceditor_dragdrop_cat preference
+     *
+     * @return array{endpoint: string, token: string, maxSize: int}|null
+     */
+    protected function dragdropConfig(int $imgcatId): ?array
+    {
+        $user = $GLOBALS['xoopsUser'] ?? null;
+        if ($imgcatId < 1 || !($user instanceof XoopsUser) || !function_exists('xoops_getHandler')) {
+            return null;
+        }
+        try {
+            $imgcat = xoops_getHandler('imagecategory')->get($imgcatId);
+            if (!($imgcat instanceof XoopsImagecategory)
+                || !xoops_getHandler('groupperm')->checkRight('imgcat_write', $imgcatId, $user->getGroups())) {
+                return null;
+            }
+            XoopsLoad::load('fineuploadhandler', 'system');
+            XoopsLoad::load('fineimuploadhandler', 'system');
+            $token = SystemFineImUploadHandler::uploadToken($imgcatId, (int) $user->id());
+        } catch (Throwable $e) {
+            return null;
+        }
+
+        return [
+            'endpoint' => XOOPS_URL . '/ajaxfineupload.php',
+            'token'    => $token,
+            'maxSize'  => (int) $imgcat->getVar('imgcat_maxsize'),
+        ];
     }
 
     /**
@@ -347,6 +402,10 @@ class FormSCEditor extends XoopsEditor
             'heightPrompt'  => '_XOOPS_EDITOR_SCEDITOR_HEIGHT_PROMPT',
             'wiki'          => '_XOOPS_EDITOR_SCEDITOR_WIKI',
             'wikiPrompt'    => '_XOOPS_EDITOR_SCEDITOR_WIKI_PROMPT',
+            'mp3'           => '_XOOPS_EDITOR_SCEDITOR_MP3',
+            'mp3Prompt'     => '_XOOPS_EDITOR_SCEDITOR_MP3_PROMPT',
+            'uploadFailed'  => '_XOOPS_EDITOR_SCEDITOR_UPLOAD_FAILED',
+            'uploadTooBig'  => '_XOOPS_EDITOR_SCEDITOR_UPLOAD_TOOBIG',
         ];
 
         $lang = [];

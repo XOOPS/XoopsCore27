@@ -72,6 +72,10 @@ class SystemFineImUploadHandler extends SystemFineUploadHandler
      * @param int $imgcatId target image category
      * @param int $uid      current user id, 0 for anonymous
      * @return string JWT, valid for 30 minutes
+     *
+     * @throws \DomainException          propagated from TokenFactory::build()
+     * @throws \InvalidArgumentException propagated from TokenFactory::build()
+     * @throws \UnexpectedValueException propagated from TokenFactory::build()
      */
     public static function uploadToken(int $imgcatId, int $uid): string
     {

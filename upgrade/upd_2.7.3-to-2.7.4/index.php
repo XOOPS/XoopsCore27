@@ -463,7 +463,7 @@ class Upgrade_274 extends XoopsUpgrade
      * Rows still to insert, in insert order: the category, then each preference
      * followed by its options.
      *
-     * @return list<array{type: string, name?: string, item?: array, option?: string}>|null null when a lookup failed
+     * @return array<int, array{type: string, name?: string, item?: array, option?: string}>|null null when a lookup failed
      */
     private function missingEditorRows(): ?array
     {

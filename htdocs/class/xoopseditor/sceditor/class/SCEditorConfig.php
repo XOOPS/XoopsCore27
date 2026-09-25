@@ -67,7 +67,7 @@ final class SCEditorConfig
     /**
      * Every button in TOOLBAR, in order.
      *
-     * @return list<string>
+     * @return array<int, string>
      */
     public static function buttons(): array
     {
@@ -77,7 +77,7 @@ final class SCEditorConfig
     /**
      * The preference rows with their stored default and select options.
      *
-     * @return array<string, array{title: string, desc: string, formtype: string, valuetype: string, value: string, order: int, options: list<string>}>
+     * @return array<string, array{title: string, desc: string, formtype: string, valuetype: string, value: string, order: int, options: array<int, string>}>
      */
     public static function items(): array
     {
@@ -110,7 +110,7 @@ final class SCEditorConfig
      *
      * @param array<string, mixed> $saved getConfigsByCat(XOOPS_CONF_EDITOR)
      *
-     * @return array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int}
+     * @return array{toolbar: array<int, string>, plugins: array<int, string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int}
      */
     public static function settings(array $saved): array
     {
@@ -137,7 +137,7 @@ final class SCEditorConfig
      * SCEditor's toolbar string: enabled buttons in TOOLBAR order and grouping,
      * empty groups dropped.
      *
-     * @param array{toolbar: list<string>, emoticons: bool} $settings from settings()
+     * @param array{toolbar: array<int, string>, emoticons: bool} $settings from settings()
      *
      * @return string
      */

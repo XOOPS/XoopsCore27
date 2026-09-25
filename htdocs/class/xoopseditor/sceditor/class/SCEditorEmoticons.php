@@ -69,7 +69,7 @@ final class SCEditorEmoticons
     /**
      * The emoticons as smiles rows.
      *
-     * @return list<array{code: string, file: string, smile_url: string, emotion: string, display: int}>
+     * @return array<int, array{code: string, file: string, smile_url: string, emotion: string, display: int}>
      */
     public static function list(): array
     {
@@ -95,7 +95,7 @@ final class SCEditorEmoticons
      * @param XoopsMySQLDatabase $db         database connection
      * @param string             $uploadPath uploads directory; '' = the site's
      *
-     * @return list<array{code: string, file: string, smile_url: string, emotion: string, display: int}>|null
+     * @return array<int, array{code: string, file: string, smile_url: string, emotion: string, display: int}>|null
      *         null when the smiles table cannot be read
      */
     public static function missing(XoopsMySQLDatabase $db, string $uploadPath = ''): ?array
@@ -122,7 +122,7 @@ final class SCEditorEmoticons
      * the row uses the bundled one, so an admin's own smiley is left alone.
      *
      * @param XoopsMySQLDatabase $db         database connection
-     * @param list<string>       $logs       receives one line per failure
+     * @param array<int, string>       $logs       receives one line per failure
      * @param string             $uploadPath uploads directory; '' = the site's
      *
      * @return bool true when every emoticon has its row and image afterwards

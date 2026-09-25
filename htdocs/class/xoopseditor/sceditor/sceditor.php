@@ -48,7 +48,7 @@ class FormSCEditor extends XoopsEditor
     public string $width  = '100%';
     public string $height = '400px';
 
-    /** @var array{toolbar: list<string>, plugins: list<string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int} */
+    /** @var array{toolbar: array<int, string>, plugins: array<int, string>, emoticons: bool, resize: bool, autoexpand: bool, spellcheck: bool, width: string, height: string, dragdrop_cat: int} */
     private array $settings;
 
     /**
@@ -150,12 +150,10 @@ class FormSCEditor extends XoopsEditor
         try {
             /** @var XoopsConfigHandler $configHandler */
             $configHandler = xoops_getHandler('config');
-            $saved = $configHandler->getConfigsByCat(XOOPS_CONF_EDITOR);
+            return $configHandler->getConfigsByCat(XOOPS_CONF_EDITOR);
         } catch (Throwable $e) {
             return [];
         }
-
-        return is_array($saved) ? $saved : [];
     }
 
     /**
@@ -347,10 +345,12 @@ class FormSCEditor extends XoopsEditor
      * @param string $name handler name
      *
      * @return object
+     *
+     * @throws RuntimeException when the handler does not exist
      */
     protected function handler(string $name): object
     {
-        return xoops_getHandler($name);
+        return xoops_getHandler($name, true) ?: throw new RuntimeException('No handler: ' . $name);
     }
 
     /**

@@ -73,6 +73,14 @@ final class YoutubeTagTest extends TestCase
     }
 
     #[Test]
+    public function idOutsideTheYoutubeAlphabetIsNotAVideo(): void
+    {
+        foreach (['[youtube]abc.def:ghi[/youtube]', '[youtube]https://youtu.be/abc.def:ghi[/youtube]'] as $tag) {
+            self::assertSame($tag, $this->render($tag), $tag);
+        }
+    }
+
+    #[Test]
     public function idFollowedByAUrlSuffixStillRenders(): void
     {
         foreach (['https://youtu.be/s4I4zaY5B6s?t=30', 'https://www.youtube.com/watch?v=s4I4zaY5B6s&amp;t=30', 'https://youtu.be/s4I4zaY5B6s#t=30'] as $url) {

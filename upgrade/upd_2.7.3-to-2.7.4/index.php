@@ -65,8 +65,10 @@ class Upgrade_274 extends XoopsUpgrade
         $this->tasks = [
             'user2fatable',
             'twofactormode',
-            'emoticons',
+            // editorprefs first: the optional emoticon copy can fail on a
+            // read-only folder, and the runner stops at the first failure.
             'editorprefs',
+            'emoticons',
         ];
     }
 

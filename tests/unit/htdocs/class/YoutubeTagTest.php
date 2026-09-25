@@ -73,6 +73,33 @@ final class YoutubeTagTest extends TestCase
     }
 
     #[Test]
+    public function urlOnAnotherHostIsNotAVideo(): void
+    {
+        foreach ([
+            'https://notyoutube.com/watch?v=s4I4zaY5B6s',
+            'https://evil.example/youtube.com/watch?v=s4I4zaY5B6s',
+            'https://notyoutu.be/s4I4zaY5B6s',
+        ] as $url) {
+            $tag = "[youtube]{$url}[/youtube]";
+            self::assertSame($tag, $this->render($tag), $url);
+        }
+    }
+
+    #[Test]
+    public function youtubeHostVariantsRender(): void
+    {
+        foreach ([
+            'https://youtube.com/watch?v=s4I4zaY5B6s',
+            'http://m.youtube.com/watch?v=s4I4zaY5B6s',
+            '//www.youtube-nocookie.com/embed/s4I4zaY5B6s',
+            'www.youtube.com/watch?v=s4I4zaY5B6s',
+            'youtu.be/s4I4zaY5B6s',
+        ] as $url) {
+            self::assertStringContainsString('youtube.com/embed/s4I4zaY5B6s"', $this->render("[youtube]{$url}[/youtube]"), $url);
+        }
+    }
+
+    #[Test]
     public function idOutsideTheYoutubeAlphabetIsNotAVideo(): void
     {
         foreach (['[youtube]abc.def:ghi[/youtube]', '[youtube]https://youtu.be/abc.def:ghi[/youtube]'] as $tag) {

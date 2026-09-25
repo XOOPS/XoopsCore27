@@ -85,7 +85,9 @@ EOH;
     {
         // match known youtube urls
         // from: https://stackoverflow.com/questions/2936467/parse-youtube-video-id-using-preg-match/6382259#6382259
-        $youtubeRegex = '%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)'
+        // Anchored to the URL start so the host is youtube itself (optionally one
+        // subdomain such as www. or m.), never a lookalike such as notyoutube.com.
+        $youtubeRegex = '%^(?:https?:)?(?://)?(?:[a-z0-9-]+\.)?(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)'
             . '([A-Za-z0-9_-]{11})(?![\w-])%i'; // a 12th id character means it is not a video id
 
         if (preg_match($youtubeRegex, (string) $url, $match)) {

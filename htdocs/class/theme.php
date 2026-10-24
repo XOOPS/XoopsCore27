@@ -53,6 +53,53 @@ class xos_opal_ThemeFactory
     public $allowUserSelection = true;
 
     /**
+     * Pick the theme folder when the caller did not name one.
+     *
+     * Order: xoops_theme_select from POST, then GET (remembered in
+     * $_SESSION['xoopsUserTheme']), then the remembered session theme,
+     * then $this->defaultTheme. The session key is the one the kernel's
+     * theme selector and login also use, so there is a single store.
+     *
+     * @param  array $options createInstance() options
+     * @return array $options with 'folderName' resolved
+     */
+    protected function resolveFolderName(array $options): array
+    {
+        // Use === '' rather than empty() — a theme directory literally
+        // named "0" is legitimate (legacy XOOPS supports all-numeric
+        // theme names), and empty('0') === true would silently drop it.
+        if (isset($options['folderName']) && $options['folderName'] !== '') {
+            return $options;
+        }
+        $req = xoops_validateThemeName(Request::getString('xoops_theme_select', '', 'POST'));
+        if ($req === '') {
+            $req = xoops_validateThemeName(Request::getString('xoops_theme_select', '', 'GET'));
+        }
+        if ($req !== '' && $this->isThemeAllowed($req)) {
+            $options['folderName'] = $req;
+            if (isset($_SESSION) && $this->allowUserSelection) {
+                $_SESSION['xoopsUserTheme'] = $req;
+            }
+        } elseif (isset($_SESSION['xoopsUserTheme'])) {
+            // Stale session theme names can outlive an admin change
+            // to the allowed list; validate AND check membership
+            // before reaching the path-construction code below.
+            // xoops_validateThemeValue() — scalar-gated; a session
+            // poisoned with an array / object never reaches the
+            // (string) cast (which would emit a warning AND let
+            // "Array" pass the path-safety check downstream).
+            $sessionTheme = xoops_validateThemeValue($_SESSION['xoopsUserTheme']);
+            $options['folderName'] = ($sessionTheme !== '' && $this->isThemeAllowed($sessionTheme))
+                ? $sessionTheme
+                : $this->defaultTheme;
+        } else {
+            $options['folderName'] = $this->defaultTheme;
+        }
+
+        return $options;
+    }
+
+    /**
      * Instantiate the specified theme
      * @param  array $options
      * @param  array $initArgs
@@ -60,42 +107,14 @@ class xos_opal_ThemeFactory
      */
     public function createInstance($options = [], $initArgs = [])
     {
-        // Grab the theme folder from request vars if present.
-        // Use === '' rather than empty() — a theme directory literally
-        // named "0" is legitimate (legacy XOOPS supports all-numeric
-        // theme names), and empty('0') === true would silently drop it.
-        if (!isset($options['folderName']) || $options['folderName'] === '') {
-            $req = xoops_validateThemeName(Request::getString('xoops_theme_select', '', 'POST'));
-            if ($req === '') {
-                $req = xoops_validateThemeName(Request::getString('xoops_theme_select', '', 'GET'));
-            }
-            if ($req !== '' && $this->isThemeAllowed($req)) {
-                $options['folderName'] = $req;
-                if (isset($_SESSION) && $this->allowUserSelection) {
-                    $_SESSION[$this->xoBundleIdentifier]['defaultTheme'] = $req;
-                }
-            } elseif (isset($_SESSION[$this->xoBundleIdentifier]['defaultTheme'])) {
-                // Stale session theme names can outlive an admin change
-                // to the allowed list; validate AND check membership
-                // before reaching the path-construction code below.
-                // xoops_validateThemeValue() — scalar-gated; a session
-                // poisoned with an array / object never reaches the
-                // (string) cast (which would emit a warning AND let
-                // "Array" pass the path-safety check downstream).
-                $sessionTheme = xoops_validateThemeValue($_SESSION[$this->xoBundleIdentifier]['defaultTheme']);
-                $options['folderName'] = ($sessionTheme !== '' && $this->isThemeAllowed($sessionTheme))
-                    ? $sessionTheme
-                    : $this->defaultTheme;
-            } elseif (!isset($options['folderName']) || $options['folderName'] === '' || !$this->isThemeAllowed($options['folderName'])) {
-                $options['folderName'] = $this->defaultTheme;
-            }
-        }
+        $options = $this->resolveFolderName($options);
         // Validate $options['folderName'] AND the defaultTheme property
-        // unconditionally, after every resolution branch. Two paths
-        // bypass the inner-if block above and could still produce an
-        // unsafe path segment:
+        // unconditionally, after every resolution branch. Two inputs
+        // reach this point without the request/session validation in
+        // resolveFolderName() and could still produce an unsafe path
+        // segment:
         //   - A non-standard caller may have supplied a poisoned
-        //     folderName directly (skipping the empty()-branch).
+        //     folderName directly (returned unchanged).
         //   - $this->defaultTheme is a public property; any caller
         //     can overwrite it before createInstance() runs.
         // xoops_validateThemeValue() — scalar gate + path/HTML validate
@@ -466,16 +485,24 @@ class xos_opal_Theme
         if (empty($extraString)) {
             if (empty($extra_string)) {
                 // Generate language section
-                $extra_string = $GLOBALS['xoopsConfig']['language'];
+                $language = $GLOBALS['xoopsConfig']['language'];
                 // Generate group section
                 if (!isset($GLOBALS['xoopsUser']) || !is_object($GLOBALS['xoopsUser'])) {
-                    $extra_string .= '-' . XOOPS_GROUP_ANONYMOUS;
+                    $extra_string = $language . '-' . XOOPS_GROUP_ANONYMOUS;
                 } else {
-                    $groups = $GLOBALS['xoopsUser']->getGroups();
-                    sort($groups);
-                    // Generate group string for non-anonymous groups,
-                    // XOOPS_DB_PASS and XOOPS_DB_NAME (before we find better variables) are used to protect group sensitive contents
-                    $extra_string .= '-' . substr(md5(implode('-', $groups)), 0, 8) . '-' . substr(md5(XOOPS_DB_PASS . XOOPS_DB_NAME . XOOPS_DB_USER), 0, 8);
+                    // Group segment for non-anonymous users, keyed with the site's stored secret
+                    require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+                    $segment = xoops_groupCacheKey($GLOBALS['xoopsUser']->getGroups());
+                    if ('' === $segment) {
+                        // No usable key: fail closed. Switch caching off for this request
+                        // (every call lands here again, so block caching stays off too)
+                        // rather than write cache files under an unshareable id.
+                        $this->contentCacheLifetime = 0;
+                        $this->template->caching    = 0;
+
+                        return $cache_id;
+                    }
+                    $extra_string = $language . '-' . $segment;
                 }
             }
             $extraString = $extra_string;

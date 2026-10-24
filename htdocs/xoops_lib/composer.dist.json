@@ -1,6 +1,6 @@
 {
   "name": "xoopscore27/libraries",
-  "description": "Libraries for XOOPS 2.7.2 (meta-package, no code)",
+  "description": "Libraries for XOOPS 2.7.4 (meta-package, no code)",
   "type": "metapackage",
   "license": "GPL-2.0-or-later",
   "homepage": "https://xoops.org",
@@ -18,7 +18,7 @@
 
     "boenrobot/money_format_polyfill": "^1.0",
     "dflydev/apache-mime-types": "^1.0",
-    "erusev/parsedown": "^1.7",
+    "erusev/parsedown": "^1.7.4",
     "ezyang/htmlpurifier": "^4.18",
     "firebase/php-jwt": "^7.0",
     "php-debugbar/php-debugbar": "^v3.4.0",
@@ -33,7 +33,7 @@
     "xoops/helpers": "^1.0",
     "xoops/regdom": "^2.1.0",
     "xoops/smartyextensions": "^1.3",
-    "xoops/xmf": "^1.3.1"
+    "xoops/xmf": "^1.3.3"
   },
   "suggest": {
     "ext-sodium": "Required for two-factor enrolment and authenticator-code verification"
@@ -45,6 +45,11 @@
     "classmap-authoritative": true
   },
   "prefer-stable": true,
+  "scripts": {
+    "remove-phpmailer-oauth-helper": "@php -r \"if (is_file('vendor/phpmailer/phpmailer/get_oauth_token.php') && !unlink('vendor/phpmailer/phpmailer/get_oauth_token.php')) { echo 'Could not remove vendor/phpmailer/phpmailer/get_oauth_token.php', PHP_EOL; exit(1); }\"",
+    "post-install-cmd": "@remove-phpmailer-oauth-helper",
+    "post-update-cmd": "@remove-phpmailer-oauth-helper"
+  },
   "support": {
     "issues": "https://github.com/XOOPS/XoopsCore27/issues",
     "source": "https://github.com/XOOPS/XoopsCore27"

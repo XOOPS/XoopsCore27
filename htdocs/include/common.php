@@ -20,8 +20,8 @@ global $xoops, $xoopsPreload, $xoopsLogger, $xoopsErrorHandler, $xoopsSecurity, 
 /**
  * YOU SHOULD NEVER USE THE FOLLOWING TO CONSTANTS, THEY WILL BE REMOVED
  */
-defined('DS') or define('DS', DIRECTORY_SEPARATOR);
-defined('NWLINE') or define('NWLINE', "\n");
+defined('DS') || define('DS', DIRECTORY_SEPARATOR);
+defined('NWLINE') || define('NWLINE', "\n");
 
 /**
  * Include files with definitions
@@ -143,6 +143,27 @@ include_once $xoops->path('class/criteria.php');
 include_once $xoops->path('class/module.textsanitizer.php');
 require_once $xoops->path('include/xoopssetcookie.php');
 include_once $xoops->path('include/functions.php');
+
+// Preserve editor format in existing module columns before save/preview handlers
+// read input. This does not authorize a save or enable raw HTML.
+if (\Xmf\Request::hasVar('_xoops_markdown', 'POST')) {
+    require_once XOOPS_ROOT_PATH . '/class/xoopsmarkdown.php';
+    // Raw and untrimmed, and only the fields preparePost() changed are written
+    // back: a full Request::set() would rewrite (and by default trim) every field.
+    $markdownMask    = \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM;
+    $markdownPost    = \Xmf\Request::get('POST', $markdownMask);
+    $markdownRequest = \Xmf\Request::get('REQUEST', $markdownMask);
+    $markdownBefore  = $markdownPost;
+    XoopsMarkdown::preparePost($markdownPost, $markdownRequest);
+    foreach ($markdownPost as $markdownName => $markdownValue) {
+        if ($markdownValue !== $markdownBefore[$markdownName]) {
+            \Xmf\Request::setVar($markdownName, $markdownValue, 'POST');
+            // setVar(POST) also overwrites REQUEST; keep its own precedence.
+            \Xmf\Request::setVar($markdownName, $markdownRequest[$markdownName] ?? $markdownValue, 'REQUEST');
+        }
+    }
+    unset($markdownMask, $markdownPost, $markdownRequest, $markdownBefore, $markdownName, $markdownValue);
+}
 
 /* new installs should create this in mainfile */
 if (!defined('XOOPS_COOKIE_DOMAIN')) {
@@ -308,18 +329,30 @@ if ($xoopsConfig['use_ssl'] && $sslSessionId !== '' && preg_match('/^[a-zA-Z0-9,
 } elseif ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '' && $xoopsConfig['session_expire'] > 0) {
     session_name($xoopsConfig['session_name']);
     session_cache_expire($xoopsConfig['session_expire']);
-    @ini_set('session.gc_maxlifetime', $xoopsConfig['session_expire'] * 60);
+    // gc_maxlifetime can only be changed before the session starts.
+    if (
+        PHP_SESSION_ACTIVE !== session_status()
+        && false === ini_set('session.gc_maxlifetime', (string) ($xoopsConfig['session_expire'] * 60))
+    ) {
+        trigger_error('The session lifetime setting could not be applied.', E_USER_WARNING);
+    }
 }
 
 session_set_save_handler($sess_handler, true);
 
-if (function_exists('session_status')) {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        session_start();
+if (PHP_SESSION_ACTIVE !== session_status()) {
+    // PHP's own warning can name the session save path; report one warning
+    // without it instead.
+    set_error_handler(static fn (): bool => true);
+    try {
+        $sessionStarted = session_start();
+    } finally {
+        restore_error_handler();
     }
-} else {
-    // this should silently fail if session has already started (for PHP 5.3)
-    @session_start();
+    if (!$sessionStarted) {
+        trigger_error('The PHP session could not be started.', E_USER_WARNING);
+    }
+    unset($sessionStarted);
 }
 $xoopsPreload->triggerEvent('core.behavior.session.start');
 /**

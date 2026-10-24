@@ -16,7 +16,8 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_CACHE')):
     /**
      * @param array|null $groups
      *
-     * @return string
+     * @return string group segment for a cache name; '' when no usable cache-id key exists,
+     *                in which case the caller must neither read nor write the cache
      */
     function mod_generateCacheId_byGroup($groups = null)
     {
@@ -27,8 +28,8 @@ if (!defined('FRAMEWORKS_ART_FUNCTIONS_CACHE')):
             $groups = $xoopsUser->getGroups();
         }
         if (!empty($groups) && \is_array($groups)) {
-            sort($groups);
-            $contentCacheId = substr(md5(implode(',', $groups) . XOOPS_DB_PASS . XOOPS_DB_NAME), 0, strlen(XOOPS_DB_USER) * 2);
+            require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+            $contentCacheId = xoops_groupCacheKey($groups);
         } else {
             $contentCacheId = XOOPS_GROUP_ANONYMOUS;
         }
@@ -89,9 +90,12 @@ function mod_createCacheFile($data, $name = null, $dirname = null)
  */
 function mod_createCacheFile_byGroup($data, $name = null, $dirname = null, $groups = null)
 {
-    $name .= mod_generateCacheId_byGroup();
+    $groupId = mod_generateCacheId_byGroup($groups);
+    if ('' === $groupId) {
+        return false; // no usable cache-id key: fail closed, write nothing
+    }
 
-    return mod_createCacheFile($data, $name, $dirname);
+    return mod_createCacheFile($data, $name . $groupId, $dirname);
 }
 
 /**
@@ -139,10 +143,12 @@ function mod_loadCacheFile($name, $dirname = null)
  */
 function mod_loadCacheFile_byGroup($name, $dirname = null, $groups = null)
 {
-    $name .= mod_generateCacheId_byGroup();
-    $data = mod_loadFile($name, $dirname);
+    $groupId = mod_generateCacheId_byGroup($groups);
+    if ('' === $groupId) {
+        return null; // no usable cache-id key: fail closed, read nothing
+    }
 
-    return $data;
+    return mod_loadFile($name . $groupId, $dirname);
 }
 
 /* Shall we use the function of glob for better performance ? */
@@ -163,9 +169,10 @@ function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PAT
         $nameQuoted = preg_quote((string) $name, '/');
         $pattern = "[^_]+_{$nameQuoted}.*\.php";
         if ($handle = opendir($root_path)) {
+            require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
             while (false !== ($file = readdir($handle))) {
                 if (is_file($root_path . '/' . $file) && preg_match("/{$pattern}$/", $file)) {
-                    @unlink($root_path . '/' . $file);
+                    xoops_remove_file_quietly($root_path . '/' . $file, 'cache');
                 }
             }
             closedir($handle);
@@ -176,8 +183,9 @@ function mod_clearFile($name = '', $dirname = null, $root_path = XOOPS_CACHE_PAT
         $safeDir  = str_replace(['*', '?', '[', ']'], '', basename((string) $dirname));
         $safeName = str_replace(['*', '?', '[', ']'], '', basename((string) $name));
         $files = (array) glob($root_path . "/*{$safeDir}_{$safeName}*.php");
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         foreach ($files as $file) {
-            @unlink($file);
+            xoops_remove_file_quietly($file, 'cache');
         }
     }
 
@@ -209,9 +217,10 @@ function mod_clearSmartyCache($pattern = '')
         $pattern = "/(^{$dirname}\^.*\.html$|blk_{$dirname}_.*[^\.]*\.html$)/";
     }
     if ($handle = opendir(XOOPS_CACHE_PATH)) {
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         while (false !== ($file = readdir($handle))) {
             if (is_file(XOOPS_CACHE_PATH . '/' . $file) && preg_match($pattern, $file)) {
-                @unlink(XOOPS_CACHE_PATH . '/' . $file);
+                xoops_remove_file_quietly(XOOPS_CACHE_PATH . '/' . $file, 'cache');
             }
         }
         closedir($handle);

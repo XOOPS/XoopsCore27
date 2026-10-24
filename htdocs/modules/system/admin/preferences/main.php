@@ -59,12 +59,14 @@ switch ($op) {
         if (!is_object($confcat)) {
             redirect_header('admin.php?fct=preferences', 1);
         }
-        $xoBreadCrumb->addLink(constant($confcat->getVar('confcat_name')));
+        $confcatName  = (string) $confcat->getVar('confcat_name');
+        $confcatTitle = defined($confcatName) ? (string) constant($confcatName) : htmlspecialchars($confcatName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $xoBreadCrumb->addLink($confcatTitle);
         $xoBreadCrumb->addHelp(system_adminVersion('preferences', 'help'));
         $xoBreadCrumb->render();
         $xoopsTpl->assign('breadcrumb', 1);
 
-        $form           = new XoopsThemeForm(constant($confcat->getVar('confcat_name')), 'pref_form', 'admin.php?fct=preferences', 'post', true);
+        $form           = new XoopsThemeForm($confcatTitle, 'pref_form', 'admin.php?fct=preferences', 'post', true);
         /** @var XoopsConfigHandler $config_handler */
         $config_handler = xoops_getHandler('config');
         $criteria       = new CriteriaCompo();
@@ -423,10 +425,7 @@ switch ($op) {
         }
         $conf_ids = Request::getArray('conf_ids', [], 'POST');
         $redirect = Request::getString('redirect', '', 'POST');
-        require_once XOOPS_ROOT_PATH . '/class/template.php';
-        $xoopsTpl         = new XoopsTpl();
         $count            = count($conf_ids);
-        $tpl_updated      = false;
         $theme_updated    = false;
         $startmod_updated = false;
         $lang_updated     = false;
@@ -458,49 +457,6 @@ switch ($op) {
                         $member_handler = xoops_getHandler('member');
                         $member_handler->updateUsersByField('theme', $new_value);
                         $theme_updated = true;
-                    }
-                    //todo: remove this code since it is not used anymore.
-                    // if default template set has been changed
-                    if (!$tpl_updated && $config->getVar('conf_catid') == XOOPS_CONF && $config->getVar('conf_name') === 'template_set') {
-                        // clear cached/compiled files and regenerate them if default theme has been changed
-                        if ($xoopsConfig['template_set'] != $new_value) {
-                            $newtplset = $new_value;
-
-                            // clear all compiled and cached files
-                            $xoopsTpl->clearCompiledTemplate();
-
-                            // generate compiled files for the new theme
-                            // block files only for now.
-                            $tplfile_handler = xoops_getHandler('tplfile');
-                            $dtemplates      = $tplfile_handler->find('default', 'block');
-                            $dcount          = count($dtemplates);
-
-                            // need to do this to pass to xoops_template_touch function
-                            $GLOBALS['xoopsConfig']['template_set'] = $newtplset;
-
-                            for ($j = 0; $j < $dcount; ++$j) {
-                                $found = $tplfile_handler->find($newtplset, 'block', $dtemplates[$j]->getVar('tpl_refid'), null);
-                                if (count($found) > 0) {
-                                    // template for the new theme found, compile it
-                                    xoops_template_touch($found[0]->getVar('tpl_id'));
-                                } else {
-                                    // not found, so compile 'default' template file
-                                    xoops_template_touch($dtemplates[$j]->getVar('tpl_id'));
-                                }
-                            }
-
-                            // generate image cache files from image binary data, save them under cache/
-                            $image_handler = xoops_getHandler('imagesetimg');
-                            $imagefiles    = $image_handler->getObjects(new Criteria('tplset_name', $newtplset), true);
-                            foreach (array_keys($imagefiles) as $j) {
-                                if (!$fp = fopen(XOOPS_CACHE_PATH . '/' . $newtplset . '_' . $imagefiles[$j]->getVar('imgsetimg_file'), 'wb')) {
-                                } else {
-                                    fwrite($fp, (string) $imagefiles[$j]->getVar('imgsetimg_body'));
-                                    fclose($fp);
-                                }
-                            }
-                        }
-                        $tpl_updated = true;
                     }
 
                     // add read permission for the start module to all groups
@@ -570,7 +526,8 @@ switch ($op) {
         foreach (array_keys($confcats) as $i) {
             $preferences['id']    = $confcats[$i]->getVar('confcat_id');
             $preferences['image'] = system_AdminIcons('xoops/' . $image[$i]);
-            $preferences['name']  = constant($confcats[$i]->getVar('confcat_name'));
+            $confcatName          = (string) $confcats[$i]->getVar('confcat_name');
+            $preferences['name']  = defined($confcatName) ? constant($confcatName) : htmlspecialchars($confcatName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             ++$count_prefs;
             $preferences['newline'] = ($count_prefs % $nbcolonnes_pref == 1);// ? true : false;
             $xoopsTpl->assign('newline', $preferences['newline']);

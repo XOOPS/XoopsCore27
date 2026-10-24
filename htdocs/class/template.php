@@ -59,6 +59,8 @@ class XoopsTpl extends Smarty
         $this->registerPlugin('modifier', 'trim', 'trim');
         // Assuming $smarty is your Smarty instance
         $this->registerPlugin('modifier', 'file_exists', 'file_exists');
+        // Smarty 4 deprecates unregistered PHP functions used as modifiers.
+        $this->registerPlugin('modifier', 'sprintf', 'sprintf');
 
         if ($xoopsConfig['debug_mode']) {
             $this->debugging_ctrl = 'URL';
@@ -95,29 +97,19 @@ class XoopsTpl extends Smarty
      */
     public function fetchFromData($tplSource, $display = false, $vars = null)
     {
-        if (!function_exists('smarty_function_eval')) {
-            require_once SMARTY_DIR . '/plugins/function.eval.php';
-        }
+        // $vars go on the template object only, so they do not outlive this call.
+        $template = $this->createTemplate('eval:' . $tplSource, $this);
         if (isset($vars)) {
-            $oldVars = $this->_tpl_vars;
-            $this->assign($vars);
-            $out             = smarty_function_eval(
-                [
-                    'var' => $tplSource,
-                ],
-                $this,
-            );
-            $this->_tpl_vars = $oldVars;
+            $template->assign($vars);
+        }
+        $out = $template->fetch();
+        if ($display) {
+            echo $out;
 
-            return $out;
+            return '';
         }
 
-        return smarty_function_eval(
-            [
-                'var' => $tplSource,
-            ],
-            $this,
-        );
+        return $out;
     }
 
     /**

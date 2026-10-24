@@ -419,7 +419,17 @@ function xoops_result($msg, $title = '')
 /**
  * xoops_confirm()
  *
- * @param mixed  $hiddens
+ * $msg is output as HTML; callers must escape any untrusted text in it.
+ * Field names, values and radio captions in $hiddens are escaped here
+ * (see xoops_confirm_fields()), and so is the submit label (see
+ * xoops_confirm_submit_label()).
+ *
+ * Template contract (system_confirm.tpl and theme copies): <{$hiddens}>
+ * is ready-made HTML, and <{$submit}> and <{$action}> arrive escaped for an
+ * HTML attribute. Print them unmodified; an |escape modifier would encode
+ * them a second time.
+ *
+ * @param array  $hiddens  field name => scalar (hidden input) or caption => value array (radio group)
  * @param mixed  $action
  * @param mixed  $msg
  * @param string $submit
@@ -433,44 +443,27 @@ function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
         $GLOBALS['xoTheme'] = new \xos_opal_Theme();
     }
     require_once $GLOBALS['xoops']->path('/class/template.php');
+    require_once __DIR__ . '/html_safety.php';
+    $tempHiddens = xoops_confirm_fields((array) $hiddens);
     $confirmTpl = new \XoopsTpl();
     $confirmTpl->assign('msg', $msg);
     $confirmTpl->assign('action', htmlspecialchars($action, ENT_QUOTES | ENT_HTML5));
-    $tempHiddens = '';
-    foreach ($hiddens as $name => $value) {
-        if (is_array($value)) {
-            foreach ($value as $caption => $newvalue) {
-                $tempHiddens .= '<input type="radio" name="' . $name . '" value="' . htmlspecialchars($newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
-            }
-            $tempHiddens .= '<br>';
-        } else {
-            $tempHiddens .= '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '" />';
-        }
-    }
     $confirmTpl->assign('hiddens', $tempHiddens);
     $confirmTpl->assign('addtoken', $addtoken);
     if ($addtoken != false) {
         $confirmTpl->assign('token', $GLOBALS['xoopsSecurity']->getTokenHTML());
     }
-    $submit = ($submit != '') ? trim($submit) : _SUBMIT;
+    // Escaped once for both outputs: the template and the fallback put the
+    // label into value="" and title="" attributes.
+    $submit = xoops_confirm_submit_label($submit, _SUBMIT);
     $confirmTpl->assign('submit', $submit);
     $html = $confirmTpl->fetch("db:system_confirm.tpl");
     if (!empty($html)) {
         echo $html;
     } else {
-        $submit = ($submit != '') ? trim($submit) : _SUBMIT;
         echo '<div class="confirmMsg">' . $msg . '<br>
 			  <form method="post" action="' . htmlspecialchars($action, ENT_QUOTES | ENT_HTML5) . '">';
-        foreach ($hiddens as $name => $value) {
-            if (is_array($value)) {
-                foreach ($value as $caption => $newvalue) {
-                    echo '<input type="radio" name="' . $name . '" value="' . htmlspecialchars($newvalue, ENT_QUOTES | ENT_HTML5) . '" /> ' . $caption;
-                }
-                echo '<br>';
-            } else {
-                echo '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value, ENT_QUOTES | ENT_HTML5) . '" />';
-            }
-        }
+        echo $tempHiddens;
         if ($addtoken != false) {
             echo $GLOBALS['xoopsSecurity']->getTokenHTML();
         }
@@ -814,10 +807,13 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
         require_once __DIR__ . '/file_safety.php';
         $decoded = html_entity_decode((string) $url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         // Validate any scheme-bearing (http:, data:, mailto:, ...) or
-        // scheme-relative target against XOOPS_URL (full scheme/host/port match,
-        // not a prefix). Bare relative paths carry no scheme and are left
-        // untouched, matching the previous behaviour.
-        if ((null !== parse_url($decoded, PHP_URL_SCHEME) || 0 === strncmp(ltrim($decoded), '//', 2))
+        // root-relative target against XOOPS_URL (full scheme/host/port match,
+        // not a prefix). The probe mirrors browser parsing: "\" reads as "/"
+        // and TAB/LF/CR are dropped, so "/\host" and "/<TAB>/host" are
+        // recognised as scheme-relative. Bare relative paths carry no scheme
+        // and are left untouched, matching the previous behaviour.
+        $probe = ltrim(str_replace('\\', '/', (string) preg_replace('/[\t\n\r]+/', '', $decoded)));
+        if ((null !== parse_url($probe, PHP_URL_SCHEME) || str_starts_with($probe, '/'))
             && !xoops_isLocalUrl($url)) {
             $url = XOOPS_URL;
         }
@@ -834,8 +830,12 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
     $xoopsThemeFactory                = new xos_opal_ThemeFactory();
     $xoopsThemeFactory->allowedThemes = $xoopsConfig['theme_set_allowed'];
     $xoopsThemeFactory->defaultTheme  = $theme;
+    // Name the folder: the factory would otherwise prefer the visitor's
+    // session theme over defaultTheme, while the template variables below
+    // are built for $theme.
     $xoTheme                          = $xoopsThemeFactory->createInstance(
         [
+            'folderName'   => $theme,
             'plugins'      => [],
             'renderBanner' => false,
         ],
@@ -1385,7 +1385,7 @@ function xoops_getUrlDomain($url)
     $domain = '';
     $_URL   = parse_url($url);
 
-    if (!empty($_URL) || !empty($_URL['host'])) {
+    if (!empty($_URL) && !empty($_URL['host'])) {
         $domain = $_URL['host'];
     }
 

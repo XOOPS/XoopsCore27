@@ -40,8 +40,22 @@ diff_added() {
 added=$(diff_added '*.php')
 tpl_added=$(diff_added '*.tpl')
 
-# Exit fast only when there is nothing for either pass to look at.
-if [ -z "$added" ] && [ -z "$tpl_added" ]; then
+# New PHP files under tests/ (any fixtures/ directory excluded). Only newly
+# added files are listed, so existing tests without the standard header
+# never fire. In a plain pathspec `*` also matches `/`, so nested test
+# directories count; the glob exclude drops tests/fixtures/** and nested
+# ones such as tests/unit/htdocs/include/fixtures/** (`**/` matches zero
+# or more directories).
+new_tests=$(git diff --cached --name-only --diff-filter=A -- 'tests/*.php' \
+    ':(exclude,glob)tests/**/fixtures/**' 2>/dev/null || true)
+
+# Whether any PHP file is added, so the early exit cannot skip rule 17. A
+# failed git call counts as "maybe": the rule then runs and reports it.
+new_php_any=$(git diff --cached --no-renames --name-only --diff-filter=A -- '*.php' 2>/dev/null) \
+    || new_php_any=unknown
+
+# Exit fast only when there is nothing for any pass to look at.
+if [ -z "$added" ] && [ -z "$tpl_added" ] && [ -z "$new_tests" ] && [ -z "$new_php_any" ]; then
     exit 0
 fi
 
@@ -182,6 +196,21 @@ if [ -n "$added" ]; then
     hits=$(printf '%s\n' "$added" | grep -E '@[a-zA-Z_][a-zA-Z0-9_]*\(' || true)
     [ -n "$hits" ] && report "error-suppressed call @foo() — handle the failure explicitly instead" "$hits"
 
+    # Raw setcookie(): no Secure flag over HTTPS, no HttpOnly, no SameSite.
+    # xoops_setcookie() sets all three. Flagged on xoops.org by an external
+    # scanner via a module cookie (newbb, 2026-09). The only legitimate raw
+    # call is the helper's own, in include/xoopssetcookie.php, so that file
+    # is excluded. Case-insensitive because PHP function names are. Before
+    # matching, in this order: quoted strings are blanked (escape-aware, so
+    # 'it\'s' stays one string), same-line /* */ comments are removed, then
+    # `//` comments are dropped. Text that only mentions setcookie( does not
+    # fire; a real call keeps its `setcookie(`. Line-based like every sniff
+    # here, so a comment that opens on an earlier line is not tracked.
+    cookie_added=$(diff_added '*.php' ':(exclude)htdocs/include/xoopssetcookie.php' \
+        | sed -E "s/'([^'\\\\]|\\\\.)*'/''/g; s/\"([^\"\\\\]|\\\\.)*\"/\"\"/g; s#/\\*([^*]|\\*+[^*/])*\\*+/##g; s#//.*\$##")
+    hits=$(printf '%s\n' "$cookie_added" | grep -iE '(^|[^_a-zA-Z0-9>:$])setcookie[[:space:]]*\(' | grep -vE '^\+[[:space:]]*(\*|#)' || true)
+    [ -n "$hits" ] && report "raw setcookie() — use xoops_setcookie() (Secure over HTTPS, HttpOnly, SameSite)" "$hits"
+
     # JSON_UNESCAPED_SLASHES sniff (previously rule 10) was removed:
     # the </script> breakout concern only applies inside HTML <script>
     # contexts, and the repo legitimately uses the flag elsewhere
@@ -197,6 +226,141 @@ if [ -n "$tpl_added" ]; then
     # also lets the violation match at the very start of the line.
     hits=$(printf '%s\n' "$tpl_added" | grep -E '(^|[^<])\{\$[a-zA-Z_]' || true)
     [ -n "$hits" ] && report "standard Smarty delimiter in .tpl — XOOPS uses <{ }> not { }" "$hits"
+fi
+
+# --- New test files -------------------------------------------------
+# 16. A new test must open with the standard XOOPS file header, in the
+#     form tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php
+#     uses: `<?php` on line 1, a `/*` or `/**` comment opening on line 2,
+#     and the header's first sentence inside that comment, within the
+#     first 12 lines. On each line the sentence must come before any `*/`,
+#     so text after the comment closes never counts. The staged content
+#     (":path") is checked, not the working-tree file.
+if [ -n "$new_tests" ]; then
+    missing=''
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        if ! git show ":$f" 2>/dev/null | head -n 12 | awk '
+            NR == 1 { if ($0 !~ /^<\?php[[:space:]]*$/) { bad = 1; exit } next }
+            NR == 2 { if ($0 !~ /^\/\*\*?([[:space:]]|$)/) { bad = 1; exit } }
+            {
+                p = index($0, "You may not change or alter any portion of this comment")
+                c = index($0, "*/")
+                if (p > 0 && (c == 0 || p < c)) { found = 1; exit }
+                if (c > 0) { exit }
+            }
+            END { exit (bad || !found) ? 1 : 0 }
+        '; then
+            missing="${missing}${f}"$'\n'
+        fi
+    done <<EOF
+$new_tests
+EOF
+    [ -n "$missing" ] && report "new test file without the standard XOOPS file header (copy it from tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php)" "$missing"
+fi
+
+# --- New-file pass --------------------------------------------------
+# Caught post-hoc by review across three consecutive 2FA PRs (#205-#207,
+# 2026-09): about ten "add the XOOPS copyright header / PHPDoc" findings
+# on new files.
+
+# 17. New PHP file, test files included, without both @copyright and @license in
+#    PHP comments. Only files ADDED in this commit (renames and copies
+#    count as added, so a moved file cannot slip through); existing legacy
+#    files are untouched. Test files are NOT excluded: review asked for the
+#    header on new test files and harness scripts in five consecutive rounds
+#    of PR #207. Vendor trees, language/ and fixtures/ inside a tests/ tree
+#    are excluded, as are symlinks and submodules (not PHP source).
+#  - The staged blob is scanned with PHP's tokenizer, so a tag inside a
+#    string, heredoc or nowdoc does not count. Without php on PATH the rule
+#    is skipped with a notice.
+#  - Paths are read NUL-separated, so spaces, quotes, newlines and non-ASCII
+#    characters stay intact; a failed git listing, a staged file that cannot
+#    be read, or a PHP scanner failure fails the commit with its own message
+#    instead of passing it or reporting a missing header.
+if ! (
+    set -o pipefail
+    git diff --cached --no-renames --raw -z --diff-filter=A -- '*.php' \
+        ':(exclude,glob)**/vendor/**' \
+        ':(exclude,glob)**/language/**' \
+        ':(exclude,glob)**/tests/**/fixtures/**' |
+    {
+        bad=0
+        php_state=unknown
+        while IFS= read -r -d '' entry && IFS= read -r -d '' f; do
+            case "$entry" in
+                ':000000 100644 '*|':000000 100755 '*) ;;
+                *) continue ;; # symlink or submodule, not a PHP source file
+            esac
+
+            if [ "$php_state" = unknown ]; then
+                if command -v php >/dev/null 2>&1; then
+                    php_state=ready
+                else
+                    php_state=missing
+                    printf '\n[pre-commit] rule 17 skipped: php is not on PATH\n' >&2
+                fi
+            fi
+            [ "$php_state" = missing ] && continue
+
+            git show ":$f" | php -d memory_limit=128M -r '
+                $source = stream_get_contents(STDIN);
+                if ($source === false || !function_exists("token_get_all")) exit(2);
+                $found = [];
+                foreach (token_get_all($source) as $t) {
+                    if (is_array($t)
+                        && ($t[0] === T_COMMENT || $t[0] === T_DOC_COMMENT)
+                        && preg_match_all("/@(copyright|license)\\b/", $t[1], $m)) {
+                        foreach ($m[1] as $tag) {
+                            $found[$tag] = true;
+                        }
+                    }
+                }
+                exit(isset($found["copyright"], $found["license"]) ? 0 : 42);
+            '
+            status=( "${PIPESTATUS[@]}" )
+            printf -v name '%q' "$f"
+            if [ "${status[0]}" -ne 0 ]; then
+                printf '\n[pre-commit] rule 17: cannot read staged %s\n' "$name" >&2
+                bad=1
+            elif [ "${status[1]}" -eq 42 ]; then
+                printf '\n[pre-commit] new PHP file without both @copyright and @license in PHP comments: %s\n' "$name" >&2
+                bad=1
+            elif [ "${status[1]}" -ne 0 ]; then
+                printf '\n[pre-commit] rule 17: PHP scanner failed for %s\n' "$name" >&2
+                bad=1
+            fi
+        done
+        exit "$bad"
+    }
+); then
+    violations=$((violations + 1))
+fi
+
+# 18. WARNING ONLY. A language constant added to an existing English file is
+#    undefined on every translated pack that predates it (G-2026-109), so
+#    each new read must use a canonical guard form. Reads in any other shape
+#    are listed; the commit is never refused for them. The rule is a
+#    whitelist (see .githooks/lib/LanguageConstantGuard.php and
+#    tests/unit/githooks/), skipped with a notice without PHP 8.2 or later.
+if ! command -v php >/dev/null 2>&1; then
+    printf '\n[pre-commit] rule 18 skipped: php is not on PATH\n' >&2
+elif ! php -r 'exit(PHP_VERSION_ID >= 80200 ? 0 : 1);' >/dev/null 2>&1; then
+    printf '\n[pre-commit] rule 18 skipped: it needs PHP 8.2 or later\n' >&2
+else
+    rule18_out=$(php "$(git rev-parse --show-toplevel)/.githooks/language-constant-guard.php" 2>&1)
+    rule18_status=$?
+    if [ "$rule18_status" -eq 1 ]; then
+        printf '\n[pre-commit] warning (rule 18): new language constant read outside a canonical guard; undefined on translated packs that predate it (G-2026-109)\n%s\n' "$rule18_out" >&2
+        cat >&2 <<'EOF'
+  Canonical forms (the commit is not refused for this warning):
+    $v = defined('_X') ? _X : 'English text';
+    if (defined('_X')) { ... _X ... }
+    defined('_X') || define('_X', 'English text');   // at file scope; covers later file-scope reads
+EOF
+    elif [ "$rule18_status" -ne 0 ]; then
+        printf '\n[pre-commit] rule 18 skipped: %s\n' "$rule18_out" >&2
+    fi
 fi
 
 if [ "$violations" -gt 0 ]; then

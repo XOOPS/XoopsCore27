@@ -263,7 +263,9 @@ class XoopsObject
                         $value = $temp;
                         $this->vars[$key]['value'] = $value;
                     } else {
-                        $this->vars[$key]['value'] = xoops_convert_decode($value);
+                        // A stored value is a serialized array of encoded elements; getVar() unserializes
+                        // and decodes it. Decoding the serialized string here would break its lengths.
+                        $this->vars[$key]['value'] = $value;
                     }
                     break;
                 case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_URL:
@@ -550,7 +552,7 @@ class XoopsObject
                             }
                             $ret = is_array($ret) ? $ret : [];
                             if (is_array($ret)) {
-                                $ret = array_walk($ret, 'xoops_aw_decode');
+                                array_walk($ret, 'xoops_aw_decode');
                             }
                         }
 
@@ -885,7 +887,8 @@ class XoopsObject
                         $cleanv = xoops_convert_encode($cleanv);
                         break;
                     case /** @scrutinizer ignore-deprecated */ XOBJ_DTYPE_UNICODE_ARRAY:
-                        $cleanv = serialize(array_walk($cleanv, 'xoops_aw_encode'));
+                        array_walk($cleanv, 'xoops_aw_encode');
+                        $cleanv = serialize($cleanv);
                         break;
                     default:
                         break;
@@ -1046,6 +1049,9 @@ class XoopsObject
     /**
      * return the errors for this object as html
      *
+     * Each error is plain text and is escaped here; entities that a language
+     * constant already carries are kept.
+     *
      * @return string html listing the errors
      * @access public
      */
@@ -1054,7 +1060,7 @@ class XoopsObject
         $ret = '<h4>Errors</h4>';
         if (!empty($this->_errors)) {
             foreach ($this->_errors as $error) {
-                $ret .= $error . '<br>';
+                $ret .= htmlspecialchars((string) $error, ENT_QUOTES | ENT_HTML5 | ENT_SUBSTITUTE, 'UTF-8', false) . '<br>';
             }
         } else {
             $ret .= 'None<br>';

@@ -17,7 +17,7 @@
 xoops_loadLanguage('modinfo', 'system');
 
 $modversion['name']        = _MI_SYSTEM_NAME;
-$modversion['version']     = '2.1.12-Stable';
+$modversion['version']     = '2.1.13-Stable';
 $modversion['description'] = _MI_SYSTEM_DESC;
 $modversion['author']      = '';
 $modversion['credits']     = 'The XOOPS Project; MusS, Kraven30, Mage';
@@ -417,7 +417,7 @@ $modversion['config'][$i]['title']       = '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR'
 $modversion['config'][$i]['description'] = '_MI_SYSTEM_PREFERENCE_BLOCKS_EDITOR_DSC';
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'text';
-$modversion['config'][$i]['default']     = 'dhtmltextarea';
+$modversion['config'][$i]['default']     = 'sceditor';
 $modversion['config'][$i]['options']     = $editors;
 $modversion['config'][$i]['category']    = 'global';
 ++$i;
@@ -426,7 +426,7 @@ $modversion['config'][$i]['title']       = '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITO
 $modversion['config'][$i]['description'] = '_MI_SYSTEM_PREFERENCE_COMMENTS_EDITOR_DSC';
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'text';
-$modversion['config'][$i]['default']     = 'dhtmltextarea';
+$modversion['config'][$i]['default']     = 'sceditor';
 $modversion['config'][$i]['options']     = $editors;
 $modversion['config'][$i]['category']    = 'global';
 ++$i;
@@ -435,7 +435,7 @@ $modversion['config'][$i]['title']       = '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR
 $modversion['config'][$i]['description'] = '_MI_SYSTEM_PREFERENCE_GENERAL_EDITOR_DSC';
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'text';
-$modversion['config'][$i]['default']     = 'dhtmltextarea';
+$modversion['config'][$i]['default']     = 'sceditor';
 $modversion['config'][$i]['options']     = $editors;
 $modversion['config'][$i]['category']    = 'global';
 ++$i;
@@ -460,7 +460,11 @@ $modversion['config'][$i]['description'] = '_MD_AM_DEFAULT_NOTIFICATION_METHOD_D
 $modversion['config'][$i]['formtype']    = 'select';
 $modversion['config'][$i]['valuetype']   = 'int';
 $modversion['config'][$i]['default']     = 3;
-$modversion['config'][$i]['options']     = [_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE => 0, _MI_DEFAULT_NOTIFICATION_METHOD_PM => 1, _MI_DEFAULT_NOTIFICATION_METHOD_EMAIL => 2];
+$modversion['config'][$i]['options']     = [
+    '_MI_DEFAULT_NOTIFICATION_METHOD_DISABLE' => 0,
+    '_MI_DEFAULT_NOTIFICATION_METHOD_PM'      => 1,
+    '_MI_DEFAULT_NOTIFICATION_METHOD_EMAIL'   => 2,
+];
 //2.7.0
 ++$i;
 $modversion['config'][$i]['name']        = 'active_menus';

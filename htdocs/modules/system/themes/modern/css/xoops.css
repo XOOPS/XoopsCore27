@@ -201,7 +201,10 @@ body > div.jGrowl div.jGrowl-closer {
    XOOPS Admin Content Overrides
    Style the old XOOPS admin tables/forms
    =================================== */
-
+/* general */
+.dark-mode a {
+    color: var(--text-primary);
+}
 /* Admin breadcrumb */
 #xo-breadcrumb {
     background: var(--bg-secondary);
@@ -231,6 +234,12 @@ body > div.jGrowl div.jGrowl-closer {
     color: var(--primary-dark);
     background: var(--bg-tertiary);
     border-radius: var(--radius);
+}
+/* nav menue */
+.nav-item.active {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-left-color: var(--primary);
 }
 
 /* Tips section */

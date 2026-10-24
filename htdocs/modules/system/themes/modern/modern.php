@@ -358,12 +358,16 @@ class XoopsGuiModern extends XoopsSystemGui
         xoops_loadLanguage('menu', 'system');
         include_once __DIR__ . '/menu.php';
 
+        $requestUri  = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
+
         // Build system services list (always available for header toolbar)
         /** @var array $adminmenu Populated by menu.php include above */
         $system_services = isset($adminmenu) ? $adminmenu : [];
         foreach (array_keys($system_services) as $item) {
+            $link = $system_services[$item]['link'];
             $system_services[$item]['link'] = empty($system_services[$item]['absolute']) ? XOOPS_URL . '/modules/system/' . $system_services[$item]['link'] : $system_services[$item]['link'];
             $system_services[$item]['icon'] = empty($system_services[$item]['icon']) ? '' : XOOPS_ADMINTHEME_URL . '/modern/' . $system_services[$item]['icon'];
+            $system_services[$item]['active'] = str_contains($requestUri, $link) ? 'active' : '';
             unset($system_services[$item]['icon_small']);
         }
         // assign links for system services list (icons) in xo_head
@@ -391,7 +395,6 @@ class XoopsGuiModern extends XoopsSystemGui
         }
 
         // Detect whether system panel should be opened
-        $requestUri  = \Xmf\Request::getString('REQUEST_URI', '', 'SERVER');
         $pathUri     = (string) parse_url($requestUri, PHP_URL_PATH);          // strip query string
         $basePath   = rtrim((string) parse_url(XOOPS_URL, PHP_URL_PATH), '/'); // '' on root, '/xoops27' on WAMP
 
@@ -432,6 +435,7 @@ class XoopsGuiModern extends XoopsSystemGui
                 $item = [];
                 $item['name'] = $mod->getVar('name');
                 $item['dirname'] = $mod->getVar('dirname');
+                $item['active'] = str_contains($requestUri, '/modules/' .  $mod->getVar('dirname')) ? 'active' : '';
                 $item['icon'] = isset($info['image']) ? XOOPS_URL . '/modules/' . $mod->getVar('dirname') . '/' . $info['image'] : '';
 
                 if (!empty($info['adminindex'])) {

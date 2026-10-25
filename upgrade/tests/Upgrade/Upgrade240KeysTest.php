@@ -95,7 +95,8 @@ final class Upgrade240KeysTest extends TestCase
     #[Test]
     public function singleColumnKeyByNameStillSatisfiesTheCheck(): void
     {
-        $this->keys['xoops_xoopscomments'] = [self::key('com_status', 1, 'com_status')];
+        // Leading column differs from the name, so only Key_name matching can satisfy it.
+        $this->keys['xoops_xoopscomments'] = [self::key('com_status', 1, 'com_created')];
 
         self::assertTrue($this->patch()->check_keys());
     }

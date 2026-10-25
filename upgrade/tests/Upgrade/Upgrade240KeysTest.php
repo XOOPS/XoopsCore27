@@ -46,6 +46,9 @@ final class Upgrade240KeysTest extends TestCase
 
     protected function setUp(): void
     {
+        if (!class_exists(mysqli_result::class)) {
+            self::markTestSkipped('The mysqli extension is required for database result mocks.');
+        }
         $this->keys = [];
         foreach ([
             'modules' => ['isactive', 'weight', 'hascomments'],

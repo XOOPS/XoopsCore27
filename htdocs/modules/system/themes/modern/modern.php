@@ -435,7 +435,12 @@ class XoopsGuiModern extends XoopsSystemGui
                 $item = [];
                 $item['name'] = $mod->getVar('name');
                 $item['dirname'] = $mod->getVar('dirname');
-                $item['active'] = str_contains($requestUri, '/modules/' .  $mod->getVar('dirname')) ? 'active' : '';
+                if (str_contains($requestUri, '/modules/system/admin.php?fct=preferences&op=showmod')) {
+                    $modId = Xmf\Request::getInt('mod', 0);
+                    $item['active'] = ($modId == $mod->getVar('mid'))  ? 'active' : '';
+                } else {
+                    $item['active'] = str_contains($requestUri, '/modules/' .  $mod->getVar('dirname') . '/')  ? 'active' : '';
+                }
                 $item['icon'] = isset($info['image']) ? XOOPS_URL . '/modules/' . $mod->getVar('dirname') . '/' . $info['image'] : '';
 
                 if (!empty($info['adminindex'])) {

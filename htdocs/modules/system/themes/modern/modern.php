@@ -428,6 +428,8 @@ class XoopsGuiModern extends XoopsSystemGui
 
         // Build modules array for dashboard display
         $modules_list = [];
+        $modId = Xmf\Request::getInt('mod');
+        $op    = Xmf\Request::getString('op');
         foreach ($modules as $mod) {
             if ($moduleperm_handler->checkRight('module_admin', $mod->getVar('mid'), $xoopsUser->getGroups()) && 'system' !== $mod->getVar('dirname')) {
                 $info = $mod->getInfo();
@@ -435,8 +437,7 @@ class XoopsGuiModern extends XoopsSystemGui
                 $item = [];
                 $item['name'] = $mod->getVar('name');
                 $item['dirname'] = $mod->getVar('dirname');
-                if (str_contains($requestUri, '/modules/system/admin.php?fct=preferences&op=showmod')) {
-                    $modId = Xmf\Request::getInt('mod', 0);
+                if (str_contains($requestUri, '/modules/system/admin.php?fct=preferences') && 'showmod' == $op) {
                     $item['active'] = ($modId == $mod->getVar('mid'))  ? 'active' : '';
                 } else {
                     $item['active'] = str_contains($requestUri, '/modules/' .  $mod->getVar('dirname') . '/')  ? 'active' : '';

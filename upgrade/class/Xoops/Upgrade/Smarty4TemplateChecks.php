@@ -31,7 +31,9 @@ class Smarty4TemplateChecks extends ScannerProcess
         // Order-independent: match foreach with item= and from= in any order,
         // allowing extra attributes (key=, name=) and modifiers on from (e.g. |default:null)
         'varname' => '/<\{foreach\b(?=[^}]*\bitem=([a-zA-Z_][a-zA-Z0-9_]*))(?=[^}]*\bfrom=\$([a-zA-Z_][a-zA-Z0-9_]*)(?:\|[^\s}>]+)?)[^}]*\}>/',
-        'noquotes' => '/(<{xo[a-zA-Z\d]*\b)(?=[^}>]*[^\'"\$}>=]+[}>])([^}>]*?)(\s+)([^\$\'\"=]+)(\s*}>)/',
+        'noquotes' => '/(<{xo[a-zA-Z\d]*\b)(?=[^}>]*[^\'"\$}>=]+[}>])([^}>]*?)(\s+)([^\$\'\"=}{>]+)(\s*}>)/',
+        // left behind by earlier repairs: <{xoAppUrl '/}><{$item.file'}>
+        'brokenquotes' => '/<{xo[a-zA-Z\d]*\s+([\'"])[^\'"{}]*}><{[^\'"{}]*\1}>/',
         'includeq' => '/(<{includeq[[:space:]]+[ -=\.\/_\'\"\$a-zA-Z0-9]+}>)/',
         'foreachq' => '/(<{foreachq[[:space:]]+[ -=\.\/_\'\"\$a-zA-Z0-9]+}>)/',
     ];
@@ -88,6 +90,15 @@ class Smarty4TemplateChecks extends ScannerProcess
                     $output->outputIssue($output->makeOutputIssue($rule, $file, $match, $writable));
                 }
             }
+        }
+        unset($matches);
+
+        // a quoted argument that spans two adjacent tags
+        $rule = 'brokenquotes';
+        $results = preg_match_all($this->patterns[$rule], $contents, $matches, PREG_PATTERN_ORDER, 0);
+        for ($i = 0; $i < (int)$results; $i++) {
+            $file = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
+            $output->outputIssue($output->makeOutputIssue($rule, $file, $matches[0][$i], $writable));
         }
         unset($matches);
 

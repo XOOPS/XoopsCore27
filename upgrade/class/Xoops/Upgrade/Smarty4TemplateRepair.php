@@ -73,6 +73,10 @@ class Smarty4TemplateRepair extends ScannerProcess
         $this->replacements[] = '$1$3$4$5';
         $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])((?!\$\d*[a-zA-Z_])[^\'"{}][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
         $this->replacements[] = '$1$2$3$2$4$5';
+        // An empty first argument had nothing to quote; drop both quotes:
+        // <{xoAppUrl '}><{$x'}> becomes <{xoAppUrl }><{$x}>
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->replacements[] = '$1$3$4';
         // ...and a variable it quoted into literal text, with any modifiers or
         // index, and the trailing space the attribute patterns could keep:
         // <{xoAppUrl '$x|escape '}> becomes <{xoAppUrl $x|escape}>
@@ -90,11 +94,11 @@ class Smarty4TemplateRepair extends ScannerProcess
         // would turn the variable into literal text.
 
         // For double quotes
-        $this->patterns[] = '/("<{xo[a-zA-Z\d]*\b(?![^}>]*\$)[^}>]*?)\s*([^\'"}=]+(?:=[^\'"}=]*)*)\s?}>/';
+        $this->patterns[] = '/("<{xo[a-zA-Z\d]*\b(?![^}>]*\$)[^}>]*?)\s*([^\s\'"}=][^\'"}=]*(?:=[^\'"}=]*)*)\s?}>/';
         $this->replacements[] = "$1 '$2'}>";
 
         // For single quotes
-        $this->patterns[] = "/(\'<{xo[a-zA-Z\d]*\b(?![^}>]*\\$)[^}>]*?)\s*([^\'\"=}{>]+(?:=[^\'\"=}{>]*)*)\s?}>/";
+        $this->patterns[] = "/(\'<{xo[a-zA-Z\d]*\b(?![^}>]*\\$)[^}>]*?)\s*([^\s\'\"=}{>][^\'\"=}{>]*(?:=[^\'\"=}{>]*)*)\s?}>/";
         $this->replacements[] = '$1 "$2"}>';
 
         // For no surrounding quotes; a $variable argument is left unquoted

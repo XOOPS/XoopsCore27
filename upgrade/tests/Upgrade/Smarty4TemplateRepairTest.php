@@ -115,6 +115,12 @@ final class Smarty4TemplateRepairTest extends TestCase
             // elsewhere "$theme.css" is $theme followed by the text .css
             'double-quoted interpolation stays' => ['<{xoAppUrl "$theme.css"}>', '<{xoAppUrl "$theme.css"}>'],
             'quoted path with a $ stays'       => ["<{xoAppUrl 'a\$b.php'}>", "<{xoAppUrl 'a\$b.php'}>"],
+            // The old repair quoted across an empty first argument too
+            'earlier corruption, empty arg'    => ["<{xoAppUrl '}><{\$x'}>", '<{xoAppUrl }><{$x}>'],
+            'earlier corruption, empty in attr' => ["<a href='<{xoAppUrl \"}><{\$x\"}>'>", "<a href='<{xoAppUrl }><{\$x}>'>"],
+            'old repair output, empty arg'     => ['<{xoAppUrl }><{$x}>', '<{xoAppUrl }><{$x}>'],
+            'empty tag in double-quoted attr'  => ['<a href="<{xoAppUrl }>">', '<a href="<{xoAppUrl }>">'],
+            'empty tag in single-quoted attr'  => ["<a href='<{xoAppUrl }>'>", "<a href='<{xoAppUrl }>'>"],
         ];
     }
 

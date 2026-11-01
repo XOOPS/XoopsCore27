@@ -415,7 +415,8 @@ final class ControllerHardeningContractTest extends TestCase
         // The System preload sends Location itself when redirect_message_ajax is on.
         $src     = self::src('include/functions.php');
         $start   = (int) strpos($src, 'function redirect_header(');
-        $local   = strpos($src, '!xoops_isLocalUrl($url)', $start);
+        // A rejected target is replaced, so the preload never receives it.
+        $local   = strpos($src, '!xoops_isLocalUrl($url)) { $url = XOOPS_URL; }', $start);
         $preload = strpos($src, "triggerEvent('core.include.functions.redirectheader.start'", $start);
         $this->assertNotFalse($local);
         $this->assertNotFalse($preload);

@@ -92,9 +92,11 @@ if (false !== $error) {
         $category = (int) ($modversion['category'] ?? 0);
         unset($modversion);
         $group = $xoopsUser->getGroups();
+        /** @var XoopsGroupPermHandler $sysperm_handler */
+        $sysperm_handler = xoops_getHandler('groupperm');
         if ($category <= 0
             || (!in_array(XOOPS_GROUP_ADMIN, $group)
-                && false === xoops_getHandler('groupperm')->checkRight('system_admin', $category, $group, $xoopsModule->getVar('mid')))) {
+                && false === $sysperm_handler->checkRight('system_admin', $category, $group, $xoopsModule->getVar('mid')))) {
             http_response_code(403);
             exit('Forbidden');
         }

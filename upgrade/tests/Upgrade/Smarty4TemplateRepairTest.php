@@ -93,6 +93,19 @@ final class Smarty4TemplateRepairTest extends TestCase
             'already quoted'                   => ["<{xoAppUrl 'a.php'}>", "<{xoAppUrl 'a.php'}>"],
             'earlier corruption is undone'     => ["url(<{xoAppUrl '/}><{\$item.file'}>)", "url(<{xoAppUrl '/'}><{\$item.file}>)"],
             'earlier corruption, double quote' => ["<{xoAppUrl \"/}><{\$x\"}>", '<{xoAppUrl "/"}><{$x}>'],
+            'earlier corruption, three tags'   => ["<{xoAppUrl '/}><{\$dir}><{\$file'}>", "<{xoAppUrl '/'}><{\$dir}><{\$file}>"],
+            'earlier corruption, trailing ws'  => ["<{xoAppUrl '/}><{\$file' }>", "<{xoAppUrl '/'}><{\$file }>"],
+            'earlier corruption, variable'     => ["<{xoAppUrl '\$base}><{\$file'}>", '<{xoAppUrl $base}><{$file}>'],
+            'old repair output, three tags'    => ['<{xoAppUrl /}><{$dir}><{$file}>', "<{xoAppUrl '/'}><{\$dir}><{\$file}>"],
+            'earlier corruption, text between' => ["<a href='<{xoAppUrl \"/}> <{\$x\"}>'>", "<a href='<{xoAppUrl \"/\"}> <{\$x}>'>"],
+            'earlier quoted lone variable'     => ["<{xoAppUrl '\$item.file'}>", '<{xoAppUrl $item.file}>'],
+            'earlier double-quoted variable'   => ["<a href='<{xoAppUrl \"\$x\"}>'>", "<a href='<{xoAppUrl \$x}>'>"],
+            'earlier quoted variable modifier' => ["<{xoAppUrl '\$x|escape'}>", '<{xoAppUrl $x|escape}>'],
+            'earlier quoted indexed variable'  => ["<{xoAppUrl '\$a[0]'}>", '<{xoAppUrl $a[0]}>'],
+            'earlier quoted second variable'   => ["<{xoAppUrl foo '\$x'}>", '<{xoAppUrl foo $x}>'],
+            'earlier quoted var after literal' => ["<{xoAppUrl 'foo' '\$x'}>", "<{xoAppUrl 'foo' \$x}>"],
+            'quoted $digit literal stays'      => ["<{xoAppUrl '\$5'}>", "<{xoAppUrl '\$5'}>"],
+            'quoted path with a $ stays'       => ["<{xoAppUrl 'a\$b.php'}>", "<{xoAppUrl 'a\$b.php'}>"],
         ];
     }
 
@@ -108,14 +121,27 @@ final class Smarty4TemplateRepairTest extends TestCase
     #[Test]
     public function theScannerFlagsQuotesSpanningTwoTags(): void
     {
-        $path = $this->tmpFile("<{xoAppUrl '/}><{\$item.file'}>\n<{xoAppUrl 'ok.php'}><{\$x}>");
+        $path = $this->tmpFile("<{xoAppUrl '/}><{\$item.file'}>\n<{xoAppUrl 'ok.php'}><{\$x}>\n"
+            . "<{xoAppUrl '/}><{\$dir}><{\$file'}>\n<{xoAppUrl '/}><{\$file' }>\n"
+            . "<{xoAppUrl \"/}> <{\$x\"}>\n<{xoAppUrl '\$item.file'}>\n<{xoAppUrl 'a\$b.php'}>\n"
+            . "<{xoAppUrl '\$x|escape'}>\n<{xoAppUrl foo '\$x'}>\n<{xoAppUrl 'foo' '\$x'}>\n<{xoAppUrl '\$5'}>");
         $output = new Smarty4ScannerOutput();
         (new Smarty4TemplateChecks($output))->inspectFile(new SplFileInfo($path));
         $output->outputWrapUp();
         $report = $output->outputFetch();
 
         self::assertStringContainsString('<td>brokenquotes</td><td>&lt;{xoAppUrl &#039;/}&gt;&lt;{$item.file&#039;}&gt;</td>', $report);
-        self::assertSame(1, substr_count($report, '<td>brokenquotes</td>'));
-        self::assertStringContainsString('(auto-fixable)</td><td>1</td>', $report);
+        self::assertSame(8, substr_count($report, '<td>brokenquotes</td>'));
+        self::assertStringContainsString('earlier repair (auto-fixable)</td><td>8</td>', $report);
+    }
+
+    #[Test]
+    public function theScannerReportKeepsAMatchWithInvalidUtf8(): void
+    {
+        $path = $this->tmpFile("<{xoAppUrl '/a\xFF}><{\$x'}>");
+        $output = new Smarty4ScannerOutput();
+        (new Smarty4TemplateChecks($output))->inspectFile(new SplFileInfo($path));
+
+        self::assertStringContainsString("<td>&lt;{xoAppUrl &#039;/a\u{FFFD}}&gt;&lt;{\$x&#039;}&gt;</td>", $output->outputFetch());
     }
 }

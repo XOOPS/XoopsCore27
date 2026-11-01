@@ -147,7 +147,7 @@ class Smarty4ScannerOutput extends ScannerOutput
         $this->outputAppend('<tr class="warning"><td>' . 'Foreach item/from name conflicts (auto-fixable)' . '</td><td>' . (string) $this->getCount('varname') . '</td></tr>');
         $this->outputAppend('<tr><td>' . 'Using includeq/foreachq' . '</td><td>' . (string) ($this->getCount('includeq') + $this->getCount('foreachq')) . '</td></tr>');
         $this->outputAppend('<tr><td>' . 'Missing Quotes' . '</td><td>' . (string) ($this->getCount('noquotes')) . '</td></tr>');
-        $this->outputAppend('<tr class="warning"><td>' . 'Quotes spanning two tags (auto-fixable)' . '</td><td>' . (string) ($this->getCount('brokenquotes')) . '</td></tr>');
+        $this->outputAppend('<tr class="warning"><td>' . 'Quotes damaged by an earlier repair (auto-fixable)' . '</td><td>' . (string) ($this->getCount('brokenquotes')) . '</td></tr>');
         $this->outputAppend('<tr><td></td><td></td></tr>');
         $this->outputAppend('</table>');
     }
@@ -158,8 +158,8 @@ class Smarty4ScannerOutput extends ScannerOutput
     public function outputIssue(ArrayObject $args)
     {
         $rule = $args['rule'];
-        $file = htmlspecialchars((string) $args['file'], ENT_QUOTES, 'UTF-8');
-        $match = htmlspecialchars((string) $args['match'], ENT_QUOTES, 'UTF-8');
+        $file = htmlspecialchars((string) $args['file'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $match = htmlspecialchars((string) $args['match'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $writable = $args['writable'];
 
         $this->addToCount($rule);

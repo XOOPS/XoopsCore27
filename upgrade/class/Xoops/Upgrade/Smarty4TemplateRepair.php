@@ -64,10 +64,18 @@ class Smarty4TemplateRepair extends ScannerProcess
         $this->patterns[] = '/(<{foreachq[[:space:]]+)/';
         $this->replacements[] = '<{foreach ';
 
-        // Undo earlier runs of this repair that quoted across two adjacent tags:
-        // <{xoAppUrl '/}><{$item.file'}> becomes <{xoAppUrl '/'}><{$item.file}>
-        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])([^\'"{}]*)}><{([^\'"{}]*)\2}>/';
-        $this->replacements[] = '$1$2$3$2}><{$4}>';
+        // Undo earlier runs of this repair. A quoted argument holding }> was
+        // quoted across the following tags (with any text between them):
+        // <{xoAppUrl '/}> <{$dir}><{$file' }> becomes <{xoAppUrl '/'}> <{$dir}><{$file }>
+        // A $variable first argument gets its quotes removed instead.
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])(\$[^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->replacements[] = '$1$3$4$5';
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])([^\'"{}$][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->replacements[] = '$1$2$3$2$4$5';
+        // ...and a variable it quoted into literal text, with any modifiers or
+        // index: <{xoAppUrl '$x|escape'}> becomes <{xoAppUrl $x|escape}>
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s)([\'"])(\$[a-zA-Z_][^\s\'"={}]*)\2(\s*}>)/';
+        $this->replacements[] = '$1$3$4';
 
         // The argument classes below exclude { } > so a match ends at the
         // first closing }>, not at the end of a directly following tag.

@@ -982,6 +982,46 @@ class XoopsMemberHandlerTest extends TestCase
         $this->assertSame($user, $result);
     }
 
+    /**
+     * A digit-only name is compared numerically by MySQL, so '1' also
+     * returns '001' and '01': only the account with exactly that name may
+     * sign in, and no row limit may hide it behind the coerced matches.
+     */
+    public function testLoginUserWithADigitOnlyNameAcceptsOnlyTheExactName(): void
+    {
+        $password = 'pw';
+        $hash     = password_hash($password, PASSWORD_DEFAULT);
+        $make = function (string $uname) use ($hash): XoopsUser {
+            $user = $this->createMock(XoopsUser::class);
+            $user->method('pass')->willReturn($hash);
+            $user->method('getVar')->willReturnCallback(static fn ($key) => 'uname' === $key ? $uname : 1);
+
+            return $user;
+        };
+        $padded = $make('001');
+        $short  = $make('01');
+        $exact  = $make('1');
+
+        $this->userHandler->method('getObjects')->willReturnCallback(
+            static function ($criteria) use ($padded, $short, $exact) {
+                \PHPUnit\Framework\Assert::assertSame(0, $criteria->getLimit(), 'no limit for a digit-only name');
+
+                return [$padded, $short, $exact];
+            }
+        );
+        $this->assertSame($exact, $this->handler->loginUser('1', $password));
+    }
+
+    public function testLoginUserWithADigitOnlyNameAndNoExactAccountFails(): void
+    {
+        $user = $this->createMock(XoopsUser::class);
+        $user->method('pass')->willReturn(password_hash('pw', PASSWORD_DEFAULT));
+        $user->method('getVar')->willReturnCallback(static fn ($key) => 'uname' === $key ? '001' : 1);
+        $this->userHandler->method('getObjects')->willReturn([$user]);
+
+        $this->assertFalse($this->handler->loginUser('1', 'pw'));
+    }
+
     public function testLoginUserWithLegacyMd5HashReturnsUser(): void
     {
         $password = 'legacy_password';

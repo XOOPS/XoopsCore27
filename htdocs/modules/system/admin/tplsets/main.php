@@ -138,9 +138,9 @@ switch ($op) {
                     //Create the modules folder
 
                     if (!is_dir($theme_surcharge)) {
-                        mkdir($theme_surcharge, 0777);
+                        mkdir($theme_surcharge, 0755);
                     }
-                    chmod($theme_surcharge, 0777);
+                    chmod($theme_surcharge, 0755);
                     copy($indexFile, $theme_surcharge . '/index.html');
                 }
 
@@ -177,17 +177,17 @@ switch ($op) {
                                 if (is_object($module)) {
                                     // create module folder
                                     if (!is_dir($theme_surcharge . '/' . $module->getVar('dirname'))) {
-                                        mkdir($theme_surcharge . '/' . $module->getVar('dirname'), 0777);
-                                        chmod($theme_surcharge . '/' . $module->getVar('dirname'), 0777);
+                                        mkdir($theme_surcharge . '/' . $module->getVar('dirname'), 0755);
+                                        chmod($theme_surcharge . '/' . $module->getVar('dirname'), 0755);
                                         copy($indexFile, $theme_surcharge . '/' . $module->getVar('dirname') . '/index.html');
                                     }
 
                                     // create block folder
                                     if (!is_dir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks')) {
                                         if (!is_dir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks')) {
-                                            mkdir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0777);
+                                            mkdir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0755);
                                         }
-                                        chmod($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0777);
+                                        chmod($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0755);
                                         copy($indexFile, $theme_surcharge . '/' . $module->getVar('dirname') . '/blocks' . '/index.html');
                                     }
 
@@ -266,17 +266,17 @@ switch ($op) {
                             if (is_object($module)) {
                                 // create module folder
                                 if (!is_dir($theme_surcharge . '/' . $module->getVar('dirname'))) {
-                                    mkdir($theme_surcharge . '/' . $module->getVar('dirname'), 0777);
-                                    chmod($theme_surcharge . '/' . $module->getVar('dirname'), 0777);
+                                    mkdir($theme_surcharge . '/' . $module->getVar('dirname'), 0755);
+                                    chmod($theme_surcharge . '/' . $module->getVar('dirname'), 0755);
                                     copy($indexFile, $theme_surcharge . '/' . $module->getVar('dirname') . '/index.html');
                                 }
 
                                 // create block folder
                                 if (!is_dir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks')) {
                                     if (!is_dir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks')) {
-                                        mkdir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0777);
+                                        mkdir($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0755);
                                     }
-                                    chmod($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0777);
+                                    chmod($theme_surcharge . '/' . $module->getVar('dirname') . '/blocks', 0755);
                                     copy($indexFile, $theme_surcharge . '/' . $module->getVar('dirname') . '/blocks' . '/index.html');
                                 }
 

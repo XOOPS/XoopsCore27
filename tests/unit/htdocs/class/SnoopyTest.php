@@ -113,6 +113,52 @@ class SnoopyTest extends TestCase
         $this->assertStringContainsString('curl_exec', $source);
     }
 
+    /**
+     * A redirect to another host or port must not carry Basic-auth
+     * credentials, cookies or Authorization/Cookie headers there; a
+     * same-origin or relative redirect keeps them.
+     */
+    #[Test]
+    public function credentialsStayWithTheirOrigin(): void
+    {
+        // The request being redirected: https with no explicit port (443).
+        $from = 'https://api.example.test/start';
+        $make = function (): \Snoopy {
+            $s = $this->snoopy();
+            $s->host       = 'api.example.test';
+            $s->user       = 'u';
+            $s->pass       = 'p';
+            $s->cookies    = ['sid' => 'x'];
+            $s->headers    = ["Set-Cookie: session=secret\r\n"];
+            $s->rawheaders = ['Authorization' => 'Bearer t', 'cookie' => 'a=b', 'X-Trace' => '1'];
+
+            return $s;
+        };
+
+        foreach (['https://API.example.test/next', '/relative', 'https://api.example.test:443/x'] as $same) {
+            $s = $make();
+            $this->assertSame($same, $s->_leaveOrigin($same, $from));
+            $this->assertSame(['u', 'p'], [$s->user, $s->pass], $same);
+            $this->assertCount(3, $s->rawheaders, $same);
+        }
+
+        foreach (['https://evil.test/', 'http://api.example.test/', 'http://api.example.test:443/',
+                  'https://api.example.test:8443/', 'https://api.example.test.evil.test/'] as $other) {
+            $s = $make();
+            $this->assertSame($other, $s->_leaveOrigin($other, $from));
+            $this->assertSame(['', '', [], []], [$s->user, $s->pass, $s->cookies, $s->headers], $other);
+            $this->assertSame(['X-Trace' => '1'], $s->rawheaders, $other);
+            // The next request reads the previous response's Set-Cookie lines
+            // into the jar; none survive the switch of origin.
+            $s->setcookies();
+            $this->assertSame([], $s->cookies, $other);
+        }
+
+        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/snoopy.php');
+        $this->assertSame(0, preg_match('/->(fetch|submit)\(\$this->_redirectaddr\b/', $source), 'every followed redirect passes _leaveOrigin()');
+        $this->assertSame(6, substr_count($source, '$this->_leaveOrigin($this->_redirectaddr, $URI)'));
+    }
+
     #[Test]
     public function snoopySourceDoesNotContainShellExec(): void
     {

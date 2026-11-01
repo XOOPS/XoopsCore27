@@ -321,7 +321,8 @@ function profile_getFieldOptionForm(ProfileField $field, $action = false)
 
     $options = $field->getVar('field_options');
     foreach($options as $name => $value) {
-        $form->addElement(new XoopsFormText($name, "field_options[$name]", 80, 255, $value));
+        // The option key is stored data, and renderers print captions as HTML.
+        $form->addElement(new XoopsFormText(htmlspecialchars((string) $name, ENT_QUOTES, 'UTF-8'), "field_options[$name]", 80, 255, $value));
     }
 
     $form->addElement(new XoopsFormHidden('op', 'save-option-strings'));

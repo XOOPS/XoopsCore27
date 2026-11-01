@@ -62,7 +62,16 @@ class XoopsTpl extends Smarty
         // Smarty 4 deprecates unregistered PHP functions used as modifiers.
         $this->registerPlugin('modifier', 'sprintf', 'sprintf');
 
-        if ($xoopsConfig['debug_mode']) {
+        // The Smarty console follows the same audience as the debug logger
+        // (debugLevel: 2 admins only, 1 members, else everyone); a visitor
+        // outside it must not switch it on with ?SMARTY_DEBUG.
+        $debugLevel = (int) ($xoopsConfig['debugLevel'] ?? 2);
+        $debugAudience = match ($debugLevel) {
+            2       => !empty($GLOBALS['xoopsUserIsAdmin']),
+            1       => is_object($GLOBALS['xoopsUser'] ?? null),
+            default => true,
+        };
+        if ($xoopsConfig['debug_mode'] && $debugAudience) {
             $this->debugging_ctrl = 'URL';
             // $this->debug_tpl = XOOPS_ROOT_PATH . '/class/smarty/xoops_tpl/debug.tpl';
             if ($xoopsConfig['debug_mode'] == 3) {

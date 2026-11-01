@@ -67,24 +67,34 @@ if ($action !== '') {
 
         $filePath = $protector->get_filepath4group1ips();
         try {
-        $fp = fopen($filePath, 'w');
+        // Written beside the live file and renamed over it: readers take no
+        // lock, so truncating the live file in place ('w', or 'c' plus
+        // ftruncate) let a request read an empty allowlist and skip the
+        // administrator IP restriction. A failed write leaves the old file.
+        $tmpPath = $filePath . '.' . bin2hex(random_bytes(6)) . '.tmp';
+        $fp = fopen($tmpPath, 'x');
 
         if ($fp === false) {
-                throw new FileOpenException("Failed to open file for writing: $filePath (mode: 'w')");
+                throw new FileOpenException("Failed to open file for writing: $tmpPath (mode: 'x')");
         }
 
             if (!flock($fp, LOCK_EX)) {
-                throw new FileLockException("Failed to acquire lock on file: $filePath");
+                throw new FileLockException("Failed to acquire lock on file: $tmpPath");
             }
 
                 $data = serialize(array_unique($group1_ips)) . "\n";
                 $bytesWritten = fwrite($fp, $data);
 
-                if ($bytesWritten === false || $bytesWritten != strlen($data)) {
+                if ($bytesWritten === false || $bytesWritten != strlen($data) || !fflush($fp)) {
                 throw new FileWriteException(
-                    "Failed to write data to file: $filePath " .
+                    "Failed to write data to file: $tmpPath " .
                     "(bytes written: $bytesWritten, expected: " . strlen($data) . ")"
                 );
+                }
+                flock($fp, LOCK_UN);
+                fclose($fp);
+                if (!rename($tmpPath, $filePath)) {
+                    throw new FileWriteException("Failed to replace file: $filePath");
                 }
         } catch (FileOpenException $e) {
             $error_msg .= _AM_MSG_GROUP1IPSCANTOPEN;
@@ -100,6 +110,10 @@ if ($action !== '') {
                 flock($fp, LOCK_UN);
             fclose($fp);
         }
+            // Renamed on success; a failed attempt leaves no temporary file.
+            if (isset($tmpPath) && is_file($tmpPath)) {
+                unlink($tmpPath);
+            }
         }
 
         $redirect_msg = $error_msg ?: _AM_MSG_IPFILESUPDATED;

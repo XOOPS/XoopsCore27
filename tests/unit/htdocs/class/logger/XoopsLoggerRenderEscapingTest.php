@@ -71,6 +71,52 @@ class XoopsLoggerRenderEscapingTest extends TestCase
         return (string) $out;
     }
 
+    /**
+     * The popup writes each line through a JavaScript string literal. With only
+     * quotes escaped, a logged backslash escape (\x3c) was decoded by the
+     * script into live markup. Every literal must parse back to the exact line.
+     */
+    #[Test]
+    public function thePopupWritesEachLineAsAStrictStringLiteral(): void
+    {
+        require_once __DIR__ . '/fixtures/xoops_getcss.php';
+        $GLOBALS['xoopsConfig'] = ($GLOBALS['xoopsConfig'] ?? []) + ['sitename' => 'Site', 'theme_set' => 'default'];
+        $logger            = new XoopsLogger();
+        $logger->activated = true;
+        $logger->deprecated[] = 'Legacy API \x3cimg src=x onerror=alert(1)\x3e " \\';
+
+        // The popup path may build the logger singleton, which installs an
+        // error handler once per process: pop only what this call added.
+        $before = set_error_handler(null);
+        restore_error_handler();
+        ob_start();
+        try {
+            $out = (string) $logger->dump('popup');
+        } finally {
+            ob_end_clean();
+            for ($i = 0; $i < 5; $i++) {
+                $current = set_error_handler(null);
+                restore_error_handler();
+                if ($current === $before) {
+                    break;
+                }
+                restore_error_handler();
+            }
+        }
+
+        $count = preg_match_all('/debug_window\.document\.writeln\((.*)\);$/m', $out, $m);
+        self::assertGreaterThan(0, $count);
+        $joined = '';
+        foreach ($m[1] as $literal) {
+            $line = json_decode($literal, false, 2, JSON_THROW_ON_ERROR);
+            self::assertIsString($line, $literal);
+            self::assertStringNotContainsString('</', $literal, 'no closing tag inside the script block');
+            $joined .= $line;
+        }
+        self::assertStringContainsString('Legacy API', $joined);
+        self::assertStringNotContainsString('<img', $joined);
+    }
+
     public static function channelProvider(): array
     {
         return [

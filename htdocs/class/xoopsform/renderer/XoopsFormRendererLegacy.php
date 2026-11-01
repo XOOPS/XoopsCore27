@@ -548,7 +548,7 @@ EOJS;
         }
         return '<input type="text" name="' . $ele_name . '" id="' . $ele_name . '" size="'
             . $element->getSize() . '" maxlength="' . $element->getMaxlength() . '" value="'
-            . $display_value . '"' . $element->getExtra()
+            . htmlspecialchars((string) $display_value, ENT_QUOTES, 'UTF-8') . '"' . $element->getExtra()
             . ' /><input type="reset" value=" ... " onclick="return showCalendar(\'' . $ele_name
             . '\');">';
         /*

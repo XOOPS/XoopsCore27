@@ -41,6 +41,26 @@ final class WizardWebmasterGateTest extends TestCase
     }
 
     /**
+     * The 2.2 loginname/md5 fallback must not run after a directory provider
+     * refused the password: it would accept what LDAP rejected.
+     *
+     * @return void
+     */
+    #[Test]
+    public function legacyHashFallbackRunsOnlyForTheLocalProvider(): void
+    {
+        $source   = $this->source('login.php');
+        $fallback = strpos($source, "new Criteria('pass', md5(\$pass))");
+        self::assertNotFalse($fallback);
+        $branch = strrpos(substr($source, 0, $fallback), 'if (');
+        self::assertNotFalse($branch);
+        self::assertStringContainsString(
+            '$xoopsAuth instanceof XoopsAuthXoops',
+            substr($source, $branch, strpos($source, '{', $branch) - $branch)
+        );
+    }
+
+    /**
      * A refused session rotation must stop the wizard login before any state is written.
      *
      * @return void

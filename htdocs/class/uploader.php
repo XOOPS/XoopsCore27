@@ -682,6 +682,11 @@ class XoopsMediaUploader
             $replaces[] = '_' . $ext . '.';
         }
         $this->mediaName = preg_replace($patterns, $replaces, $this->mediaName);
+        // The name actually saved: random-filename mode copied the original
+        // name into it before this ran (x.php.jpg would stay x.php.jpg).
+        if (isset($this->targetFileName)) {
+            $this->targetFileName = preg_replace($patterns, $replaces, (string) $this->targetFileName);
+        }
     }
 
     /**

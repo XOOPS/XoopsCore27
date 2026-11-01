@@ -87,7 +87,17 @@ class XoopsAuthProvisionning
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
         $criteria       = new Criteria('uname', $uname);
-        $getuser        = $member_handler->getUsers($criteria);
+        $getuser = $member_handler->getUsers($criteria);
+        // Criteria renders a digit-only string as an SQL number, and MySQL
+        // then compares the varchar column numerically ('001' = '1'): for
+        // such a name keep only the account with exactly that name. Other
+        // names keep the column collation's matching.
+        if (preg_match('/^-?\d+$/', (string) $uname)) {
+            $getuser = array_values(array_filter(
+                $getuser,
+                static fn ($user) => (string) $user->getVar('uname', 'n') === (string) $uname
+            ));
+        }
         if (count($getuser) == 1) {
             return $getuser[0];
         } else {

@@ -425,7 +425,13 @@ if (empty($_SESSION['xoopsUserId'])
             }
         }
     }
-    if (null !== $rememberUser) {
+    // The identity changes from anonymous to the account: a fresh session ID,
+    // so an ID chosen by someone else (a planted cookie, the SSL bridge's
+    // posted ID) never becomes an authenticated session. A failed rotation
+    // signs nobody in; the cookie stays for the next request.
+    if (null !== $rememberUser && !$sess_handler->regenerate_id(true)) {
+        $rememberClaims = false;
+    } elseif (null !== $rememberUser) {
         $_SESSION['xoopsUserId'] = $rememberUser->getVar('uid');
         // The token's own fingerprint matched the current hash just above.
         $_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint($rememberUser);

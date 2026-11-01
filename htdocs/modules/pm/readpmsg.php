@@ -192,6 +192,8 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
 $start                        = Request::getInt('start', 0, 'GET');
 $total_messages               = Request::getInt('total_messages', 0, 'GET');
 $GLOBALS['xoopsOption']['template_main'] = 'pm_readpmsg.tpl';
+// Never page-cached: the same URL (?start=N) shows each member their own mail.
+$GLOBALS['xoopsConfig']['module_cache'][$GLOBALS['xoopsModule']->getVar('mid')] = 0;
 include $GLOBALS['xoops']->path('header.php');
 
 if (!is_object($pm)) {

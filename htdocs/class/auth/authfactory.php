@@ -57,7 +57,7 @@ class XoopsAuthFactory
                 $xoops_auth_method = $authConfig['auth_method'];
             }
             // Verify if uname allows to bypass LDAP auth
-            if (in_array($uname, $authConfig['ldap_users_bypass'])) {
+            if (self::isBypassed((string) $uname, $authConfig['ldap_users_bypass'])) {
                 $xoops_auth_method = 'xoops';
             }
 
@@ -87,5 +87,23 @@ class XoopsAuthFactory
         }
 
         return $auth_instance;
+    }
+
+    /**
+     * Whether a user name is on the LDAP bypass list.
+     *
+     * Strict string comparison ('1e1' is not '10'), case-folded like the
+     * uname column's collation ('Admin' is 'admin', the account the native
+     * adapter then loads).
+     *
+     * @param string $uname  submitted user name
+     * @param array  $bypass configured bypass names
+     * @return bool
+     */
+    private static function isBypassed(string $uname, array $bypass): bool
+    {
+        $fold = static fn ($name): string => mb_strtolower(trim((string) $name), 'UTF-8');
+
+        return in_array($fold($uname), array_map($fold, $bypass), true);
     }
 }

@@ -62,25 +62,11 @@ if ($op === 'dologin') {
     /** @var \XoopsMemberHandler $member_handler */
     $member_handler = xoops_getHandler('member');
     $myts           = \MyTextSanitizer::getInstance();
-    $user           = $member_handler->loginUser(addslashes($username), addslashes($password));
+    // The site's own sign-in check: the configured provider (LDAP/ADS with
+    // its bypass list), the inactive-account and closed-site refusals.
+    require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
+    $user           = xoops_login_authenticate($username, $password);
     if (is_object($user)) {
-        if (0 == $user->getVar('level')) {
-            redirect_header(XOOPS_URL . '/index.php', 5, _US_NOACTTPADM);
-            exit();
-        }
-        if ($xoopsConfig['closesite'] == 1) {
-            $allowed = false;
-            foreach ($user->getGroups() as $group) {
-                if (in_array($group, $xoopsConfig['closesite_okgrp']) || XOOPS_GROUP_ADMIN == $group) {
-                    $allowed = true;
-                    break;
-                }
-            }
-            if (!$allowed) {
-                redirect_header(XOOPS_URL . '/index.php', 1, _NOPERM);
-                exit();
-            }
-        }
         // This popup has no challenge page: an account whose factor must be
         // presented signs in through the site's own login form instead. A
         // copy of an older version of this file on the host stays a bypass

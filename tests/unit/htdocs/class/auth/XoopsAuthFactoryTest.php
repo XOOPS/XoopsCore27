@@ -118,7 +118,7 @@ class XoopsAuthFactoryTest extends TestCase
     //
     // NOTE: The stub config returns [] for getConfigsByCat(), so
     // $authConfig['ldap_users_bypass'] is null/undefined, which causes
-    // in_array() to throw TypeError on PHP 8.x. The static $auth_instance
+    // isBypassed(array) to throw TypeError on PHP 8.x. The static $auth_instance
     // is never set because the TypeError occurs before assignment.
     // Every call re-enters the logic and throws the same TypeError.
     //
@@ -141,8 +141,36 @@ class XoopsAuthFactoryTest extends TestCase
             XoopsAuthFactory::getAuthConnection('admin');
             $this->fail('Expected TypeError');
         } catch (\TypeError $e) {
-            $this->assertStringContainsString('in_array', $e->getMessage());
+            $this->assertStringContainsString('isBypassed', $e->getMessage());
         }
+    }
+
+    /**
+     * The bypass list is matched as strings, case-folded like the uname
+     * collation: loose in_array() let '1e1' match a configured '10', and a
+     * case-sensitive match sent 'Admin' to LDAP and then loaded 'admin'.
+     */
+    #[Test]
+    #[DataProvider('bypassProvider')]
+    public function bypassListMatchesStrictlyAndCaseInsensitively(string $uname, array $list, bool $expected): void
+    {
+        $method = new ReflectionMethod(XoopsAuthFactory::class, 'isBypassed');
+        $this->assertSame($expected, $method->invoke(null, $uname, $list));
+    }
+
+    public static function bypassProvider(): array
+    {
+        return [
+            'exact'               => ['admin', ['admin'], true],
+            'other case'          => ['Admin', ['admin'], true],
+            'configured in caps'  => ['admin', ['ADMIN'], true],
+            'multibyte case'      => ['ÉLODIE', ['élodie'], true],
+            'numeric lookalike'   => ['1e1', ['10'], false],
+            'leading zero'        => ['010', ['10'], false],
+            'zero vs empty'       => ['0', [''], false],
+            'not listed'          => ['bob', ['admin'], false],
+            'empty list'          => ['admin', [], false],
+        ];
     }
 
     #[Test]

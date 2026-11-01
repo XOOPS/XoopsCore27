@@ -55,7 +55,11 @@ $options = [
     'lifetime' => 0,
     'path'     => '/',
     'domain'   => null,
-    'secure'   => false,
+    // The installer session holds the database and administrator credentials:
+    // over HTTPS its cookie must never be sent over plain HTTP.
+    'secure'   => (!empty($_SERVER['HTTPS']) && 'off' !== strtolower((string) $_SERVER['HTTPS']))
+        || 443 === (int) ($_SERVER['SERVER_PORT'] ?? 0)
+        || 'https' === strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')),
     'httponly' => true,
     'samesite' => 'Lax',
 ];

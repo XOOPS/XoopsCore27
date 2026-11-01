@@ -33,7 +33,7 @@ class Smarty4TemplateChecks extends ScannerProcess
         'varname' => '/<\{foreach\b(?=[^}]*\bitem=([a-zA-Z_][a-zA-Z0-9_]*))(?=[^}]*\bfrom=\$([a-zA-Z_][a-zA-Z0-9_]*)(?:\|[^\s}>]+)?)[^}]*\}>/',
         'noquotes' => '/(<{xo[a-zA-Z\d]*\b)(?=[^}>]*[^\'"\$}>=]+[}>])([^}>]*?)(\s+)([^\$\'\"=}{>]+)(\s*}>)/',
         // left behind by earlier repairs: <{xoAppUrl '/}><{$item.file'}> and <{xoAppUrl '$x'}>
-        'brokenquotes' => '/<{xo[a-zA-Z\d]*(?:\s+([\'"])[^\'"{}]*(?:}>[^\'"{}]*<{[^\'"{}]*)+\1|\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s([\'"])\$[a-zA-Z_][^\s\'"={}]*\2)\s*}>/',
+        'brokenquotes' => '/<{xo[a-zA-Z\d]*(?:\s+([\'"])[^\'"{}]*(?:}>[^\'"{}]*<{[^\'"{}]*)+\1|\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s([\'"])\$[a-zA-Z_][^\s\'"={}]*\s*\2)\s*}>/',
         'includeq' => '/(<{includeq[[:space:]]+[ -=\.\/_\'\"\$a-zA-Z0-9]+}>)/',
         'foreachq' => '/(<{foreachq[[:space:]]+[ -=\.\/_\'\"\$a-zA-Z0-9]+}>)/',
     ];

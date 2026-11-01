@@ -104,7 +104,10 @@ final class Smarty4TemplateRepairTest extends TestCase
             'earlier quoted indexed variable'  => ["<{xoAppUrl '\$a[0]'}>", '<{xoAppUrl $a[0]}>'],
             'earlier quoted second variable'   => ["<{xoAppUrl foo '\$x'}>", '<{xoAppUrl foo $x}>'],
             'earlier quoted var after literal' => ["<{xoAppUrl 'foo' '\$x'}>", "<{xoAppUrl 'foo' \$x}>"],
-            'quoted $digit literal stays'      => ["<{xoAppUrl '\$5'}>", "<{xoAppUrl '\$5'}>"],
+            'earlier quoted var, trailing ws'  => ["<a href=\"<{xoAppUrl '\$x '}>\">", '<a href="<{xoAppUrl $x}>">'],
+            'old repair output, attr trailing' => ['<a href="<{xoAppUrl $x }>">', '<a href="<{xoAppUrl $x }>">'],
+            'earlier corruption, $digit first' => ["<{xoAppUrl '\$5}><{\$x'}>", "<{xoAppUrl '\$5'}><{\$x}>"],
+            'quoted $digit literal stays'      =>["<{xoAppUrl '\$5'}>", "<{xoAppUrl '\$5'}>"],
             'quoted path with a $ stays'       => ["<{xoAppUrl 'a\$b.php'}>", "<{xoAppUrl 'a\$b.php'}>"],
         ];
     }
@@ -124,15 +127,15 @@ final class Smarty4TemplateRepairTest extends TestCase
         $path = $this->tmpFile("<{xoAppUrl '/}><{\$item.file'}>\n<{xoAppUrl 'ok.php'}><{\$x}>\n"
             . "<{xoAppUrl '/}><{\$dir}><{\$file'}>\n<{xoAppUrl '/}><{\$file' }>\n"
             . "<{xoAppUrl \"/}> <{\$x\"}>\n<{xoAppUrl '\$item.file'}>\n<{xoAppUrl 'a\$b.php'}>\n"
-            . "<{xoAppUrl '\$x|escape'}>\n<{xoAppUrl foo '\$x'}>\n<{xoAppUrl 'foo' '\$x'}>\n<{xoAppUrl '\$5'}>");
+            . "<{xoAppUrl '\$x|escape'}>\n<{xoAppUrl foo '\$x'}>\n<{xoAppUrl 'foo' '\$x'}>\n<{xoAppUrl '\$5'}>\n<{xoAppUrl '\$x '}>");
         $output = new Smarty4ScannerOutput();
         (new Smarty4TemplateChecks($output))->inspectFile(new SplFileInfo($path));
         $output->outputWrapUp();
         $report = $output->outputFetch();
 
         self::assertStringContainsString('<td>brokenquotes</td><td>&lt;{xoAppUrl &#039;/}&gt;&lt;{$item.file&#039;}&gt;</td>', $report);
-        self::assertSame(8, substr_count($report, '<td>brokenquotes</td>'));
-        self::assertStringContainsString('earlier repair (auto-fixable)</td><td>8</td>', $report);
+        self::assertSame(9, substr_count($report, '<td>brokenquotes</td>'));
+        self::assertStringContainsString('earlier repair (auto-fixable)</td><td>9</td>', $report);
     }
 
     #[Test]

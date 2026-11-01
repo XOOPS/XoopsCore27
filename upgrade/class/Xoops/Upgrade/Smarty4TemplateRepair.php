@@ -68,15 +68,21 @@ class Smarty4TemplateRepair extends ScannerProcess
         // quoted across the following tags (with any text between them):
         // <{xoAppUrl '/}> <{$dir}><{$file' }> becomes <{xoAppUrl '/'}> <{$dir}><{$file }>
         // A $variable first argument gets its quotes removed instead.
-        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])(\$[a-zA-Z_][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        // A Smarty variable name may start with digits ($5foo); $5 alone is text.
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])(\$\d*[a-zA-Z_][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
         $this->replacements[] = '$1$3$4$5';
-        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])((?!\$[a-zA-Z_])[^\'"{}][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])((?!\$\d*[a-zA-Z_])[^\'"{}][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
         $this->replacements[] = '$1$2$3$2$4$5';
         // ...and a variable it quoted into literal text, with any modifiers or
         // index, and the trailing space the attribute patterns could keep:
         // <{xoAppUrl '$x|escape '}> becomes <{xoAppUrl $x|escape}>
-        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s)([\'"])(\$[a-zA-Z_][^\s\'"={}]*)\s*\2(\s*}>)/';
-        $this->replacements[] = '$1$3$4';
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s)\'(\$\d*[a-zA-Z_][^\s\'"={}]*)\s*\'(\s*}>)/';
+        $this->replacements[] = '$1$2$3';
+        // Double quotes were written only inside a single-quoted attribute:
+        // '<{xoAppUrl $item.file}>' became '<{xoAppUrl "$item.file"}>'. Anywhere
+        // else "$theme.css" is $theme followed by the text .css, so keep it.
+        $this->patterns[] = '/((?<=\')<{xo[a-zA-Z\d]*\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s)"(\$\d*[a-zA-Z_][^\s\'"={}]*)\s*"(\s*}>)/';
+        $this->replacements[] = '$1$2$3';
 
         // The argument classes below exclude { } > so a match ends at the
         // first closing }>, not at the end of a directly following tag.

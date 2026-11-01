@@ -107,7 +107,13 @@ final class Smarty4TemplateRepairTest extends TestCase
             'earlier quoted var, trailing ws'  => ["<a href=\"<{xoAppUrl '\$x '}>\">", '<a href="<{xoAppUrl $x}>">'],
             'old repair output, attr trailing' => ['<a href="<{xoAppUrl $x }>">', '<a href="<{xoAppUrl $x }>">'],
             'earlier corruption, $digit first' => ["<{xoAppUrl '\$5}><{\$x'}>", "<{xoAppUrl '\$5'}><{\$x}>"],
-            'quoted $digit literal stays'      =>["<{xoAppUrl '\$5'}>", "<{xoAppUrl '\$5'}>"],
+            'quoted $digit literal stays'      => ["<{xoAppUrl '\$5'}>", "<{xoAppUrl '\$5'}>"],
+            'earlier quoted $digit variable'   => ["<{xoAppUrl '\$5foo'}>", '<{xoAppUrl $5foo}>'],
+            'earlier corruption, $digit var'   => ["<{xoAppUrl '\$5foo}><{\$x'}>", '<{xoAppUrl $5foo}><{$x}>'],
+            'earlier double-quoted dotted var' => ["<a href='<{xoAppUrl \"\$item.file\"}>'>", "<a href='<{xoAppUrl \$item.file}>'>"],
+            // Only the old single-quote attribute pattern wrote double quotes;
+            // elsewhere "$theme.css" is $theme followed by the text .css
+            'double-quoted interpolation stays' => ['<{xoAppUrl "$theme.css"}>', '<{xoAppUrl "$theme.css"}>'],
             'quoted path with a $ stays'       => ["<{xoAppUrl 'a\$b.php'}>", "<{xoAppUrl 'a\$b.php'}>"],
         ];
     }
@@ -127,15 +133,18 @@ final class Smarty4TemplateRepairTest extends TestCase
         $path = $this->tmpFile("<{xoAppUrl '/}><{\$item.file'}>\n<{xoAppUrl 'ok.php'}><{\$x}>\n"
             . "<{xoAppUrl '/}><{\$dir}><{\$file'}>\n<{xoAppUrl '/}><{\$file' }>\n"
             . "<{xoAppUrl \"/}> <{\$x\"}>\n<{xoAppUrl '\$item.file'}>\n<{xoAppUrl 'a\$b.php'}>\n"
-            . "<{xoAppUrl '\$x|escape'}>\n<{xoAppUrl foo '\$x'}>\n<{xoAppUrl 'foo' '\$x'}>\n<{xoAppUrl '\$5'}>\n<{xoAppUrl '\$x '}>");
+            . "<{xoAppUrl '\$x|escape'}>\n<{xoAppUrl foo '\$x'}>\n<{xoAppUrl 'foo' '\$x'}>\n<{xoAppUrl '\$5'}>\n<{xoAppUrl '\$x '}>\n"
+            . "<{xoAppUrl '\$5foo'}>\n<a href='<{xoAppUrl \"\$item.file\"}>'>\n<{xoAppUrl \"\$theme.css\"}>");
         $output = new Smarty4ScannerOutput();
         (new Smarty4TemplateChecks($output))->inspectFile(new SplFileInfo($path));
         $output->outputWrapUp();
         $report = $output->outputFetch();
 
         self::assertStringContainsString('<td>brokenquotes</td><td>&lt;{xoAppUrl &#039;/}&gt;&lt;{$item.file&#039;}&gt;</td>', $report);
-        self::assertSame(9, substr_count($report, '<td>brokenquotes</td>'));
-        self::assertStringContainsString('earlier repair (auto-fixable)</td><td>9</td>', $report);
+        self::assertStringContainsString('&lt;{xoAppUrl &#039;$5foo&#039;}&gt;', $report);
+        self::assertStringNotContainsString('$theme.css', $report);
+        self::assertSame(11, substr_count($report, '<td>brokenquotes</td>'));
+        self::assertStringContainsString('earlier repair (auto-fixable)</td><td>11</td>', $report);
     }
 
     #[Test]

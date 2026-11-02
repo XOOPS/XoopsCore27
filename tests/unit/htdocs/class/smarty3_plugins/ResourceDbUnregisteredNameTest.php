@@ -69,6 +69,20 @@ final class ResourceDbUnregisteredNameTest extends TestCase
     }
 
     #[Test]
+    public function aTemplateNamedLinkToAPhpFileHasNoSource(): void
+    {
+        $link = XOOPS_ROOT_PATH . '/resource-db-test-' . bin2hex(random_bytes(4)) . '.tpl';
+        if (!@symlink(XOOPS_ROOT_PATH . '/mainfile.dist.php', $link)) {
+            self::markTestSkipped('symlinks are not available here');
+        }
+        try {
+            self::assertSame('', self::templateFile($link));
+        } finally {
+            unlink($link);
+        }
+    }
+
+    #[Test]
     public function aTemplateFileInsideTheRootIsStillRead(): void
     {
         $file = XOOPS_ROOT_PATH . self::REAL_TEMPLATE;

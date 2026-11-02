@@ -65,10 +65,13 @@ class XoopsTpl extends Smarty
         // The Smarty console follows the same audience as the debug logger
         // (debugLevel: 2 admins only, 1 members, else everyone); a visitor
         // outside it must not switch it on with ?SMARTY_DEBUG.
+        // Level 2 means system administrators, as for the logger: by now
+        // $xoopsUserIsAdmin holds the current module's admin right instead.
         $debugLevel = (int) ($xoopsConfig['debugLevel'] ?? 2);
+        $viewer     = $GLOBALS['xoopsUser'] ?? null;
         $debugAudience = match ($debugLevel) {
-            2       => !empty($GLOBALS['xoopsUserIsAdmin']),
-            1       => is_object($GLOBALS['xoopsUser'] ?? null),
+            2       => $viewer instanceof \XoopsUser && $viewer->isAdmin(1),
+            1       => is_object($viewer),
             default => true,
         };
         if ($xoopsConfig['debug_mode'] && $debugAudience) {

@@ -88,17 +88,46 @@ final class MenuAffixAndUrlFilterTest extends TestCase
         }
     }
 
-    #[Test]
-    public function theUrlCheckRemovesWhatBrowsersRemoveBeforeReadingTheScheme(): void
+    /**
+     * @return array<string, array{string, string}> input => expected
+     */
+    public static function menuUrls(): array
     {
-        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/menus/main.php');
-        $start  = strpos($source, 'function menus_sanitize_url(');
-        self::assertNotFalse($start);
-        $body   = substr($source, $start, (int) strpos($source, "\n}\n", $start) - $start);
-        $strip  = strpos($body, 'str_replace(["\t", "\n", "\r"], \'\', $url)');
-        $scheme = strpos($body, "preg_match('#^([a-zA-Z][a-zA-Z0-9+.-]*):#'");
-        self::assertNotFalse($strip, 'tabs and line breaks are removed');
-        self::assertNotFalse($scheme);
-        self::assertLessThan($scheme, $strip, 'before the scheme is read');
+        return [
+            'tab inside the scheme'      => ["java\tscript:alert(1)", ''],
+            'newline inside the scheme'  => ["java\nscript:alert(1)", ''],
+            'entity-encoded tab'         => ['java&#9;script:alert(1)', ''],
+            'entity-encoded letter'      => ['&#106;avascript:alert(1)', ''],
+            'leading control and space'  => ["\x01 javascript:alert(1)", ''],
+            'upper case'                 => ['JaVaScRiPt:alert(1)', ''],
+            'data scheme'                => ['data:text/html,x', ''],
+            'percent-encoded is a path'  => ['java%0Ascript:alert(1)', 'java%0Ascript:alert(1)'],
+            'https'                      => ['https://xoops.org/', 'https://xoops.org/'],
+            'mailto'                     => ['mailto:a@b.test', 'mailto:a@b.test'],
+            'site-relative'              => ['/modules/news/', '/modules/news/'],
+            'query only'                 => ['?op=x', '?op=x'],
+            'empty'                      => ['', ''],
+            'fragment'                   => ['#', '#'],
+        ];
+    }
+
+    /**
+     * The function is loaded from the admin controller, as written, into a
+     * test namespace (the controller itself cannot be included).
+     */
+    #[Test]
+    #[DataProvider('menuUrls')]
+    public function theUrlCheckRejectsObfuscatedSchemesAndKeepsSafeUrls(string $url, string $expected): void
+    {
+        $fn = 'MenuUrlSandbox\\menus_sanitize_url';
+        if (!function_exists($fn)) {
+            $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/menus/main.php');
+            $start  = strpos($source, 'function menus_sanitize_url(');
+            self::assertNotFalse($start);
+            $body = substr($source, $start, (int) strpos($source, "\n}\n", $start) - $start + 2);
+            eval('namespace MenuUrlSandbox; ' . $body);
+        }
+
+        self::assertSame($expected, $fn($url));
     }
 }

@@ -488,8 +488,11 @@ switch ($op) {
         $new_session_name   = Request::getString('session_name', '', 'POST');
         $new_session_expire = Request::getInt('session_expire', 0, 'POST');
         if (!empty($new_use_mysession) && $xoopsConfig['use_mysession'] == 0 && $new_session_name !== '' && $new_session_expire > 0) {
-            // null: Secure follows the site's protocol (never forced off); HttpOnly on.
-            xoops_setcookie($new_session_name, session_id(), time() + (60 * $new_session_expire), '/', XOOPS_COOKIE_DOMAIN, null, true);
+            // Secure as the session handler set it for the session cookie (the
+            // protocol, or forced on by session_cookie_secure / SameSite=None);
+            // null leaves it to the protocol. HttpOnly on.
+            $sessionSecure = session_get_cookie_params()['secure'] ? true : null;
+            xoops_setcookie($new_session_name, session_id(), time() + (60 * $new_session_expire), '/', XOOPS_COOKIE_DOMAIN, $sessionSecure, true);
         }
 
         // Clean cached files, may take long time

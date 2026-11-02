@@ -59,9 +59,13 @@ final class MyTextSanitizerAttributeArgumentsTest extends TestCase
     private static function attributes(string $html): array
     {
         $doc = new DOMDocument();
-        libxml_use_internal_errors(true);
-        $doc->loadHTML('<?xml encoding="UTF-8"><body>' . $html . '</body>');
-        libxml_clear_errors();
+        $previous = libxml_use_internal_errors(true); // process-wide: restored below
+        try {
+            $doc->loadHTML('<?xml encoding="UTF-8"><body>' . $html . '</body>');
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
         $found = [];
         foreach ((new DOMXPath($doc))->query('//@*') as $attr) {
             $found[] = [$attr->nodeName, $attr->nodeValue];

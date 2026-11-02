@@ -50,8 +50,14 @@ final class TemplateDebugAndPageCacheContractTest extends TestCase
         $source = self::source('class/template.php');
         $gate   = strpos($source, "if (\$xoopsConfig['debug_mode'] && \$debugAudience) {");
         self::assertNotFalse($gate, 'debugging is gated on the audience');
-        self::assertLessThan($gate, strpos($source, "2       => !empty(\$GLOBALS['xoopsUserIsAdmin']),"));
-        self::assertLessThan($gate, strpos($source, "1       => is_object(\$GLOBALS['xoopsUser'] ?? null),"));
+        // System-admin right, not $xoopsUserIsAdmin: include/common.php has
+        // replaced that with the current module's admin right by now.
+        foreach (["2       => \$viewer instanceof \\XoopsUser && \$viewer->isAdmin(1),", "1       => is_object(\$viewer),"] as $line) {
+            $at = strpos($source, $line);
+            self::assertNotFalse($at, $line);
+            self::assertLessThan($gate, $at, $line);
+        }
+        self::assertStringNotContainsString("xoopsUserIsAdmin'])", substr($source, 0, $gate));
         self::assertSame(1, substr_count($source, "\$this->debugging_ctrl = 'URL';"));
         self::assertGreaterThan($gate, strpos($source, "\$this->debugging_ctrl = 'URL';"));
     }

@@ -21,7 +21,13 @@ class Protector_postcommon_post_htmlpurify4everyone extends ProtectorFilterAbstr
         $this->method   = 'purify';
 
 
-        $_POST = $this->purify_recursive($_POST);
+        // Passwords are credentials, not markup: purifying "a<b" would store
+        // or check a different password than the one typed.
+        foreach ($_POST as $key => $value) {
+            if (!preg_match('/^(old|new|v)?pass(word)?\d*\z/i', (string) $key)) {
+                $_POST[$key] = $this->purify_recursive($value);
+            }
+        }
     }
 
     /**

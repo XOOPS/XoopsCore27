@@ -48,6 +48,38 @@ final class UploaderRandomFilenameSanitizeTest extends TestCase
     }
 
     #[Test]
+    public function adjacentInnerExtensionsAreAllSanitized(): void
+    {
+        $uploader = (new ReflectionClass(XoopsMediaUploader::class))->newInstanceWithoutConstructor();
+        $uploader->extensionsToBeSanitized = ['php', 'phtml'];
+        $sanitize = new ReflectionMethod(XoopsMediaUploader::class, 'sanitizeExtensionsIn');
+
+        self::assertSame('shell_php_php.jpg', $sanitize->invoke($uploader, 'shell.php.php.jpg'));
+        self::assertSame('shell_phtml_phtml.jpg', $sanitize->invoke($uploader, 'shell.phtml.phtml.jpg'));
+        self::assertSame('shell_php_php.jpg', $sanitize->invoke($uploader, 'shell.PHP.php.jpg'));
+        self::assertSame('photo.php', $sanitize->invoke($uploader, 'photo.php'), 'the final extension is the allowlist\'s job');
+    }
+
+    /**
+     * _copyFile() strips characters after sanitizeMultipleExtensions() ran,
+     * which can join a new inner extension (shell.p#hp.jpg): the final saved
+     * name is sanitized again before the file is moved.
+     */
+    #[Test]
+    public function theFinalSavedNameIsSanitizedBeforeTheMove(): void
+    {
+        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/uploader.php');
+        $strip  = strpos($source, "\$this->savedFileName = preg_replace(\"/[^a-zA-Z0-9\\._-]/\", '', \$this->savedFileName);");
+        $again  = strpos($source, '$this->savedFileName = $this->sanitizeExtensionsIn((string) $this->savedFileName);');
+        $move   = strpos($source, 'move_uploaded_file($this->mediaTmpName, $this->savedDestination)');
+        self::assertNotFalse($strip);
+        self::assertNotFalse($again);
+        self::assertNotFalse($move);
+        self::assertLessThan($again, $strip);
+        self::assertLessThan($move, $again);
+    }
+
+    #[Test]
     public function noTargetNameStaysNoTargetName(): void
     {
         $uploader = (new ReflectionClass(XoopsMediaUploader::class))->newInstanceWithoutConstructor();

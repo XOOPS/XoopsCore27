@@ -983,43 +983,29 @@ class XoopsMemberHandlerTest extends TestCase
     }
 
     /**
-     * A digit-only name is compared numerically by MySQL, so '1' also
-     * returns '001' and '01': only the account with exactly that name may
-     * sign in, and no row limit may hide it behind the coerced matches.
+     * A bare number would make MySQL compare the varchar column numerically
+     * ('1' = '001', '0' = every non-numeric name) and skip its index: a
+     * digit-only name is sent as a quoted string, and the duplicate-detecting
+     * limit of 2 still applies.
      */
-    public function testLoginUserWithADigitOnlyNameAcceptsOnlyTheExactName(): void
+    public function testLoginUserLooksUpADigitOnlyNameAsABoundedString(): void
     {
-        $password = 'pw';
-        $hash     = password_hash($password, PASSWORD_DEFAULT);
-        $make = function (string $uname) use ($hash): XoopsUser {
-            $user = $this->createMock(XoopsUser::class);
-            $user->method('pass')->willReturn($hash);
-            $user->method('getVar')->willReturnCallback(static fn ($key) => 'uname' === $key ? $uname : 1);
-
-            return $user;
-        };
-        $padded = $make('001');
-        $short  = $make('01');
-        $exact  = $make('1');
-
+        $seen = [];
         $this->userHandler->method('getObjects')->willReturnCallback(
-            static function ($criteria) use ($padded, $short, $exact) {
-                \PHPUnit\Framework\Assert::assertSame(0, $criteria->getLimit(), 'no limit for a digit-only name');
+            static function ($criteria) use (&$seen) {
+                $seen[] = $criteria;
 
-                return [$padded, $short, $exact];
+                return [];
             }
         );
-        $this->assertSame($exact, $this->handler->loginUser('1', $password));
-    }
-
-    public function testLoginUserWithADigitOnlyNameAndNoExactAccountFails(): void
-    {
-        $user = $this->createMock(XoopsUser::class);
-        $user->method('pass')->willReturn(password_hash('pw', PASSWORD_DEFAULT));
-        $user->method('getVar')->willReturnCallback(static fn ($key) => 'uname' === $key ? '001' : 1);
-        $this->userHandler->method('getObjects')->willReturn([$user]);
-
-        $this->assertFalse($this->handler->loginUser('1', 'pw'));
+        $names = ['1', '0', '001', 'alice'];
+        foreach ($names as $uname) {
+            $this->assertFalse($this->handler->loginUser($uname, 'pw'));
+        }
+        foreach ($names as $i => $uname) {
+            $this->assertSame(2, $seen[$i]->getLimit(), $uname);
+            $this->assertMatchesRegularExpression('/IN \(\'' . $uname . '\'\)$/', $seen[$i]->render(), $uname);
+        }
     }
 
     public function testLoginUserWithLegacyMd5HashReturnsUser(): void

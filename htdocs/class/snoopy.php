@@ -148,18 +148,8 @@ class Snoopy
      */
     public function _leaveOrigin($url, $from)
     {
-        $origin = static function ($u): ?string {
-            $parts = parse_url((string) $u);
-            if (!is_array($parts) || !isset($parts['host'])) {
-                return null;
-            }
-            $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
-            $port   = (int) ($parts['port'] ?? ('https' === $scheme ? 443 : 80));
-
-            return $scheme . '://' . strtolower((string) $parts['host']) . ':' . $port;
-        };
-        $target = $origin($url);
-        if (null === $target || $target === $origin($from)) {
+        $target = $this->_origin($url);
+        if (null === $target || $target === $this->_origin($from)) {
             return (string) $url; // relative, or the same origin
         }
         $this->user    = '';
@@ -173,6 +163,43 @@ class Snoopy
         }
 
         return (string) $url;
+    }
+
+    /**
+     * scheme://host:port of an absolute URL, null for a relative one
+     *
+     * @param string $url
+     * @return string|null
+     */
+    public function _origin($url): ?string
+    {
+        $parts = parse_url((string) $url);
+        if (!is_array($parts) || !isset($parts['host'])) {
+            return null;
+        }
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
+        $port   = (int) ($parts['port'] ?? ('https' === $scheme ? 443 : 80));
+
+        return $scheme . '://' . strtolower((string) $parts['host']) . ':' . $port;
+    }
+
+    /**
+     * Follow a redirect of submit(): the form body is re-posted only to the
+     * same origin; a query-string target or another origin is fetched by GET.
+     *
+     * @param string $from      the URI that answered with the redirect
+     * @param array  $formvars
+     * @param array  $formfiles
+     * @return void
+     */
+    public function _followSubmitRedirect($from, $formvars, $formfiles): void
+    {
+        $next = $this->_leaveOrigin($this->_redirectaddr, $from);
+        if (strpos($next, '?') > 0 || $this->_origin($next) !== $this->_origin($from)) {
+            $this->fetch($next);
+        } else {
+            $this->submit($next, $formvars, $formfiles);
+        }
     }
 
     /*======================================================================*\
@@ -375,12 +402,7 @@ class Snoopy
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                if (strpos($this->_redirectaddr, "?") > 0) {
-                                    $this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI));
-                                } // the redirect has changed the request method from post to get
-                                else {
-                                    $this->submit($this->_leaveOrigin($this->_redirectaddr, $URI), $formvars, $formfiles);
-                                }
+                                $this->_followSubmitRedirect($URI, $formvars, $formfiles);
                             }
                         }
                     }
@@ -442,12 +464,7 @@ class Snoopy
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            if (strpos($this->_redirectaddr, "?") > 0) {
-                                $this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI));
-                            } // the redirect has changed the request method from post to get
-                            else {
-                                $this->submit($this->_leaveOrigin($this->_redirectaddr, $URI), $formvars, $formfiles);
-                            }
+                            $this->_followSubmitRedirect($URI, $formvars, $formfiles);
                         }
                     }
                 }

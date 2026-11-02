@@ -68,6 +68,13 @@ if (empty($xoopsOption['hascommon'])) {
     $xoopsOption['nocommon'] = true;
     session_set_cookie_params($options);
     session_start();
+    // A session begun over HTTP keeps its non-Secure cookie when resumed over
+    // HTTPS (PHP does not reissue it): rotate once, which sends a Secure one.
+    if ($options['secure'] && empty($_SESSION['installer_secure_cookie'])) {
+        if (session_regenerate_id(true)) {
+            $_SESSION['installer_secure_cookie'] = true; // else retried next request
+        }
+    }
 }
 
 //@include __DIR__ . '/../../mainfile.php';

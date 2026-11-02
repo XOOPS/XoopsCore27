@@ -465,13 +465,15 @@ class XoopsAuthProvisionningTest extends TestCase
         $this->assertNotSame($hash, $user->getVar('pass', 'n'));
         $this->assertTrue(password_verify('changed', $user->getVar('pass', 'n')));
 
-        // A request value holding backslash-n is read like the bind and add()
-        // paths: stripslashes() drops the backslash (anb); stripcslashes()
-        // would make it a newline and the hash add() stored would never verify.
-        $escaped = password_hash('anb', PASSWORD_DEFAULT);
-        $user->setVar('pass', $escaped);
+        // The password is kept exactly as the directory bind accepted it: a
+        // backslash survives, so 'a\nb' (backslash, n) never verifies as 'anb'.
+        $literal = password_hash('a\nb', PASSWORD_DEFAULT);
+        $user->setVar('pass', $literal);
         $change('a\nb');
-        $this->assertSame($escaped, $user->getVar('pass', 'n'));
+        $this->assertSame($literal, $user->getVar('pass', 'n'));
+        $change('anb');
+        $this->assertNotSame($literal, $user->getVar('pass', 'n'));
+        $this->assertFalse(password_verify('anb', $literal));
     }
 
     #[Test]

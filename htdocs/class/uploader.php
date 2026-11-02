@@ -489,6 +489,9 @@ class XoopsMediaUploader
         $this->savedFileName = iconv('UTF-8', 'ASCII//TRANSLIT', $this->savedFileName);
         $this->savedFileName = preg_replace('!\s+!', '_', $this->savedFileName);
         $this->savedFileName = preg_replace("/[^a-zA-Z0-9\._-]/", '', $this->savedFileName);
+        // Once more on the final name: stripping characters can join a new
+        // inner extension (shell.p#hp.jpg is now shell.php.jpg).
+        $this->savedFileName = $this->sanitizeExtensionsIn((string) $this->savedFileName);
 
         $this->savedDestination = $this->uploadDir . '/' . $this->savedFileName;
 
@@ -675,18 +678,30 @@ class XoopsMediaUploader
             return null;
         }
 
-        $patterns = [];
-        $replaces = [];
-        foreach ($this->extensionsToBeSanitized as $ext) {
-            $patterns[] = "/\." . preg_quote($ext, '/') . "\./i";
-            $replaces[] = '_' . $ext . '.';
-        }
-        $this->mediaName = preg_replace($patterns, $replaces, $this->mediaName);
+        $this->mediaName = $this->sanitizeExtensionsIn((string) $this->mediaName);
         // The name actually saved: random-filename mode copied the original
         // name into it before this ran (x.php.jpg would stay x.php.jpg).
         if (isset($this->targetFileName)) {
-            $this->targetFileName = preg_replace($patterns, $replaces, (string) $this->targetFileName);
+            $this->targetFileName = $this->sanitizeExtensionsIn((string) $this->targetFileName);
         }
+    }
+
+    /**
+     * Turn every inner ".ext." of a listed extension into "_ext."
+     *
+     * A lookahead leaves the dot for the next match, so x.php.php.jpg
+     * becomes x_php_php.jpg rather than x_php.php.jpg.
+     *
+     * @param string $name file name
+     * @return string
+     */
+    private function sanitizeExtensionsIn(string $name): string
+    {
+        foreach ((array) $this->extensionsToBeSanitized as $ext) {
+            $name = (string) preg_replace('/\.' . preg_quote((string) $ext, '/') . '(?=\.)/i', '_' . $ext, $name);
+        }
+
+        return $name;
     }
 
     /**

@@ -421,22 +421,12 @@ class XoopsMemberHandler
     public function loginUser($uname, $pwd)
     {
         // Use Criteria for safe querying of username; password is handled separately for verification
-        $criteria = new Criteria('uname', (string)$uname);
-        // A digit-only name is rendered as an SQL number and compared
-        // numerically ('1' matches '001', '01'): fetch every candidate and
-        // keep only the exact name. Any other name: at most 2 (duplicates).
-        $numeric = 1 === preg_match('/^-?\d+$/', (string) $uname);
-        if (!$numeric) {
-            $criteria->setLimit(2); // Fetch at most 2 to detect duplicates
-        }
+        // An IN list quotes every element, so a digit-only name stays a
+        // string comparison ('1' does not match '001') and the index bounds it.
+        $criteria = new Criteria('uname', [(string) $uname], 'IN');
+        $criteria->setLimit(2); // Fetch at most 2 to detect duplicates
 
         $users = $this->userHandler->getObjects($criteria, false) ?: [];
-        if ($numeric) {
-            $users = array_values(array_filter(
-                $users,
-                static fn ($user) => (string) $user->getVar('uname', 'n') === (string) $uname
-            ));
-        }
         if (count($users) !== 1) {
             return false;
         }

@@ -124,7 +124,7 @@ class SnoopyTest extends TestCase
         // The request being redirected: https with no explicit port (443).
         $from = 'https://api.example.test/start';
         $make = function (): \Snoopy {
-            $s = $this->snoopy();
+            $s = clone $this->snoopy(); // never alter the shared instance
             $s->host       = 'api.example.test';
             $s->user       = 'u';
             $s->pass       = 'p';
@@ -156,7 +156,48 @@ class SnoopyTest extends TestCase
 
         $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/snoopy.php');
         $this->assertSame(0, preg_match('/->(fetch|submit)\(\$this->_redirectaddr\b/', $source), 'every followed redirect passes _leaveOrigin()');
-        $this->assertSame(6, substr_count($source, '$this->_leaveOrigin($this->_redirectaddr, $URI)'));
+        $this->assertSame(2, substr_count($source, '$this->_leaveOrigin($this->_redirectaddr, $URI)'), 'fetch(): http and https');
+        $this->assertSame(2, substr_count($source, '$this->_followSubmitRedirect($URI, $formvars, $formfiles)'), 'submit(): http and https');
+    }
+
+    /**
+     * A submit() redirect re-posts the form body only to the same origin;
+     * another origin, or a target with a query string, is fetched by GET.
+     */
+    #[Test]
+    public function aSubmitRedirectNeverPostsTheFormToAnotherOrigin(): void
+    {
+        $from = 'https://api.example.test/login';
+        $cases = [
+            'https://api.example.test/next' => 'submit',
+            '/relative'                     => 'fetch', // expanded before this point; unknown origin is not trusted
+            'https://api.example.test/n?x'  => 'fetch',
+            'https://evil.test/collect'     => 'fetch',
+            'http://api.example.test/next'  => 'fetch',
+        ];
+        foreach ($cases as $target => $expected) {
+            $s = new class extends \Snoopy {
+                public array $calls = [];
+
+                public function fetch($URI)
+                {
+                    $this->calls[] = ['fetch', $URI];
+
+                    return true;
+                }
+
+                public function submit($URI, $formvars = '', $formfiles = '')
+                {
+                    $this->calls[] = ['submit', $URI, $formvars, $formfiles];
+
+                    return true;
+                }
+            };
+            $s->_redirectaddr = $target;
+            $s->_followSubmitRedirect($from, ['pass' => 'secret'], ['f' => '/tmp/x']);
+            $this->assertSame($expected, $s->calls[0][0], $target);
+            $this->assertCount('submit' === $expected ? 4 : 2, $s->calls[0], $target . ': a GET carries no form body');
+        }
     }
 
     #[Test]

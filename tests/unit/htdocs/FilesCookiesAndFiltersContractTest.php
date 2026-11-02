@@ -57,18 +57,18 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
     public function theAllowlistIsReplacedAtomically(): void
     {
         // Readers take no lock: the live file must never be empty or half
-        // written, so the new list is written beside it and renamed over it.
+        // written. Protector's one atomic writer (private temporary file,
+        // target mode kept, renamed over it; ProtectorTest) does the write.
         $source = self::source('xoops_lib/modules/protector/admin/center.php');
-        $open   = strpos($source, "\$fp = fopen(\$tmpPath, 'x');");
-        $write  = strpos($source, '$bytesWritten = fwrite($fp, $data);', (int) $open);
-        $rename = strpos($source, 'if (!rename($tmpPath, $filePath)) {', (int) $open);
-        self::assertNotFalse($open, 'the new list goes to a temporary file');
-        self::assertNotFalse($write);
-        self::assertNotFalse($rename);
-        self::assertLessThan($rename, $write);
-        self::assertStringNotContainsString('fopen($filePath', $source, 'the live file is never opened for writing');
+        self::assertStringContainsString('if (!$protector->write_file_group1ips($group1_ips)) {', $source);
+        self::assertStringNotContainsString('fopen(', $source, 'center.php writes no file itself');
         self::assertStringNotContainsString('ftruncate(', $source);
-        self::assertStringContainsString('unlink($tmpPath);', $source, 'a failed attempt leaves no temporary file');
+
+        $protector = self::source('xoops_lib/modules/protector/class/protector.php');
+        self::assertStringContainsString(
+            'return static::writeFileAtomic(static::get_filepath4group1ips(), serialize(array_unique($ips)) . "\n", false);',
+            $protector
+        );
     }
 
     #[Test]
@@ -77,6 +77,14 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         $source = self::source('install/include/common.inc.php');
         self::assertStringNotContainsString("'secure'   => false,", $source);
         self::assertStringContainsString("'secure'   => (!empty(\$_SERVER['HTTPS']) && 'off' !== strtolower((string) \$_SERVER['HTTPS']))", $source);
+        // A session first seen over HTTPS is rotated once after it starts,
+        // so a cookie issued over HTTP is replaced by a Secure one.
+        $start  = strpos($source, 'session_start();');
+        $rotate = strpos($source, 'if (session_regenerate_id(true)) {');
+        self::assertNotFalse($start);
+        self::assertNotFalse($rotate, 'the marker is set only when the rotation succeeded');
+        self::assertLessThan($rotate, $start);
+        self::assertStringContainsString("if (\$options['secure'] && empty(\$_SESSION['installer_secure_cookie'])) {", $source);
     }
 
     #[Test]
@@ -84,7 +92,10 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
     {
         $source = self::source('modules/system/admin/preferences/main.php');
         self::assertStringNotContainsString('XOOPS_COOKIE_DOMAIN, 0);', $source);
-        self::assertStringContainsString("xoops_setcookie(\$new_session_name, session_id(), time() + (60 * \$new_session_expire), '/', XOOPS_COOKIE_DOMAIN, null, true);", $source);
+        // Secure follows the session handler's policy (session_cookie_secure
+        // forces it on behind a TLS proxy that sends no X-Forwarded-Proto).
+        self::assertStringContainsString("\$sessionSecure = session_get_cookie_params()['secure'] ? true : null;", $source);
+        self::assertStringContainsString("xoops_setcookie(\$new_session_name, session_id(), time() + (60 * \$new_session_expire), '/', XOOPS_COOKIE_DOMAIN, \$sessionSecure, true);", $source);
     }
 
     #[Test]
@@ -94,7 +105,49 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
             $source = self::source("xoops_lib/modules/protector/filters_disabled/postcommon_post_htmlpurify4{$who}.php");
             self::assertStringNotContainsString('strlen($data) > 32', $source, $who);
             self::assertStringContainsString("str_contains((string) \$data, '<') ? call_user_func([\$this->purifier, \$this->method], \$data) : \$data;", $source, $who);
+            // A password holding '<' is a credential, not markup. Only the
+            // credential field names are skipped ("compass" is purified).
+            $pattern = '/^(old|new|v)?pass(word)?\d*\z/i';
+            self::assertStringContainsString("if (!preg_match('" . $pattern . "', (string) \$key)) {", $source, $who);
+            foreach (['pass', 'pass2', 'vpass', 'password', 'oldpass', 'newpassword'] as $skipped) {
+                self::assertSame(1, preg_match($pattern, $skipped), $skipped);
+            }
+            foreach (['compass', 'passage', 'pass_hint', "pass\n", 'title'] as $purified) {
+                self::assertSame(0, preg_match($pattern, $purified), $purified);
+            }
+            self::assertStringNotContainsString('$_POST = $this->purify_recursive($_POST);', $source, $who);
         }
+    }
+
+    #[Test]
+    public function theTextFilterKeepsTheSiteRulesAfterHtmlPurifier(): void
+    {
+        $source = self::source('class/textsanitizer/textfilter/textfilter.php');
+        $purify = strpos($source, "\$text = (new \\HTMLPurifier(['Cache.DefinitionImpl' => null]))->purify((string) \$text);");
+        self::assertNotFalse($purify, 'the bundled purifier result flows on');
+        $config = strpos($source, '$config  = parent::loadConfig(__DIR__);');
+        self::assertNotFalse($config);
+        self::assertLessThan($config, $purify);
+        self::assertStringNotContainsString('return (new \\HTMLPurifier', $source);
+    }
+
+    /**
+     * The session handler expires a session by session.gc_maxlifetime, so
+     * the configured custom lifetime is applied on an SSL-bridge POST too.
+     */
+    #[Test]
+    public function theCustomSessionLifetimeAlsoAppliesToTheSslBridge(): void
+    {
+        $source   = self::source('include/common.php');
+        $lifetime = strpos($source, "ini_set('session.gc_maxlifetime'");
+        $bridge   = strpos($source, 'session_id($sslSessionId);');
+        $start    = strpos($source, '$sessionStarted = session_start();');
+        self::assertNotFalse($lifetime);
+        self::assertNotFalse($bridge);
+        self::assertNotFalse($start);
+        self::assertLessThan($bridge, $lifetime);
+        self::assertLessThan($start, $bridge);
+        self::assertStringNotContainsString("} elseif (\$xoopsConfig['use_mysession']", $source, 'not an alternative to the bridge');
     }
 
     #[Test]
@@ -104,10 +157,15 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         $start  = strpos($source, 'public function getXoopsUser($uname)');
         self::assertNotFalse($start);
         $body = substr($source, $start, (int) strpos($source, "\n    }\n", $start) - $start);
-        // Only a digit-only name (rendered as an SQL number) is narrowed to
-        // the exact account; others keep the column collation's matching.
-        self::assertStringContainsString("if (preg_match('/^-?\\d+\$/', (string) \$uname)) {", $body);
-        self::assertStringContainsString("(string) \$user->getVar('uname', 'n') === (string) \$uname", $body);
-        self::assertLessThan(strpos($body, 'if (count($getuser) == 1) {'), strpos($body, 'array_filter('));
+        // A quoted IN list keeps a digit-only name a string; the case-folded
+        // exact match stops an accent-insensitive collation mapping a
+        // directory name onto another local account.
+        self::assertStringContainsString("new Criteria('uname', [(string) \$uname], 'IN')", $body);
+        self::assertStringContainsString("\$fold(\$user->getVar('uname', 'n')) === \$fold(\$uname)", $body);
+        $filter = strpos($body, 'array_filter(');
+        $branch = strpos($body, 'if (count($getuser) == 1) {');
+        self::assertNotFalse($filter);
+        self::assertNotFalse($branch);
+        self::assertLessThan($branch, $filter);
     }
 }

@@ -407,7 +407,7 @@ class Protector
      * @param string $content new contents
      * @return bool true when the target now holds the whole new content
      */
-    protected static function writeFileAtomic(string $path, string $content): bool
+    protected static function writeFileAtomic(string $path, string $content, bool $inPlaceFallback = true): bool
     {
         $tmp = '';
         set_error_handler(static fn (): bool => true);
@@ -435,7 +435,8 @@ class Protector
                 // Only a directory that refuses new files justifies the in-place
                 // fallback (the ban must still apply). A full disk or quota also
                 // fails this open, and there the old content must stay.
-                return !is_writable(dirname($path))
+                return $inPlaceFallback
+                    && !is_writable(dirname($path))
                     && is_file($path)
                     && self::writeFileInPlace($path, $content);
             }
@@ -506,6 +507,23 @@ class Protector
         asort($bad_ips);
 
         return static::writeFileAtomic(static::get_filepath4badips(), serialize($bad_ips) . "\n");
+    }
+
+    /**
+     * Replace the administrator IP allowlist (group1 IPs) atomically.
+     *
+     * Readers take no lock, so the file is never truncated in place (an empty
+     * allowlist would lift the restriction); the existing file's mode is kept.
+     * No in-place fallback: in a directory that refuses new files the write
+     * fails and the old list stays, rather than truncating the live file.
+     *
+     * @param string[] $ips
+     *
+     * @return bool
+     */
+    public function write_file_group1ips(array $ips): bool
+    {
+        return static::writeFileAtomic(static::get_filepath4group1ips(), serialize(array_unique($ips)) . "\n", false);
     }
 
     /**

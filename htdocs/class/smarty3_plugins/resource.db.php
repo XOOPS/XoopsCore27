@@ -137,7 +137,8 @@ class Smarty_Resource_Db extends Smarty_Resource_Custom
             return '';
         }
         $real = realpath($name);
-        if (false === $real || !is_file($real)) {
+        // The resolved file too: a .tpl symlink to mainfile.php must not be read.
+        if (false === $real || !is_file($real) || !preg_match('/\.(tpl|html)\z/i', $real)) {
             return '';
         }
         $roots = [XOOPS_ROOT_PATH];

@@ -251,7 +251,7 @@ class SystemCorePreload extends XoopsPreloadItem
     {
         $message = (string) $_SESSION['redirect_message'];
         $message = strip_tags((string) preg_replace('#<br\s*/?>#i', "\n", $message));
-        $message = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8', false), false);
+        $message = nl2br(htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false), false);
 
         return (string) json_encode($message, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
     }

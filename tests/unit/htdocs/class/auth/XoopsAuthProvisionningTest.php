@@ -483,14 +483,14 @@ class XoopsAuthProvisionningTest extends TestCase
      */
     private function lookUp(string $uname, array $names): XoopsUser|false
     {
-        $rows = [];
+        $member = xoops_getHandler('member'); // loads kernel/user.php
+        $rows   = [];
         foreach ($names as $name) {
             $user = new XoopsUser();
             $user->setVar('uname', $name);
             $rows[] = $user;
         }
-        $member = xoops_getHandler('member');
-        $prop   = (new ReflectionClass($member))->getProperty('userHandler');
+        $prop  = (new ReflectionClass($member))->getProperty('userHandler');
         $saved  = $prop->getValue($member);
         $prop->setValue($member, new class ($rows) extends XoopsUserHandler {
             public function __construct(private array $rows)

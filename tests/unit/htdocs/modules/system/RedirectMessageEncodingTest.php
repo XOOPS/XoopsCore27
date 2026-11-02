@@ -99,6 +99,15 @@ final class RedirectMessageEncodingTest extends TestCase
     }
 
     #[Test]
+    public function aMessageWithAnInvalidByteIsStillShown(): void
+    {
+        $script = $this->render("Saved caf\xE9 ok");
+
+        self::assertSame(1, preg_match('/\$\.jGrowl\(("(?:[^"\\\\]|\\\\.)*"), \{/s', $script, $m), $script);
+        self::assertSame("Saved caf\u{FFFD} ok", json_decode($m[1], false, 2, JSON_THROW_ON_ERROR));
+    }
+
+    #[Test]
     public function thePermissionSaverEscapesPostedNames(): void
     {
         $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/system/admin/groupperm.php');

@@ -50,7 +50,7 @@ final class RedirectMessageEncodingTest extends TestCase
         unset($_SESSION['redirect_message']);
     }
 
-    private function render(string $message): string
+    private function render(string $message, string $event = 'eventSystemClassGuiHeader'): string
     {
         $collector = new class {
             public string $script = '';
@@ -64,7 +64,7 @@ final class RedirectMessageEncodingTest extends TestCase
         };
         $GLOBALS['xoTheme']          = $collector;
         $_SESSION['redirect_message'] = $message;
-        \SystemCorePreload::eventSystemClassGuiHeader([]);
+        \SystemCorePreload::$event([]);
 
         return $collector->script;
     }
@@ -82,6 +82,20 @@ final class RedirectMessageEncodingTest extends TestCase
         self::assertStringContainsString('&quot;x&quot;', $text);
         self::assertStringNotContainsString('</', $m[1], 'nothing can close the script element');
         self::assertArrayNotHasKey('redirect_message', $_SESSION);
+    }
+
+    /**
+     * The front end shows the same message from core.header.addmeta (the
+     * later checkcache hook unsets it there).
+     */
+    #[Test]
+    public function theFrontEndHeaderUsesTheSameLiteral(): void
+    {
+        $script = $this->render('a"); alert(1); ("</script>\\', 'eventCoreHeaderAddmeta');
+
+        self::assertSame(1, preg_match('/\$\.jGrowl\(("(?:[^"\\\\]|\\\\.)*"), \{/s', $script, $m), $script);
+        self::assertSame('a&quot;); alert(1); (&quot;\\', json_decode($m[1], false, 2, JSON_THROW_ON_ERROR));
+        self::assertStringNotContainsString('</', $m[1]);
     }
 
     #[Test]

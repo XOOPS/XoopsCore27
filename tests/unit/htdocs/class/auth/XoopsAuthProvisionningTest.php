@@ -476,6 +476,65 @@ class XoopsAuthProvisionningTest extends TestCase
         $this->assertFalse(password_verify('anb', $literal));
     }
 
+    /**
+     * getXoopsUser() against the rows the database collation returned.
+     *
+     * @param list<string> $names unames of the rows the query returns
+     */
+    private function lookUp(string $uname, array $names): XoopsUser|false
+    {
+        $rows = [];
+        foreach ($names as $name) {
+            $user = new XoopsUser();
+            $user->setVar('uname', $name);
+            $rows[] = $user;
+        }
+        $member = xoops_getHandler('member');
+        $prop   = (new ReflectionClass($member))->getProperty('userHandler');
+        $saved  = $prop->getValue($member);
+        $prop->setValue($member, new class ($rows) extends XoopsUserHandler {
+            public function __construct(private array $rows)
+            {
+            }
+
+            public function &getObjects(?\CriteriaElement $criteria = null, $id_as_key = false, $as_object = true)
+            {
+                $rows = $this->rows;
+
+                return $rows;
+            }
+        });
+        try {
+            return $this->createConfiguredInstance()->getXoopsUser($uname);
+        } finally {
+            $prop->setValue($member, $saved);
+        }
+    }
+
+    #[Test]
+    public function getXoopsUserKeepsTheCaseInsensitiveExactMatch(): void
+    {
+        $user = $this->lookUp('Admin', ['admin']);
+        $this->assertInstanceOf(XoopsUser::class, $user);
+        $this->assertSame('admin', $user->getVar('uname', 'n'));
+    }
+
+    #[Test]
+    public function getXoopsUserDropsAnAccentInsensitiveNearMiss(): void
+    {
+        $this->assertFalse($this->lookUp('admín', ['admin']));
+    }
+
+    #[Test]
+    public function getXoopsUserPicksTheExactNameAmongCandidates(): void
+    {
+        $user = $this->lookUp('admín', ['admin', 'admín']);
+        $this->assertInstanceOf(XoopsUser::class, $user);
+        $this->assertSame('admín', $user->getVar('uname', 'n'));
+        // Two rows equal apart from case stay ambiguous.
+        $this->assertFalse($this->lookUp('admin', ['admin', 'ADMIN']));
+    }
+
     #[Test]
     public function getXoopsUserReturnsFalseWithLongUsername(): void
     {

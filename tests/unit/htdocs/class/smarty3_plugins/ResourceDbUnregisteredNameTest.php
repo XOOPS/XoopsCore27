@@ -71,7 +71,9 @@ final class ResourceDbUnregisteredNameTest extends TestCase
     #[Test]
     public function aTemplateNamedLinkToAPhpFileHasNoSource(): void
     {
-        $link = XOOPS_ROOT_PATH . '/resource-db-test-' . bin2hex(random_bytes(4)) . '.tpl';
+        // The link lives in the temp directory (the root may be read-only);
+        // its target is inside the root, so only the extension check refuses it.
+        $link = sys_get_temp_dir() . '/resource-db-test-' . bin2hex(random_bytes(4)) . '.tpl';
         if (!@symlink(XOOPS_ROOT_PATH . '/mainfile.dist.php', $link)) {
             self::markTestSkipped('symlinks are not available here');
         }

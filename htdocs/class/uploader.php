@@ -492,6 +492,15 @@ class XoopsMediaUploader
         // Once more on the final name: stripping characters can join a new
         // inner extension (shell.p#hp.jpg is now shell.php.jpg).
         $this->savedFileName = $this->sanitizeExtensionsIn((string) $this->savedFileName);
+        // The allowlist checked the uploaded name, not this one: a target name
+        // (or the stripping above: shell.ph#p) can still end in an executable
+        // extension, and a dot-file (.htaccess) configures the directory.
+        $savedExt = strtolower((string) pathinfo($this->savedFileName, PATHINFO_EXTENSION));
+        if (str_starts_with($this->savedFileName, '.')
+            || in_array($savedExt, array_map('strtolower', (array) $this->extensionsToBeSanitized), true)) {
+            $this->setErrors(_ER_UP_INVALIDFILENAME);
+            return false;
+        }
 
         $this->savedDestination = $this->uploadDir . '/' . $this->savedFileName;
 

@@ -79,6 +79,32 @@ final class UploaderRandomFilenameSanitizeTest extends TestCase
         self::assertLessThan($move, $again);
     }
 
+    /**
+     * The allowlist validated photo.jpg; the target name decides what is
+     * saved, so an executable or dot-file final name is refused before the
+     * move (the temp file does not exist: reaching the move would also fail,
+     * but with a different error).
+     */
+    #[Test]
+    public function anExecutableOrHiddenFinalNameIsRefusedBeforeTheMove(): void
+    {
+        foreach (['shell.ph#p', 'shell.PHP', 'x.jpg.phar', '.htaccess', 'avatar_7.jpg'] as $target) {
+            $uploader = (new ReflectionClass(XoopsMediaUploader::class))->newInstanceWithoutConstructor();
+            $uploader->extensionsToBeSanitized = ['php', 'phar'];
+            $uploader->mediaName      = 'photo.jpg';
+            $uploader->mediaTmpName   = '/nonexistent/' . bin2hex(random_bytes(4));
+            $uploader->uploadDir      = sys_get_temp_dir();
+            $uploader->targetFileName = $target;
+
+            self::assertFalse($uploader->_copyFile(0644), $target);
+            if ($target === 'avatar_7.jpg') {
+                self::assertNotContains(_ER_UP_INVALIDFILENAME, $uploader->errors, 'a normal name reaches the move');
+            } else {
+                self::assertSame([_ER_UP_INVALIDFILENAME], $uploader->errors, $target);
+            }
+        }
+    }
+
     #[Test]
     public function noTargetNameStaysNoTargetName(): void
     {

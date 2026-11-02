@@ -50,6 +50,8 @@ final class TemplateDebugAndPageCacheContractTest extends TestCase
         $source = self::source('class/template.php');
         $gate   = strpos($source, "if (\$xoopsConfig['debug_mode'] && \$debugAudience) {");
         self::assertNotFalse($gate, 'debugging is gated on the audience');
+        // No permission lookup on every page while debugging is off.
+        self::assertStringContainsString("\$debugAudience = !empty(\$xoopsConfig['debug_mode']) && match (\$debugLevel) {", $source);
         // System-admin right, not $xoopsUserIsAdmin: include/common.php has
         // replaced that with the current module's admin right by now.
         foreach (["2       => \$viewer instanceof \\XoopsUser && \$viewer->isAdmin(1),", "1       => is_object(\$viewer),"] as $line) {

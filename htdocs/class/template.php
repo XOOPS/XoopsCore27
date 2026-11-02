@@ -69,7 +69,8 @@ class XoopsTpl extends Smarty
         // $xoopsUserIsAdmin holds the current module's admin right instead.
         $debugLevel = (int) ($xoopsConfig['debugLevel'] ?? 2);
         $viewer     = $GLOBALS['xoopsUser'] ?? null;
-        $debugAudience = match ($debugLevel) {
+        // Short-circuit: isAdmin() can query permissions, needless when off.
+        $debugAudience = !empty($xoopsConfig['debug_mode']) && match ($debugLevel) {
             2       => $viewer instanceof \XoopsUser && $viewer->isAdmin(1),
             1       => is_object($viewer),
             default => true,

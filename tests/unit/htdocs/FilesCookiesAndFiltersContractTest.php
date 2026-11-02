@@ -94,7 +94,7 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         self::assertStringNotContainsString('XOOPS_COOKIE_DOMAIN, 0);', $source);
         // Secure follows the session handler's policy (session_cookie_secure
         // forces it on behind a TLS proxy that sends no X-Forwarded-Proto).
-        self::assertStringContainsString("\$sessionSecure = session_get_cookie_params()['secure'] ? true : null;", $source);
+        self::assertStringContainsString("\$sessionSecure = (Request::getInt('session_cookie_secure', 0, 'POST') === 1 || session_get_cookie_params()['secure']) ? true : null;", $source);
         self::assertStringContainsString("xoops_setcookie(\$new_session_name, session_id(), time() + (60 * \$new_session_expire), '/', XOOPS_COOKIE_DOMAIN, \$sessionSecure, true);", $source);
     }
 

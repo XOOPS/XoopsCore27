@@ -260,7 +260,12 @@ class XoopsAuthLdap extends XoopsAuth
                 return false;
             }
             // We bind as user to test the credentials
-            $authenticated = ldap_bind($this->_ds, $userDN, stripslashes($pwd));
+            // An empty password is an anonymous (unauthenticated) bind that
+            // many directories accept: it never proves the password.
+            if ('' === (string) $pwd) {
+                return false;
+            }
+            $authenticated = ldap_bind($this->_ds, $userDN, (string) $pwd);
             if ($authenticated) {
                 // We load the Xoops User database
                 return $this->loadXoopsUser($userDN, $uname, $pwd);

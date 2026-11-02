@@ -24,6 +24,11 @@ final class PopupSessionRotationTest extends TestCase
         file_put_contents($directory . '/language/english/user.php', '<?php');
         mkdir($directory . '/include');
         copy(dirname(__DIR__, 4) . '/htdocs/include/twofactor.php', $directory . '/include/twofactor.php');
+        // The popup signs in through the site's own check; this stub stands in for it.
+        file_put_contents(
+            $directory . '/include/loginsession.php',
+            '<?php function xoops_login_authenticate(string $u, string $p) { return xoops_getHandler(\'member\')->loginUser($u, $p); }'
+        );
         $source = file_get_contents(dirname(__DIR__, 4) . '/extras/login.php');
         $source = str_replace("'/path/to/xoops/directory'", var_export($directory, true), $source);
         file_put_contents($directory . '/popup.php', $source);
@@ -106,6 +111,7 @@ PHP;
         } finally {
             foreach (glob($directory . '/*') as $file) { if (is_file($file)) { unlink($file); } }
             unlink($directory . '/include/twofactor.php');
+            unlink($directory . '/include/loginsession.php');
             rmdir($directory . '/include');
             unlink($directory . '/language/english/user.php');
             rmdir($directory . '/language/english');

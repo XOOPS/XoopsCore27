@@ -315,6 +315,54 @@ class XoopsSessionHandlerTest extends KernelTestCase
         $this->assertStringContainsString('test_data_payload', $sqlCaptured);
     }
 
+    /**
+     * A session read from an existing row is updated, never upserted: when a
+     * parallel logout deleted the row, an upsert would bring it back with
+     * this request's stale (signed-in) data.
+     */
+    public function testWriteAfterReadingAnExistingRowNeverInserts(): void
+    {
+        $this->db->method('isResultSet')->willReturn(true);
+        $this->db->method('fetchRow')->willReturn(['payload', '192.168.1.100']);
+        $sqlCaptured = null;
+        $this->db->method('exec')->willReturnCallback(function (string $sql) use (&$sqlCaptured) {
+            $sqlCaptured = $sql;
+            return true;
+        });
+
+        $this->handler->read('existing_id');
+        $this->assertTrue($this->handler->write('existing_id', 'new_payload'));
+
+        $this->assertStringStartsWith('UPDATE ', $sqlCaptured);
+        $this->assertStringNotContainsString('INSERT', $sqlCaptured);
+        $this->assertStringContainsString('existing_id', $sqlCaptured);
+        $this->assertStringContainsString('new_payload', $sqlCaptured);
+    }
+
+    /**
+     * Expiry is enforced on every lookup, not left to probabilistic GC:
+     * read() and validateId() both ignore rows older than the lifetime.
+     */
+    public function testReadAndValidateIdIgnoreExpiredRows(): void
+    {
+        $queries = [];
+        $this->db->method('query')->willReturnCallback(function (string $sql) use (&$queries) {
+            $queries[] = $sql;
+            return false;
+        });
+        $this->db->method('isResultSet')->willReturn(false);
+
+        $before = time() - $this->invokePrivateMethod($this->handler, 'maxLifetime');
+        $this->handler->read('some_id');
+        $this->handler->validateId('some_id');
+
+        $this->assertCount(2, $queries);
+        foreach ($queries as $sql) {
+            $this->assertSame(1, preg_match('/AND sess_updated >= (\d+)$/', $sql, $m), $sql);
+            $this->assertEqualsWithDelta($before, (int) $m[1], 2);
+        }
+    }
+
     // =========================================================================
     // destroy() -- success
     // =========================================================================

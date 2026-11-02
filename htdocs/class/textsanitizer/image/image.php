@@ -35,13 +35,13 @@ class MytsImage extends MyTextSanitizerExtension
         static $jsLoaded;
 
         $config         = parent::loadConfig(__DIR__);
-        $myts->patterns[] = "/\[img align=(['\"]?)(left|center|right)\\1 width=(['\"]?)(\d*)\\3]([^\"\(\)\?\&'<>]*)\[\/img\]/sU";
-        $myts->patterns[] = "/\[img align=(['\"]?)(left|center|right)\\1]([^\"\(\)\?\&'<>]*)\[\/img\]/sU";
-        $myts->patterns[] = "/\[img width=(['\"]?)(\d*)\\1]([^\"\(\)\?\&'<>]*)\[\/img\]/sU";
-        $myts->patterns[] = "/\[img]([^\"\(\)\?\&'<>]*)\[\/img\]/sU";
+        $myts->patterns[] = "/\[img align=(['\"]?)(left|center|right)\\1 width=(['\"]?)(\d*)\\3](?=(?i:https?):\/\/|[^:\[]*\[\/img\])([^\"\(\)\?\&'<>\[\]]*)\[\/img\]/sU";
+        $myts->patterns[] = "/\[img align=(['\"]?)(left|center|right)\\1](?=(?i:https?):\/\/|[^:\[]*\[\/img\])([^\"\(\)\?\&'<>\[\]]*)\[\/img\]/sU";
+        $myts->patterns[] = "/\[img width=(['\"]?)(\d*)\\1](?=(?i:https?):\/\/|[^:\[]*\[\/img\])([^\"\(\)\?\&'<>\[\]]*)\[\/img\]/sU";
+        $myts->patterns[] = "/\[img](?=(?i:https?):\/\/|[^:\[]*\[\/img\])([^\"\(\)\?\&'<>\[\]]*)\[\/img\]/sU";
 
-        $myts->patterns[] = "/\[img align=(['\"]?)(left|center|right)\\1 id=(['\"]?)(\d*)\\3]([^\"\(\)\?\&'<>]*)\[\/img\]/sU";
-        $myts->patterns[] = "/\[img id=(['\"]?)(\d*)\\1]([^\"\(\)\?\&'<>]*)\[\/img\]/sU";
+        $myts->patterns[] = "/\[img align=(['\"]?)(left|center|right)\\1 id=(['\"]?)(\d*)\\3]([^\"\(\)\?\&'<>\[\]]*)\[\/img\]/sU";
+        $myts->patterns[] = "/\[img id=(['\"]?)(\d*)\\1]([^\"\(\)\?\&'<>\[\]]*)\[\/img\]/sU";
 
         if (empty($myts->config['allowimage'])) {
             $myts->replacements[] = '<a href="\\5" rel="external">\\5</a>';
@@ -66,10 +66,10 @@ class MytsImage extends MyTextSanitizerExtension
                     $jsLoaded = true;
                     $GLOBALS['xoTheme']->addScript('/class/textsanitizer/image/image.js', ['type' => 'text/javascript']);
                 }
-                $myts->replacements[] = "<a href='javascript:loadImage(\"\\5\");'><img src='\\5' class='\\2' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' onload=\"if(this.width>\\4)this.width=\\4\" /></a>";
-                $myts->replacements[] = "<a href='javascript:loadImage(\"\\3\");'><img src='\\3' class='\\2' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' " . ($config['resize'] ? "onload=\"javascript:resizeImage(this, " . $config['max_width'] . ")\"" : '') . '/></a>';
-                $myts->replacements[] = "<a href='javascript:loadImage(\"\\3\");'><img src='\\3' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' onload=\"if(this.width>\\2)this.width=\\2\" /></a><br>";
-                $myts->replacements[] = "<a href='javascript:loadImage(\"\\1\");'><img src='\\1' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' title='" . _MSC_CLICK_TO_OPEN_IMAGE . "'" . ($config['resize'] ? " onload=\"javascript:resizeImage(this, " . $config['max_width'] . ")\"" : '') . '/></a>';
+                $myts->replacements[] = "<a href='\\5' onclick='loadImage(this.getAttribute(\"href\")); return false;'><img src='\\5' class='\\2' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' onload=\"if(this.width>\\4)this.width=\\4\" /></a>";
+                $myts->replacements[] = "<a href='\\3' onclick='loadImage(this.getAttribute(\"href\")); return false;'><img src='\\3' class='\\2' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' " . ($config['resize'] ? "onload=\"javascript:resizeImage(this, " . $config['max_width'] . ")\"" : '') . '/></a>';
+                $myts->replacements[] = "<a href='\\3' onclick='loadImage(this.getAttribute(\"href\")); return false;'><img src='\\3' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' onload=\"if(this.width>\\2)this.width=\\2\" /></a><br>";
+                $myts->replacements[] = "<a href='\\1' onclick='loadImage(this.getAttribute(\"href\")); return false;'><img src='\\1' alt='" . _MSC_CLICK_TO_OPEN_IMAGE . "' border='0' title='" . _MSC_CLICK_TO_OPEN_IMAGE . "'" . ($config['resize'] ? " onload=\"javascript:resizeImage(this, " . $config['max_width'] . ")\"" : '') . '/></a>';
             } else {
                 $myts->replacements[] = "<img src='\\5' class='\\2' border='0' alt='" . _MSC_ORIGINAL_IMAGE . "' onload=\"JavaScript:if(this.width>\\4) this.width=\\4\" />";
                 $myts->replacements[] = "<img src='\\3' class='\\2' border='0' alt='" . _MSC_ORIGINAL_IMAGE . "' " . ($config['resize'] ? "onload=\"javascript:resizeImage(this, " . $config['max_width'] . ")\"" : '') . '/>';

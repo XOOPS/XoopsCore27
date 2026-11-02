@@ -264,4 +264,34 @@ class XoopsFormTextDateSelectTest extends TestCase
 
         $this->assertEquals(1234567890, $element->getValue());
     }
+
+    /**
+     * A string value set after construction reaches the renderer as-is, so
+     * every renderer must encode it for the value attribute.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function rendererProvider(): array
+    {
+        return [
+            'legacy'     => ['XoopsFormRendererLegacy'],
+            'bootstrap3' => ['XoopsFormRendererBootstrap3'],
+            'bootstrap4' => ['XoopsFormRendererBootstrap4'],
+            'bootstrap5' => ['XoopsFormRendererBootstrap5'],
+            'tailwind'   => ['XoopsFormRendererTailwind'],
+        ];
+    }
+
+    #[DataProvider('rendererProvider')]
+    public function testEveryRendererEncodesAStringValue(string $class): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/xoopsform/renderer/' . $class . '.php';
+        $element = new \XoopsFormTextDateSelect('Date', 'date_field', 15, 0);
+        $element->setValue('2026-01-01" autofocus onfocus="alert(1)');
+
+        $html = (new $class())->renderFormTextDateSelect($element);
+
+        $this->assertStringNotContainsString('" autofocus onfocus="', $html);
+        $this->assertStringContainsString('2026-01-01&quot; autofocus onfocus=&quot;alert(1)', $html);
+    }
 }

@@ -35,6 +35,8 @@ if (!is_object($module) || !$module->getVar('isactive')) {
 }
 
 $msg = [];
+// The messages are HTML; every posted name in them is text.
+$esc = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
 /** @var XoopsMemberHandler $member_handler */
 $member_handler = xoops_getHandler('member');
@@ -60,7 +62,7 @@ if (!empty($perms)) {
                                 //                                if ($pid != 0 && !in_array($pid, array_keys($item_ids))) {
                                 if ($pid != 0 && !array_key_exists($pid, $item_ids)) {
                                     // one of the parent items were not selected, so skip this item
-                                    $msg[] = sprintf(_MD_AM_PERMADDNG, '<strong>' . $perm_name . '</strong>', '<strong>' . $perm_data['itemname'][$item_id] . '</strong>', '<strong>' . $group_list[$group_id] . '</strong>') . ' (' . _MD_AM_PERMADDNGP . ')';
+                                    $msg[] = sprintf(_MD_AM_PERMADDNG, '<strong>' . $esc($perm_name) . '</strong>', '<strong>' . $esc($perm_data['itemname'][$item_id]) . '</strong>', '<strong>' . $esc($group_list[$group_id] ?? $group_id) . '</strong>') . ' (' . _MD_AM_PERMADDNGP . ')';
                                     continue 2;
                                 }
                             }
@@ -72,16 +74,16 @@ if (!empty($perms)) {
                         $gperm->setVar('gperm_modid', $modid);
                         $gperm->setVar('gperm_itemid', $item_id);
                         if (!$gperm_handler->insert($gperm)) {
-                            $msg[] = sprintf(_MD_AM_PERMADDNG, '<strong>' . $perm_name . '</strong>', '<strong>' . $perm_data['itemname'][$item_id] . '</strong>', '<strong>' . $group_list[$group_id] . '</strong>');
+                            $msg[] = sprintf(_MD_AM_PERMADDNG, '<strong>' . $esc($perm_name) . '</strong>', '<strong>' . $esc($perm_data['itemname'][$item_id]) . '</strong>', '<strong>' . $esc($group_list[$group_id] ?? $group_id) . '</strong>');
                         } else {
-                            $msg[] = sprintf(_MD_AM_PERMADDOK, '<strong>' . $perm_name . '</strong>', '<strong>' . $perm_data['itemname'][$item_id] . '</strong>', '<strong>' . $group_list[$group_id] . '</strong>');
+                            $msg[] = sprintf(_MD_AM_PERMADDOK, '<strong>' . $esc($perm_name) . '</strong>', '<strong>' . $esc($perm_data['itemname'][$item_id]) . '</strong>', '<strong>' . $esc($group_list[$group_id] ?? $group_id) . '</strong>');
                         }
                         unset($gperm);
                     }
                 }
             }
         } else {
-            $msg[] = sprintf(_MD_AM_PERMRESETNG, $module->getVar('name') . '(' . $perm_name . ')');
+            $msg[] = sprintf(_MD_AM_PERMRESETNG, $esc($module->getVar('name') . '(' . (string) $perm_name . ')'));
         }
     }
 }

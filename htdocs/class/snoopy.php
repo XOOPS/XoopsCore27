@@ -133,6 +133,75 @@ class Snoopy
     public $_isproxy = false; // set if using a proxy server
     public $_fp_timeout = 30; // timeout for socket connection
 
+    /**
+     * Forget origin-bound credentials before following a redirect elsewhere.
+     *
+     * Basic-auth credentials, cookies and Authorization/Cookie raw headers
+     * belong to the origin (scheme, host, port) they were set for; a redirect
+     * to another origin, https to http included, must not carry them there.
+     * The previous response's headers go too: the next request would read
+     * their Set-Cookie lines back into the cookie jar. Returns $url unchanged.
+     *
+     * @param string $url  redirect target
+     * @param string $from URL of the response that redirected
+     * @return string
+     */
+    public function _leaveOrigin($url, $from)
+    {
+        $target = $this->_origin($url);
+        if (null === $target || $target === $this->_origin($from)) {
+            return (string) $url; // relative, or the same origin
+        }
+        $this->user    = '';
+        $this->pass    = '';
+        $this->cookies = [];
+        $this->headers = [];
+        foreach (array_keys($this->rawheaders) as $name) {
+            if (in_array(strtolower((string) $name), ['authorization', 'cookie'], true)) {
+                unset($this->rawheaders[$name]);
+            }
+        }
+
+        return (string) $url;
+    }
+
+    /**
+     * scheme://host:port of an absolute URL, null for a relative one
+     *
+     * @param string $url
+     * @return string|null
+     */
+    public function _origin($url): ?string
+    {
+        $parts = parse_url((string) $url);
+        if (!is_array($parts) || !isset($parts['host'])) {
+            return null;
+        }
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
+        $port   = (int) ($parts['port'] ?? ('https' === $scheme ? 443 : 80));
+
+        return $scheme . '://' . strtolower((string) $parts['host']) . ':' . $port;
+    }
+
+    /**
+     * Follow a redirect of submit(): the form body is re-posted only to the
+     * same origin; a query-string target or another origin is fetched by GET.
+     *
+     * @param string $from      the URI that answered with the redirect
+     * @param array  $formvars
+     * @param array  $formfiles
+     * @return void
+     */
+    public function _followSubmitRedirect($from, $formvars, $formfiles): void
+    {
+        $next = $this->_leaveOrigin($this->_redirectaddr, $from);
+        if (strpos($next, '?') > 0 || $this->_origin($next) !== $this->_origin($from)) {
+            $this->fetch($next);
+        } else {
+            $this->submit($next, $formvars, $formfiles);
+        }
+    }
+
     /*======================================================================*\
         Function:	fetch
         Purpose:	fetch the contents of a web page
@@ -186,7 +255,7 @@ class Snoopy
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                $this->fetch($this->_redirectaddr);
+                                $this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI));
                             }
                         }
                     }
@@ -243,7 +312,7 @@ class Snoopy
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            $this->fetch($this->_redirectaddr);
+                            $this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI));
                         }
                     }
                 }
@@ -333,12 +402,7 @@ class Snoopy
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                if (strpos($this->_redirectaddr, "?") > 0) {
-                                    $this->fetch($this->_redirectaddr);
-                                } // the redirect has changed the request method from post to get
-                                else {
-                                    $this->submit($this->_redirectaddr, $formvars, $formfiles);
-                                }
+                                $this->_followSubmitRedirect($URI, $formvars, $formfiles);
                             }
                         }
                     }
@@ -400,12 +464,7 @@ class Snoopy
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            if (strpos($this->_redirectaddr, "?") > 0) {
-                                $this->fetch($this->_redirectaddr);
-                            } // the redirect has changed the request method from post to get
-                            else {
-                                $this->submit($this->_redirectaddr, $formvars, $formfiles);
-                            }
+                            $this->_followSubmitRedirect($URI, $formvars, $formfiles);
                         }
                     }
                 }

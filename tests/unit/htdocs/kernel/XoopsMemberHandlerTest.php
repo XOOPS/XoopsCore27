@@ -982,6 +982,32 @@ class XoopsMemberHandlerTest extends TestCase
         $this->assertSame($user, $result);
     }
 
+    /**
+     * A bare number would make MySQL compare the varchar column numerically
+     * ('1' = '001', '0' = every non-numeric name) and skip its index: a
+     * digit-only name is sent as a quoted string, and the duplicate-detecting
+     * limit of 2 still applies.
+     */
+    public function testLoginUserLooksUpADigitOnlyNameAsABoundedString(): void
+    {
+        $seen = [];
+        $this->userHandler->method('getObjects')->willReturnCallback(
+            static function ($criteria) use (&$seen) {
+                $seen[] = $criteria;
+
+                return [];
+            }
+        );
+        $names = ['1', '0', '001', 'alice'];
+        foreach ($names as $uname) {
+            $this->assertFalse($this->handler->loginUser($uname, 'pw'));
+        }
+        foreach ($names as $i => $uname) {
+            $this->assertSame(2, $seen[$i]->getLimit(), $uname);
+            $this->assertMatchesRegularExpression('/IN \(\'' . $uname . '\'\)$/', $seen[$i]->render(), $uname);
+        }
+    }
+
     public function testLoginUserWithLegacyMd5HashReturnsUser(): void
     {
         $password = 'legacy_password';

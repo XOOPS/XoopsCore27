@@ -37,7 +37,7 @@ class Smarty_Resource_Db extends Smarty_Resource_Custom
             $source = $tpl->getVar('tpl_source', 'n');
             $mtime = $tpl->getVar('tpl_lastmodified', 'n');
         } else {
-            $stat = stat($tpl);
+            $stat = ('' !== $tpl) ? stat($tpl) : false;
 
             // Did we fail to get stat information?
             if ($stat) {
@@ -83,7 +83,11 @@ class Smarty_Resource_Db extends Smarty_Resource_Custom
         $tplobj = $tplfile_handler->find('default', null, null, null, $tpl_name, true);
 
         if (!count($tplobj)) {
-            return $cache[$tpl_name] = $tpl_name;
+            // An unregistered name is read as a file only when it is a real
+            // template file inside the XOOPS trees: never a stream URI
+            // (file://, php://), a file outside them, or a PHP file such as
+            // mainfile.php, which a stored template name could otherwise name.
+            return $cache[$tpl_name] = self::templateFile((string) $tpl_name);
         }
         /** @var XoopsTplFile $tplobj */
         $tplobj = $tplobj[0];
@@ -119,5 +123,37 @@ class Smarty_Resource_Db extends Smarty_Resource_Custom
             }
         }
         return $cache[$tpl_name] = $filepath;
+    }
+
+    /**
+     * The absolute path of an unregistered template name, or '' (no source).
+     *
+     * @param string $name template name as given to the db: resource
+     * @return string
+     */
+    private static function templateFile(string $name): string
+    {
+        if (str_contains($name, '://') || !preg_match('/\.(tpl|html)\z/i', $name)) {
+            return '';
+        }
+        $real = realpath($name);
+        // The resolved file too: a .tpl symlink to mainfile.php must not be read.
+        if (false === $real || !is_file($real) || !preg_match('/\.(tpl|html)\z/i', $real)) {
+            return '';
+        }
+        $roots = [XOOPS_ROOT_PATH];
+        foreach (['XOOPS_PATH', 'XOOPS_VAR_PATH'] as $constant) {
+            if (defined($constant)) {
+                $roots[] = constant($constant);
+            }
+        }
+        foreach ($roots as $root) {
+            $root = realpath((string) $root);
+            if (false !== $root && str_starts_with($real, rtrim($root, '\\/') . DIRECTORY_SEPARATOR)) {
+                return $real;
+            }
+        }
+
+        return '';
     }
 }

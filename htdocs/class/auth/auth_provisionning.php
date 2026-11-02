@@ -86,8 +86,19 @@ class XoopsAuthProvisionning
     {
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
-        $criteria       = new Criteria('uname', $uname);
-        $getuser        = $member_handler->getUsers($criteria);
+        // An IN list quotes every element, so a digit-only name stays a
+        // string comparison ('001' is not '1') and the index bounds it.
+        // No row limit: uname is not unique, and several collation-equal rows
+        // must all reach the exact-name filter below.
+        $criteria       = new Criteria('uname', [(string) $uname], 'IN');
+        // The column collation may also be accent-insensitive: directory
+        // user 'admín' must not map to the local 'admin'. Keep only the
+        // account whose name matches apart from case, as the bypass list does.
+        $fold    = static fn ($name): string => mb_strtolower((string) $name, 'UTF-8');
+        $getuser = array_values(array_filter(
+            $member_handler->getUsers($criteria),
+            static fn ($user) => $fold($user->getVar('uname', 'n')) === $fold($uname)
+        ));
         if (count($getuser) == 1) {
             return $getuser[0];
         } else {
@@ -144,8 +155,8 @@ class XoopsAuthProvisionning
         if ($pwd === null || trim($pwd) === '') {
             redirect_header(XOOPS_URL . '/user.php', 5, 'Password cannot be empty.');
         }
-        $passwordValue = trim($pwd);
-        $newuser->setVar('pass', password_hash(stripslashes($passwordValue), PASSWORD_DEFAULT));
+        // The password exactly as the directory bind accepted it.
+        $newuser->setVar('pass', password_hash((string) $pwd, PASSWORD_DEFAULT));
         $newuser->setVar('rank', 0);
         $newuser->setVar('level', 1);
         $newuser->setVar('timezone_offset', $this->default_TZ);
@@ -190,9 +201,10 @@ class XoopsAuthProvisionning
         // Keep the stored hash while the password is unchanged: every sign-in
         // runs this sync, and a new salt would end the account's other sessions
         // (common.php ends a session whose stamp no longer matches the hash).
-        $password = stripslashes((string) $pwd); // as add() and the LDAP/AD bind
+        $password = (string) $pwd; // exactly as the directory bind accepted it
         $hash     = (string) $xoopsUser->getVar('pass', 'n');
-        if ('' === $hash || !password_verify($password, $hash)) {
+        // The binds refuse an empty password; never store one regardless.
+        if ('' !== $password && ('' === $hash || !password_verify($password, $hash))) {
             $xoopsUser->setVar('pass', password_hash($password, PASSWORD_DEFAULT));
         }
         $tab_mapping = explode('|', $this->ldap_field_mapping);

@@ -216,6 +216,24 @@ final class SessionRestoreActiveCheckTest extends TestCase
     }
 
     #[Test]
+    public function aCookieLoginRotatesTheSessionIdBeforeSeedingIt(): void
+    {
+        // Anonymous -> signed in is an identity change: a session ID someone
+        // else chose (planted cookie, SSL bridge POST) must not become the
+        // authenticated session. A failed rotation seeds nothing.
+        $blockStart = strpos($this->sourceContent, '$rememberClaims = false;');
+        $seed       = strpos($this->sourceContent, "\$_SESSION['xoopsUserId'] = \$rememberUser->getVar('uid');", (int) $blockStart);
+        self::assertNotFalse($blockStart);
+        self::assertNotFalse($seed);
+        $rotate = strrpos(substr($this->sourceContent, 0, $seed), 'if (null !== $rememberUser && !$sess_handler->regenerate_id(true)) {');
+        self::assertNotFalse($rotate, 'the session is rotated before the cookie seeds it');
+        self::assertGreaterThan($blockStart, $rotate);
+        $failure = substr($this->sourceContent, $rotate, $seed - $rotate);
+        self::assertStringContainsString('$rememberClaims = false;', $failure, 'a failed rotation is not a cookie login');
+        self::assertStringContainsString('} elseif (null !== $rememberUser) {', $failure);
+    }
+
+    #[Test]
     public function cookieValidationUsesTheSameGuardedKeySnapshotAsTheCheckAndRenewal(): void
     {
         // The token reader used to build the key on its own, before the

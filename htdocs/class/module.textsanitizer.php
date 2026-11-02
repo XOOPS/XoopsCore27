@@ -463,13 +463,13 @@ class MyTextSanitizer
     {
         $patterns       = [];
         $replacements   = [];
-        $patterns[]     = "/\[siteurl=(['\"]?)([^\"'<>]*)\\1](.*)\[\/siteurl\]/sU";
+        $patterns[]     = "/\[siteurl=(['\"]?)([^\"'<>\[\]]*)\\1](.*)\[\/siteurl\]/sU";
         $replacements[] = '<a href="' . XOOPS_URL . '/\\2" title="">\\3</a>';
-        $patterns[]     = "/\[url=(['\"]?)(http[s]?:\/\/[^\"'<>]*)\\1](.*)\[\/url\]/sU";
+        $patterns[]     = "/\[url=(['\"]?)(http[s]?:\/\/[^\"'<>\[\]]*)\\1](.*)\[\/url\]/sU";
         $replacements[] = '<a href="\\2" rel="noopener external" title="">\\3</a>';
-        $patterns[]     = "/\[url=(['\"]?)(ftp?:\/\/[^\"'<>]*)\\1](.*)\[\/url\]/sU";
+        $patterns[]     = "/\[url=(['\"]?)(ftp?:\/\/[^\"'<>\[\]]*)\\1](.*)\[\/url\]/sU";
         $replacements[] = '<a href="\\2" rel="external" title="">\\3</a>';
-        $patterns[]     = "/\[url=(['\"]?)([^'\"<>]*)\\1](.*)\[\/url\]/sU";
+        $patterns[]     = "/\[url=(['\"]?)([^'\"<>\[\]]*)\\1](.*)\[\/url\]/sU";
         $replacements[] = '<a href="http://\\2" rel="noopener external" title="">\\3</a>';
         $patterns[]     = "/\[color=(['\"]?)(rgb\(\s*(?:\d{1,3}\s*,\s*){2}\d{1,3}\s*\))\\1?](.*)\[\/color\]/sU";
         $replacements[] = '<span style="color: \\2;">\\3</span>';
@@ -478,9 +478,9 @@ class MyTextSanitizer
         $replacements[] = '<span style="color: #\\2;">\\3</span>';
         $patterns[]     = "/\[size=(['\"]?)([a-zA-Z0-9-]+)\\1?](.*)\[\/size\]/sU";
         $replacements[] = '<span style="font-size: \\2;">\\3</span>';
-        $patterns[]     = "/\[font=(['\"]?)([^;<>\*\(\)\"']*)\\1](.*)\[\/font\]/sU";
+        $patterns[]     = "/\[font=(['\"]?)([^;<>\*\(\)\"'&\\\\\[\]]*)\\1](.*)\[\/font\]/sU";
         $replacements[] = '<span style="font-family: \\2;">\\3</span>';
-        $patterns[]     = "/\[email]([^;<>\*\(\)\"']*)\[\/email\]/sU";
+        $patterns[]     = "/\[email]([^;<>\*\(\)\"'\[\]]*)\[\/email\]/sU";
         $replacements[] = '<a href="mailto:\\1" title="">\\1</a>';
 
         $patterns[]     = '/\[b](.*)\[\/b\]/sU';

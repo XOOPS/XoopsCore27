@@ -126,11 +126,10 @@ class SystemMenusRegressionTest extends TestCase
     {
         $source = $this->readSourceFile('class/theme.php');
 
-        $this->assertMatchesRegularExpression(
-            '/on\\\\w\+/i',
-            $source,
-            'Affix renderer must strip on* event handler attributes'
-        );
+        // A parser-based allowlist (no attribute but class), not attribute
+        // regexes; MenuAffixAndUrlFilterTest covers the behaviour.
+        $this->assertStringContainsString("'HTML.Allowed'         => 'span[class],i[class],b,em,strong,small',", $source);
+        $this->assertStringContainsString('return self::filterMenuAffix($value);', $source);
     }
 
     // ── Toolbar safety ──

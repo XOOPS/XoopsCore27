@@ -614,7 +614,7 @@ EOJS;
         return '<div class="input-group">'
             . '<input class="form-control" type="text" name="' . $ele_name . '" id="' . $ele_name
             . '" size="' . $element->getSize() . '" maxlength="' . $element->getMaxlength()
-            . '" value="' . $display_value . '"' . $element->getExtra() . ' />'
+            . '" value="' . htmlspecialchars((string) $display_value, ENT_QUOTES, 'UTF-8') . '"' . $element->getExtra() . ' />'
             . '<span class="input-group-btn"><button class="btn btn-default" type="button"'
             . ' onclick="return showCalendar(\'' . $ele_name . '\');">'
             . '<span class="fa-solid fa-calendar" aria-hidden="true"></span>&nbsp;</button>'

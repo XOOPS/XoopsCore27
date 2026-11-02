@@ -773,7 +773,7 @@ class ProtectorTest extends TestCase
      * Call Protector::writeFileAtomic() and fail the test if any PHP warning
      * escapes it (PHP's file warnings name the full server path).
      */
-    private function writeAtomic(string $path, string $content, string $class = \Protector::class): bool
+    private function writeAtomic(string $path, string $content, string $class = \Protector::class, bool $inPlaceFallback = true): bool
     {
         $leaked = [];
         set_error_handler(static function (int $errno, string $message) use (&$leaked): bool {
@@ -782,7 +782,7 @@ class ProtectorTest extends TestCase
             return true;
         });
         try {
-            $result = (new \ReflectionMethod($class, 'writeFileAtomic'))->invoke(null, $path, $content);
+            $result = (new \ReflectionMethod($class, 'writeFileAtomic'))->invoke(null, $path, $content, $inPlaceFallback);
         } finally {
             restore_error_handler();
         }
@@ -907,6 +907,33 @@ class ProtectorTest extends TestCase
             $this->assertTrue($this->writeAtomic($path, "deny from 192.0.2.1\n"));
             $this->assertSame("deny from 192.0.2.1\n", file_get_contents($path));
             $this->assertSame(['.htaccess'], array_values(array_diff(scandir($dir) ?: [], ['.', '..'])));
+        } finally {
+            chmod($dir, 0755);
+            unlink($path);
+            rmdir($dir);
+        }
+    }
+
+    /**
+     * The administrator IP allowlist is read without a lock: it is never
+     * truncated in place, so in a read-only directory the write fails and the
+     * old list stays.
+     */
+    #[Test]
+    public function writeFileAtomicWithoutFallbackKeepsTheOldFileWhenTheDirectoryIsReadOnly(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR || (function_exists('posix_geteuid') && 0 === posix_geteuid())) {
+            $this->markTestSkipped('A read-only directory cannot refuse new files here (Windows, or running as root).');
+        }
+        $dir  = sys_get_temp_dir() . '/protector-ro-' . bin2hex(random_bytes(6));
+        $path = $dir . '/group1ips';
+        mkdir($dir);
+        file_put_contents($path, "old list\n");
+        chmod($path, 0644);
+        chmod($dir, 0555);
+        try {
+            $this->assertFalse($this->writeAtomic($path, "new list\n", \Protector::class, false));
+            $this->assertSame("old list\n", file_get_contents($path));
         } finally {
             chmod($dir, 0755);
             unlink($path);

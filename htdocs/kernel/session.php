@@ -208,10 +208,13 @@ class XoopsSessionHandler implements
     public function read(string $sessionId): string|false
     {
         $ip = \Xmf\IPAddress::fromRequest();
+        // An expired row is no session, whether or not garbage collection
+        // (probabilistic) has removed it yet.
         $sql = sprintf(
-            'SELECT sess_data, sess_ip FROM %s WHERE sess_id = %s',
+            'SELECT sess_data, sess_ip FROM %s WHERE sess_id = %s AND sess_updated >= %u',
             $this->db->prefix('session'),
-            $this->db->quote($sessionId)
+            $this->db->quote($sessionId),
+            time() - $this->maxLifetime()
         );
 
         $result = $this->db->query($sql);
@@ -249,6 +252,26 @@ class XoopsSessionHandler implements
         $remoteAddress = \Xmf\IPAddress::fromRequest()->asReadable();
         $sid = $this->db->quote($sessionId);
         $now = time();
+
+        // A session this request read from an existing row is only updated:
+        // if a parallel request destroyed it (logout), zero rows change, and
+        // an upsert would resurrect it with this request's stale data. Only
+        // an ID whose row did not exist (new, or regenerated mid-request) is
+        // inserted - the same gate as updateTimestamp().
+        if (!empty($this->rowExistedAtRead[$sessionId])) {
+            $sql = sprintf(
+                'UPDATE %s SET sess_updated = %u, sess_data = %s, sess_ip = %s WHERE sess_id = %s',
+                $this->db->prefix('session'),
+                $now,
+                $this->db->quote($data),
+                $this->db->quote($remoteAddress),
+                $sid
+            );
+            $ok = $this->db->exec($sql);
+            $this->update_cookie();
+
+            return (bool) $ok;
+        }
 
         $sql = sprintf(
             'INSERT INTO %s (sess_id, sess_updated, sess_ip, sess_data)
@@ -383,10 +406,12 @@ class XoopsSessionHandler implements
 
     public function validateId(string $id): bool
     {
+        // Strict mode must not adopt an expired ID: PHP issues a new one.
         $sql = sprintf(
-            'SELECT sess_ip FROM %s WHERE sess_id = %s',
+            'SELECT sess_ip FROM %s WHERE sess_id = %s AND sess_updated >= %u',
             $this->db->prefix('session'),
-            $this->db->quote($id)
+            $this->db->quote($id),
+            time() - $this->maxLifetime()
         );
         $res = $this->db->query($sql, 1, 0);
         if (!$this->db->isResultSet($res)) {
@@ -481,15 +506,24 @@ class XoopsSessionHandler implements
          */
         try {
             if (\random_int(1, 100) < 11) {
-                $expire = (int) @ini_get('session.gc_maxlifetime');
-                if ($expire <= 0) {
-                    $expire = 900;
-                }
-                $this->gc($expire);
+                $this->gc($this->maxLifetime());
             }
         } catch (\Throwable $e) {
             // ignore
         }
+    }
+
+    /**
+     * Seconds a session lives after its last write: session.gc_maxlifetime,
+     * which include/common.php sets from the custom-session expiry.
+     *
+     * @return int
+     */
+    protected function maxLifetime(): int
+    {
+        $expire = (int) ini_get('session.gc_maxlifetime');
+
+        return $expire > 0 ? $expire : 900;
     }
 
     public function regenerate_id(bool $delete_old_session = false): bool

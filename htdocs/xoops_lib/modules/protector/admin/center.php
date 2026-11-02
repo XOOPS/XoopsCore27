@@ -8,11 +8,6 @@ xoops_cp_header();
 include __DIR__ . '/mymenu.php';
 require_once XOOPS_ROOT_PATH . '/class/pagenav.php';
 
-// Define custom exception classes
-class FileOpenException extends RuntimeException {}
-class FileLockException extends RuntimeException {}
-class FileWriteException extends RuntimeException {}
-
 //dirty trick to get navigation working with system menus
 if (Request::hasVar('num', 'GET')) {
     $_SERVER['REQUEST_URI'] = 'admin/center.php?page=center';
@@ -65,41 +60,10 @@ if ($action !== '') {
         $group1_ips = empty($g1IpsText) ? [] : explode("\n", trim($g1IpsText));
         $group1_ips = array_map('trim', $group1_ips); // Use array_map for trimming
 
-        $filePath = $protector->get_filepath4group1ips();
-        try {
-        $fp = fopen($filePath, 'w');
-
-        if ($fp === false) {
-                throw new FileOpenException("Failed to open file for writing: $filePath (mode: 'w')");
-        }
-
-            if (!flock($fp, LOCK_EX)) {
-                throw new FileLockException("Failed to acquire lock on file: $filePath");
-            }
-
-                $data = serialize(array_unique($group1_ips)) . "\n";
-                $bytesWritten = fwrite($fp, $data);
-
-                if ($bytesWritten === false || $bytesWritten != strlen($data)) {
-                throw new FileWriteException(
-                    "Failed to write data to file: $filePath " .
-                    "(bytes written: $bytesWritten, expected: " . strlen($data) . ")"
-                );
-                }
-        } catch (FileOpenException $e) {
+        // Replaced atomically with the file's mode kept: readers take no lock,
+        // so an in-place truncate let a request see an empty allowlist.
+        if (!$protector->write_file_group1ips($group1_ips)) {
             $error_msg .= _AM_MSG_GROUP1IPSCANTOPEN;
-            error_log("[File Open Error] " . $e->getMessage());
-        } catch (FileLockException $e) {
-            $error_msg .= "Failed to acquire lock on file.";
-            error_log("[File Lock Error] " . $e->getMessage());
-        } catch (FileWriteException $e) {
-            $error_msg .= "Failed to write data to file.";
-            error_log("[File Write Error] " . $e->getMessage());
-        } finally {
-            if (isset($fp) && is_resource($fp)) {
-                flock($fp, LOCK_UN);
-            fclose($fp);
-        }
         }
 
         $redirect_msg = $error_msg ?: _AM_MSG_IPFILESUPDATED;

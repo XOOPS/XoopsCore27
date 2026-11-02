@@ -72,7 +72,7 @@ final class RedirectMessageEncodingTest extends TestCase
     #[Test]
     public function theMessageIsOneStrictStringLiteral(): void
     {
-        $script = $this->render('Saved "x"); alert(1); ("<br>\x3cimg src=x onerror=alert(1)\x3e</script><b>ok</b>');
+        $script = $this->render('Saved "x"); alert(1); ("<br><img src=x onerror=alert(1)></script><b>ok</b>');
 
         self::assertSame(1, preg_match('/\$\.jGrowl\((".*?(?<!\\\\)"), \{/s', $script, $m), $script);
         $text = json_decode($m[1], false, 2, JSON_THROW_ON_ERROR);

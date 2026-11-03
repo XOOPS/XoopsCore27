@@ -39,6 +39,7 @@ final class ProfileCredentialFieldTest extends TestCase
         if (!isset($GLOBALS['xoopsLogger'])) {
             $GLOBALS['xoopsLogger'] = \XoopsLogger::getInstance();
         }
+        require_once XOOPS_ROOT_PATH . '/kernel/user.php';
         require_once XOOPS_ROOT_PATH . '/modules/profile/class/field.php';
         require_once XOOPS_ROOT_PATH . '/modules/profile/class/profile.php';
     }
@@ -107,7 +108,7 @@ final class ProfileCredentialFieldTest extends TestCase
         $field = new \ProfileField();
         $field->setVar('field_name', $name);
         $field->setVar('field_type', 'textbox');
-        self::assertTrue($field->isCredential());
+        self::assertTrue($field->isAccountControl());
 
         $user = $this->createMock(\XoopsUser::class);
         $user->expects($this->never())->method('getVar');
@@ -140,9 +141,15 @@ final class ProfileCredentialFieldTest extends TestCase
         self::assertSame('', $field->getOutputValue($user, $profile));
     }
 
+    /** @return array<string, array{string}> */
+    public static function allAccountControlNames(): array
+    {
+        return self::credentialNames() + self::accountControlNames() + ['email' => [' Email ']];
+    }
+
     #[Test]
-    #[DataProvider('credentialNames')]
-    public function anEditFormNeverReadsACredentialColumn(string $name): void
+    #[DataProvider('allAccountControlNames')]
+    public function anEditFormNeverReadsAnAccountControlColumn(string $name): void
     {
         $field = new \ProfileField();
         $field->setVar('field_name', $name);
@@ -169,13 +176,24 @@ final class ProfileCredentialFieldTest extends TestCase
     }
 
     #[Test]
-    public function ordinaryFieldsAreNotCredentials(): void
+    public function ordinaryFieldsAreNotAccountControl(): void
     {
         $field = new \ProfileField();
-        foreach (['name', 'user_from', 'email', 'password_hint'] as $name) {
+        foreach (['name', 'user_from', 'user_viewemail', 'password_hint'] as $name) {
             $field->setVar('field_name', $name);
-            self::assertFalse($field->isCredential(), $name);
+            self::assertFalse($field->isAccountControl(), $name);
         }
+    }
+
+    #[Test]
+    public function formsSkipAccountControlFieldsAndRegistrationChecksThePostedStep(): void
+    {
+        $forms = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/profile/include/forms.php');
+        self::assertSame(2, substr_count($forms, '!$fields[$i]->isAccountControl()'), 'register and user forms');
+
+        $register = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/profile/register.php');
+        self::assertStringNotContainsString('profile_required', $register . $forms);
+        self::assertStringContainsString('$postedStepId = (int) $steps[$current_step - 1][\'step_id\'];', $register);
     }
 
     #[Test]

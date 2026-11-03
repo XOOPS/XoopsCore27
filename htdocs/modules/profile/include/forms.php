@@ -406,14 +406,11 @@ function profile_getRegisterForm(XoopsUser $user, $profile, $step = null)
     // Dynamic fields
     $profile_handler              = xoops_getModuleHandler('profile');
     $fields                       = $profile_handler->loadFields();
-    $_SESSION['profile_required'] = [];
     foreach (array_keys($fields) as $i) {
-        if ($fields[$i]->getVar('step_id') == $step['step_id']) {
-            $fieldinfo['element'] = $fields[$i]->getEditElement($user, $profile);
-            //assign and check (=)
-            if ($fieldinfo['required'] = $fields[$i]->getVar('field_required')) {
-                $_SESSION['profile_required'][$fields[$i]->getVar('field_name')] = $fields[$i]->getVar('field_title');
-            }
+        // Account-control columns have their own fixed elements; a legacy field on one is never saved.
+        if ($fields[$i]->getVar('step_id') == $step['step_id'] && !$fields[$i]->isAccountControl()) {
+            $fieldinfo['element']  = $fields[$i]->getEditElement($user, $profile);
+            $fieldinfo['required'] = $fields[$i]->getVar('field_required');
 
             $key              = $fields[$i]->getVar('cat_id');
             $elements[$key][] = $fieldinfo;
@@ -556,7 +553,8 @@ function profile_getUserForm(XoopsUser $user, ?ProfileProfile $profile = null, $
     $count_fields   = count($fields);
 
     foreach (array_keys($fields) as $i) {
-        if (in_array($fields[$i]->getVar('field_id'), $editable_fields)) {
+        // Account-control columns have their own fixed elements; a legacy field on one is never saved.
+        if (in_array($fields[$i]->getVar('field_id'), $editable_fields) && !$fields[$i]->isAccountControl()) {
             // Set default value for user fields if available
             if ($user->isNew()) {
                 $default = $fields[$i]->getVar('field_default');

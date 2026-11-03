@@ -192,11 +192,16 @@ foreach (array_keys($fields) as $field) {
 
 $stop = '';
 
-//Client side validation
-if (Request::hasVar('step', 'POST') && isset($_SESSION['profile_required'])) {
-    foreach ($_SESSION['profile_required'] as $name => $title) {
+// Required fields of the step being posted (step N posts the form of steps[N-1]),
+// never of whichever form this session rendered last.
+if ($current_step > 0 && isset($steps[$current_step - 1])) {
+    $postedStepId = (int) $steps[$current_step - 1]['step_id'];
+    foreach ($fields as $name => $field) {
+        if ((int) $field->getVar('step_id') !== $postedStepId || !$field->getVar('field_required') || $field->isAccountControl()) {
+            continue;
+        }
         if (!Request::hasVar($name, 'POST') || empty(Request::getVar($name, '', 'POST'))) {
-            $stop .= sprintf(_FORM_ENTER, $title) . '<br>';
+            $stop .= sprintf(_FORM_ENTER, $field->getVar('field_title')) . '<br>';
         }
     }
 }

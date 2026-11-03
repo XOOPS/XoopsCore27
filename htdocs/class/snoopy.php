@@ -91,7 +91,7 @@ class Snoopy
     public $error = ""; // error messages sent here
     public $response_code = ""; // response code returned from server
     public $headers = []; // headers returned from server sent here
-    public $maxlength = 500000; // max return data length (body)
+    public $maxlength = 500000; // read chunk size for the body; a gzip body may decode to at most 20 times this
     public $read_timeout = 0; // timeout on read operations, in seconds
     // supported only since PHP 4 Beta 4
     // set to 0 to disallow timeouts

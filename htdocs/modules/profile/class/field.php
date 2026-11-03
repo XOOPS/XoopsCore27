@@ -105,16 +105,6 @@ class ProfileField extends XoopsObject
     }
 
     /**
-     * Whether this field is defined on a credential column (password hash, activation key)
-     *
-     * @return bool
-     */
-    public function isCredential(): bool
-    {
-        return in_array(strtolower((string) $this->getVar('field_name', 'n')), ['pass', 'actkey'], true);
-    }
-
-    /**
      * Whether this field is defined on an account-control column (identity, credentials, level)
      *
      * @return bool
@@ -134,8 +124,8 @@ class ProfileField extends XoopsObject
      **/
     public function getEditElement($user, $profile)
     {
-        // Never read a stored hash or activation key, let alone put it into a form.
-        $value = $this->isCredential() ? ''
+        // Never put an account-control value (identity, hash, activation key, level) into a form.
+        $value = $this->isAccountControl() ? ''
             : (in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name'), 'e') : $profile->getVar($this->getVar('field_name'), 'e'));
 
         $caption = $this->getVar('field_title');

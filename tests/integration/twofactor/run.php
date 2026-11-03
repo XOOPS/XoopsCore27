@@ -397,6 +397,19 @@ try {
     // A stale verified hash is never swapped in, whichever order the commits take.
     check(false === testUserHandler($db)->replacePasswordHash(70, md5('anything'), 'x'), 'A stale verified hash replaces nothing');
     echo "PASS: concurrent sign-in rehash never undoes a password reset ($lost of 25 rehashes found the reset first)\n";
+
+    // The DDL leaves the collation implicit: pin a case-insensitive one, under which a
+    // plain = would match a hash differing only in letter case.
+    check($db->exec("ALTER TABLE $users MODIFY pass varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT ''"), 'Pin a case-insensitive collation');
+    $stored = 'AbCdEf0123456789AbCdEf0123456789';
+    check($db->exec("UPDATE $users SET pass = " . $db->quote($stored) . ' WHERE uid = 70'), 'Store a mixed-case hash');
+    $passOf = static fn(): string => $db->fetchArray($db->query("SELECT pass FROM $users WHERE uid = 70"))['pass'];
+    check(1 === (int) $db->fetchArray($db->query("SELECT COUNT(*) AS n FROM $users WHERE uid = 70 AND pass = " . $db->quote(strtolower($stored))))['n'], 'The collation is case-insensitive');
+    check(false === testUserHandler($db)->replacePasswordHash(70, strtolower($stored), 'case-swap'), 'A case-only mismatch replaces nothing');
+    check($stored === $passOf(), 'The stored hash is unchanged after a case-only mismatch');
+    check(true === testUserHandler($db)->replacePasswordHash(70, $stored, 'exact-swap'), 'An exact match is replaced');
+    check('exact-swap' === $passOf(), 'The exact match stored the new hash');
+    echo "PASS: the rehash compare-and-swap is byte-exact under a case-insensitive collation\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'FAIL: ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
     $exitCode = 1;

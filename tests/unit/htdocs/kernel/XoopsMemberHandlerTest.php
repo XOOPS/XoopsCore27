@@ -1037,14 +1037,22 @@ class XoopsMemberHandlerTest extends TestCase
                           ->willReturn([$user]);
         // With column length 255, it should upgrade the hash, swapping only the verified one
         // assignVar(): the row already holds the new hash, so a later save (last_login) must not write it again
+        // the object takes the very hash the row was swapped to (the 2FA challenge digests it)
+        $stored = null;
         $user->expects($this->never())->method('setVar');
         $user->expects($this->once())
              ->method('assignVar')
-             ->with('pass', $this->callback(function ($v) { return is_string($v) && str_starts_with($v, '$'); }));
+             ->with('pass', $this->callback(static function ($v) use (&$stored): bool {
+                 return null !== $stored && $v === $stored;
+             }));
         $this->userHandler->expects($this->never())->method('insert');
         $this->userHandler->expects($this->once())
                           ->method('replacePasswordHash')
-                          ->with(1, $hash, $this->callback(static fn($v): bool => password_verify($password, $v)))
+                          ->with(1, $hash, $this->callback(static function ($v) use ($password, &$stored): bool {
+                              $stored = $v;
+
+                              return password_verify($password, $v);
+                          }))
                           ->willReturn(true);
 
         $result = $partialHandler->loginUser('legacyuser', $password);

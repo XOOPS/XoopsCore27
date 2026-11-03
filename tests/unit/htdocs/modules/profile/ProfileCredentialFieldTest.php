@@ -161,7 +161,7 @@ final class ProfileCredentialFieldTest extends TestCase
 
         $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/modules/profile/admin/field.php');
         self::assertMatchesRegularExpression(
-            '/in_array\(strtolower\(\$fieldName\), \$profilefield_handler->getAccountControlVars\(\), true\)\)\s*\{\s*redirect_header/',
+            '/if \(\$profilefield_handler->isAccountControlVar\(\$fieldName\)\)\s*\{\s*redirect_header/',
             $source
         );
     }

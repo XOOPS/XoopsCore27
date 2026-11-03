@@ -246,16 +246,16 @@ class Snoopy
      * @param string $from      the URI that answered with the redirect
      * @param array  $formvars
      * @param array  $formfiles
-     * @return void
+     * @return bool whether the followed request succeeded
      */
-    public function _followSubmitRedirect($from, $formvars, $formfiles): void
+    public function _followSubmitRedirect($from, $formvars, $formfiles): bool
     {
         $next = $this->_leaveOrigin($this->_redirectaddr, $from);
         if (strpos($next, '?') > 0 || $this->_origin($next) !== $this->_origin($from)) {
-            $this->fetch($next);
-        } else {
-            $this->submit($next, $formvars, $formfiles);
+            return (bool) $this->fetch($next);
         }
+
+        return (bool) $this->submit($next, $formvars, $formfiles);
     }
 
     /*======================================================================*\
@@ -318,7 +318,9 @@ class Snoopy
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                $this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI));
+                                if (!$this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI))) {
+                                    return false; // the followed request failed
+                                }
                             }
                         }
                     }
@@ -375,7 +377,9 @@ class Snoopy
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            $this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI));
+                            if (!$this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI))) {
+                                return false; // the followed request failed
+                            }
                         }
                     }
                 }
@@ -472,7 +476,9 @@ class Snoopy
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                $this->_followSubmitRedirect($URI, $formvars, $formfiles);
+                                if (!$this->_followSubmitRedirect($URI, $formvars, $formfiles)) {
+                                    return false; // the followed request failed
+                                }
                             }
                         }
                     }
@@ -534,7 +540,9 @@ class Snoopy
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            $this->_followSubmitRedirect($URI, $formvars, $formfiles);
+                            if (!$this->_followSubmitRedirect($URI, $formvars, $formfiles)) {
+                                return false; // the followed request failed
+                            }
                         }
                     }
                 }

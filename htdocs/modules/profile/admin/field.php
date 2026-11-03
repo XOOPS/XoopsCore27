@@ -28,7 +28,7 @@ echo $indexAdmin->addNavigation(basename(__FILE__));
 echo $indexAdmin->renderButton('right', '');
 
 $op = Request::hasVar('op', 'POST') ? Request::getCmd('op', 'list', 'POST') : Request::getCmd('op', (Request::hasVar('id', 'GET') || Request::hasVar('id', 'POST')) ? 'edit' : 'list', 'GET');
-/** @var XoopsModuleHandler $profilefield_handler */
+/** @var ProfileFieldHandler $profilefield_handler */
 $profilefield_handler = xoops_getModuleHandler('field');
 
 switch ($op) {
@@ -195,7 +195,7 @@ switch ($op) {
             }
         } else {
             $fieldName = Request::getCmd('field_name', '', 'POST');
-            if (in_array(strtolower($fieldName), $profilefield_handler->getAccountControlVars(), true)) {
+            if ($profilefield_handler->isAccountControlVar($fieldName)) {
                 redirect_header('field.php', 2, _PROFILE_AM_FIELDNOTCONFIGURABLE);
             }
             $obj = $profilefield_handler->create();

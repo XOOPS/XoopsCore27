@@ -1612,13 +1612,18 @@ class Protector
      * Lower-case host of a link written without its scheme ("host:port/path",
      * or text following "http://"): the authority ends at a path, query,
      * fragment, quote, bracket or white space, a userinfo part ("user@") is
-     * dropped and so is a port.
+     * dropped and so is a port. An IPv6 literal keeps its brackets, as
+     * parse_url() reports it ("[::1]").
      *
      * @param string $link link text after the scheme
      * @return string host, '' for none
      */
     protected static function linkHost(string $link): string
     {
+        // the literal must end the authority ("[::1]@attacker.test" is userinfo, not this host)
+        if (1 === preg_match('#^(?:[^/?\#\s\[\]"\'<>\\\\@]*@)?(\[[0-9a-f:.%]+\])(?::\d*)?(?=$|[/?\#\s\[\]"\'<>\\\\])#i', $link, $ipv6)) {
+            return strtolower($ipv6[1]);
+        }
         $authority = (string) preg_replace('#[/?\#\s\[\]"\'<>\\\\].*$#s', '', $link);
         $at        = strrpos($authority, '@');
         if (false !== $at) {
@@ -1645,14 +1650,11 @@ class Protector
             // count URI up; a link is local only when its parsed host IS this host
             // (example.com.attacker.test and example.com:80@attacker.test are other sites)
             $localHost = strtolower($http_host);
-            $count = -1;
-            foreach (preg_split('#https?\:\/\/#i', $val) as $fragment) {
+            // the text before the first scheme is no link, whatever it starts with
+            foreach (array_slice(preg_split('#https?\:\/\/#i', $val), 1) as $fragment) {
                 if (self::linkHost($fragment) !== $localHost) {
-                    ++$count;
+                    ++$this->_spamcount_uri;
                 }
-            }
-            if ($count > 0) {
-                $this->_spamcount_uri += $count;
             }
 
             // count BBCode like [url=www....] up (without [url=http://...], counted above)

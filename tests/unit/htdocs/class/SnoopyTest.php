@@ -158,6 +158,9 @@ class SnoopyTest extends TestCase
         $this->assertSame(0, preg_match('/->(fetch|submit)\(\$this->_redirectaddr\b/', $source), 'every followed redirect passes _leaveOrigin()');
         $this->assertSame(2, substr_count($source, '$this->_leaveOrigin($this->_redirectaddr, $URI)'), 'fetch(): http and https');
         $this->assertSame(2, substr_count($source, '$this->_followSubmitRedirect($URI, $formvars, $formfiles)'), 'submit(): http and https');
+        // a failed followed request fails the original call
+        $this->assertSame(2, substr_count($source, 'if (!$this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI))) {'), 'fetch() returns the followed result');
+        $this->assertSame(2, substr_count($source, 'if (!$this->_followSubmitRedirect($URI, $formvars, $formfiles)) {'), 'submit() returns the followed result');
     }
 
     /**
@@ -194,9 +197,26 @@ class SnoopyTest extends TestCase
                 }
             };
             $s->_redirectaddr = $target;
-            $s->_followSubmitRedirect($from, ['pass' => 'secret'], ['f' => '/tmp/x']);
+            $this->assertTrue($s->_followSubmitRedirect($from, ['pass' => 'secret'], ['f' => '/tmp/x']), $target);
             $this->assertSame($expected, $s->calls[0][0], $target);
             $this->assertCount('submit' === $expected ? 4 : 2, $s->calls[0], $target . ': a GET carries no form body');
+        }
+
+        // the followed request's failure reaches the caller, on both paths
+        $failing = new class extends \Snoopy {
+            public function fetch($URI)
+            {
+                return false;
+            }
+
+            public function submit($URI, $formvars = '', $formfiles = '')
+            {
+                return false;
+            }
+        };
+        foreach (['https://api.example.test/next', 'https://evil.test/collect'] as $target) {
+            $failing->_redirectaddr = $target;
+            $this->assertFalse($failing->_followSubmitRedirect($from, [], []), $target);
         }
     }
 

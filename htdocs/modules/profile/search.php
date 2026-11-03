@@ -45,6 +45,7 @@ switch ($op) {
         $sortby_arr      = [];
 
         // Dynamic fields
+        /** @var ProfileProfileHandler $profile_handler */
         $profile_handler = xoops_getModuleHandler('profile');
         // Get fields
         $fields = $profile_handler->loadSearchFields(); // never an account-control column
@@ -173,6 +174,7 @@ switch ($op) {
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
         // Dynamic fields
+        /** @var ProfileProfileHandler $profile_handler */
         $profile_handler = xoops_getModuleHandler('profile');
         // Get fields
         $fields = $profile_handler->loadSearchFields(); // never an account-control column: no predicate, sort key or column

@@ -1178,6 +1178,20 @@ class ProtectorTest extends TestCase
         $this->assertSame(0, $count("<a href=\"http://{$host}\">Home</a> or http://{$host} here"));
         $this->assertSame(0, $count("[url=\"{$host}\"]x[/url]"));
         $this->assertSame(1, $count('[url=www.elsewhere.test]x[/url]'));
+        // text before the first link is no link: a leading local host cannot hide one
+        $this->assertSame(1, $count(strtoupper($host) . ' http://attacker.test'));
+        $this->assertSame(2, $count('elsewhere.test http://a.test http://b.test'));
+
+        // an IPv6 literal keeps its brackets, as parse_url() reports XOOPS_URL's host
+        $linkHost = \Closure::bind(static fn (string $link): string => static::linkHost($link), null, \Protector::class);
+        $this->assertSame((string) parse_url('http://[::1]/x', PHP_URL_HOST), $linkHost('[::1]/x'));
+        $this->assertSame('[::1]', $linkHost('[::1]:8080/x'));
+        $this->assertSame('[fe80::1]', $linkHost('user@[FE80::1]/x'));
+        $this->assertSame('[::1]', $linkHost('[::1]'));
+        $this->assertNotSame('[::1]', $linkHost('[::1]@attacker.test/x'));
+        $this->assertNotSame('[::1]', $linkHost('[::1]:80@attacker.test/x'));
+        $this->assertNotSame('[::1]', $linkHost('[::1]evil.test/x'));
+        $this->assertSame('example.test', $linkHost('example.test]x[/url]'));
     }
 
     #[Test]

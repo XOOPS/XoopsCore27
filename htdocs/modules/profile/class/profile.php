@@ -78,7 +78,9 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
     public function __construct(XoopsDatabase $db)
     {
         parent::__construct($db, 'profile_profile', 'profileprofile', 'profile_id');
-        $this->_fHandler = xoops_getModuleHandler('field', 'profile');
+        /** @var ProfileFieldHandler $fieldHandler */
+        $fieldHandler    = xoops_getModuleHandler('field', 'profile');
+        $this->_fHandler = $fieldHandler;
     }
 
     /**

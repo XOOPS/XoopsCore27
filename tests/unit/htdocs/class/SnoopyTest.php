@@ -322,7 +322,8 @@ class SnoopyTest extends TestCase
         $marker = strpos($source, 'function _expandlinks');
         $this->assertNotFalse($marker, 'the redirect checks are looked up before _expandlinks()');
         $this->assertStringNotContainsString('preg_quote($this->host)', substr($source, 0, $marker));
-        // A body past the inflate bound is an error, never an empty or partial success.
+        // A body past the bound, as received or once inflated, is an error, never an empty or partial success.
+        $this->assertStringContainsString("\$results .= \$_data;\n            if (strlen(\$results) > \$this->maxlength * 20) {\n                \$this->error = ", $source);
         $this->assertStringContainsString('$results = gzinflate($results, $this->maxlength * 20);', $source);
         $this->assertStringContainsString("if (false === \$results) {\n                \$this->error = ", $source);
         // ...and fetch()/submit() pass that failure on over plain http, as over https

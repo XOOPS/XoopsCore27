@@ -374,6 +374,9 @@ function profile_getRegisterForm(XoopsUser $user, $profile, $step = null)
     $step_no   = $step['step_no'];
     $use_token = $step['step_no'] > 0;// ? true : false;
     $reg_form  = new XoopsThemeForm($step['step_name'], 'regform', $action, 'post', $use_token);
+    // A step may hold no element at all (only account-control fields, which are skipped below).
+    $elements  = [];
+    $weights   = [];
 
     if ($step['step_desc']) {
         $reg_form->addElement(new XoopsFormLabel('', $step['step_desc']));
@@ -404,9 +407,7 @@ function profile_getRegisterForm(XoopsUser $user, $profile, $step = null)
     }
 
     // Dynamic fields
-    $elements ??= [];
-    $weights  ??= [];
-    $profile_handler              = xoops_getModuleHandler('profile');
+    $profile_handler             = xoops_getModuleHandler('profile');
     $fields                       = $profile_handler->loadFields();
     foreach (array_keys($fields) as $i) {
         // Account-control columns have their own fixed elements; a legacy field on one is never saved.

@@ -91,7 +91,7 @@ class Snoopy
     public $error = ""; // error messages sent here
     public $response_code = ""; // response code returned from server
     public $headers = []; // headers returned from server sent here
-    public $maxlength = 500000; // read chunk size for the body; a gzip body may decode to at most 20 times this
+    public $maxlength = 500000; // read chunk size for the body; a body, received or gzip-decoded, may be at most 20 times this
     public $read_timeout = 0; // timeout on read operations, in seconds
     // supported only since PHP 4 Beta 4
     // set to 0 to disallow timeouts
@@ -1047,6 +1047,8 @@ class Snoopy
             $this->headers[] = $currentHeader;
         }
 
+        // The received body has the same bound as a decoded one: a server that never stops
+        // sending must not exhaust memory before the inflate limit below is reached.
         $results = '';
         do {
             $_data = fread($fp, $this->maxlength);
@@ -1054,6 +1056,10 @@ class Snoopy
                 break;
             }
             $results .= $_data;
+            if (strlen($results) > $this->maxlength * 20) {
+                $this->error = 'Response is larger than the size limit';
+                return false;
+            }
         } while (true);
 
         // gunzip

@@ -68,7 +68,7 @@ Bug fixes:
 - a cached block is kept per member, so blocks such as the User Menu never show one member's data to another (class/theme_blocks.php)
 - a private message is marked read only when it is opened as a page (modules/pm/readpmsg.php)
 - a visitor turned away by the banned-IP list never receives debug output (class/xoopssecurity.php)
-- Snoopy follows a frame on another origin without the page's credentials and restores the page's state afterwards, counts frame depth before recursing, accepts a redirect as same-site only on an exact origin (scheme, host and port), refuses a URI containing control characters, and reports a decompressed response past its size limit as an error (class/snoopy.php)
+- Snoopy follows a frame on another origin without the page's credentials and restores the page's state afterwards, counts frame depth before recursing, accepts a redirect as same-site only on an exact origin (scheme, host and port), refuses a URI containing control characters, and reports a response past its size limit, as received or once decompressed, as an error (class/snoopy.php)
 - Protector asks StopForumSpam over HTTPS with an encoded query, exempts from the link count only links whose parsed host is this host, and reads the ban list under the lock its writer takes, or without it where the filesystem has none (xoops_lib/modules/protector/class/protector.php)
 
 ===================================

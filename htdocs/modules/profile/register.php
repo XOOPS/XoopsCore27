@@ -122,7 +122,7 @@ if ($uid == 0) {
     if (count($fields) > 0) {
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
-            if (in_array($fieldname, $userfields) && !in_array($fieldname, $protected, true)) {
+            if (in_array($fieldname, $userfields) && !in_array(strtolower(trim((string) $fieldname)), $protected, true)) {
                 $default = $fields[$i]->getVar('field_default');
                 if ($default === '' || $default === null) {
                     continue;
@@ -176,7 +176,8 @@ if ($current_step == 0) {
 // a field on no registration step, or on a later one, is never written from the request.
 $reachedStepIds = array_map('intval', array_column(array_slice($steps, 0, max(0, $current_step)), 'step_id'));
 foreach (array_keys($fields) as $field) {
-    if (!Request::hasVar($field, 'POST') || in_array($field, $protected, true)
+    // Column names are case-insensitive: a field named PASS writes pass.
+    if (!Request::hasVar($field, 'POST') || in_array(strtolower(trim((string) $field)), $protected, true)
         || !in_array((int) $fields[$field]->getVar('step_id'), $reachedStepIds, true)) {
         continue;
     }

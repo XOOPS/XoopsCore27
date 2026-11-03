@@ -663,7 +663,8 @@ class XoopsUserHandler extends XoopsPersistableObjectHandler
         /** @var XoopsMySQLDatabase $db */
         $db  = $this->db;
         $sql = sprintf(
-            'UPDATE %s SET pass = %s WHERE uid = %d AND pass = %s',
+            // Byte-exact: users.pass has a case-insensitive collation, hashes are case-sensitive.
+            'UPDATE %s SET pass = %s WHERE uid = %d AND CAST(pass AS BINARY) = CAST(%s AS BINARY)',
             $this->table,
             $db->quote($newHash),
             $uid,

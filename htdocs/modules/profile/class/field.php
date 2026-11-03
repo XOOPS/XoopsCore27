@@ -115,6 +115,16 @@ class ProfileField extends XoopsObject
     }
 
     /**
+     * Whether this field is defined on an account-control column (identity, credentials, level)
+     *
+     * @return bool
+     */
+    public function isAccountControl(): bool
+    {
+        return in_array(strtolower(trim((string) $this->getVar('field_name', 'n'))), ProfileFieldHandler::ACCOUNT_CONTROL_VARS, true);
+    }
+
+    /**
      * Returns a {@link XoopsFormElement} for editing the value of this field
      *
      * @param XoopsUser      $user    {@link XoopsUser} object to edit the value of
@@ -124,10 +134,9 @@ class ProfileField extends XoopsObject
      **/
     public function getEditElement($user, $profile)
     {
-        $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name'), 'e') : $profile->getVar($this->getVar('field_name'), 'e');
-        if ($this->isCredential()) {
-            $value = ''; // never put a stored hash or activation key into a form
-        }
+        // Never read a stored hash or activation key, let alone put it into a form.
+        $value = $this->isCredential() ? ''
+            : (in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name'), 'e') : $profile->getVar($this->getVar('field_name'), 'e'));
 
         $caption = $this->getVar('field_title');
         $caption = defined($caption) ? constant($caption) : $caption;
@@ -258,12 +267,13 @@ class ProfileField extends XoopsObject
     {
         xoops_loadLanguage('modinfo', 'profile');
 
-        // A field defined on a credential column (an older install could create one) shows nothing.
-        if ($this->isCredential()) {
-            return '';
-        }
-        // A field on email (also an older install's) shows it only as the member allows.
-        if ('email' === strtolower(trim((string) $this->getVar('field_name', 'n'))) && !$user->getVar('user_viewemail')) {
+        // A field on email (an older install could create one) shows it only as the member allows;
+        // a field on any other account-control column shows nothing.
+        if ('email' === strtolower(trim((string) $this->getVar('field_name', 'n')))) {
+            if (!$user->getVar('user_viewemail')) {
+                return '';
+            }
+        } elseif ($this->isAccountControl()) {
             return '';
         }
         $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name')) : $profile->getVar($this->getVar('field_name'));
@@ -453,6 +463,9 @@ class ProfileField extends XoopsObject
  */
 class ProfileFieldHandler extends XoopsPersistableObjectHandler
 {
+    /** @see getAccountControlVars() */
+    public const ACCOUNT_CONTROL_VARS = ['uid', 'uname', 'email', 'pass', 'level', 'actkey'];
+
     public $table_link;
 
     /**
@@ -734,7 +747,7 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
      */
     public function getAccountControlVars(): array
     {
-        return ['uid', 'uname', 'email', 'pass', 'level', 'actkey'];
+        return self::ACCOUNT_CONTROL_VARS;
     }
 
     /**

@@ -336,9 +336,10 @@ final class ControllerHardeningContractTest extends TestCase
     public static function profileWritePaths(): array
     {
         return [
-            'own edit'     => ['modules/profile/edituser.php', 'if (in_array($fieldname, $protected, true)) { continue; }'],
-            'registration' => ['modules/profile/register.php', "if (!Request::hasVar(\$field, 'POST') || in_array(\$field, \$protected, true) || !in_array((int) \$fields[\$field]->getVar('step_id'), \$reachedStepIds, true)) { continue; }"],
-            'reg defaults' => ['modules/profile/register.php', "if (in_array(\$fieldname, \$userfields) && !in_array(\$fieldname, \$protected, true)) {"],
+            // Lower-cased: column names are case-insensitive, so a field named PASS writes pass.
+            'own edit'     => ['modules/profile/edituser.php', 'if (in_array(strtolower(trim((string) $fieldname)), $protected, true)) { continue; }'],
+            'registration' => ['modules/profile/register.php', "if (!Request::hasVar(\$field, 'POST') || in_array(strtolower(trim((string) \$field)), \$protected, true) || !in_array((int) \$fields[\$field]->getVar('step_id'), \$reachedStepIds, true)) { continue; }"],
+            'reg defaults' => ['modules/profile/register.php', "if (in_array(\$fieldname, \$userfields) && !in_array(strtolower(trim((string) \$fieldname)), \$protected, true)) {"],
         ];
     }
 

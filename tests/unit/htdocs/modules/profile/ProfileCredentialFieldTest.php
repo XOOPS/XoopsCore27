@@ -117,6 +117,57 @@ final class ProfileCredentialFieldTest extends TestCase
         self::assertSame('', $field->getOutputValue($user, $profile));
     }
 
+    /** @return array<string, array{string}> */
+    public static function accountControlNames(): array
+    {
+        return ['uid' => ['uid'], 'uname' => ['uname'], 'level' => ['level'], 'mixed case' => [' Level ']];
+    }
+
+    #[Test]
+    #[DataProvider('accountControlNames')]
+    public function aLegacyFieldOnAnAccountControlColumnShowsNothing(string $name): void
+    {
+        $field = new \ProfileField();
+        $field->setVar('field_name', $name);
+        $field->setVar('field_type', 'textbox');
+        self::assertTrue($field->isAccountControl());
+
+        $user = $this->createMock(\XoopsUser::class);
+        $user->expects($this->never())->method('getVar');
+        $profile = $this->createMock(\ProfileProfile::class);
+        $profile->expects($this->never())->method('getVar');
+
+        self::assertSame('', $field->getOutputValue($user, $profile));
+    }
+
+    #[Test]
+    #[DataProvider('credentialNames')]
+    public function anEditFormNeverReadsACredentialColumn(string $name): void
+    {
+        $field = new \ProfileField();
+        $field->setVar('field_name', $name);
+        $field->setVar('field_type', 'textbox');
+
+        $user = $this->createMock(\XoopsUser::class);
+        $user->expects($this->never())->method('getVar');
+        $profile = $this->createMock(\ProfileProfile::class);
+        $profile->expects($this->never())->method('getVar');
+
+        self::assertInstanceOf(\XoopsFormElement::class, $field->getEditElement($user, $profile));
+    }
+
+    #[Test]
+    public function accountControlNamesMatchInAnyLetterCase(): void
+    {
+        $handler = (new \ReflectionClass(\ProfileFieldHandler::class))->newInstanceWithoutConstructor();
+        foreach (['pass', 'PASS', ' Email ', 'Level', 'actkey'] as $name) {
+            self::assertTrue($handler->isAccountControlVar($name), $name);
+        }
+        foreach (['name', 'user_from', 'password_hint', 'rank'] as $name) {
+            self::assertFalse($handler->isAccountControlVar($name), $name);
+        }
+    }
+
     #[Test]
     public function ordinaryFieldsAreNotCredentials(): void
     {

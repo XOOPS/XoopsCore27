@@ -84,13 +84,16 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         self::assertNotFalse($start);
         self::assertNotFalse($rotate, 'the marker is set only when the rotation succeeded');
         self::assertLessThan($rotate, $start);
-        self::assertStringContainsString("if (\$options['secure'] && empty(\$_SESSION['installer_secure_cookie'])) {", $source);
-        // Plain HTTP too: every POST (each step that takes credentials) gets a new id,
-        // and a POST whose id could not be replaced stops there.
-        $post = strpos($source, "} elseif ('POST' === (\$_SERVER['REQUEST_METHOD'] ?? '')) {");
-        self::assertNotFalse($post);
-        $branch = substr($source, $post, (int) strpos($source, "\n    }", $post) - $post);
-        self::assertStringContainsString('if (!session_regenerate_id(true)) {', $branch);
+        self::assertStringContainsString("\$needsSecure = \$options['secure'] && empty(\$_SESSION['installer_secure_cookie']);", $source);
+        // Every POST (each step that takes credentials) gets a new id, over HTTP or
+        // HTTPS alike, and a POST whose id could not be replaced stops there.
+        self::assertStringContainsString("\$isPost      = 'POST' === (\$_SERVER['REQUEST_METHOD'] ?? '');", $source);
+        self::assertStringContainsString('if ($isPost || $needsSecure) {', $source);
+        $fail = strpos($source, '} elseif ($isPost) {');
+        self::assertNotFalse($fail);
+        self::assertGreaterThan($rotate, $fail);
+        $branch = substr($source, $fail, (int) strpos($source, "\n        }", $fail) - $fail);
+        self::assertStringContainsString('http_response_code(500);', $branch);
         self::assertStringContainsString('exit(', $branch);
     }
 

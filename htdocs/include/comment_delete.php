@@ -173,7 +173,7 @@ switch ($op) {
         }
 
         // get all comments posted later within the same thread
-        $thread_comments = $comment_handler->getThread($comment->getVar('com_rootid'), $com_id);
+        $thread_comments = $comment_handler->getThread($comment->getVar('com_rootid'), $com_id, null, $comment->getVar('com_modid'), $comment->getVar('com_itemid'));
         include_once $GLOBALS['xoops']->path('class/tree.php');
         $xot            = new XoopsObjectTree($thread_comments, 'com_id', 'com_pid', 'com_rootid');
         $child_comments = $xot->getFirstChild($com_id);
@@ -224,7 +224,7 @@ switch ($op) {
         $com_rootid      = $comment->getVar('com_rootid');
 
         // get all comments posted later within the same thread
-        $thread_comments = $comment_handler->getThread($com_rootid, $com_id);
+        $thread_comments = $comment_handler->getThread($com_rootid, $com_id, null, $comment->getVar('com_modid'), $comment->getVar('com_itemid'));
 
         // construct a comment tree
         include_once $GLOBALS['xoops']->path('class/tree.php');

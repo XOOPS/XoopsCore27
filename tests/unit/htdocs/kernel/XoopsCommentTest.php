@@ -958,4 +958,42 @@ class XoopsCommentTest extends KernelTestCase
         $this->assertTrue($comment->isRoot());
     }
 
+    // =========================================================================
+    // XoopsCommentHandler — getThread scoping
+    // =========================================================================
+
+    /**
+     * Captures the SELECT that getThread() sends.
+     */
+    private function threadQuery(array $args): string
+    {
+        $db  = $this->createMockDatabase();
+        $sql = '';
+        $db->method('query')->willReturnCallback(function ($query) use (&$sql) {
+            $sql = (string) $query;
+
+            return false;
+        });
+        $this->assertSame([], $this->createHandler('XoopsCommentHandler', $db)->getThread(...$args));
+
+        return $sql;
+    }
+
+    public function testGetThreadLimitsToTheGivenModuleAndItem(): void
+    {
+        $sql = $this->threadQuery([5, 7, null, 3, 9]);
+
+        $this->assertMatchesRegularExpression("/com_rootid\W+=\W+5\b/", $sql);
+        $this->assertMatchesRegularExpression("/com_modid\W+=\W+3\b/", $sql);
+        $this->assertMatchesRegularExpression("/com_itemid\W+=\W+9\b/", $sql);
+    }
+
+    public function testGetThreadWithoutContextKeepsItsFormerQuery(): void
+    {
+        $sql = $this->threadQuery([5, 7]);
+
+        $this->assertMatchesRegularExpression("/com_rootid\W+=\W+5\b/", $sql);
+        $this->assertStringNotContainsString('com_modid', $sql);
+        $this->assertStringNotContainsString('com_itemid', $sql);
+    }
 }

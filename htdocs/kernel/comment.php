@@ -645,18 +645,29 @@ class XoopsCommentHandler extends XoopsObjectHandler
     /**
      * Retrieve a whole thread
      *
-     * @param int $comment_rootid
-     * @param int $comment_id
-     * @param int $status
+     * Pass $module_id and $item_id whenever the root and comment ids come from
+     * a request: the ids alone select a thread of any module or item.
+     *
+     * @param int      $comment_rootid
+     * @param int      $comment_id
+     * @param int      $status
+     * @param int|null $module_id Only comments of this module
+     * @param int|null $item_id   Only comments of this item
      *
      * @return array Array of {@link XoopsComment} objects
      **/
-    public function getThread($comment_rootid, $comment_id, $status = null)
+    public function getThread($comment_rootid, $comment_id, $status = null, $module_id = null, $item_id = null)
     {
         $criteria = new CriteriaCompo(new Criteria('com_rootid', (int)$comment_rootid));
         $criteria->add(new Criteria('com_id', (int)$comment_id, '>='));
         if (isset($status)) {
             $criteria->add(new Criteria('com_status', (int)$status));
+        }
+        if (isset($module_id)) {
+            $criteria->add(new Criteria('com_modid', (int)$module_id));
+        }
+        if (isset($item_id)) {
+            $criteria->add(new Criteria('com_itemid', (int)$item_id));
         }
 
         return $this->getObjects($criteria);

@@ -404,6 +404,8 @@ function profile_getRegisterForm(XoopsUser $user, $profile, $step = null)
     }
 
     // Dynamic fields
+    $elements ??= [];
+    $weights  ??= [];
     $profile_handler              = xoops_getModuleHandler('profile');
     $fields                       = $profile_handler->loadFields();
     foreach (array_keys($fields) as $i) {

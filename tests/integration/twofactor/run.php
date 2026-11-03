@@ -110,7 +110,14 @@ try {
     foreach (['user_2fa', 'tokens', 'config', 'configoption', 'users'] as $table) {
         check(preg_match('/CREATE TABLE ' . $table . ' \(.*?\) ENGINE=[^;]+;/s', $schema, $match) === 1, 'Missing install DDL');
         $name = $db->prefix($table);
-        check($db->exec(str_replace('CREATE TABLE ' . $table, 'CREATE TABLE `' . $name . '`', $match[0])), 'Create test table');
+        $ddl = str_replace('CREATE TABLE ' . $table, 'CREATE TABLE `' . $name . '`', $match[0]);
+        if ('users' === $table) {
+            // The DDL leaves the collation implicit: pin a case-insensitive one at creation
+            // (no ALTER grant needed), under which a plain = would match a hash differing
+            // only in letter case. The exact-compare rehash check below relies on it.
+            $ddl = rtrim($ddl, ';') . ' DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;';
+        }
+        check($db->exec($ddl), 'Create test table');
         $created[] = $name;
     }
     $secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
@@ -398,9 +405,7 @@ try {
     check(false === testUserHandler($db)->replacePasswordHash(70, md5('anything'), 'x'), 'A stale verified hash replaces nothing');
     echo "PASS: concurrent sign-in rehash never undoes a password reset ($lost of 25 rehashes found the reset first)\n";
 
-    // The DDL leaves the collation implicit: pin a case-insensitive one, under which a
-    // plain = would match a hash differing only in letter case.
-    check($db->exec("ALTER TABLE $users MODIFY pass varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT ''"), 'Pin a case-insensitive collation');
+    // The users table was created under utf8mb4_general_ci (see the setup loop).
     $stored = 'AbCdEf0123456789AbCdEf0123456789';
     check($db->exec("UPDATE $users SET pass = " . $db->quote($stored) . ' WHERE uid = 70'), 'Store a mixed-case hash');
     $passOf = static fn(): string => $db->fetchArray($db->query("SELECT pass FROM $users WHERE uid = 70"))['pass'];

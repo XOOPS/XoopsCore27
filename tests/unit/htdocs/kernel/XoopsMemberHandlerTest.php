@@ -1036,8 +1036,10 @@ class XoopsMemberHandlerTest extends TestCase
         $this->userHandler->method('getObjects')
                           ->willReturn([$user]);
         // With column length 255, it should upgrade the hash, swapping only the verified one
+        // assignVar(): the row already holds the new hash, so a later save (last_login) must not write it again
+        $user->expects($this->never())->method('setVar');
         $user->expects($this->once())
-             ->method('setVar')
+             ->method('assignVar')
              ->with('pass', $this->callback(function ($v) { return is_string($v) && str_starts_with($v, '$'); }));
         $this->userHandler->expects($this->never())->method('insert');
         $this->userHandler->expects($this->once())
@@ -1076,8 +1078,9 @@ class XoopsMemberHandlerTest extends TestCase
         // a password reset committed between the read and the swap: no row still holds $hash
         $this->userHandler->method('replacePasswordHash')->willReturn(false);
         $user->expects($this->never())->method('setVar');
+        $user->expects($this->never())->method('assignVar');
 
-        $previous             = $GLOBALS['xoopsUser'] ?? null;
+        $previous            = $GLOBALS['xoopsUser'] ?? null;
         $GLOBALS['xoopsUser'] = '';
         try {
             $this->assertFalse($partialHandler->loginUser('legacyuser', $password));
@@ -1116,6 +1119,7 @@ class XoopsMemberHandlerTest extends TestCase
 
         // the write failed: the object keeps the stored hash, which still matches the row
         $user->expects($this->never())->method('setVar');
+        $user->expects($this->never())->method('assignVar');
 
         // the security log runs while the visitor is still a guest: common.php seeds '' here
         $previous             = $GLOBALS['xoopsUser'] ?? null;

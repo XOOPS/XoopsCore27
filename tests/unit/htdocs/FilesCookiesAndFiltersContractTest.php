@@ -85,8 +85,13 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         self::assertNotFalse($rotate, 'the marker is set only when the rotation succeeded');
         self::assertLessThan($rotate, $start);
         self::assertStringContainsString("if (\$options['secure'] && empty(\$_SESSION['installer_secure_cookie'])) {", $source);
-        // Plain HTTP too: every POST (each step that takes credentials) gets a new id.
-        self::assertMatchesRegularExpression("/\\} elseif \\('POST' === \\(\\\$_SERVER\\['REQUEST_METHOD'\\] \\?\\? ''\\)\\) \\{\\s*(\\/\\/[^\\n]*\\s*)*session_regenerate_id\\(true\\);/", $source);
+        // Plain HTTP too: every POST (each step that takes credentials) gets a new id,
+        // and a POST whose id could not be replaced stops there.
+        $post = strpos($source, "} elseif ('POST' === (\$_SERVER['REQUEST_METHOD'] ?? '')) {");
+        self::assertNotFalse($post);
+        $branch = substr($source, $post, (int) strpos($source, "\n    }", $post) - $post);
+        self::assertStringContainsString('if (!session_regenerate_id(true)) {', $branch);
+        self::assertStringContainsString('exit(', $branch);
     }
 
     #[Test]

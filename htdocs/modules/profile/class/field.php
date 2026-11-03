@@ -262,6 +262,10 @@ class ProfileField extends XoopsObject
         if ($this->isCredential()) {
             return '';
         }
+        // A field on email (also an older install's) shows it only as the member allows.
+        if ('email' === strtolower(trim((string) $this->getVar('field_name', 'n'))) && !$user->getVar('user_viewemail')) {
+            return '';
+        }
         $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name')) : $profile->getVar($this->getVar('field_name'));
 
         switch ($this->getVar('field_type')) {
@@ -731,5 +735,17 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
     public function getAccountControlVars(): array
     {
         return ['uid', 'uname', 'email', 'pass', 'level', 'actkey'];
+    }
+
+    /**
+     * Whether a field name is one of getAccountControlVars(), in any letter case:
+     * MySQL column names are case-insensitive, so a field named PASS reads pass.
+     *
+     * @param string $name field name
+     * @return bool
+     */
+    public function isAccountControlVar($name): bool
+    {
+        return in_array(strtolower(trim((string) $name)), $this->getAccountControlVars(), true);
     }
 }

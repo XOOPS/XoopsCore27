@@ -61,6 +61,8 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
 {
     /**
      * holds reference to {@link profileFieldHandler} object
+     *
+     * @var ProfileFieldHandler
      */
     public $_fHandler;
 
@@ -147,6 +149,21 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
         }
 
         return $this->_fields;
+    }
+
+    /**
+     * The fields a member search may filter, sort or show: all but those on an
+     * account-control column (an older install could define one). uname and
+     * email keep the search form's own filters, which honour user_viewemail.
+     *
+     * @return ProfileField[] keyed like loadFields()
+     */
+    public function loadSearchFields(): array
+    {
+        return array_filter(
+            $this->loadFields(),
+            fn($field): bool => !$this->_fHandler->isAccountControlVar($field->getVar('field_name', 'n'))
+        );
     }
 
     /**
@@ -298,7 +315,7 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
         // Never select credentials (pass, actkey) or authority through a configured field.
         // A request for those columns only selects the base columns, never the u.*, p.* fallback.
         $requested  = !empty($searchvars);
-        $searchvars = array_diff($searchvars, $this->_fHandler->getAccountControlVars());
+        $searchvars = array_filter($searchvars, fn($var): bool => !$this->_fHandler->isAccountControlVar($var));
 
         $searchvars_user    = array_intersect($searchvars, $uservars);
         $searchvars_profile = array_diff($searchvars, $uservars);

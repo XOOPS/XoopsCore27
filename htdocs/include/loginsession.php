@@ -33,16 +33,15 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 function xoops_login_is_cross_site(): bool
 {
-    // Request headers: read from $_SERVER, no bootstrap helper needed.
-    $fetchSite = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+    $fetchSite = strtolower(\Xmf\Request::getString('HTTP_SEC_FETCH_SITE', '', 'SERVER'));
     if ('' !== $fetchSite) {
         return !in_array($fetchSite, ['same-origin', 'none'], true);
     }
-    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    $origin = \Xmf\Request::getString('HTTP_ORIGIN', '', 'SERVER');
     if ('' !== $origin) {
         return 'null' === $origin || !$GLOBALS['xoopsSecurity']->isSameOrigin($origin);
     }
-    $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+    $referer = \Xmf\Request::getString('HTTP_REFERER', '', 'SERVER');
 
     return '' !== $referer && !$GLOBALS['xoopsSecurity']->isSameOrigin($referer);
 }

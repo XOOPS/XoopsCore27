@@ -467,8 +467,10 @@ class XoopsMemberHandler
                 $replaced = $this->userHandler->replacePasswordHash((int) $user->getVar('uid'), (string) $hash, $newHash);
                 if (true === $replaced) {
                     // Keep the object in step with the row: a digest taken from it
-                    // (the two-factor challenge) must match.
-                    $user->setVar('pass', $newHash);
+                    // (the two-factor challenge) must match. assignVar(), not setVar():
+                    // the row already holds it, and a changed var would be written
+                    // again unguarded by the last_login save, over a reset made since.
+                    $user->assignVar('pass', $newHash);
                 } elseif (false === $replaced) {
                     // The password changed after it was verified (a reset): the old one is no longer valid.
                     $this->logSecurityEvent('Password changed during sign-in', ['uid' => (int) $user->getVar('uid')]);

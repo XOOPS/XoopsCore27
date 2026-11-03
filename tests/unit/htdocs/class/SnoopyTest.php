@@ -201,16 +201,79 @@ class SnoopyTest extends TestCase
     }
 
     #[Test]
-    public function aSameSiteRedirectIsTheExactHostNotAPrefix(): void
+    public function aSameSiteRedirectIsTheExactOriginNotAPrefix(): void
     {
-        $s       = new \Snoopy();
-        $s->host = 'example.com';
-        $this->assertTrue($s->_isOnSite('http://example.com/next'));
-        $this->assertTrue($s->_isOnSite('https://EXAMPLE.com:8443/next'));
-        $this->assertFalse($s->_isOnSite('http://example.com.attacker.test/'));
-        $this->assertFalse($s->_isOnSite('http://example.com@attacker.test/'));
-        $this->assertFalse($s->_isOnSite('ftp://example.com/'));
-        $this->assertFalse($s->_isOnSite('/relative'));
+        $s    = new \Snoopy();
+        $from = 'http://example.com/start';
+        $this->assertTrue($s->_isOnSite('http://example.com/next', $from));
+        $this->assertTrue($s->_isOnSite('HTTP://EXAMPLE.com:80/next', $from));
+        $this->assertFalse($s->_isOnSite('https://example.com/next', $from), 'another scheme');
+        $this->assertFalse($s->_isOnSite('http://example.com:8443/next', $from), 'another port');
+        $this->assertFalse($s->_isOnSite('http://example.com.attacker.test/', $from));
+        $this->assertFalse($s->_isOnSite('http://example.com@attacker.test/', $from));
+        $this->assertFalse($s->_isOnSite('ftp://example.com/', 'ftp://example.com/start'));
+        $this->assertFalse($s->_isOnSite('/relative', $from));
+    }
+
+    /**
+     * A frame on another origin is fetched without the page's credentials,
+     * and the instance has them back for the next frame or request.
+     */
+    #[Test]
+    public function aFrameOnAnotherOriginGetsNoCredentialsAndTheyComeBack(): void
+    {
+        $s = new class extends \Snoopy {
+            public array $seen = [];
+
+            public function fetch($URI)
+            {
+                $this->seen[] = [$URI, $this->user, $this->cookies, $this->rawheaders];
+
+                return true;
+            }
+        };
+        $s->user       = 'admin';
+        $s->pass       = 'secret';
+        $s->cookies    = ['sid' => 'abc'];
+        $s->rawheaders = ['Authorization' => 'Bearer t', 'X-Trace' => '1'];
+
+        $s->_fetchFrame('https://other.test/frame', 'https://site.test/page');
+        $this->assertSame(['https://other.test/frame', '', [], ['X-Trace' => '1']], $s->seen[0]);
+        $this->assertSame(['admin', 'secret', ['sid' => 'abc'], ['Authorization' => 'Bearer t', 'X-Trace' => '1']], [$s->user, $s->pass, $s->cookies, $s->rawheaders]);
+
+        $s->_fetchFrame('https://site.test/frame2', 'https://site.test/page');
+        $this->assertSame('admin', $s->seen[1][1], 'a same-origin frame keeps the credentials');
+    }
+
+    /**
+     * A same-origin frame that redirects to another origin leaves it too: the
+     * page's credentials, response headers and redirect state come back, so
+     * the other origin's Set-Cookie is never imported into the page's jar.
+     */
+    #[Test]
+    public function aFrameRedirectingToAnotherOriginRestoresThePageState(): void
+    {
+        $s = new class extends \Snoopy {
+            public function fetch($URI)
+            {
+                // the frame answers with a redirect elsewhere, which fetch() follows
+                $this->_leaveOrigin('https://other.test/landing', $URI);
+                $this->headers       = ["Set-Cookie: tracker=1\r\n"];
+                $this->_redirectaddr = 'https://other.test/next';
+
+                return true;
+            }
+        };
+        $s->user          = 'admin';
+        $s->cookies       = ['sid' => 'abc'];
+        $s->headers       = ["HTTP/1.1 200 OK\r\n"];
+        $s->_redirectaddr = false;
+
+        $s->_fetchFrame('https://site.test/frame', 'https://site.test/page');
+        $this->assertSame('admin', $s->user);
+        $this->assertSame(['sid' => 'abc'], $s->cookies);
+        $this->assertSame(["HTTP/1.1 200 OK\r\n"], $s->headers);
+        $this->assertFalse($s->_redirectaddr);
     }
 
     #[Test]
@@ -232,13 +295,19 @@ class SnoopyTest extends TestCase
         $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/snoopy.php');
         $this->assertSame(0, substr_count($source, '$this->fetch($frameurl);'), 'no frame is fetched with the parent origin\'s credentials');
         $this->assertSame(4, preg_match_all(
-            '/\$this->_framedepth\+\+;[^\n]*\n\s*\$this->fetch\(\$this->_leaveOrigin\(\$frameurl, \$URI\)\);/',
+            '/\$this->_framedepth\+\+;[^\n]*\n\s*\$this->_fetchFrame\(\$frameurl, \$URI\);/',
             $source
         ), 'depth is counted before recursing, in all four frame loops');
+        $this->assertSame(4, substr_count($source, '$this->_isOnSite($this->_redirectaddr, $URI)'), 'every redirect check compares the origin');
         $marker = strpos($source, 'function _expandlinks');
         $this->assertNotFalse($marker, 'the redirect checks are looked up before _expandlinks()');
         $this->assertStringNotContainsString('preg_quote($this->host)', substr($source, 0, $marker));
-        $this->assertStringContainsString('gzinflate($results, $this->maxlength * 20)', $source);
+        // A body past the inflate bound is an error, never an empty or partial success.
+        $this->assertStringContainsString('$results = gzinflate($results, $this->maxlength * 20);', $source);
+        $this->assertStringContainsString("if (false === \$results) {\n                \$this->error = ", $source);
+        // ...and fetch()/submit() pass that failure on over plain http, as over https
+        $this->assertSame(4, substr_count($source, '$sent = $this->_httprequest('));
+        $this->assertSame(2, substr_count($source, "\$this->_disconnect(\$fp);\n                    if (!\$sent) {\n                        return false;"));
     }
 
     #[Test]

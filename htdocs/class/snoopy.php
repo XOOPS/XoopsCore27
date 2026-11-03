@@ -126,6 +126,7 @@ class Snoopy
     public $_submit_type = "application/x-www-form-urlencoded"; // default submit type
     public $_mime_boundary = ""; // MIME boundary for multipart/form-data submit type
     public $_redirectaddr = false; // will be set if page fetched is a redirect
+    public $_originLeaves = 0; // counts _leaveOrigin() clearing the state for another origin
     public $_redirectdepth = 0; // increments on an http redirect
     public $_frameurls = []; // frame src urls
     public $_framedepth = 0; // increments on frame depth
@@ -152,6 +153,7 @@ class Snoopy
         if (null === $target || $target === $this->_origin($from)) {
             return (string) $url; // relative, or the same origin
         }
+        ++$this->_originLeaves;
         $this->user    = '';
         $this->pass    = '';
         $this->cookies = [];
@@ -184,21 +186,46 @@ class Snoopy
     }
 
     /**
-     * Whether a redirect target is an http(s) URL on the host being fetched.
+     * Whether a redirect target is an http(s) URL on the origin being fetched.
      *
-     * Compares the parsed host exactly: a textual prefix would accept
-     * example.com.attacker.test or example.com@attacker.test.
+     * Compares the parsed scheme, host and port: a textual prefix would accept
+     * example.com.attacker.test or example.com@attacker.test, and the same
+     * host on another port or scheme is another service.
      *
-     * @param string $url absolute redirect target
+     * @param string $url  absolute redirect target
+     * @param string $from URL of the response that redirected
      * @return bool
      */
-    public function _isOnSite($url): bool
+    public function _isOnSite($url, $from): bool
     {
-        $parts = parse_url((string) $url);
+        $scheme = strtolower((string) parse_url((string) $url, PHP_URL_SCHEME));
+        $origin = $this->_origin($url);
 
-        return is_array($parts) && isset($parts['host'])
-            && in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
-            && 0 === strcasecmp((string) $parts['host'], (string) $this->host);
+        return in_array($scheme, ['http', 'https'], true)
+            && null !== $origin && $origin === $this->_origin($from);
+    }
+
+    /**
+     * Fetch a frame of the page at $from.
+     *
+     * A frame on another origin, or one that redirects to another, is fetched
+     * without the page's credentials. When it left the page's origin, the
+     * page's state comes back afterwards: its credentials, which the next
+     * frame or request may still need, and its response headers and redirect,
+     * so the other origin's Set-Cookie never reaches the page's cookie jar.
+     *
+     * @param string $frameurl frame source
+     * @param string $from     URL of the page that holds the frame
+     * @return void
+     */
+    public function _fetchFrame($frameurl, $from): void
+    {
+        $saved  = [$this->user, $this->pass, $this->cookies, $this->rawheaders, $this->headers, $this->_redirectaddr];
+        $leaves = $this->_originLeaves;
+        $this->fetch($this->_leaveOrigin($frameurl, $from));
+        if ($this->_originLeaves !== $leaves) {
+            [$this->user, $this->pass, $this->cookies, $this->rawheaders, $this->headers, $this->_redirectaddr] = $saved;
+        }
     }
 
     /**
@@ -271,20 +298,23 @@ class Snoopy
                 if ($this->_connect($fp)) {
                     if ($this->_isproxy) {
                         // using proxy, send entire URI
-                        $this->_httprequest($URI, $fp, $URI, $this->_httpmethod);
+                        $sent = $this->_httprequest($URI, $fp, $URI, $this->_httpmethod);
                     } else {
                         $path = $URI_PARTS["path"] . ($URI_PARTS["query"] ? "?" . $URI_PARTS["query"] : "");
                         // no proxy, send only the path
-                        $this->_httprequest($path, $fp, $URI, $this->_httpmethod);
+                        $sent = $this->_httprequest($path, $fp, $URI, $this->_httpmethod);
                     }
 
                     $this->_disconnect($fp);
+                    if (!$sent) {
+                        return false; // a timeout or an undecodable body, as the https branch reports
+                    }
 
                     if ($this->_redirectaddr) {
                         /* url was redirected, check if we've hit the max depth */
                         if ($this->maxredirs > $this->_redirectdepth) {
                             // only follow redirect if it's on this site, or offsiteok is true
-                            if ($this->_isOnSite($this->_redirectaddr) || $this->offsiteok) {
+                            if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
@@ -300,7 +330,7 @@ class Snoopy
                         while (list(, $frameurl) = each($frameurls)) {
                             if ($this->_framedepth < $this->maxframes) {
                                 $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
-                                $this->fetch($this->_leaveOrigin($frameurl, $URI));
+                                $this->_fetchFrame($frameurl, $URI);
                             } else {
                                 break;
                             }
@@ -341,7 +371,7 @@ class Snoopy
                     /* url was redirected, check if we've hit the max depth */
                     if ($this->maxredirs > $this->_redirectdepth) {
                         // only follow redirect if it's on this site, or offsiteok is true
-                        if ($this->_isOnSite($this->_redirectaddr) || $this->offsiteok) {
+                        if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
@@ -357,7 +387,7 @@ class Snoopy
                     while (list(, $frameurl) = each($frameurls)) {
                         if ($this->_framedepth < $this->maxframes) {
                             $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
-                            $this->fetch($this->_leaveOrigin($frameurl, $URI));
+                            $this->_fetchFrame($frameurl, $URI);
                         } else {
                             break;
                         }
@@ -418,14 +448,17 @@ class Snoopy
                 if ($this->_connect($fp)) {
                     if ($this->_isproxy) {
                         // using proxy, send entire URI
-                        $this->_httprequest($URI, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
+                        $sent = $this->_httprequest($URI, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
                     } else {
                         $path = $URI_PARTS["path"] . ($URI_PARTS["query"] ? "?" . $URI_PARTS["query"] : "");
                         // no proxy, send only the path
-                        $this->_httprequest($path, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
+                        $sent = $this->_httprequest($path, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
                     }
 
                     $this->_disconnect($fp);
+                    if (!$sent) {
+                        return false; // a timeout or an undecodable body, as the https branch reports
+                    }
 
                     if ($this->_redirectaddr) {
                         /* url was redirected, check if we've hit the max depth */
@@ -435,7 +468,7 @@ class Snoopy
                             }
 
                             // only follow redirect if it's on this site, or offsiteok is true
-                            if ($this->_isOnSite($this->_redirectaddr) || $this->offsiteok) {
+                            if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
@@ -451,7 +484,7 @@ class Snoopy
                         while (list(, $frameurl) = each($frameurls)) {
                             if ($this->_framedepth < $this->maxframes) {
                                 $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
-                                $this->fetch($this->_leaveOrigin($frameurl, $URI));
+                                $this->_fetchFrame($frameurl, $URI);
                             } else {
                                 break;
                             }
@@ -497,7 +530,7 @@ class Snoopy
                         }
 
                         // only follow redirect if it's on this site, or offsiteok is true
-                        if ($this->_isOnSite($this->_redirectaddr) || $this->offsiteok) {
+                        if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
@@ -513,7 +546,7 @@ class Snoopy
                     while (list(, $frameurl) = each($frameurls)) {
                         if ($this->_framedepth < $this->maxframes) {
                             $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
-                            $this->fetch($this->_leaveOrigin($frameurl, $URI));
+                            $this->_fetchFrame($frameurl, $URI);
                         } else {
                             break;
                         }
@@ -1020,7 +1053,12 @@ class Snoopy
             // per https://www.php.net/manual/en/function.gzencode.php
             $results = substr($results, 10);
             // Bound the decoded size too: a small compressed body can inflate to gigabytes.
-            $results = (string) gzinflate($results, $this->maxlength * 20);
+            // Past the bound, or on corrupt data, gzinflate() fails: report it, never a partial body.
+            $results = gzinflate($results, $this->maxlength * 20);
+            if (false === $results) {
+                $this->error = 'Compressed response is invalid or larger than the size limit';
+                return false;
+            }
         }
 
         if ($this->read_timeout > 0 && $this->_check_timeout($fp)) {

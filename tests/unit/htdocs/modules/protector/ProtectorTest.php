@@ -1170,6 +1170,14 @@ class ProtectorTest extends TestCase
         $this->assertSame(1, $count('see http://elsewhere.test/a'));
         $this->assertSame(0, $count("[url={$host}/page]x[/url]"));
         $this->assertSame(1, $count("[url={$host}.attacker.test]x[/url]"));
+        // the host is parsed: a userinfo part before "@" is not the host
+        $this->assertSame(1, $count("see http://{$host}:80@attacker.test/a"));
+        $this->assertSame(1, $count("[url={$host}:80@attacker.test]x[/url]"));
+        // a local link ends at a bracket, quote or white space too
+        $this->assertSame(0, $count("[url=http://{$host}]Home[/url]"));
+        $this->assertSame(0, $count("<a href=\"http://{$host}\">Home</a> or http://{$host} here"));
+        $this->assertSame(0, $count("[url=\"{$host}\"]x[/url]"));
+        $this->assertSame(1, $count('[url=www.elsewhere.test]x[/url]'));
     }
 
     #[Test]
@@ -1186,6 +1194,10 @@ class ProtectorTest extends TestCase
             file_put_contents($file, "a:0:{}\nsecond line");
             $this->assertSame("a:0:{}\nsecond line", $read->invoke(null, $file));
             $this->assertNull($read->invoke(null, $file . '.missing'));
+            // a failed lock still reads the list: taken as empty, it would lift every ban
+            $body = substr($source, (int) strpos($source, 'private static function readFileLocked('), 900);
+            $this->assertStringContainsString('$locked  = flock($fp, LOCK_SH);', $body);
+            $this->assertStringContainsString("\$content = stream_get_contents(\$fp);\n        if (\$locked) {", $body);
         } finally {
             unlink($file);
         }

@@ -376,9 +376,11 @@ class Protector
         if (false === $fp) {
             return null;
         }
-        $content = false;
-        if (flock($fp, LOCK_SH)) {
-            $content = stream_get_contents($fp);
+        // Without the lock (a filesystem that has none) the file is still read:
+        // a list taken as empty would lift every ban.
+        $locked  = flock($fp, LOCK_SH);
+        $content = stream_get_contents($fp);
+        if ($locked) {
             flock($fp, LOCK_UN);
         }
         fclose($fp);
@@ -1607,6 +1609,26 @@ class Protector
     }
 
     /**
+     * Lower-case host of a link written without its scheme ("host:port/path",
+     * or text following "http://"): the authority ends at a path, query,
+     * fragment, quote, bracket or white space, a userinfo part ("user@") is
+     * dropped and so is a port.
+     *
+     * @param string $link link text after the scheme
+     * @return string host, '' for none
+     */
+    protected static function linkHost(string $link): string
+    {
+        $authority = (string) preg_replace('#[/?\#\s\[\]"\'<>\\\\].*$#s', '', $link);
+        $at        = strrpos($authority, '@');
+        if (false !== $at) {
+            $authority = substr($authority, $at + 1);
+        }
+
+        return strtolower((string) preg_replace('#:\d*$#', '', $authority));
+    }
+
+    /**
      * @param $val
      */
     protected function _spam_check_point_recursive($val)
@@ -1620,12 +1642,12 @@ class Protector
             $path_array = parse_url(XOOPS_URL);
             $http_host  = empty($path_array['host']) ? 'www.xoops.org' : $path_array['host'];
 
-            // count URI up; a link is local only when its host IS this host
-            // (example.com.attacker.test shares the prefix but is another site)
-            $localHost = '#^' . preg_quote($http_host, '#') . '(?:[/:?\#]|$)#i';
+            // count URI up; a link is local only when its parsed host IS this host
+            // (example.com.attacker.test and example.com:80@attacker.test are other sites)
+            $localHost = strtolower($http_host);
             $count = -1;
             foreach (preg_split('#https?\:\/\/#i', $val) as $fragment) {
-                if (1 !== preg_match($localHost, $fragment)) {
+                if (self::linkHost($fragment) !== $localHost) {
                     ++$count;
                 }
             }
@@ -1633,8 +1655,14 @@ class Protector
                 $this->_spamcount_uri += $count;
             }
 
-            // count BBCode likd [url=www....] up (without [url=http://...])
-            $this->_spamcount_uri += count(preg_split('/\[url=(?!http|\\"http|\\\'http|' . preg_quote($http_host, '/') . '(?:[\/:?#\]]|$))/i', $val)) - 1;
+            // count BBCode like [url=www....] up (without [url=http://...], counted above)
+            if (preg_match_all('/\[url=\\\\?["\']?([^\]\s"\'\\\\]*)/i', $val, $targets)) {
+                foreach ($targets[1] as $target) {
+                    if (1 !== preg_match('#^https?://#i', $target) && self::linkHost($target) !== $localHost) {
+                        ++$this->_spamcount_uri;
+                    }
+                }
+            }
         }
     }
 

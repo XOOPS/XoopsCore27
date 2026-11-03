@@ -84,6 +84,20 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
     }
 
     /**
+     * Escape an option label. The other renderers print labels raw, so callers
+     * pass them already encoded ("Fish &amp; Chips"): an entity is kept, not
+     * encoded twice, while markup is still escaped.
+     *
+     * @param mixed $label option label
+     *
+     * @return string escaped label
+     */
+    protected function escLabel($label): string
+    {
+        return htmlspecialchars((string) $label, ENT_QUOTES | ENT_HTML5, 'UTF-8', false);
+    }
+
+    /**
      * Capture a form element's render() output as a string.
      *
      * XoopsFormElement::render() is empty in the base class but all concrete
@@ -270,7 +284,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             ++$idSuffix;
             $checked = $this->isOptionChecked($value, $elementValue) ? ' checked' : '';
             $inputId = $this->esc($elementId . $idSuffix);
-            $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->esc((string) $name);
+            $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->escLabel((string) $name);
             $ariaLabel = '';
             if ($type === 'radio' && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
                 $attributes = new \DOMDocument();
@@ -285,7 +299,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
                 . '<input class="' . $type . ' ' . $type . '-primary" type="' . $type . '"'
                 . self::ATTR_NAME . $this->esc($elementName) . '"'
                 . ' id="' . $inputId . '"'
-                . self::ATTR_TITLE_LEAD . $this->esc(strip_tags((string) $name)) . '"'
+                . self::ATTR_TITLE_LEAD . $this->escLabel(strip_tags((string) $name)) . '"'
                 . self::ATTR_VALUE . $this->esc($value) . '"'
                 . $checked . $ariaLabel . $extra . '>'
                 . '<span class="label-text">' . $labelHtml . $delimiter . '</span>'
@@ -340,7 +354,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             }
         }
 
-        return $this->esc($label);
+        return $this->escLabel($label);
     }
 
     /**
@@ -663,7 +677,7 @@ EOJS;
         foreach ($options as $optValue => $optName) {
             $selected = in_array((string) $optValue, $valueStrings, true) ? ' selected' : '';
             $ret .= '<option value="' . $this->esc($optValue) . '"' . $selected . '>'
-                . $this->esc($optName) . '</option>';
+                . $this->escLabel($optName) . '</option>';
         }
         $ret .= '</select>';
 

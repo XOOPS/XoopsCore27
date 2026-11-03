@@ -74,6 +74,11 @@ $uid = !empty($_SESSION['profile_register_uid']) ? (int) $_SESSION['profile_regi
 if ($current_step > 0 && !$GLOBALS['xoopsSecurity']->check()) {
     redirect_header('user.php', 5, _PROFILE_MA_EXPIRED);
 }
+// A POST completes the form this session rendered last (step N posts form N-1):
+// the posted number cannot skip ahead to fields of a step never shown.
+if ($current_step > 0 && $current_step > (int) ($_SESSION['profile_register_shown'] ?? -1) + 1) {
+    redirect_header('register.php', 5, _PROFILE_MA_EXPIRED);
+}
 
 $criteria = new CriteriaCompo();
 $criteria->setSort('step_order');
@@ -360,6 +365,9 @@ if ($current_step > 0 && empty($stop) && (!empty($steps[$current_step - 1]['step
 if (!empty($stop) || isset($steps[$current_step])) {
     include_once __DIR__ . '/include/forms.php';
     $current_step = empty($stop) ? $current_step : $current_step - 1;
+    // Furthest form shown in this flow; step 0 starts a new flow.
+    $_SESSION['profile_register_shown'] = 0 === $current_step
+        ? 0 : max($current_step, (int) ($_SESSION['profile_register_shown'] ?? 0));
     $reg_form     = profile_getRegisterForm($newuser, $profile, $steps[$current_step]);
     $reg_form->assign($GLOBALS['xoopsTpl']);
     $GLOBALS['xoopsTpl']->assign('current_step', $current_step);

@@ -77,7 +77,11 @@ if (empty($xoopsOption['hascommon'])) {
     } elseif ('POST' === ($_SERVER['REQUEST_METHOD'] ?? '')) {
         // Every wizard step that takes credentials is a POST: a session id
         // planted in the operator's browser stops working before any of them is stored.
-        session_regenerate_id(true);
+        // No step runs on a session id that could not be replaced.
+        if (!session_regenerate_id(true)) {
+            http_response_code(500);
+            exit('The installer could not renew its session. Check the PHP session settings, then reload this page.');
+        }
     }
 }
 

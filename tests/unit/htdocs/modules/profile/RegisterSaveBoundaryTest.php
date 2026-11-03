@@ -45,6 +45,29 @@ final class RegisterSaveBoundaryTest extends TestCase
     }
 
     #[Test]
+    public function onlyFieldsOfStepsAlreadyShownAreWrittenFromTheRequest(): void
+    {
+        // Evaluate the real line against three steps: step N posts after steps 0..N-1.
+        preg_match('/^\$reachedStepIds = .*;$/m', $this->sourceContent, $m);
+        self::assertNotEmpty($m, 'register.php computes the reached step ids');
+        $steps = [['step_id' => '4'], ['step_id' => '7'], ['step_id' => '9']];
+        $reached = static function (int $current_step) use ($steps, $m): array {
+            $reachedStepIds = null;
+            eval($m[0]);
+
+            return $reachedStepIds;
+        };
+        self::assertSame([], $reached(0), 'the first form has not been posted yet');
+        self::assertSame([4], $reached(1));
+        self::assertSame([4, 7], $reached(2));
+        self::assertSame([4, 7, 9], $reached(3));
+        self::assertNotContains(0, $reached(3), 'a field on no registration step is never accepted');
+
+        $loop = $this->between("foreach (array_keys(\$fields) as \$field) {", 'continue;');
+        self::assertStringContainsString("!in_array((int) \$fields[\$field]->getVar('step_id'), \$reachedStepIds, true)", $loop);
+    }
+
+    #[Test]
     public function stepOneRecordsItsOutcomeAndStepZeroResetsIt(): void
     {
         $stepOne = $this->between("if (\$current_step == 1) {", '// If the last step required SAVE');

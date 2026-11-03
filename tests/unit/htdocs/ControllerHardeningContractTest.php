@@ -337,7 +337,7 @@ final class ControllerHardeningContractTest extends TestCase
     {
         return [
             'own edit'     => ['modules/profile/edituser.php', 'if (in_array($fieldname, $protected, true)) { continue; }'],
-            'registration' => ['modules/profile/register.php', "if (!Request::hasVar(\$field, 'POST') || in_array(\$field, \$protected, true)) { continue; }"],
+            'registration' => ['modules/profile/register.php', "if (!Request::hasVar(\$field, 'POST') || in_array(\$field, \$protected, true) || !in_array((int) \$fields[\$field]->getVar('step_id'), \$reachedStepIds, true)) { continue; }"],
             'reg defaults' => ['modules/profile/register.php', "if (in_array(\$fieldname, \$userfields) && !in_array(\$fieldname, \$protected, true)) {"],
         ];
     }

@@ -64,6 +64,15 @@ try {
         'emailcode' => $handler->acceptEmailCode($job['uid'], $job['code'], $job['generation'], $job['now']),
         'failure' => $handler->recordFailure($job['uid'], $job['now'], $job['generation']),
         'reset' => $handler->disable($job['uid']),
+        // Sign-in rehash: the hash was verified before the barrier, as loginUser() reads it first.
+        'rehash' => testUserHandler($db)->replacePasswordHash($job['uid'], $job['verified'], $job['new']),
+        // A password reset committing at the same moment.
+        'setpass' => $db->exec(sprintf(
+            'UPDATE `%s` SET pass = %s WHERE uid = %d',
+            $db->prefix('users'),
+            $db->quote($job['new']),
+            $job['uid']
+        )),
         'key' => (static function (): string|false {
             $crypto = testCrypto('concurrent');
             $key    = $crypto->provisionKey(false) ? $crypto->loadKey() : null;

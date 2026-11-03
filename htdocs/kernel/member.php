@@ -463,12 +463,19 @@ class XoopsMemberHandler
                     'current_length' => $columnLength
                 ]);
             } else {
-                $newHash = password_hash($pwd, PASSWORD_DEFAULT);
-                $user->setVar('pass', $newHash);
-                if (!$this->userHandler->insert($user)) {
-                    // The row still holds the verified hash; keep the object in step with it so
-                    // a digest taken from the object (the two-factor challenge) matches the row.
-                    $user->setVar('pass', $hash);
+                $newHash  = password_hash($pwd, PASSWORD_DEFAULT);
+                $replaced = $this->userHandler->replacePasswordHash((int) $user->getVar('uid'), (string) $hash, $newHash);
+                if (true === $replaced) {
+                    // Keep the object in step with the row: a digest taken from it
+                    // (the two-factor challenge) must match.
+                    $user->setVar('pass', $newHash);
+                } elseif (false === $replaced) {
+                    // The password changed after it was verified (a reset): the old one is no longer valid.
+                    $this->logSecurityEvent('Password changed during sign-in', ['uid' => (int) $user->getVar('uid')]);
+
+                    return false;
+                } else {
+                    // The row still holds the verified hash; sign in without the upgrade.
                     $this->logSecurityEvent('Password rehash not persisted', ['uid' => (int) $user->getVar('uid')]);
                 }
             }

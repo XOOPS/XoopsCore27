@@ -128,6 +128,67 @@ final class LoginSessionBehaviourTest extends TestCase
         self::assertNotContains('event:core.behavior.user.login:uid=5', $GLOBALS['sandboxLog']);
     }
 
+    /** @return array<string, array{array<string, string>, bool}> headers => refused */
+    public static function signInRequestHeaders(): array
+    {
+        return [
+            'no browser headers (non-browser client)'          => [[], false],
+            'Sec-Fetch-Site same-origin'                       => [['HTTP_SEC_FETCH_SITE' => 'same-origin'], false],
+            'Sec-Fetch-Site none (typed address)'              => [['HTTP_SEC_FETCH_SITE' => 'none'], false],
+            'Sec-Fetch-Site same-origin, Origin null'          => [['HTTP_SEC_FETCH_SITE' => 'same-origin', 'HTTP_ORIGIN' => 'null'], false],
+            'Sec-Fetch-Site cross-site, Origin forged'         => [['HTTP_SEC_FETCH_SITE' => 'cross-site', 'HTTP_ORIGIN' => 'http://localhost'], true],
+            'Sec-Fetch-Site same-site (sibling host)'          => [['HTTP_SEC_FETCH_SITE' => 'same-site'], true],
+            'Origin null, no Referer (sandboxed frame)'        => [['HTTP_ORIGIN' => 'null'], true],
+            'Origin null, same-site Referer'                   => [['HTTP_ORIGIN' => 'null', 'HTTP_REFERER' => 'http://localhost/user.php'], true],
+            'Origin of this site'                              => [['HTTP_ORIGIN' => 'http://localhost'], false],
+            'Origin of another site'                           => [['HTTP_ORIGIN' => 'http://evil.test'], true],
+            'Origin sharing a prefix'                          => [['HTTP_ORIGIN' => 'http://localhost.evil.test'], true],
+            'Referer only, this site'                          => [['HTTP_REFERER' => 'http://localhost/user.php'], false],
+            'Referer only, another site'                       => [['HTTP_REFERER' => 'http://evil.test/'], true],
+        ];
+    }
+
+    /**
+     * Every browser sign-in (user.php, the popup, two-factor reauthentication)
+     * passes through xoops_login_authenticate(): a forged cross-site POST stops
+     * there, before any provider is asked.
+     *
+     * @param array<string, string> $headers
+     */
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    #[\PHPUnit\Framework\Attributes\DataProvider('signInRequestHeaders')]
+    public function aCrossSiteSignInIsRefusedBeforeAnyProviderIsAsked(array $headers, bool $refused): void
+    {
+        foreach (['HTTP_SEC_FETCH_SITE', 'HTTP_ORIGIN', 'HTTP_REFERER'] as $name) {
+            unset($_SERVER[$name]);
+        }
+        $_SERVER = $headers + $_SERVER;
+        // same scheme, host and port as XOOPS_URL (http://localhost)
+        $GLOBALS['xoopsSecurity'] = new class {
+            public function isSameOrigin(string $url): bool
+            {
+                $p = parse_url($url);
+
+                return is_array($p) && ($p['scheme'] ?? '') === 'http' && ($p['host'] ?? '') === 'localhost' && (int) ($p['port'] ?? 80) === 80;
+            }
+        };
+        $GLOBALS['sandboxAuthResult'] = false;
+
+        self::assertFalse((self::NS . '\\xoops_login_authenticate')('alice', 'pw'));
+        self::assertSame($refused ? [] : ['loadLanguage:auth', 'authenticate:alice'], $GLOBALS['sandboxLog']);
+    }
+
+    #[Test]
+    public function everyBrowserSignInPathUsesTheCheckedAuthenticator(): void
+    {
+        $root = dirname(__DIR__, 4);
+        foreach (['htdocs/include/checklogin.php', 'extras/login.php', 'htdocs/include/twofactor.php'] as $file) {
+            self::assertStringContainsString('xoops_login_authenticate(', (string) file_get_contents($root . '/' . $file), $file);
+        }
+    }
+
     #[Test]
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]

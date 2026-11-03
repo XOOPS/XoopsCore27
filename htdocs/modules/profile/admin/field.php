@@ -194,8 +194,12 @@ switch ($op) {
                 redirect_header('admin.php', 2, _PROFILE_AM_FIELDNOTCONFIGURABLE);
             }
         } else {
+            $fieldName = Request::getCmd('field_name', '', 'POST');
+            if (in_array(strtolower($fieldName), $profilefield_handler->getAccountControlVars(), true)) {
+                redirect_header('field.php', 2, _PROFILE_AM_FIELDNOTCONFIGURABLE);
+            }
             $obj = $profilefield_handler->create();
-            $obj->setVar('field_name', Request::getCmd('field_name', '', 'POST'));
+            $obj->setVar('field_name', $fieldName);
             $obj->setVar('field_moduleid', $GLOBALS['xoopsModule']->getVar('mid'));
             $obj->setVar('field_show', 1);
             $obj->setVar('field_edit', 1);
@@ -222,7 +226,8 @@ switch ($op) {
             $addOption = Request::getArray('addOption', [], 'POST');
             if (!empty($addOption)) {
                 foreach ($addOption as $option) {
-                    if (empty($option['value'])) {
+                    if (!is_array($option) || !is_scalar($option['key'] ?? '') || !is_scalar($option['value'] ?? null)
+                        || empty($option['value'])) {
                         continue;
                     }
                     $options[$option['key']] = $option['value'];
@@ -326,7 +331,11 @@ switch ($op) {
         if (!is_object($obj)) {
             redirect_header('field.php', 2, _PROFILE_AM_FIELDNOTCONFIGURABLE);
         }
-        $fieldOptions = Request::getArray('field_options', [], 'POST');
+        // Only keys the field already has, with text values: a nested array cannot be stored.
+        $fieldOptions = array_intersect_key(
+            array_filter(Request::getArray('field_options', [], 'POST'), 'is_scalar'),
+            (array) $obj->getVar('field_options')
+        );
         if (empty($fieldOptions)) { //If no option strings exist
             redirect_header('field.php', 2, _PROFILE_AM_FIELDNOTCONFIGURABLE);
         }

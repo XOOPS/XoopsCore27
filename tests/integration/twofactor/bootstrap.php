@@ -56,6 +56,21 @@ function testCrypto(string $subdirectory = 'data'): XoopsTwoFactorCrypto
     return new XoopsTwoFactorCrypto(new Xmf\Key\FileStorage($directory, $systemSecret), $directory . '/twofactor.lock');
 }
 
+/**
+ * The real user handler on the disposable connection. Its parent constructor
+ * asks XoopsDatabaseFactory for the site's connection, so it is bypassed.
+ */
+function testUserHandler(XoopsMySQLDatabase $db): XoopsUserHandler
+{
+    require_once XOOPS_ROOT_PATH . '/kernel/object.php';
+    require_once XOOPS_ROOT_PATH . '/kernel/user.php';
+    $handler        = (new ReflectionClass(XoopsUserHandler::class))->newInstanceWithoutConstructor();
+    $handler->db    = $db;
+    $handler->table = $db->prefix('users');
+
+    return $handler;
+}
+
 function check(bool $condition, string $message): void
 {
     if (!$condition) {

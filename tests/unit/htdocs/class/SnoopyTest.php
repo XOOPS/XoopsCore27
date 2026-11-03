@@ -201,6 +201,47 @@ class SnoopyTest extends TestCase
     }
 
     #[Test]
+    public function aSameSiteRedirectIsTheExactHostNotAPrefix(): void
+    {
+        $s       = new \Snoopy();
+        $s->host = 'example.com';
+        $this->assertTrue($s->_isOnSite('http://example.com/next'));
+        $this->assertTrue($s->_isOnSite('https://EXAMPLE.com:8443/next'));
+        $this->assertFalse($s->_isOnSite('http://example.com.attacker.test/'));
+        $this->assertFalse($s->_isOnSite('http://example.com@attacker.test/'));
+        $this->assertFalse($s->_isOnSite('ftp://example.com/'));
+        $this->assertFalse($s->_isOnSite('/relative'));
+    }
+
+    #[Test]
+    public function aUriWithControlCharactersIsNeverSent(): void
+    {
+        foreach (["http://x.test/a\r\nX-Injected: 1", "http://x.test/\n", "http://x.test/\x00", "http://x.test/\x7f"] as $uri) {
+            $s = new \Snoopy();
+            $this->assertFalse($s->fetch($uri), bin2hex($uri));
+            $this->assertSame('Invalid URI', $s->error);
+            $s = new \Snoopy();
+            $this->assertFalse($s->submit($uri, ['a' => 'b']), bin2hex($uri));
+        }
+        $this->assertFalse((new \Snoopy())->_hasControlChars('http://x.test/a%0D%0Ab?q=1 2'));
+    }
+
+    #[Test]
+    public function framesCountTheirDepthFirstAndLeaveTheOriginsCredentials(): void
+    {
+        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/snoopy.php');
+        $this->assertSame(0, substr_count($source, '$this->fetch($frameurl);'), 'no frame is fetched with the parent origin\'s credentials');
+        $this->assertSame(4, preg_match_all(
+            '/\$this->_framedepth\+\+;[^\n]*\n\s*\$this->fetch\(\$this->_leaveOrigin\(\$frameurl, \$URI\)\);/',
+            $source
+        ), 'depth is counted before recursing, in all four frame loops');
+        $marker = strpos($source, 'function _expandlinks');
+        $this->assertNotFalse($marker, 'the redirect checks are looked up before _expandlinks()');
+        $this->assertStringNotContainsString('preg_quote($this->host)', substr($source, 0, $marker));
+        $this->assertStringContainsString('gzinflate($results, $this->maxlength * 20)', $source);
+    }
+
+    #[Test]
     public function snoopySourceDoesNotContainShellExec(): void
     {
         $source = file_get_contents(XOOPS_ROOT_PATH . '/class/snoopy.php');

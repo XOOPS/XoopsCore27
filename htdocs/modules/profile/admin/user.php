@@ -110,7 +110,8 @@ switch ($op) {
             if (count($fields) > 0) {
                 foreach (array_keys($fields) as $i) {
                     $fieldname = $fields[$i]->getVar('field_name');
-                    if (in_array($fieldname, $userfields)) {
+                    if (in_array($fieldname, $userfields)
+                        && !in_array($fieldname, $profile_handler->_fHandler->getAccountControlVars(), true)) {
                         $default = $fields[$i]->getVar('field_default');
                         if ($default === '' || $default === null) {
                             continue;
@@ -146,8 +147,13 @@ switch ($op) {
             $errors[] = $stop;
         }
 
+        // uname, email, level and pass are set (and validated) above; a field of that name must not override them.
+        $accountVars = $profile_handler->_fHandler->getAccountControlVars();
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
+            if (in_array($fieldname, $accountVars, true)) {
+                continue;
+            }
             if (in_array($fields[$i]->getVar('field_id'), $editable_fields) && Request::hasVar($fieldname, 'POST')) {
                 $fieldValue = Request::getVar($fieldname, null, 'POST');
                 if (in_array($fieldname, $userfields)) {

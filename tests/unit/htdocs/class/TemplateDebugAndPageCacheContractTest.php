@@ -73,6 +73,17 @@ final class TemplateDebugAndPageCacheContractTest extends TestCase
     }
 
     #[Test]
+    public function aCachedBlockIsKeyedByTheMemberNotOnlyTheGroups(): void
+    {
+        $source = self::source('class/theme_blocks.php');
+        self::assertStringContainsString(
+            "'blk_' . \$xobject->getVar('bid') . (\$member instanceof XoopsUser ? '-u' . (int) \$member->getVar('uid') : '')",
+            $source
+        );
+        self::assertStringNotContainsString("\$this->generateCacheId('blk_' . \$xobject->getVar('bid'));", $source);
+    }
+
+    #[Test]
     public function thePrivateMessageReaderIsNeverPageCached(): void
     {
         $source  = self::source('modules/pm/readpmsg.php');
@@ -81,5 +92,16 @@ final class TemplateDebugAndPageCacheContractTest extends TestCase
         self::assertNotFalse($disable);
         self::assertNotFalse($header);
         self::assertLessThan($header, $disable, 'caching is off before header.php checks the cache');
+    }
+
+    #[Test]
+    public function aMessageIsMarkedReadOnlyWhenShownAsAPage(): void
+    {
+        $source = self::source('modules/pm/readpmsg.php');
+        $gate   = strpos($source, "if (('' === \$fetchDest || 'document' === \$fetchDest)");
+        self::assertNotFalse($gate, 'an embedded cross-site load must not mark the message read');
+        self::assertStringContainsString("\$fetchDest = strtolower((string) xoops_getenv('HTTP_SEC_FETCH_DEST'));", $source);
+        self::assertSame(1, substr_count($source, '$pm_handler->setRead($pm);'));
+        self::assertGreaterThan($gate, strpos($source, '$pm_handler->setRead($pm);'));
     }
 }

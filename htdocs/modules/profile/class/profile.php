@@ -295,6 +295,10 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
     public function search(CriteriaElement $criteria, $searchvars = [], $groups = null)
     {
         $uservars = $this->getUserVars();
+        // Never select credentials (pass, actkey) or authority through a configured field.
+        // A request for those columns only selects the base columns, never the u.*, p.* fallback.
+        $requested  = !empty($searchvars);
+        $searchvars = array_diff($searchvars, $this->_fHandler->getAccountControlVars());
 
         $searchvars_user    = array_intersect($searchvars, $uservars);
         $searchvars_profile = array_diff($searchvars, $uservars);
@@ -306,7 +310,7 @@ class ProfileProfileHandler extends XoopsPersistableObjectHandler
             $sv[] = 'p.' . implode(', p.', $searchvars_profile);
         }
 
-        $sql_select = 'SELECT ' . (empty($searchvars) ? 'u.*, p.*' : implode(', ', $sv));
+        $sql_select = 'SELECT ' . ($requested ? implode(', ', $sv) : 'u.*, p.*');
         $sql_from   = ' FROM ' . $this->db->prefix('users') . ' AS u LEFT JOIN ' . $this->table . ' AS p ON u.uid=p.profile_id' . (empty($groups) ? '' : ' LEFT JOIN ' . $this->db->prefix('groups_users_link') . ' AS g ON u.uid=g.uid');
         $sql_clause = ' WHERE 1=1';
         $sql_order  = '';

@@ -167,8 +167,12 @@ if ($current_step == 0) {
 }
 
 // Set vars from $_POST/$_SESSION['profile_post']
+// Only fields of the steps this visitor has been shown (step N posts after steps 0..N-1):
+// a field on no registration step, or on a later one, is never written from the request.
+$reachedStepIds = array_map('intval', array_column(array_slice($steps, 0, max(0, $current_step)), 'step_id'));
 foreach (array_keys($fields) as $field) {
-    if (!Request::hasVar($field, 'POST') || in_array($field, $protected, true)) {
+    if (!Request::hasVar($field, 'POST') || in_array($field, $protected, true)
+        || !in_array((int) $fields[$field]->getVar('step_id'), $reachedStepIds, true)) {
         continue;
     }
 

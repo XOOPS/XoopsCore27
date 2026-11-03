@@ -74,6 +74,10 @@ if (empty($xoopsOption['hascommon'])) {
         if (session_regenerate_id(true)) {
             $_SESSION['installer_secure_cookie'] = true; // else retried next request
         }
+    } elseif ('POST' === ($_SERVER['REQUEST_METHOD'] ?? '')) {
+        // Every wizard step that takes credentials is a POST: a session id
+        // planted in the operator's browser stops working before any of them is stored.
+        session_regenerate_id(true);
     }
 }
 

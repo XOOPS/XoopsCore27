@@ -1035,17 +1035,55 @@ class XoopsMemberHandlerTest extends TestCase
 
         $this->userHandler->method('getObjects')
                           ->willReturn([$user]);
-        // With column length 255, it should upgrade the hash
+        // With column length 255, it should upgrade the hash, swapping only the verified one
         $user->expects($this->once())
              ->method('setVar')
-             ->with('pass', $this->callback(function ($v) { return is_string($v); }));
+             ->with('pass', $this->callback(function ($v) { return is_string($v) && str_starts_with($v, '$'); }));
+        $this->userHandler->expects($this->never())->method('insert');
         $this->userHandler->expects($this->once())
-                          ->method('insert')
-                          ->with($user)
+                          ->method('replacePasswordHash')
+                          ->with(1, $hash, $this->callback(static fn($v): bool => password_verify($password, $v)))
                           ->willReturn(true);
 
         $result = $partialHandler->loginUser('legacyuser', $password);
         $this->assertSame($user, $result);
+    }
+
+    public function testLoginUserFailsWhenPasswordChangedBeforeRehash(): void
+    {
+        $password = 'legacy_password';
+        $hash     = md5($password);
+
+        $user = $this->createMock(XoopsUser::class);
+        $user->method('pass')
+             ->willReturn($hash);
+        $user->method('getVar')
+             ->willReturn(1);
+
+        $partialHandler = $this->getMockBuilder(XoopsMemberHandler::class)
+                               ->disableOriginalConstructor()
+                               ->onlyMethods(['getColumnCharacterLength'])
+                               ->getMock();
+        $partialHandler->method('getColumnCharacterLength')
+                       ->willReturn(255);
+
+        $this->setProtectedProperty($partialHandler, 'userHandler', $this->userHandler);
+        $this->setProtectedProperty($partialHandler, 'membershipHandler', $this->membershipHandler);
+        $this->setProtectedProperty($partialHandler, 'membersWorkingList', []);
+
+        $this->userHandler->method('getObjects')
+                          ->willReturn([$user]);
+        // a password reset committed between the read and the swap: no row still holds $hash
+        $this->userHandler->method('replacePasswordHash')->willReturn(false);
+        $user->expects($this->never())->method('setVar');
+
+        $previous             = $GLOBALS['xoopsUser'] ?? null;
+        $GLOBALS['xoopsUser'] = '';
+        try {
+            $this->assertFalse($partialHandler->loginUser('legacyuser', $password));
+        } finally {
+            $GLOBALS['xoopsUser'] = $previous;
+        }
     }
 
     public function testLoginUserRestoresStoredHashWhenRehashWriteFails(): void
@@ -1073,17 +1111,11 @@ class XoopsMemberHandlerTest extends TestCase
         $this->userHandler->method('getObjects')
                           ->willReturn([$user]);
         $this->userHandler->expects($this->once())
-                          ->method('insert')
-                          ->with($user)
-                          ->willReturn(false);
+                          ->method('replacePasswordHash')
+                          ->willReturn(null);
 
-        // the new hash is set, then the stored one is put back so the object matches the row
-        $setVarCalls = [];
-        $user->expects($this->exactly(2))
-             ->method('setVar')
-             ->willReturnCallback(function ($key, $value) use (&$setVarCalls) {
-                 $setVarCalls[] = [$key, $value];
-             });
+        // the write failed: the object keeps the stored hash, which still matches the row
+        $user->expects($this->never())->method('setVar');
 
         // the security log runs while the visitor is still a guest: common.php seeds '' here
         $previous             = $GLOBALS['xoopsUser'] ?? null;
@@ -1093,9 +1125,6 @@ class XoopsMemberHandlerTest extends TestCase
         } finally {
             $GLOBALS['xoopsUser'] = $previous;
         }
-        $this->assertSame('pass', $setVarCalls[0][0]);
-        $this->assertStringStartsWith('$', $setVarCalls[0][1]);
-        $this->assertSame(['pass', $hash], $setVarCalls[1]);
     }
 
     public function testLoginUserWithWrongPasswordReturnsFalse(): void

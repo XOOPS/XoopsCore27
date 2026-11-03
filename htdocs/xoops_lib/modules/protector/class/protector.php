@@ -358,11 +358,40 @@ class Protector
     }
 
     /**
+     * Read a file under a shared lock.
+     *
+     * Pairs with writeFileInPlace(): that fallback truncates and rewrites under
+     * an exclusive lock, so a reader holding a shared lock never sees the
+     * emptied or half-written file in between.
+     *
+     * @param string $path file to read
+     * @return string|null its content, null when it cannot be opened, locked or read
+     */
+    private static function readFileLocked(string $path): ?string
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+        $fp = fopen($path, 'r');
+        if (false === $fp) {
+            return null;
+        }
+        $content = false;
+        if (flock($fp, LOCK_SH)) {
+            $content = stream_get_contents($fp);
+            flock($fp, LOCK_UN);
+        }
+        fclose($fp);
+
+        return false === $content ? null : $content;
+    }
+
+    /**
      * Replace a file's contents in place under an exclusive lock.
      *
      * The fallback for a directory that refuses new files, such as a document
      * root PHP may not write to that holds a writable .htaccess: the ban still
-     * applies, but a reader that takes no lock can briefly see a partial file,
+     * applies, a reader of the ban list takes a shared lock (readFileLocked()),
      * and a write that fails after truncation can leave the file empty or
      * partial instead of keeping the old content. Every step is checked; the
      * caller holds the error handler.
@@ -557,9 +586,10 @@ class Protector
         $bad_ips_serialized = null;
         $filepath = Protector::get_filepath4badips();
         if (file_exists($filepath)) {
-            $filepath4badips = file($filepath);
-            if (is_array($filepath4badips) && isset($filepath4badips[0])) {
-                [$bad_ips_serialized] = $filepath4badips;
+            // Shared lock: the in-place fallback writer truncates under LOCK_EX.
+            $content = self::readFileLocked($filepath);
+            if (null !== $content && '' !== $content) {
+                $bad_ips_serialized = strtok($content, "\n");
             }
         }
         // trim() required: write_file_badips() appends "\n" after the serialized payload
@@ -1305,16 +1335,14 @@ class Protector
             return false;
         }
 
-        $query = '';
-        $query .= (empty($ip)) ? '' : '&ip=' . $ip;
-        $query .= (empty($email)) ? '' : '&email=' . $email;
-        $query .= (empty($username)) ? '' : '&username=' . $username;
-
-        if (empty($query)) {
+        // Encoded per parameter: an email holding "#" or "&" must not cut off or add parameters.
+        $params = array_filter(['ip' => $ip, 'email' => $email, 'username' => $username], static fn($v): bool => !empty($v));
+        if ([] === $params) {
             return false;
         }
 
-        $url = 'http://www.stopforumspam.com/api?f=json' . $query;
+        // HTTPS: the identifiers are personal data, and the verdict must not be replaceable in transit.
+        $url = 'https://www.stopforumspam.com/api?f=json&' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
         $ch  = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -1592,10 +1620,12 @@ class Protector
             $path_array = parse_url(XOOPS_URL);
             $http_host  = empty($path_array['host']) ? 'www.xoops.org' : $path_array['host'];
 
-            // count URI up
+            // count URI up; a link is local only when its host IS this host
+            // (example.com.attacker.test shares the prefix but is another site)
+            $localHost = '#^' . preg_quote($http_host, '#') . '(?:[/:?\#]|$)#i';
             $count = -1;
             foreach (preg_split('#https?\:\/\/#i', $val) as $fragment) {
-                if (0 !== strncmp($fragment, $http_host, strlen($http_host))) {
+                if (1 !== preg_match($localHost, $fragment)) {
                     ++$count;
                 }
             }
@@ -1604,7 +1634,7 @@ class Protector
             }
 
             // count BBCode likd [url=www....] up (without [url=http://...])
-            $this->_spamcount_uri += count(preg_split('/\[url=(?!http|\\"http|\\\'http|' . $http_host . ')/i', $val)) - 1;
+            $this->_spamcount_uri += count(preg_split('/\[url=(?!http|\\"http|\\\'http|' . preg_quote($http_host, '/') . '(?:[\/:?#\]]|$))/i', $val)) - 1;
         }
     }
 

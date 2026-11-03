@@ -237,10 +237,11 @@ class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFo
         $toolbar = new \XoopsDhtmlToolbar();
         $ret .= $toolbar->render($element) . "<br>\n";
         // the textarea box
+        $savePosition = $this->jsHandler('xoopsSavePosition', [$element->getName(false)]);
         $ret .= "<textarea class='form-control' id='" . $element->getName() . "' name='" . $element->getName()
-            . "' title='" . $element->getTitle() . "' onselect=\"xoopsSavePosition('" . $element->getName()
-            . "');\" onclick=\"xoopsSavePosition('" . $element->getName()
-            . "');\" onkeyup=\"xoopsSavePosition('" . $element->getName() . "');\" cols='"
+            . "' title='" . $element->getTitle() . "' onselect=\"" . $savePosition
+            . "\" onclick=\"" . $savePosition
+            . "\" onkeyup=\"" . $savePosition . "\" cols='"
             . $element->getCols() . "' rows='" . $element->getRows() . "'" . $element->getExtra()
             . '>' . $this->escapeElementValue($element->getValue()) . "</textarea>\n";
 
@@ -253,9 +254,13 @@ class XoopsFormRendererBootstrap3 implements XoopsFormRendererInterface, XoopsFo
                     ['type' => 'text/javascript'],
                 );
             }
-            $button = "<button type='button' class='btn btn-primary' onclick=\"form_instantPreview('" . XOOPS_URL
-                . "', '" . $element->getName() . "','" . XOOPS_URL . "/images', " . (int) $element->doHtml . ", '"
-                . $GLOBALS['xoopsSecurity']->createToken() . "')\" title='" . _PREVIEW . "'>" . _PREVIEW . "</button>";
+            $button = "<button type='button' class='btn btn-primary' onclick=\"" . $this->jsHandler('form_instantPreview', [
+                XOOPS_URL,
+                $element->getName(false),
+                XOOPS_URL . '/images',
+                (int) $element->doHtml,
+                (string) $GLOBALS['xoopsSecurity']->createToken(),
+            ]) . "\" title='" . _PREVIEW . "'>" . _PREVIEW . "</button>";
 
             $ret .= '<br>' . "<div id='" . $element->getName() . "_hidden' style='display: block;'> "
                 . '   <fieldset>' . '       <legend>' . $button . '</legend>'
@@ -616,7 +621,7 @@ EOJS;
             . '" size="' . $element->getSize() . '" maxlength="' . $element->getMaxlength()
             . '" value="' . htmlspecialchars((string) $display_value, ENT_QUOTES, 'UTF-8') . '"' . $element->getExtra() . ' />'
             . '<span class="input-group-btn"><button class="btn btn-default" type="button"'
-            . ' onclick="return showCalendar(\'' . $ele_name . '\');">'
+            . ' onclick="' . $this->jsHandler('showCalendar', [$element->getName(false)], 'return ') . '">'
             . '<span class="fa-solid fa-calendar" aria-hidden="true"></span>&nbsp;</button>'
             . '</span>'
             . '</div>';

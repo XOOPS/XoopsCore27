@@ -494,7 +494,16 @@ switch ($op) {
             // handler read the old value); null leaves it to the protocol.
             // HttpOnly on.
             $sessionSecure = (Request::getInt('session_cookie_secure', 0, 'POST') === 1 || session_get_cookie_params()['secure']) ? true : null;
-            xoops_setcookie($new_session_name, session_id(), time() + (60 * $new_session_expire), '/', XOOPS_COOKIE_DOMAIN, $sessionSecure, true);
+            // SameSite likewise: as saved in this request, else as the handler applied it.
+            $sessionSameSite = Request::getString('session_cookie_samesite', '', 'POST');
+            if (!in_array($sessionSameSite, ['Lax', 'Strict', 'None'], true)) {
+                $sessionSameSite = (string) (session_get_cookie_params()['samesite'] ?? '');
+                $sessionSameSite = in_array($sessionSameSite, ['Lax', 'Strict', 'None'], true) ? $sessionSameSite : 'Lax';
+            }
+            if ('None' === $sessionSameSite) {
+                $sessionSecure = true; // browsers drop SameSite=None without Secure
+            }
+            xoops_setcookie($new_session_name, session_id(), time() + (60 * $new_session_expire), '/', XOOPS_COOKIE_DOMAIN, $sessionSecure, true, $sessionSameSite);
         }
 
         // Clean cached files, may take long time

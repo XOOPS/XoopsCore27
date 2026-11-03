@@ -78,7 +78,8 @@ EOH;
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->patterns[] = "/\[mms=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/mms\]/sU";
+        // No [ ] < > in any group: later BBCode would otherwise expand inside the attributes.
+        $myts->patterns[] = "/\[mms=(['\"]?)([^\"'<>\[\]]*),([^\"'<>\[\]]*)\\1]([^\"'<>\[\]]*)\[\/mms\]/sU";
         $rp             = "<OBJECT id=videowindow1 height='\\3' width='\\2' classid='CLSID:6BF52A52-394A-11D3-B153-00C04F79FAA6'>";
         $rp .= "<PARAM NAME=\"URL\" VALUE=\"\\4\">";
         $rp .= "<PARAM NAME=\"rate\" VALUE=\"1\">";

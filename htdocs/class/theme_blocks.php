@@ -185,7 +185,13 @@ class xos_logos_PageBuilder
         }
         $template->setCompileId($xobject->getVar('dirname', 'n'));
         $tplName = ($tplName = $xobject->getVar('template')) ? "db:$tplName" : 'db:system_block_dummy.tpl';
-        $cacheid = $this->generateCacheId('blk_' . $xobject->getVar('bid'));
+        // A member's copy is their own: blocks such as the User Menu show account data
+        // (unread messages) that the group key alone would hand to every member.
+        // ponytail: one cache entry per member per cached block; guests still share one.
+        $member  = $GLOBALS['xoopsUser'] ?? null;
+        $cacheid = $this->generateCacheId(
+            'blk_' . $xobject->getVar('bid') . ($member instanceof XoopsUser ? '-u' . (int) $member->getVar('uid') : '')
+        );
         // The theme switches caching off when no usable cache-id key exists:
         // then skip the block's cached metas too, not only its Smarty cache.
         if (!$template->caching) {

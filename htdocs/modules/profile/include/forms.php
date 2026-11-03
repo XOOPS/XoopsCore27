@@ -142,7 +142,8 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 $remove_options->columns = 3;
                 asort($options);
                 foreach (array_keys($options) as $key) {
-                    $options[$key] .= "[{$key}]";
+                    // Checkbox labels are emitted raw: encode the stored text and its key.
+                    $options[$key] = htmlspecialchars($options[$key] . "[{$key}]", ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
                 $remove_options->addOptionArray($options);
                 $form->addElement($remove_options);
@@ -181,7 +182,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                     $def_value = unserialize($rawDefault, ['allowed_classes' => false]) ?: [];
                 }
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value, 8, true);
-                $options   = $field->getVar('field_options');
+                $options   = profile_encodeOptionLabels($field->getVar('field_options'));
                 asort($options);
                 // If options do not include an empty element, then add a blank option to prevent any default selection
                 //                if (!in_array('', array_keys($options))) {
@@ -203,7 +204,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 // '>', or '"'.
                 $def_value = $field->getVar('field_default', 'n');
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value);
-                $options   = $field->getVar('field_options');
+                $options   = profile_encodeOptionLabels($field->getVar('field_options'));
                 asort($options);
                 // If options do not include an empty element, then add a blank option to prevent any default selection
                 //                if (!in_array('', array_keys($options))) {
@@ -305,6 +306,18 @@ function profile_getFieldForm(ProfileField $field, $action = false)
     }
 
     return $form;
+}
+
+/**
+ * HTML-encode profile option labels for form label APIs, which emit them raw
+ *
+ * @param array<int|string, string> $options stored option key => label
+ *
+ * @return array<int|string, string>
+ */
+function profile_encodeOptionLabels(array $options): array
+{
+    return array_map(static fn($label): string => htmlspecialchars((string) $label, ENT_QUOTES | ENT_HTML5, 'UTF-8'), $options);
 }
 
 function profile_getFieldOptionForm(ProfileField $field, $action = false)

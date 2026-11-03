@@ -105,6 +105,16 @@ class ProfileField extends XoopsObject
     }
 
     /**
+     * Whether this field is defined on a credential column (password hash, activation key)
+     *
+     * @return bool
+     */
+    public function isCredential(): bool
+    {
+        return in_array(strtolower((string) $this->getVar('field_name', 'n')), ['pass', 'actkey'], true);
+    }
+
+    /**
      * Returns a {@link XoopsFormElement} for editing the value of this field
      *
      * @param XoopsUser      $user    {@link XoopsUser} object to edit the value of
@@ -115,6 +125,9 @@ class ProfileField extends XoopsObject
     public function getEditElement($user, $profile)
     {
         $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name'), 'e') : $profile->getVar($this->getVar('field_name'), 'e');
+        if ($this->isCredential()) {
+            $value = ''; // never put a stored hash or activation key into a form
+        }
 
         $caption = $this->getVar('field_title');
         $caption = defined($caption) ? constant($caption) : $caption;
@@ -124,7 +137,8 @@ class ProfileField extends XoopsObject
             //asort($options);
 
             foreach (array_keys($options) as $key) {
-                $optval = defined($options[$key]) ? constant($options[$key]) : $options[$key];
+                // Option labels are text; checkbox, radio and select labels are emitted raw.
+                $optval = htmlspecialchars((string) (defined($options[$key]) ? constant($options[$key]) : $options[$key]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 $optkey = defined($key) ? constant($key) : $key;
                 unset($options[$key]);
                 $options[$optkey] = $optval;
@@ -244,6 +258,10 @@ class ProfileField extends XoopsObject
     {
         xoops_loadLanguage('modinfo', 'profile');
 
+        // A field defined on a credential column (an older install could create one) shows nothing.
+        if ($this->isCredential()) {
+            return '';
+        }
         $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name')) : $profile->getVar($this->getVar('field_name'));
 
         switch ($this->getVar('field_type')) {
@@ -702,5 +720,16 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
     public function getProtectedUserVars(): array
     {
         return ['uid', 'uname', 'email', 'pass', 'level', 'rank', 'posts', 'actkey', 'user_regdate', 'last_login'];
+    }
+
+    /**
+     * Account columns that only their own code paths may read or write: never a
+     * configurable field, never set by a field save, never a search column.
+     *
+     * @return string[]
+     */
+    public function getAccountControlVars(): array
+    {
+        return ['uid', 'uname', 'email', 'pass', 'level', 'actkey'];
     }
 }

@@ -645,6 +645,37 @@ class XoopsUserHandler extends XoopsPersistableObjectHandler
         parent::__construct($db, 'users', 'XoopsUser', 'uid', 'uname');
     }
 
+    /**
+     * Replace a password hash only while the row still holds the hash the caller verified.
+     *
+     * A sign-in that rehashes the password must not overwrite a password reset that
+     * committed after it read the row: compare and swap in one statement.
+     *
+     * @param int    $uid          user id
+     * @param string $verifiedHash hash the caller verified the password against
+     * @param string $newHash      replacement hash
+     *
+     * @return bool|null true when replaced, false when the stored hash changed meanwhile,
+     *                   null when the write failed
+     */
+    public function replacePasswordHash(int $uid, string $verifiedHash, string $newHash): ?bool
+    {
+        /** @var XoopsMySQLDatabase $db */
+        $db  = $this->db;
+        $sql = sprintf(
+            'UPDATE %s SET pass = %s WHERE uid = %d AND pass = %s',
+            $this->table,
+            $db->quote($newHash),
+            $uid,
+            $db->quote($verifiedHash)
+        );
+        if (!$db->exec($sql)) {
+            return null;
+        }
+
+        return 1 === (int) $db->getAffectedRows();
+    }
+
     /**#@+
      * @deprecated
      * @param bool $uname

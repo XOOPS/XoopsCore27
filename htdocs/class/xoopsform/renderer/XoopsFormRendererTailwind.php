@@ -84,66 +84,6 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
     }
 
     /**
-     * Encode a value for use inside a JavaScript string literal in an inline
-     * `<script>` block.
-     *
-     * Uses `json_encode` with `JSON_HEX_*` flags so the result cannot break out
-     * of the surrounding `<script>` via `</script>`, cannot escape the string
-     * via single/double quotes, and cannot introduce HTML entities via `&`.
-     * The returned value INCLUDES its own surrounding quotes — do not wrap it
-     * in `"..."` at the call site.
-     *
-     * @param string $value raw value to encode
-     *
-     * @return string JSON-encoded string literal including surrounding quotes
-     */
-    protected function esJs(string $value): string
-    {
-        try {
-            return json_encode(
-                $value,
-                JSON_HEX_TAG | JSON_HEX_QUOT | JSON_HEX_APOS | JSON_HEX_AMP
-                | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
-            );
-        } catch (\JsonException $e) {
-            trigger_error(
-                'XoopsFormRendererTailwind::esJs: ' . $e->getMessage(),
-                E_USER_WARNING,
-            );
-
-            return '""';
-        }
-    }
-
-    /**
-     * Build a safe JavaScript function call expression, with each argument
-     * encoded through {@see esJs()}.
-     *
-     * Returns e.g. `xoopsCodeUrl("textarea_id", "Enter URL", "Enter title")`.
-     * The result is ready for embedding in a single-quoted HTML attribute
-     * (`onclick='...'` or `href='#' onclick='...; return false;'`) because
-     * `esJs()` hex-escapes both quote characters — so neither the inner JS
-     * quotes nor any locale-provided quote can break the attribute delimiters.
-     *
-     * Do NOT build `$fn` from user input — the function name is concatenated
-     * verbatim. It is intended to be a hard-coded JavaScript function literal.
-     *
-     * @param string               $fn   JavaScript function name (safe literal)
-     * @param array<int, int|string> $args arguments to encode, in order
-     *
-     * @return string JavaScript expression of the form `fn("a","b",…)`
-     */
-    protected function buildJsCall(string $fn, array $args): string
-    {
-        $encoded = [];
-        foreach ($args as $arg) {
-            $encoded[] = $this->esJs((string) $arg);
-        }
-
-        return $fn . '(' . implode(', ', $encoded) . ')';
-    }
-
-    /**
      * Capture a form element's render() output as a string.
      *
      * XoopsFormElement::render() is empty in the base class but all concrete

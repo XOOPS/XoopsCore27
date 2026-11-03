@@ -21,6 +21,33 @@
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 
 /**
+ * Whether the sign-in POST came from another site (login CSRF).
+ *
+ * Browser-set headers decide, so login forms need no token and themes and
+ * modules need no change. Sec-Fetch-Site first (pages cannot set it); then
+ * Origin, where "null" (sandboxed frame, data: URL, opaque redirect) is
+ * cross-site; then Referer. Every modern browser sends Origin on a cross-site
+ * POST, so a request with none of the three is not a browser's forged login.
+ *
+ * @return bool
+ */
+function xoops_login_is_cross_site(): bool
+{
+    // Request headers: read from $_SERVER, no bootstrap helper needed.
+    $fetchSite = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+    if ('' !== $fetchSite) {
+        return !in_array($fetchSite, ['same-origin', 'none'], true);
+    }
+    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ('' !== $origin) {
+        return 'null' === $origin || !$GLOBALS['xoopsSecurity']->isSameOrigin($origin);
+    }
+    $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+
+    return '' !== $referer && !$GLOBALS['xoopsSecurity']->isSameOrigin($referer);
+}
+
+/**
  * Check the credentials and the account's right to log in.
  *
  * Redirects and exits when the account is inactive or the site is closed to
@@ -38,11 +65,15 @@ function xoops_login_authenticate(string $uname, string $pass)
 {
     global $xoopsConfig;
 
+    if (xoops_login_is_cross_site()) {
+        return false;
+    }
+
     include_once $GLOBALS['xoops']->path('class/auth/authfactory.php');
     xoops_loadLanguage('auth');
-    /** @var XoopsMySQLDatabase $xoopsDB */
-    $xoopsDB   = XoopsDatabaseFactory::getDatabaseConnection();
-    $xoopsAuth = XoopsAuthFactory::getAuthConnection($xoopsDB->escape($uname));
+    // The bypass list is matched against the same name authenticate() uses; the
+    // factory compares it as a string and never puts it into SQL.
+    $xoopsAuth = XoopsAuthFactory::getAuthConnection($uname);
     $user      = $xoopsAuth->authenticate($uname, $pass);
     if (false === $user) {
         return false;

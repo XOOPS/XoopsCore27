@@ -48,7 +48,7 @@ final class LoginPathSplitTest extends TestCase
         // declaration is removed with the brace walk below; what remains must
         // be the open tag, comments and the access guard only.
         $topLevel = $this->sourceContent;
-        foreach (['xoops_login_authenticate', 'xoops_login_begin_challenge', 'xoops_login_establish_session', 'xoops_login_set_session'] as $name) {
+        foreach (['xoops_login_is_cross_site', 'xoops_login_authenticate', 'xoops_login_begin_challenge', 'xoops_login_establish_session', 'xoops_login_set_session'] as $name) {
             $start = strpos($topLevel, 'function ' . $name . '(');
             self::assertNotFalse($start);
             $body = $this->functionBody($name);

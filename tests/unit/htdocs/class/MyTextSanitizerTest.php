@@ -468,4 +468,38 @@ class MyTextSanitizerTest extends TestCase
         $this->assertNull($method->invoke($this->sanitizer, null));
     }
 
+    public function testNestedQuotesAreConvertedUpToTheDepthLimitOnly(): void
+    {
+        defined('_QUOTEC') || define('_QUOTEC', 'Quote:');
+        $depth = \MyTextSanitizer::MAX_QUOTE_DEPTH;
+
+        $nested = static fn (int $n): string => str_repeat('[quote]', $n) . 'x' . str_repeat('[/quote]', $n);
+
+        $within = $this->sanitizer->quoteConv($nested($depth));
+        $this->assertSame($depth, substr_count($within, '<blockquote>'));
+        $this->assertStringNotContainsString('[quote]', $within);
+
+        // deeper levels stay literal text: the work is bounded, not repeated per level
+        $deep = $this->sanitizer->quoteConv($nested(5000));
+        $this->assertSame($depth, substr_count($deep, '<blockquote>'));
+        $this->assertStringContainsString('[quote]', $deep);
+    }
+
+    public function testMediaAttributeCapturesRefuseNestedBbcode(): void
+    {
+        require_once XOOPS_ROOT_PATH . '/class/textsanitizer/mms/mms.php';
+        require_once XOOPS_ROOT_PATH . '/class/textsanitizer/rtsp/rtsp.php';
+        require_once XOOPS_ROOT_PATH . '/class/textsanitizer/wmp/wmp.php';
+        foreach (['MytsMms' => 'mms', 'MytsRtsp' => 'rtsp', 'MytsWmp' => 'wmp'] as $class => $tag) {
+            $myts           = (new \ReflectionClass(\MyTextSanitizer::class))->newInstanceWithoutConstructor();
+            $myts->patterns = [];
+            (new \ReflectionClass($class))->newInstanceWithoutConstructor()->load($myts);
+            $pattern = $myts->patterns[0];
+
+            $this->assertSame(1, preg_match($pattern, "[{$tag}=320,240]mms://x.test/a[/{$tag}]"), $tag);
+            $this->assertSame(0, preg_match($pattern, "[{$tag}=320,240]mms://x.test/[img]https://y/a.png[/img][/{$tag}]"), $tag . ' url');
+            $this->assertSame(0, preg_match($pattern, "[{$tag}=[b]1[/b],240]mms://x.test/a[/{$tag}]"), $tag . ' width');
+            $this->assertSame(0, preg_match($pattern, "[{$tag}=320,240]mms://x.test/a'><script>[/{$tag}]"), $tag . ' markup');
+        }
+    }
 }

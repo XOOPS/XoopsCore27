@@ -75,7 +75,8 @@ if ($op === 'save') {
         }
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
-            if (in_array($fieldname, $protected, true)) {
+            // Column names are case-insensitive: a field named PASS writes pass.
+            if (in_array(strtolower(trim((string) $fieldname)), $protected, true)) {
                 continue;
             }
             if (in_array($fields[$i]->getVar('field_id'), $editable_fields) && Request::hasVar($fieldname, 'POST')) {

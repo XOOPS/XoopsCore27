@@ -107,10 +107,17 @@ try {
     echo 'Server: ' . $db->getServerVersion() . "\n";
     // Exercise the shipped install DDL, not a test-specific schema facsimile.
     $schema = file_get_contents(XOOPS_ROOT_PATH . '/install/sql/mysql.structure.sql');
-    foreach (['user_2fa', 'tokens', 'config', 'configoption'] as $table) {
+    foreach (['user_2fa', 'tokens', 'config', 'configoption', 'users'] as $table) {
         check(preg_match('/CREATE TABLE ' . $table . ' \(.*?\) ENGINE=[^;]+;/s', $schema, $match) === 1, 'Missing install DDL');
         $name = $db->prefix($table);
-        check($db->exec(str_replace('CREATE TABLE ' . $table, 'CREATE TABLE `' . $name . '`', $match[0])), 'Create test table');
+        $ddl = str_replace('CREATE TABLE ' . $table, 'CREATE TABLE `' . $name . '`', $match[0]);
+        if ('users' === $table) {
+            // The DDL leaves the collation implicit: pin a case-insensitive one at creation
+            // (no ALTER grant needed), under which a plain = would match a hash differing
+            // only in letter case. The exact-compare rehash check below relies on it.
+            $ddl = rtrim($ddl, ';') . ' DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;';
+        }
+        check($db->exec($ddl), 'Create test table');
         $created[] = $name;
     }
     $secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
@@ -374,6 +381,40 @@ try {
     check((int) $db->fetchArray($result)['n'] === 2 && $upgrade->check_twofactormode(), 'Concurrent repair restores exactly two distinct options');
     $enrol(50);
     echo "PASS: absent-table file-first session, real 2.7.4 upgrade tasks, idempotency and upgraded enrolment\n";
+
+    // A sign-in that rehashes the password must never undo a reset that commits
+    // between its read and its write: every interleaving keeps the reset.
+    $users = '`' . $db->prefix('users') . '`';
+    $lost  = 0;
+    for ($round = 0; $round < 25; ++$round) {
+        $old = md5('old-password-' . $round);
+        $new = password_hash('new-password-' . $round, PASSWORD_DEFAULT);
+        check($db->exec("DELETE FROM $users WHERE uid = 70"), 'Clear disposable account');
+        check($db->exec("INSERT INTO $users (uid, uname, email, pass, user_sig, bio, user_occ, user_intrest) VALUES (70, 'racer', 'r@example.test', " . $db->quote($old) . ", '', '', '', '')"), 'Create disposable account');
+        $results = race([
+            ['action' => 'rehash', 'uid' => 70, 'verified' => $old, 'new' => password_hash('old-password-' . $round, PASSWORD_DEFAULT)],
+            ['action' => 'setpass', 'uid' => 70, 'new' => $new],
+        ]);
+        $row = $db->fetchArray($db->query("SELECT pass FROM $users WHERE uid = 70"));
+        check($row['pass'] === $new, "Round $round: the reset survives the concurrent rehash");
+        check(true === $results[1], "Round $round: the reset committed");
+        check(in_array($results[0], [true, false], true), "Round $round: the rehash reports replaced or stale, never an error");
+        $lost += false === $results[0] ? 1 : 0;
+    }
+    // A stale verified hash is never swapped in, whichever order the commits take.
+    check(false === testUserHandler($db)->replacePasswordHash(70, md5('anything'), 'x'), 'A stale verified hash replaces nothing');
+    echo "PASS: concurrent sign-in rehash never undoes a password reset ($lost of 25 rehashes found the reset first)\n";
+
+    // The users table was created under utf8mb4_general_ci (see the setup loop).
+    $stored = 'AbCdEf0123456789AbCdEf0123456789';
+    check($db->exec("UPDATE $users SET pass = " . $db->quote($stored) . ' WHERE uid = 70'), 'Store a mixed-case hash');
+    $passOf = static fn(): string => $db->fetchArray($db->query("SELECT pass FROM $users WHERE uid = 70"))['pass'];
+    check(1 === (int) $db->fetchArray($db->query("SELECT COUNT(*) AS n FROM $users WHERE uid = 70 AND pass = " . $db->quote(strtolower($stored))))['n'], 'The collation is case-insensitive');
+    check(false === testUserHandler($db)->replacePasswordHash(70, strtolower($stored), 'case-swap'), 'A case-only mismatch replaces nothing');
+    check($stored === $passOf(), 'The stored hash is unchanged after a case-only mismatch');
+    check(true === testUserHandler($db)->replacePasswordHash(70, $stored, 'exact-swap'), 'An exact match is replaced');
+    check('exact-swap' === $passOf(), 'The exact match stored the new hash');
+    echo "PASS: the rehash compare-and-swap is byte-exact under a case-insensitive collation\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'FAIL: ' . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
     $exitCode = 1;

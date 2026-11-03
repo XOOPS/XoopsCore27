@@ -142,7 +142,8 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 $remove_options->columns = 3;
                 asort($options);
                 foreach (array_keys($options) as $key) {
-                    $options[$key] .= "[{$key}]";
+                    // Checkbox labels are emitted raw: encode the stored text and its key.
+                    $options[$key] = htmlspecialchars($options[$key] . "[{$key}]", ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
                 $remove_options->addOptionArray($options);
                 $form->addElement($remove_options);
@@ -181,7 +182,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                     $def_value = unserialize($rawDefault, ['allowed_classes' => false]) ?: [];
                 }
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value, 8, true);
-                $options   = $field->getVar('field_options');
+                $options   = profile_encodeOptionLabels($field->getVar('field_options'));
                 asort($options);
                 // If options do not include an empty element, then add a blank option to prevent any default selection
                 //                if (!in_array('', array_keys($options))) {
@@ -203,7 +204,7 @@ function profile_getFieldForm(ProfileField $field, $action = false)
                 // '>', or '"'.
                 $def_value = $field->getVar('field_default', 'n');
                 $element   = new XoopsFormSelect(_PROFILE_AM_DEFAULT, 'field_default', $def_value);
-                $options   = $field->getVar('field_options');
+                $options   = profile_encodeOptionLabels($field->getVar('field_options'));
                 asort($options);
                 // If options do not include an empty element, then add a blank option to prevent any default selection
                 //                if (!in_array('', array_keys($options))) {
@@ -307,6 +308,18 @@ function profile_getFieldForm(ProfileField $field, $action = false)
     return $form;
 }
 
+/**
+ * HTML-encode profile option labels for form label APIs, which emit them raw
+ *
+ * @param array<int|string, string> $options stored option key => label
+ *
+ * @return array<int|string, string>
+ */
+function profile_encodeOptionLabels(array $options): array
+{
+    return array_map(static fn($label): string => htmlspecialchars((string) $label, ENT_QUOTES | ENT_HTML5, 'UTF-8'), $options);
+}
+
 function profile_getFieldOptionForm(ProfileField $field, $action = false)
 {
     if ($action === false) {
@@ -361,6 +374,9 @@ function profile_getRegisterForm(XoopsUser $user, $profile, $step = null)
     $step_no   = $step['step_no'];
     $use_token = $step['step_no'] > 0;// ? true : false;
     $reg_form  = new XoopsThemeForm($step['step_name'], 'regform', $action, 'post', $use_token);
+    // A step may hold no element at all (only account-control fields, which are skipped below).
+    $elements  = [];
+    $weights   = [];
 
     if ($step['step_desc']) {
         $reg_form->addElement(new XoopsFormLabel('', $step['step_desc']));
@@ -391,16 +407,13 @@ function profile_getRegisterForm(XoopsUser $user, $profile, $step = null)
     }
 
     // Dynamic fields
-    $profile_handler              = xoops_getModuleHandler('profile');
+    $profile_handler             = xoops_getModuleHandler('profile');
     $fields                       = $profile_handler->loadFields();
-    $_SESSION['profile_required'] = [];
     foreach (array_keys($fields) as $i) {
-        if ($fields[$i]->getVar('step_id') == $step['step_id']) {
-            $fieldinfo['element'] = $fields[$i]->getEditElement($user, $profile);
-            //assign and check (=)
-            if ($fieldinfo['required'] = $fields[$i]->getVar('field_required')) {
-                $_SESSION['profile_required'][$fields[$i]->getVar('field_name')] = $fields[$i]->getVar('field_title');
-            }
+        // Account-control columns have their own fixed elements; a legacy field on one is never saved.
+        if ($fields[$i]->getVar('step_id') == $step['step_id'] && !$fields[$i]->isAccountControl()) {
+            $fieldinfo['element']  = $fields[$i]->getEditElement($user, $profile);
+            $fieldinfo['required'] = $fields[$i]->getVar('field_required');
 
             $key              = $fields[$i]->getVar('cat_id');
             $elements[$key][] = $fieldinfo;
@@ -543,7 +556,8 @@ function profile_getUserForm(XoopsUser $user, ?ProfileProfile $profile = null, $
     $count_fields   = count($fields);
 
     foreach (array_keys($fields) as $i) {
-        if (in_array($fields[$i]->getVar('field_id'), $editable_fields)) {
+        // Account-control columns have their own fixed elements; a legacy field on one is never saved.
+        if (in_array($fields[$i]->getVar('field_id'), $editable_fields) && !$fields[$i]->isAccountControl()) {
             // Set default value for user fields if available
             if ($user->isNew()) {
                 $default = $fields[$i]->getVar('field_default');

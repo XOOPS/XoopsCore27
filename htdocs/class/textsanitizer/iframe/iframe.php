@@ -35,7 +35,9 @@ class MytsIframe extends MyTextSanitizerExtension
         // of the attribute (SECURITY.md M-7), and (b) start with http://, https://, or
         // a protocol-relative // — otherwise a javascript:/data: URI would execute in
         // the page context. The height (group 2) already excludes quotes.
-        $myts->patterns[]     = "/\[iframe=(['\"]?)([^\"']*)\\1]((?:https?:\/\/|\/\/)[^\"'<>]*)\[\/iframe\]/sU";
+        // Neither group may hold [ or ]: a later BBCode replacement or callback would
+        // otherwise expand nested BBCode, quotes included, inside the generated attribute.
+        $myts->patterns[]     = "/\[iframe=(['\"]?)([^\"'<>\[\]]*)\\1]((?:https?:\/\/|\/\/)[^\"'<>\[\]]*)\[\/iframe\]/sU";
         $myts->replacements[] = "<iframe src='\\3' width='100%' height='\\2' scrolling='auto' frameborder='yes' marginwidth='0' marginheight='0' noresize></iframe>";
 
         return true;

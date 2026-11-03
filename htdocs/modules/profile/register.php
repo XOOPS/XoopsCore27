@@ -74,6 +74,11 @@ $uid = !empty($_SESSION['profile_register_uid']) ? (int) $_SESSION['profile_regi
 if ($current_step > 0 && !$GLOBALS['xoopsSecurity']->check()) {
     redirect_header('user.php', 5, _PROFILE_MA_EXPIRED);
 }
+// A POST completes the form this session rendered last (step N posts form N-1):
+// the posted number cannot skip ahead to fields of a step never shown.
+if ($current_step > 0 && $current_step > (int) ($_SESSION['profile_register_shown'] ?? -1) + 1) {
+    redirect_header('register.php', 5, _PROFILE_MA_EXPIRED);
+}
 
 $criteria = new CriteriaCompo();
 $criteria->setSort('step_order');
@@ -117,7 +122,7 @@ if ($uid == 0) {
     if (count($fields) > 0) {
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
-            if (in_array($fieldname, $userfields) && !in_array($fieldname, $protected, true)) {
+            if (in_array($fieldname, $userfields) && !in_array(strtolower(trim((string) $fieldname)), $protected, true)) {
                 $default = $fields[$i]->getVar('field_default');
                 if ($default === '' || $default === null) {
                     continue;
@@ -167,8 +172,13 @@ if ($current_step == 0) {
 }
 
 // Set vars from $_POST/$_SESSION['profile_post']
+// Only fields of the steps this visitor has been shown (step N posts after steps 0..N-1):
+// a field on no registration step, or on a later one, is never written from the request.
+$reachedStepIds = array_map('intval', array_column(array_slice($steps, 0, max(0, $current_step)), 'step_id'));
 foreach (array_keys($fields) as $field) {
-    if (!Request::hasVar($field, 'POST') || in_array($field, $protected, true)) {
+    // Column names are case-insensitive: a field named PASS writes pass.
+    if (!Request::hasVar($field, 'POST') || in_array(strtolower(trim((string) $field)), $protected, true)
+        || !in_array((int) $fields[$field]->getVar('step_id'), $reachedStepIds, true)) {
         continue;
     }
 
@@ -182,11 +192,16 @@ foreach (array_keys($fields) as $field) {
 
 $stop = '';
 
-//Client side validation
-if (Request::hasVar('step', 'POST') && isset($_SESSION['profile_required'])) {
-    foreach ($_SESSION['profile_required'] as $name => $title) {
+// Required fields of the step being posted (step N posts the form of steps[N-1]),
+// never of whichever form this session rendered last.
+if ($current_step > 0 && isset($steps[$current_step - 1])) {
+    $postedStepId = (int) $steps[$current_step - 1]['step_id'];
+    foreach ($fields as $name => $field) {
+        if ((int) $field->getVar('step_id') !== $postedStepId || !$field->getVar('field_required') || $field->isAccountControl()) {
+            continue;
+        }
         if (!Request::hasVar($name, 'POST') || empty(Request::getVar($name, '', 'POST'))) {
-            $stop .= sprintf(_FORM_ENTER, $title) . '<br>';
+            $stop .= sprintf(_FORM_ENTER, $field->getVar('field_title')) . '<br>';
         }
     }
 }
@@ -356,6 +371,9 @@ if ($current_step > 0 && empty($stop) && (!empty($steps[$current_step - 1]['step
 if (!empty($stop) || isset($steps[$current_step])) {
     include_once __DIR__ . '/include/forms.php';
     $current_step = empty($stop) ? $current_step : $current_step - 1;
+    // Furthest form shown in this flow; step 0 starts a new flow.
+    $_SESSION['profile_register_shown'] = 0 === $current_step
+        ? 0 : max($current_step, (int) ($_SESSION['profile_register_shown'] ?? 0));
     $reg_form     = profile_getRegisterForm($newuser, $profile, $steps[$current_step]);
     $reg_form->assign($GLOBALS['xoopsTpl']);
     $GLOBALS['xoopsTpl']->assign('current_step', $current_step);

@@ -84,7 +84,29 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         self::assertNotFalse($start);
         self::assertNotFalse($rotate, 'the marker is set only when the rotation succeeded');
         self::assertLessThan($rotate, $start);
-        self::assertStringContainsString("if (\$options['secure'] && empty(\$_SESSION['installer_secure_cookie'])) {", $source);
+        self::assertStringContainsString("\$needsSecure = \$options['secure'] && empty(\$_SESSION['installer_secure_cookie']);", $source);
+        // Every POST (each step that takes credentials) gets a new id, over HTTP or
+        // HTTPS alike, and a POST whose id could not be replaced stops there.
+        self::assertStringContainsString("\$isPost      = 'POST' === (\$_SERVER['REQUEST_METHOD'] ?? '');", $source);
+        self::assertStringContainsString('if ($isPost || $needsSecure) {', $source);
+        $fail = strpos($source, '} elseif ($isPost) {');
+        self::assertNotFalse($fail);
+        self::assertGreaterThan($rotate, $fail);
+        $branch = substr($source, $fail, (int) strpos($source, "\n        }", $fail) - $fail);
+        self::assertStringContainsString('http_response_code(500);', $branch);
+        self::assertStringContainsString('exit(', $branch);
+    }
+
+    #[Test]
+    public function aBannedVisitorExitsWithTheDebugOutputSwitchedOff(): void
+    {
+        $source = self::source('class/xoopssecurity.php');
+        $method = substr($source, (int) strpos($source, 'public function checkBadips()'), 1600);
+        $off    = strpos($method, "\$GLOBALS['xoopsLogger']->activated = false;");
+        $exit   = strpos($method, 'exit();');
+        self::assertNotFalse($off, 'the logger renders nothing once activated is false');
+        self::assertNotFalse($exit);
+        self::assertLessThan($exit, $off);
     }
 
     #[Test]
@@ -95,7 +117,10 @@ final class FilesCookiesAndFiltersContractTest extends TestCase
         // Secure follows the session handler's policy (session_cookie_secure
         // forces it on behind a TLS proxy that sends no X-Forwarded-Proto).
         self::assertStringContainsString("\$sessionSecure = (Request::getInt('session_cookie_secure', 0, 'POST') === 1 || session_get_cookie_params()['secure']) ? true : null;", $source);
-        self::assertStringContainsString("xoops_setcookie(\$new_session_name, session_id(), time() + (60 * \$new_session_expire), '/', XOOPS_COOKIE_DOMAIN, \$sessionSecure, true);", $source);
+        // SameSite is passed too: left out, the helper falls back to Lax even when Strict is configured.
+        self::assertStringContainsString("xoops_setcookie(\$new_session_name, session_id(), time() + (60 * \$new_session_expire), '/', XOOPS_COOKIE_DOMAIN, \$sessionSecure, true, \$sessionSameSite);", $source);
+        self::assertStringContainsString("\$sessionSameSite = Request::getString('session_cookie_samesite', '', 'POST');", $source);
+        self::assertStringContainsString("session_get_cookie_params()['samesite']", $source);
     }
 
     #[Test]

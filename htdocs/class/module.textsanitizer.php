@@ -135,6 +135,9 @@ class MyTextSanitizerExtension
  */
 class MyTextSanitizer
 {
+    /** Nested [quote] levels converted; deeper levels stay as text. */
+    public const MAX_QUOTE_DEPTH = 16;
+
     /**
      *
      * @var array
@@ -555,14 +558,16 @@ class MyTextSanitizer
         $pattern     = '/\[quote](.*)\[\/quote\]/sU';
         $replacement = _QUOTEC . '<div class="xoopsQuote"><blockquote>\\1</blockquote></div>';
 
-        $text = preg_replace($pattern, $replacement, $text, -1, $count);
-        //no more matches, return now
-        if (!$count) {
-            return $text;
+        // Each pass converts one nesting level across the whole text. Deeper
+        // nesting stays as literal [quote] text, so the work is bounded.
+        for ($pass = 0; $pass < self::MAX_QUOTE_DEPTH; ++$pass) {
+            $text = preg_replace($pattern, $replacement, $text, -1, $count);
+            if (!$count) {
+                break;
+            }
         }
 
-        //new matches could have been created, keep doing it until we have no matches
-        return $this->quoteConv($text);
+        return $text;
     }
 
     /**

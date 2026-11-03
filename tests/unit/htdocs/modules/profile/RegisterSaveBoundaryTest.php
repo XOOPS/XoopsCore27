@@ -45,6 +45,56 @@ final class RegisterSaveBoundaryTest extends TestCase
     }
 
     #[Test]
+    public function onlyFieldsOfStepsAlreadyShownAreWrittenFromTheRequest(): void
+    {
+        // Evaluate the real line against three steps: step N posts after steps 0..N-1.
+        preg_match('/^\$reachedStepIds = .*;$/m', $this->sourceContent, $m);
+        self::assertNotEmpty($m, 'register.php computes the reached step ids');
+        $steps = [['step_id' => '4'], ['step_id' => '7'], ['step_id' => '9']];
+        $reached = static function (int $current_step) use ($steps, $m): array {
+            $reachedStepIds = null;
+            eval($m[0]);
+
+            return $reachedStepIds;
+        };
+        self::assertSame([], $reached(0), 'the first form has not been posted yet');
+        self::assertSame([4], $reached(1));
+        self::assertSame([4, 7], $reached(2));
+        self::assertSame([4, 7, 9], $reached(3));
+        self::assertNotContains(0, $reached(3), 'a field on no registration step is never accepted');
+
+        $loop = $this->between("foreach (array_keys(\$fields) as \$field) {", 'continue;');
+        self::assertStringContainsString("!in_array((int) \$fields[\$field]->getVar('step_id'), \$reachedStepIds, true)", $loop);
+    }
+
+    #[Test]
+    public function aPostedStepCannotSkipPastTheFormsThisSessionRendered(): void
+    {
+        // Evaluate the real guard: the posted step number alone proves nothing.
+        preg_match('/^if \((\$current_step > 0 && \$current_step > .*profile_register_shown.*)\) \{$/m', $this->sourceContent, $m);
+        self::assertNotEmpty($m, 'register.php bounds the posted step by the session record');
+        $saved   = $_SESSION ?? null;
+        $refused = static function (int $current_step, array $session) use ($m): bool {
+            $_SESSION = $session;
+
+            return (bool) eval('return ' . $m[1] . ';');
+        };
+        try {
+            self::assertFalse($refused(0, []), 'the first form is always available');
+            self::assertFalse($refused(1, ['profile_register_shown' => 0]));
+            self::assertFalse($refused(2, ['profile_register_shown' => 1]));
+            self::assertFalse($refused(1, ['profile_register_shown' => 2]), 'going back is allowed');
+            self::assertTrue($refused(3, ['profile_register_shown' => 0]), 'form 2 was never shown');
+            self::assertTrue($refused(1, []), 'no form was rendered in this session');
+        } finally {
+            $_SESSION = $saved;
+        }
+
+        $render = $this->between("\$current_step = empty(\$stop) ? \$current_step : \$current_step - 1;", 'profile_getRegisterForm(');
+        self::assertStringContainsString("\$_SESSION['profile_register_shown'] = 0 === \$current_step", $render);
+    }
+
+    #[Test]
     public function stepOneRecordsItsOutcomeAndStepZeroResetsIt(): void
     {
         $stepOne = $this->between("if (\$current_step == 1) {", '// If the last step required SAVE');

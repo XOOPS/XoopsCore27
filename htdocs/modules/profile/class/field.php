@@ -105,6 +105,16 @@ class ProfileField extends XoopsObject
     }
 
     /**
+     * Whether this field is defined on an account-control column (identity, credentials, level)
+     *
+     * @return bool
+     */
+    public function isAccountControl(): bool
+    {
+        return in_array(strtolower(trim((string) $this->getVar('field_name', 'n'))), ProfileFieldHandler::ACCOUNT_CONTROL_VARS, true);
+    }
+
+    /**
      * Returns a {@link XoopsFormElement} for editing the value of this field
      *
      * @param XoopsUser      $user    {@link XoopsUser} object to edit the value of
@@ -114,7 +124,9 @@ class ProfileField extends XoopsObject
      **/
     public function getEditElement($user, $profile)
     {
-        $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name'), 'e') : $profile->getVar($this->getVar('field_name'), 'e');
+        // Never put an account-control value (identity, hash, activation key, level) into a form.
+        $value = $this->isAccountControl() ? ''
+            : (in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name'), 'e') : $profile->getVar($this->getVar('field_name'), 'e'));
 
         $caption = $this->getVar('field_title');
         $caption = defined($caption) ? constant($caption) : $caption;
@@ -124,7 +136,8 @@ class ProfileField extends XoopsObject
             //asort($options);
 
             foreach (array_keys($options) as $key) {
-                $optval = defined($options[$key]) ? constant($options[$key]) : $options[$key];
+                // Option labels are text; checkbox, radio and select labels are emitted raw.
+                $optval = htmlspecialchars((string) (defined($options[$key]) ? constant($options[$key]) : $options[$key]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 $optkey = defined($key) ? constant($key) : $key;
                 unset($options[$key]);
                 $options[$optkey] = $optval;
@@ -244,6 +257,15 @@ class ProfileField extends XoopsObject
     {
         xoops_loadLanguage('modinfo', 'profile');
 
+        // A field on email (an older install could create one) shows it only as the member allows;
+        // a field on any other account-control column shows nothing.
+        if ('email' === strtolower(trim((string) $this->getVar('field_name', 'n')))) {
+            if (!$user->getVar('user_viewemail')) {
+                return '';
+            }
+        } elseif ($this->isAccountControl()) {
+            return '';
+        }
         $value = in_array($this->getVar('field_name'), $this->getUserVars()) ? $user->getVar($this->getVar('field_name')) : $profile->getVar($this->getVar('field_name'));
 
         switch ($this->getVar('field_type')) {
@@ -431,6 +453,9 @@ class ProfileField extends XoopsObject
  */
 class ProfileFieldHandler extends XoopsPersistableObjectHandler
 {
+    /** @see getAccountControlVars() */
+    public const ACCOUNT_CONTROL_VARS = ['uid', 'uname', 'email', 'pass', 'level', 'actkey'];
+
     public $table_link;
 
     /**
@@ -702,5 +727,28 @@ class ProfileFieldHandler extends XoopsPersistableObjectHandler
     public function getProtectedUserVars(): array
     {
         return ['uid', 'uname', 'email', 'pass', 'level', 'rank', 'posts', 'actkey', 'user_regdate', 'last_login'];
+    }
+
+    /**
+     * Account columns that only their own code paths may read or write: never a
+     * configurable field, never set by a field save, never a search column.
+     *
+     * @return string[]
+     */
+    public function getAccountControlVars(): array
+    {
+        return self::ACCOUNT_CONTROL_VARS;
+    }
+
+    /**
+     * Whether a field name is one of getAccountControlVars(), in any letter case:
+     * MySQL column names are case-insensitive, so a field named PASS reads pass.
+     *
+     * @param string $name field name
+     * @return bool
+     */
+    public function isAccountControlVar($name): bool
+    {
+        return in_array(strtolower(trim((string) $name)), $this->getAccountControlVars(), true);
     }
 }

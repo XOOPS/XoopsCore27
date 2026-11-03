@@ -165,7 +165,8 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
         $toolbar = new \XoopsDhtmlToolbar();
         $ret .= $toolbar->render($element) . "<br>\n";
         // the textarea box
-        $ret .= "<textarea id='" . $element->getName() . "' name='" . $element->getName() . "' title='" . $element->getTitle() . "' onselect=\"xoopsSavePosition('" . $element->getName() . "');\" onclick=\"xoopsSavePosition('" . $element->getName() . "');\" onkeyup=\"xoopsSavePosition('" . $element->getName() . "');\" cols='" . $element->getCols() . "' rows='" . $element->getRows() . "'" . $element->getExtra() . '>' . $this->escapeElementValue($element->getValue()) . "</textarea><br>\n";
+        $savePosition = $this->jsHandler('xoopsSavePosition', [$element->getName(false)]);
+        $ret .= "<textarea id='" . $element->getName() . "' name='" . $element->getName() . "' title='" . $element->getTitle() . "' onselect=\"" . $savePosition . "\" onclick=\"" . $savePosition . "\" onkeyup=\"" . $savePosition . "\" cols='" . $element->getCols() . "' rows='" . $element->getRows() . "'" . $element->getExtra() . '>' . $this->escapeElementValue($element->getValue()) . "</textarea><br>\n";
 
         if (empty($element->skipPreview)) {
             if (empty($GLOBALS['xoTheme'])) {
@@ -173,7 +174,7 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
             } else {
                 $GLOBALS['xoTheme']->addScript('/class/textsanitizer/image/image.js', ['type' => 'text/javascript']);
             }
-            $button = "<button type='button' class='btn btn-primary' onclick=\"form_instantPreview('" . XOOPS_URL . "', '" . $element->getName() . "','" . XOOPS_URL . "/images', " . (int) $element->doHtml . ", '" . $GLOBALS['xoopsSecurity']->createToken() . "')\" title='" . _PREVIEW . "'>" . _PREVIEW . "</button>";
+            $button = "<button type='button' class='btn btn-primary' onclick=\"" . $this->jsHandler('form_instantPreview', [XOOPS_URL, $element->getName(false), XOOPS_URL . '/images', (int) $element->doHtml, (string) $GLOBALS['xoopsSecurity']->createToken()]) . "\" title='" . _PREVIEW . "'>" . _PREVIEW . "</button>";
 
             $ret .= '<br>' . "<div id='" . $element->getName() . "_hidden' style='display: block;'> " . '   <fieldset>' . '       <legend>' . $button . '</legend>' . "       <div id='" . $element->getName() . "_hidden_data'>" . _XOOPS_FORM_PREVIEW_CONTENT . '</div>' . '   </fieldset>' . '</div>';
         }
@@ -549,8 +550,8 @@ EOJS;
         return '<input type="text" name="' . $ele_name . '" id="' . $ele_name . '" size="'
             . $element->getSize() . '" maxlength="' . $element->getMaxlength() . '" value="'
             . htmlspecialchars((string) $display_value, ENT_QUOTES, 'UTF-8') . '"' . $element->getExtra()
-            . ' /><input type="reset" value=" ... " onclick="return showCalendar(\'' . $ele_name
-            . '\');">';
+            . ' /><input type="reset" value=" ... " onclick="'
+            . $this->jsHandler('showCalendar', [$element->getName(false)], 'return ') . '">';
         /*
         return "<input type='text' name='" . $ele_name . "' id='" . $ele_name . "' size='"
             . $element->getSize() . "' maxlength='" . $element->getMaxlength() . "' value='"

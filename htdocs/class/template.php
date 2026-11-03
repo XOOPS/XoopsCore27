@@ -807,7 +807,8 @@ function xoops_template_clear_module_cache($mid)
         $xoopsTpl->caching = 2;
         for ($i = 0; $i < $count; ++$i) {
             if ($block_arr[$i]->getVar('template') != '') {
-                $xoopsTpl->clearCache('db:' . $block_arr[$i]->getVar('template'), 'blk_' . $block_arr[$i]->getVar('bid'));
+                // Every cache id of the block: blk_<bid> carries per-member and language/group suffixes.
+                $xoopsTpl->clearCache('db:' . $block_arr[$i]->getVar('template'));
             }
         }
     }

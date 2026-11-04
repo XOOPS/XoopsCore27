@@ -46,10 +46,34 @@ class SystemFineAvatarUploadHandler extends SystemFineUploadHandler
         parent::__construct($claims);
         $this->allowedMimeTypes = ['image/gif', 'image/jpeg', 'image/png'];
         $this->allowedExtensions = ['gif', 'jpeg', 'jpg', 'png'];
+        $this->setByteLimit((int) ($this->limits()['avatar_maxsize'] ?? 0));
+    }
+
+    /**
+     * The site's avatar limits from the user preferences.
+     *
+     * @return array<string, mixed> avatar_maxsize (bytes), avatar_width and avatar_height (pixels)
+     */
+    protected function limits(): array
+    {
+        /** @var XoopsConfigHandler $configHandler */
+        $configHandler = xoops_getHandler('config');
+
+        return $configHandler->getConfigsByCat(XOOPS_CONF_USER);
     }
 
     protected function storeUploadedFile($target, $mimeType, $uuid)
     {
+        $limits     = $this->limits();
+        $pixelError = $this->pixelError(
+            (string) $_FILES[$this->inputName]['tmp_name'],
+            (int) ($limits['avatar_width'] ?? 0),
+            (int) ($limits['avatar_height'] ?? 0),
+        );
+        if (null !== $pixelError) {
+            return ['error' => $pixelError, 'preventRetry' => true];
+        }
+
         $pathParts = pathinfo((string) $this->getName());
         $avatarName = uniqid('savt', false) . '.' . strtolower($pathParts['extension']);
         $avatarNicename = str_replace(['_', '-'], ' ', $pathParts['filename']);

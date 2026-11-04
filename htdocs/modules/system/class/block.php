@@ -69,6 +69,7 @@ class SystemBlock extends XoopsBlock
                     break;
                 case 'clone':
                     $title = _AM_SYSTEM_BLOCKS_CLONEBLOCK;
+                    $cloneSource = (int) $this->getVar('bid');
                     $this->setVar('bid', 0);
                     if ($this->isCustom()) {
                         $this->setVar('block_type', 'C');
@@ -185,14 +186,11 @@ class SystemBlock extends XoopsBlock
         $form->addElement(new XoopsFormSelectGroup(_AM_SYSTEM_BLOCKS_GROUP, 'groups', true, $groups, 5, true));
 
         $form->addElement(new XoopsFormHidden('block_type', $this->getVar('block_type')));
-        $form->addElement(new XoopsFormHidden('mid', $this->getVar('mid')));
-        $form->addElement(new XoopsFormHidden('func_num', $this->getVar('func_num')));
-        $form->addElement(new XoopsFormHidden('func_file', $this->getVar('func_file')));
-        $form->addElement(new XoopsFormHidden('show_func', $this->getVar('show_func')));
-        $form->addElement(new XoopsFormHidden('edit_func', $this->getVar('edit_func')));
-        $form->addElement(new XoopsFormHidden('template', $this->getVar('template')));
-        $form->addElement(new XoopsFormHidden('dirname', $this->getVar('dirname')));
-        $form->addElement(new XoopsFormHidden('name', $this->getVar('name')));
+        // A clone names its source block; the save handler copies the module
+        // binding and callbacks from that stored row, never from the form.
+        if (isset($cloneSource)) {
+            $form->addElement(new XoopsFormHidden('clone_bid', $cloneSource));
+        }
         $form->addElement(new XoopsFormHidden('bid', $this->getVar('bid')));
         $form->addElement(new XoopsFormHidden('op', $op));
         $form->addElement(new XoopsFormHidden('fct', 'blocksadmin'));
@@ -217,27 +215,17 @@ class SystemBlock extends XoopsBlock
     {
         global $xoopsConfig;
         if (!$this->isCustom()) {
-            $edit_func = $this->getVar('edit_func');
-            if (!$edit_func) {
+            $edit_func = $this->moduleBlockFunction((string) $this->getVar('edit_func', 'n'));
+            if (null === $edit_func) {
                 return false;
             }
-            if (file_exists($GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file')))) {
-                if (file_exists($file = $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/language/' . $xoopsConfig['language'] . '/blocks.php'))) {
-                    include_once $file;
-                } elseif (file_exists($file = $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/language/english/blocks.php'))) {
-                    include_once $file;
-                }
-                include_once $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file'));
-                $options   = explode('|', (string) $this->getVar('options'));
-                $edit_form = $edit_func($options);
-                if (!$edit_form) {
-                    return false;
-                }
+            $options   = explode('|', (string) $this->getVar('options'));
+            $edit_form = $edit_func($options);
+            if (!$edit_form) {
+                return false;
+            }
 
-                return $edit_form;
-            } else {
-                return false;
-            }
+            return $edit_form;
         } else {
             return false;
         }

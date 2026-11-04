@@ -308,6 +308,16 @@ class XoopsObjectTreeTest extends TestCase
         }
     }
 
+    public function testGetAllChildTerminatesOnStoredParentLoops(): void
+    {
+        // 2 and 3 are each other's parent; 5 is its own parent.
+        $tree = self::buildTree([[1, 0], [2, 3], [3, 2], [4, 1], [5, 5]]);
+
+        $this->assertSame([3, 2], array_keys($tree->getAllChild(2)));
+        $this->assertSame([5], array_keys($tree->getAllChild(5)));
+        $this->assertSame([4], array_keys($tree->getAllChild(1)));
+    }
+
     public function testGetAllChildOnLeafReturnsEmpty(): void
     {
         $tree = self::buildTree([[1, 0], [2, 1]]);

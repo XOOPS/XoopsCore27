@@ -260,6 +260,11 @@ switch ($op) {
             if (!is_object($comment) || (int) $comment->getVar('com_modid') !== (int) $com_modid) {
                 redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
             }
+            // An edit keeps the comment's place in its thread and item; the
+            // posted root and item ids would otherwise drive the counts,
+            // notifications and redirects below.
+            $com_rootid = (int) $comment->getVar('com_rootid');
+            $com_itemid = (int) $comment->getVar('com_itemid');
 
             if (is_object($xoopsUser)) {
                 include_once $GLOBALS['xoops']->path('modules/system/constants.php');
@@ -300,6 +305,37 @@ switch ($op) {
                 redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
             }
         } else {
+            // A reply joins its parent's thread: the parent must be a comment of
+            // this module and item, and the root is taken from the parent, never
+            // from the form. A top comment gets its own id as root after insert.
+            $com_rootid = 0;
+            if ($com_pid > 0) {
+                $parent       = $comment_handler->get($com_pid);
+                $parent_valid = is_object($parent)
+                    && (int) $parent->getVar('com_modid') === (int) $com_modid
+                    && (int) $parent->getVar('com_itemid') === (int) $com_itemid;
+                // Only moderators reply below a pending or hidden comment, as on the reply page.
+                if ($parent_valid && XOOPS_COMMENT_ACTIVE != $parent->getVar('com_status')) {
+                    $parent_valid = false;
+                    if (is_object($xoopsUser)) {
+                        include_once $GLOBALS['xoops']->path('modules/system/constants.php');
+                        /** @var XoopsGroupPermHandler $sysperm_handler */
+                        $sysperm_handler = xoops_getHandler('groupperm');
+                        $parent_valid    = $xoopsUser->isAdmin($com_modid)
+                            || $sysperm_handler->checkRight('system_admin', XOOPS_SYSTEM_COMMENT, $xoopsUser->getGroups());
+                    }
+                }
+                if (!$parent_valid) {
+                    redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
+                }
+                $com_rootid = (int) $parent->getVar('com_rootid');
+                if ($com_rootid === 0) {
+                    $com_rootid = (int) $parent->getVar('com_id');
+                }
+                unset($parent, $parent_valid);
+            } else {
+                $com_pid = 0;
+            }
             $comment = $comment_handler->create();
             $comment->setVar('com_created', time());
             $comment->setVar('com_pid', $com_pid);

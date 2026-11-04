@@ -51,9 +51,29 @@ if (isset($imgcat_id) && $op === 'listimg') {
 }
 
 // check WRITE right by category before continue
-if (isset($imgcat_id) && ($op === 'addfile' || $op === 'multiupload' || $op === 'editcat' || $op === 'updatecat' || $op === 'delcatok' || $op === 'delcat')) {
+if (isset($imgcat_id) && ($op === 'addfile' || $op === 'multiupload' || $op === 'editcat' || $op === 'updatecat' || $op === 'delcatok' || $op === 'delcat' || $op === 'display_cat')) {
     $imgcat_write = $gperm_handler->checkRight('imgcat_write', $imgcat_id, $groups, $xoopsModule->mid());
     if (!$imgcat_write) {
+        redirect_header('admin.php?fct=images', 1);
+    }
+}
+
+// Image operations need WRITE on the category the image is stored in, and a
+// save that may move it also needs WRITE on the category it is moved to, which
+// must exist (the webmaster passes every right check, even for unknown ids).
+// A stored category of 0 is never writable: checkRight() treats item 0 as "any".
+/** @var XoopsImageHandler $image_handler */
+$image_handler = xoops_getHandler('image');
+/** @var XoopsImagecategoryHandler $imgcat_handler */
+$imgcat_handler = xoops_getHandler('imagecategory');
+if (in_array($op, ['display_img', 'editimg', 'save', 'delfile', 'delfileok'], true)) {
+    $image = $image_id > 0 ? $image_handler->get($image_id) : null;
+    if (!is_object($image)
+        || (int) $image->getVar('imgcat_id') <= 0
+        || !$gperm_handler->checkRight('imgcat_write', (int) $image->getVar('imgcat_id'), $groups, $xoopsModule->mid())
+        || ('save' === $op && (!is_object($imgcat_handler->get($imgcat_id))
+                || !$gperm_handler->checkRight('imgcat_write', $imgcat_id, $groups, $xoopsModule->mid())))
+    ) {
         redirect_header('admin.php?fct=images', 1);
     }
 }

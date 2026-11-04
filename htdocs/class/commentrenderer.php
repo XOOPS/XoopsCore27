@@ -154,14 +154,18 @@ class XoopsCommentRenderer
      * @param  integer $comment_id Should be "0" when called by client
      * @param  boolean $admin_view
      * @param  boolean $show_nav
+     * @param  array   $visited    Comment ids already rendered (internal; bounds stored parent loops)
      * @return void
      */
-    public function renderThreadView($comment_id = 0, $admin_view = false, $show_nav = true)
+    public function renderThreadView($comment_id = 0, $admin_view = false, $show_nav = true, array &$visited = [])
     {
         include_once $GLOBALS['xoops']->path('class/tree.php');
         // construct comment tree
         $xot  = new XoopsObjectTree($this->_comments, 'com_id', 'com_pid', 'com_rootid');
         $tree = & $xot->getTree();
+        if (isset($visited[$comment_id]) || !isset($tree[$comment_id]['obj'])) {
+            return;
+        }
 
         if (false !== $this->_useIcons) {
             $title = $this->_getTitleIcon($tree[$comment_id]['obj']->getVar('com_icon')) . '&nbsp;' . $tree[$comment_id]['obj']->getVar('com_title');
@@ -191,9 +195,10 @@ class XoopsCommentRenderer
             // hide comments that are not active
             if (XOOPS_COMMENT_ACTIVE != $tree[$comment_id]['obj']->getVar('com_status')) {
                 // if there are any child comments, display them as root comments
+                $visited[$comment_id] = true;
                 if (isset($tree[$comment_id]['child']) && !empty($tree[$comment_id]['child'])) {
                     foreach ($tree[$comment_id]['child'] as $child_id) {
-                        $this->renderThreadView($child_id, $admin_view, false);
+                        $this->renderThreadView($child_id, $admin_view, false, $visited);
                     }
                 }
 
@@ -203,7 +208,7 @@ class XoopsCommentRenderer
             }
         }
         $replies = [];
-        $this->_renderThreadReplies($tree, $comment_id, $replies, '&nbsp;&nbsp;', $admin_view);
+        $this->_renderThreadReplies($tree, $comment_id, $replies, '&nbsp;&nbsp;', $admin_view, 0, '', $visited);
         $show_replies = (count($replies) > 0);// ? true : false;
         // Start edit by voltan
         $this->_tpl->append(
@@ -235,12 +240,15 @@ class XoopsCommentRenderer
      * @param bool    $admin_view
      * @param integer $depth
      * @param string  $current_prefix
+     * @param array   $visited        Comment ids already rendered (bounds stored parent loops)
      * @access   private
      */
-    public function _renderThreadReplies(&$thread, $key, &$replies, $prefix, $admin_view, $depth = 0, $current_prefix = '')
+    public function _renderThreadReplies(&$thread, $key, &$replies, $prefix, $admin_view, $depth = 0, $current_prefix = '', array &$visited = [])
     {
         $admin_view = (bool) $admin_view;
-        if ($depth > 0) {
+        $visited[$key] = true;
+        // An inactive reply is not listed, but its replies are, each passing this same check.
+        if ($depth > 0 && ($admin_view || XOOPS_COMMENT_ACTIVE == $thread[$key]['obj']->getVar('com_status'))) {
             if (false !== $this->_useIcons) {
                 $title = $this->_getTitleIcon($thread[$key]['obj']->getVar('com_icon')) . '&nbsp;' . $thread[$key]['obj']->getVar('com_title');
             } else {
@@ -263,15 +271,8 @@ class XoopsCommentRenderer
         if (isset($thread[$key]['child']) && !empty($thread[$key]['child'])) {
             ++$depth;
             foreach ($thread[$key]['child'] as $childkey) {
-                if (!$admin_view && $thread[$childkey]['obj']->getVar('com_status') != XOOPS_COMMENT_ACTIVE) {
-                    // skip this comment if it is not active and continue on processing its child comments instead
-                    if (isset($thread[$childkey]['child']) && !empty($thread[$childkey]['child'])) {
-                        foreach ($thread[$childkey]['child'] as $childchildkey) {
-                            $this->_renderThreadReplies($thread, $childchildkey, $replies, $prefix, $admin_view, $depth);
-                        }
-                    }
-                } else {
-                    $this->_renderThreadReplies($thread, $childkey, $replies, $prefix, $admin_view, $depth, $current_prefix);
+                if (!isset($visited[$childkey])) {
+                    $this->_renderThreadReplies($thread, $childkey, $replies, $prefix, $admin_view, $depth, $current_prefix, $visited);
                 }
             }
         }
@@ -284,13 +285,17 @@ class XoopsCommentRenderer
      *
      * @param  integer $comment_id Always "0" when called by client.
      * @param  boolean $admin_view
+     * @param  array   $visited    Comment ids already rendered (internal; bounds stored parent loops)
      * @return void
      */
-    public function renderNestView($comment_id = 0, $admin_view = false)
+    public function renderNestView($comment_id = 0, $admin_view = false, array &$visited = [])
     {
         include_once $GLOBALS['xoops']->path('class/tree.php');
         $xot  = new XoopsObjectTree($this->_comments, 'com_id', 'com_pid', 'com_rootid');
         $tree = & $xot->getTree();
+        if (isset($visited[$comment_id]) || !isset($tree[$comment_id]['obj'])) {
+            return;
+        }
         if (false !== $this->_useIcons) {
             $title = $this->_getTitleIcon($tree[$comment_id]['obj']->getVar('com_icon')) . '&nbsp;' . $tree[$comment_id]['obj']->getVar('com_title');
         } else {
@@ -311,9 +316,10 @@ class XoopsCommentRenderer
             // skip this comment if it is not active and continue on processing its child comments instead
             if (XOOPS_COMMENT_ACTIVE != $tree[$comment_id]['obj']->getVar('com_status')) {
                 // if there are any child comments, display them as root comments
+                $visited[$comment_id] = true;
                 if (isset($tree[$comment_id]['child']) && !empty($tree[$comment_id]['child'])) {
                     foreach ($tree[$comment_id]['child'] as $child_id) {
-                        $this->renderNestView($child_id, $admin_view);
+                        $this->renderNestView($child_id, $admin_view, $visited);
                     }
                 }
 
@@ -323,7 +329,7 @@ class XoopsCommentRenderer
             }
         }
         $replies = [];
-        $this->_renderNestReplies($tree, $comment_id, $replies, 25, $admin_view);
+        $this->_renderNestReplies($tree, $comment_id, $replies, 25, $admin_view, 0, $visited);
         // Start edit by voltan
         $this->_tpl->append(
             'comments',
@@ -352,17 +358,20 @@ class XoopsCommentRenderer
      * @param string|int  $prefix
      * @param bool    $admin_view
      * @param integer $depth
+     * @param array   $visited Comment ids already rendered (bounds stored parent loops)
      * @access private
      */
-    public function _renderNestReplies(&$thread, $key, &$replies, $prefix, $admin_view, $depth = 0)
+    public function _renderNestReplies(&$thread, $key, &$replies, $prefix, $admin_view, $depth = 0, array &$visited = [])
     {
-        if ($depth > 0) {
+        $admin_view = (bool) $admin_view;
+        $visited[$key] = true;
+        // An inactive reply is not listed, but its replies are, each passing this same check.
+        if ($depth > 0 && ($admin_view || XOOPS_COMMENT_ACTIVE == $thread[$key]['obj']->getVar('com_status'))) {
             if (false !== $this->_useIcons) {
                 $title = $this->_getTitleIcon($thread[$key]['obj']->getVar('com_icon')) . '&nbsp;' . $thread[$key]['obj']->getVar('com_title');
             } else {
                 $title = $thread[$key]['obj']->getVar('com_title');
             }
-            $admin_view = (bool) $admin_view;
             $text = (false !== $admin_view) ? $thread[$key]['obj']->getVar('com_text') . '<div style="text-align:right; margin-top: 2px; margin-right: 2px;">' . _CM_STATUS . ': ' . $this->_statusText[$thread[$key]['obj']->getVar('com_status')] . '<br>IP: <span style="font-weight: bold;">' . $thread[$key]['obj']->getVar('com_ip') . '</span><br>' . _CM_EMAIL . ' :<span style="font-weight: bold;">' . $thread[$key]['obj']->getVar('com_email') . '</span></div>' : $thread[$key]['obj']->getVar('com_text');
             // Start edit by voltan
             $replies[] = [
@@ -383,15 +392,8 @@ class XoopsCommentRenderer
         if (isset($thread[$key]['child']) && !empty($thread[$key]['child'])) {
             ++$depth;
             foreach ($thread[$key]['child'] as $childkey) {
-                if (!$admin_view && $thread[$childkey]['obj']->getVar('com_status') != XOOPS_COMMENT_ACTIVE) {
-                    // skip this comment if it is not active and continue on processing its child comments instead
-                    if (isset($thread[$childkey]['child']) && !empty($thread[$childkey]['child'])) {
-                        foreach ($thread[$childkey]['child'] as $childchildkey) {
-                            $this->_renderNestReplies($thread, $childchildkey, $replies, $prefix, $admin_view, $depth);
-                        }
-                    }
-                } else {
-                    $this->_renderNestReplies($thread, $childkey, $replies, $prefix, $admin_view, $depth);
+                if (!isset($visited[$childkey])) {
+                    $this->_renderNestReplies($thread, $childkey, $replies, $prefix, $admin_view, $depth, $visited);
                 }
             }
         }

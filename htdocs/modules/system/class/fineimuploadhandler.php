@@ -48,20 +48,8 @@ class SystemFineImUploadHandler extends SystemFineUploadHandler
         $this->allowedExtensions = ['gif', 'jpeg', 'jpg', 'png'];
 
         // The category's byte limit used to reach only the client-side widget.
-        // Cap it at what PHP itself accepts, so a category limit above the
-        // php.ini limits does not make handleUpload() refuse every file.
         $imgcat = $this->category();
-        $maxSize = (null === $imgcat) ? 0 : (int) $imgcat->getVar('imgcat_maxsize');
-        if ($maxSize > 0) {
-            foreach (['upload_max_filesize', 'post_max_size'] as $ini) {
-                $value = trim((string) ini_get($ini));
-                $bytes = ('' === $value) ? 0 : (int) $this->toBytes($value);
-                if ($bytes > 0) {
-                    $maxSize = min($maxSize, $bytes);
-                }
-            }
-            $this->sizeLimit = $maxSize;
-        }
+        $this->setByteLimit((null === $imgcat) ? 0 : (int) $imgcat->getVar('imgcat_maxsize'));
     }
 
     /**
@@ -114,17 +102,7 @@ class SystemFineImUploadHandler extends SystemFineUploadHandler
      */
     protected function dimensionError(string $file, XoopsImagecategory $imgcat): ?string
     {
-        $size = getimagesize($file);
-        if (false === $size) {
-            return 'File is of an invalid type.';
-        }
-        $maxWidth  = (int) $imgcat->getVar('imgcat_maxwidth');
-        $maxHeight = (int) $imgcat->getVar('imgcat_maxheight');
-        if (($maxWidth > 0 && $size[0] > $maxWidth) || ($maxHeight > 0 && $size[1] > $maxHeight)) {
-            return sprintf('Image is too large. The limit is %d x %d pixels.', $maxWidth, $maxHeight);
-        }
-
-        return null;
+        return $this->pixelError($file, (int) $imgcat->getVar('imgcat_maxwidth'), (int) $imgcat->getVar('imgcat_maxheight'));
     }
 
     protected function storeUploadedFile($target, $mimeType, $uuid)

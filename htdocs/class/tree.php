@@ -124,6 +124,11 @@ class XoopsObjectTree
     {
         if (isset($this->tree[$key]['child'])) {
             foreach ($this->tree[$key]['child'] as $childKey) {
+                // A stored parent loop (a comment that is its own ancestor)
+                // would otherwise recurse without end.
+                if (isset($ret[$childKey])) {
+                    continue;
+                }
                 $ret[$childKey] = $this->tree[$childKey]['obj'];
                 $children       = $this->getAllChild($childKey, $ret);
                 foreach (array_keys($children) as $newKey) {

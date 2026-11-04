@@ -63,7 +63,7 @@ final class ImageCategoryWriteGateTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, int, int, bool}> [op, image's category (0 = no image), posted imgcat_id, allowed]
+     * @return array<string, array{string, int|null, int, bool}> [op, image's category (null = no image), posted imgcat_id, allowed]
      */
     public static function requests(): array
     {
@@ -73,7 +73,9 @@ final class ImageCategoryWriteGateTest extends TestCase
             'edit form for foreign image'       => ['editimg', self::FOREIGN, 0, false],
             'delete confirm for foreign image'  => ['delfile', self::FOREIGN, 0, false],
             'delete foreign image'              => ['delfileok', self::FOREIGN, 0, false],
-            'unknown image'                     => ['display_img', 0, 0, false],
+            'unknown image'                     => ['display_img', null, 0, false],
+            'image stored in category 0'        => ['display_img', 0, 0, false],
+            'save image stored in category 0'   => ['save', 0, self::WRITABLE, false],
             'save within writable category'     => ['save', self::WRITABLE, self::WRITABLE, true],
             'save moves image to foreign cat'   => ['save', self::WRITABLE, self::FOREIGN, false],
             'save pulls image from foreign cat' => ['save', self::FOREIGN, self::WRITABLE, false],
@@ -85,7 +87,7 @@ final class ImageCategoryWriteGateTest extends TestCase
 
     #[Test]
     #[DataProvider('requests')]
-    public function onlyWritableCategoriesCanBeChanged(string $op, int $imageCategory, int $imgcat_id, bool $allowed): void
+    public function onlyWritableCategoriesCanBeChanged(string $op, ?int $imageCategory, int $imgcat_id, bool $allowed): void
     {
         $image_id      = 42;
         $groups        = [2];
@@ -98,8 +100,9 @@ final class ImageCategoryWriteGateTest extends TestCase
         $gperm_handler = new class {
             public function checkRight(string $name, int $id, mixed $groups, int $mid): bool
             {
+                // Like XoopsGroupPermHandler: item 0 is "any item" and passes.
                 return 'imgcat_write' === $name
-                    && in_array($id, [ImageCategoryWriteGateTest::WRITABLE, ImageCategoryWriteGateTest::MISSING], true);
+                    && in_array($id, [0, ImageCategoryWriteGateTest::WRITABLE, ImageCategoryWriteGateTest::MISSING], true);
             }
         };
         $imgcat_handler = new class {
@@ -110,13 +113,13 @@ final class ImageCategoryWriteGateTest extends TestCase
             }
         };
         $image_handler = new class($imageCategory) {
-            public function __construct(private int $category)
+            public function __construct(private ?int $category)
             {
             }
 
             public function get(int $id): mixed
             {
-                if (0 === $this->category) {
+                if (null === $this->category) {
                     return false;
                 }
                 $image = new \XoopsImage();

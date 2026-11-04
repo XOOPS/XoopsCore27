@@ -973,25 +973,17 @@ function xoops_getcss($theme = '')
  */
 function xoops_getMailer()
 {
-    static $mailer;
     global $xoopsConfig;
-    if (is_object($mailer)) {
-        return $mailer;
-    }
     include_once XOOPS_ROOT_PATH . '/class/xoopsmailer.php';
     if (file_exists($file = XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/xoopsmailerlocal.php')) {
         include_once $file;
     } elseif (file_exists($file = XOOPS_ROOT_PATH . '/language/english/xoopsmailerlocal.php')) {
         include_once $file;
     }
-    unset($mailer);
-    if (class_exists('XoopsMailerLocal')) {
-        $mailer = new XoopsMailerLocal();
-    } else {
-        $mailer = new XoopsMailer();
-    }
 
-    return $mailer;
+    // A new mailer per call: a shared instance carried the previous message's
+    // recipients, tags, template and HTML mode into the next one.
+    return class_exists('XoopsMailerLocal') ? new XoopsMailerLocal() : new XoopsMailer();
 }
 
 /**

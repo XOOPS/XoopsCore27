@@ -2,14 +2,14 @@
 /**
  * Regression tests for modules/system/admin/blocksadmin/main.php — issue #73.
  *
- * Cloning a module block submits bid=0, so the save handler creates a
- * fresh empty block. Before the fix it never read the module metadata
- * back from the hidden clone-form fields, so the clone failed the
- * not-null name validation and lost its module association.
+ * Cloning a module block submits bid=0, so the save handler creates a fresh
+ * block. It must carry the source block's module binding and name (issue #73),
+ * and it takes them from the stored source row named by clone_bid: posted
+ * callback names or paths are never used, so a forged form cannot point a
+ * block at an arbitrary function or file.
  *
- * blocksadmin/main.php is a procedural request handler (redirects, CSRF,
- * globals) and cannot be executed in isolation, so — like ModulesAdminTest
- * — this verifies the fix by static analysis of the source.
+ * The clone branch is sliced from the save handler and executed as written
+ * against a stub block handler; the bootstrap's redirect_header() throws.
  *
  * @copyright    2000-2026 XOOPS Project (https://xoops.org)
  * @license      GNU GPL 2.0 or later (https://www.gnu.org/licenses/gpl-2.0.html)
@@ -23,6 +23,8 @@ namespace Tests\Unit\System\BlocksAdmin;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/SourceFileTestTrait.php';
+require_once XOOPS_ROOT_PATH . '/modules/system/class/block.php';
+defined('_AM_SYSTEM_BLOCKS_INVALID_CLONE') || define('_AM_SYSTEM_BLOCKS_INVALID_CLONE', 'Invalid clone');
 
 use Tests\Unit\System\SourceFileTestTrait;
 
@@ -30,16 +32,18 @@ class BlocksAdminCloneTest extends TestCase
 {
     use SourceFileTestTrait;
 
-    /** Module-binding fields the clone form round-trips as hidden inputs. */
+    public const SOURCE_BID = 77;
+
+    /** Module-binding fields a clone takes from its source block. */
     private const CLONE_FIELDS = [
-        'mid',
-        'func_num',
-        'func_file',
-        'show_func',
-        'edit_func',
-        'template',
-        'dirname',
-        'name',
+        'mid'       => 4,
+        'func_num'  => 2,
+        'func_file' => 'nested/news_top.php',
+        'show_func' => 'b_news_top_show',
+        'edit_func' => 'b_news_top_edit',
+        'template'  => 'news_block_top.tpl',
+        'dirname'   => 'news',
+        'name'      => 'Top News',
     ];
 
     protected function setUp(): void
@@ -48,124 +52,121 @@ class BlocksAdminCloneTest extends TestCase
     }
 
     /**
-     * Byte offset of the save handler's clone branch. Anchored on the
-     * unique "get($block_id); } else { ... create();" shape so the inner
-     * c_type switch (case 'H'/default) can't throw off detection.
+     * The clone branch of the save handler, without the closing brace of the
+     * surrounding else.
      */
-    private function cloneBranchOffset(): int
+    private function cloneBranch(): string
     {
-        $matched = preg_match(
-            '/\$block_handler->get\(\$block_id\);\s*\}\s*else\s*\{\s*\$block\s*=\s*\$block_handler->create\(\);/',
-            $this->sourceContent,
-            $m,
-            PREG_OFFSET_CAPTURE
-        );
-        self::assertSame(
-            1,
-            $matched,
-            "save handler must branch: bid>0 -> get(\$block_id), else create()"
-        );
+        $from  = "if ('D' === Request::getString('block_type', '', 'POST')) {";
+        $to    = '// A stored block keeps its type';
+        $start = strpos($this->sourceContent, $from);
+        self::assertNotFalse($start, 'clone branch must be selected by the posted block type D');
+        $end = strpos($this->sourceContent, $to, $start);
+        self::assertNotFalse($end, 'end marker missing');
+        $code = rtrim(substr($this->sourceContent, $start, $end - $start));
+        self::assertStringEndsWith('}', $code);
 
-        return $m[0][1];
+        return 'use Xmf\Request; ' . substr($code, 0, -1);
     }
 
     /**
-     * Capture the clone-branch hydration region: from the clone create()
-     * through the end of the $block->setVars([...]); call. This spans both
-     * the $clone_* = Request::get*() reads and the setVars() array, so it
-     * works whether a field is read inline or via a local. Window-free, so
-     * it cannot under/over-read like a fixed substring length would.
+     * @param array<string, mixed> $vars
      */
-    private function cloneHydrationRegion(): string
+    private static function block(string $type, array $vars = []): \SystemBlock
     {
-        $matched = preg_match(
-            '/\$block_handler->get\(\$block_id\);\s*\}\s*else\s*\{\s*'
-            . '\$block\s*=\s*\$block_handler->create\(\);'
-            . '(.*?\$block->setVars\(\[.*?\]\);)/s',
-            $this->sourceContent,
-            $m
-        );
-        self::assertSame(
-            1,
-            $matched,
-            'clone branch must hydrate the new block via $block->setVars([...])'
-        );
+        $block = new \SystemBlock();
+        $block->setVar('block_type', $type);
+        foreach ($vars as $key => $value) {
+            $block->setVar($key, $value);
+        }
+        $block->unsetNew();
 
-        return $m[1];
+        return $block;
     }
 
     /**
-     * The clone branch (bid == 0 -> create()) must hydrate every
-     * module-binding field from POST — this is the #73 fix.
+     * Run the clone branch for a posted form.
+     *
+     * @param array<string, mixed> $post
      */
-    public function testCloneBranchHydratesModuleFieldsFromPost(): void
+    private function save(array $post, \SystemBlock $source): \SystemBlock
     {
-        $region = $this->cloneHydrationRegion();
+        $block_handler = new class ($source) {
+            public function __construct(private \SystemBlock $source)
+            {
+            }
 
-        foreach (self::CLONE_FIELDS as $field) {
-            self::assertMatchesRegularExpression(
-                "/Request::get\w+\(\s*'" . preg_quote($field, '/') . "'.*'POST'\s*\)/",
-                $region,
-                "Clone branch must read '{$field}' from POST so the cloned block keeps its module binding (issue #73)"
-            );
+            public function get(int $id): ?\SystemBlock
+            {
+                return BlocksAdminCloneTest::SOURCE_BID === $id ? $this->source : null;
+            }
+        };
+        $block = new \SystemBlock();
+
+        $saved = $_POST;
+        $_POST = $post;
+        try {
+            eval($this->cloneBranch());
+        } finally {
+            $_POST = $saved;
+        }
+
+        return $block;
+    }
+
+    public function testCloneCopiesModuleBindingFromTheStoredSource(): void
+    {
+        $forged = [
+            'block_type' => 'D',
+            'clone_bid'  => (string) self::SOURCE_BID,
+            'mid'        => '1',
+            'func_file'  => 'other.php',
+            'show_func'  => 'phpinfo',
+            'edit_func'  => 'system',
+            'dirname'    => 'system',
+            'template'   => 'x.tpl',
+            'name'       => 'forged',
+        ];
+        $clone = $this->save($forged, self::block('M', self::CLONE_FIELDS));
+
+        foreach (self::CLONE_FIELDS as $field => $expected) {
+            self::assertSame($expected, $clone->getVar($field, 'n'), "clone must take '{$field}' from the source block");
         }
     }
 
-    /**
-     * Hardening for issue #73: the clone branch must reject tampered
-     * hidden inputs before persisting, since dirname/func_file/template
-     * feed include_once paths and show/edit_func are called as functions.
-     */
-    public function testCloneBranchRejectsTamperedPathAndFunctionFields(): void
+    public function testCloneOfUnknownSourceIsRefused(): void
     {
-        $region = $this->cloneHydrationRegion();
-
-        // Path-traversal rejection on the path-building fields.
-        self::assertStringContainsString(
-            "'..'",
-            $region,
-            'Clone branch must reject ".." in dirname/func_file/template'
-        );
-        self::assertStringContainsString(
-            "redirect_header('admin.php?fct=blocksadmin'",
-            $region,
-            'A tampered clone must be rejected via redirect_header(), not persisted'
-        );
-        // Function-name allowlist for show_func / edit_func.
-        self::assertStringContainsString(
-            '^[A-Za-z_]\w*$',
-            $region,
-            'show_func/edit_func must be validated against a PHP-identifier allowlist'
-        );
+        $this->expectException(\RedirectHeaderException::class);
+        $this->save(['block_type' => 'D', 'clone_bid' => '5'], self::block('M', self::CLONE_FIELDS));
     }
 
-    /**
-     * Failure mode #1: a cloned block must carry a name before insert(),
-     * otherwise the not-null DB validation rejects it.
-     */
-    public function testCloneHydratesNameBeforeInsert(): void
+    public function testCloneWithoutSourceIsRefused(): void
     {
-        $cloneOffset = $this->cloneBranchOffset();
+        $this->expectException(\RedirectHeaderException::class);
+        $this->save(['block_type' => 'D', 'show_func' => 'phpinfo'], self::block('M', self::CLONE_FIELDS));
+    }
 
-        $nameRead = strpos($this->sourceContent, "Request::getString('name'", $cloneOffset);
-        self::assertNotFalse($nameRead, "clone branch must read 'name' from POST");
+    public function testModuleCloneOfACustomSourceIsRefused(): void
+    {
+        $this->expectException(\RedirectHeaderException::class);
+        $this->save(['block_type' => 'D', 'clone_bid' => (string) self::SOURCE_BID], self::block('C'));
+    }
 
-        $insertPos = strpos($this->sourceContent, '$block_handler->insert(', $cloneOffset);
-        self::assertNotFalse($insertPos, 'save handler must insert() the block');
-
-        // assertGreaterThan($expected, $actual) passes when $actual >
-        // $expected, i.e. insert() appears after the name read. Phrased
-        // this way (vs the equivalent assertLessThan) to read naturally.
-        self::assertGreaterThan(
-            $nameRead,
-            $insertPos,
-            "'name' must be hydrated before insert() so a clone passes name validation (issue #73)"
+    public function testNewCustomBlockGetsNoModuleBinding(): void
+    {
+        $block = $this->save(
+            ['block_type' => 'C', 'clone_bid' => (string) self::SOURCE_BID, 'show_func' => 'phpinfo', 'func_file' => 'x.php'],
+            self::block('M', self::CLONE_FIELDS),
         );
+
+        self::assertSame('', (string) $block->getVar('show_func', 'n'));
+        self::assertSame('', (string) $block->getVar('func_file', 'n'));
+        self::assertSame(0, (int) $block->getVar('mid'));
     }
 
     /**
      * Regression guard: the normal edit path (bid > 0) must still load
-     * the block from the handler, unchanged by the fix.
+     * the block from the handler.
      */
     public function testEditPathStillLoadsViaHandlerGet(): void
     {

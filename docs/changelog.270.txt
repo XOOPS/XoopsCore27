@@ -74,6 +74,9 @@ Bug fixes:
 - the comment reply page quotes only an active comment of the module it is opened from, and only moderators may reply below a pending or hidden comment; the System comment manager opens any module's comment for moderators only (include/comment_reply.php, include/comment_post.php)
 - the threaded and nested comment views check every reply's status, so a pending or hidden reply below another inactive reply is no longer listed; a stored parent loop between comments no longer recurses without end in the views or in XoopsObjectTree::getAllChild() (class/commentrenderer.php, class/tree.php)
 - extra parameters a module adds to comment thread links are URL-encoded (include/comment_view.php)
+- the image manager checks write permission on an image's own category before showing, editing, moving, hiding or deleting it, on the category an image is moved to, and on a category before hiding it (modules/system/admin/images/main.php)
+- the image and avatar uploaders check the byte limit against the size PHP received, so a smaller declared total no longer passes; avatar uploads enforce the configured avatar byte and pixel limits on the server (modules/system/class/fineuploadhandler.php, fineimuploadhandler.php, fineavataruploadhandler.php)
+- a cloned module block takes its module, file, functions and template from the stored source block, not from the form; module block display and option functions run only when the module's own code defines them (modules/system/admin/blocksadmin/main.php, modules/system/class/block.php, kernel/block.php)
 
 ===================================
 2.7.4                     2026-10

@@ -588,6 +588,44 @@ class XoopsBlock extends XoopsObject
     }
 
     /**
+     * Load this module block's file and return its show or edit function, but
+     * only when that function is user code defined inside the block's own
+     * module directory. The stored names can then never call a PHP or core
+     * function, or code of another module.
+     *
+     * @param string $function show_func or edit_func of this block
+     * @return string|null the function name, or null when it cannot be trusted
+     */
+    protected function moduleBlockFunction(string $function): ?string
+    {
+        $dirname     = (string) $this->getVar('dirname', 'n');
+        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
+        $moduleDir   = realpath(XOOPS_ROOT_PATH . '/modules/' . $dirname);
+        $file        = realpath(XOOPS_ROOT_PATH . '/modules/' . $dirname . '/blocks/' . $this->getVar('func_file', 'n'));
+        if ('' === $function || '' === $dirname || false === $modulesRoot || false === $moduleDir || false === $file
+            || dirname($moduleDir) !== $modulesRoot
+            || !str_starts_with($file, $moduleDir . DIRECTORY_SEPARATOR)
+        ) {
+            return null;
+        }
+        // Some modules need their block strings outside the function body.
+        xoops_loadLanguage('blocks', $dirname);
+        include_once $file;
+        if (!function_exists($function)) {
+            return null;
+        }
+        $definedIn = (new \ReflectionFunction($function))->getFileName();
+        $definedIn = (false === $definedIn) ? false : realpath($definedIn);
+        if (false === $definedIn || !str_starts_with($definedIn, $moduleDir . DIRECTORY_SEPARATOR)) {
+            $this->logBlockWarning("Block function {$function} is not defined by module {$dirname}");
+
+            return null;
+        }
+
+        return $function;
+    }
+
+    /**
      * (HTML-) form for setting the options of the block
      *
      * @return string HTML for the form, FALSE if not defined for this block
@@ -595,27 +633,17 @@ class XoopsBlock extends XoopsObject
     public function getOptions()
     {
         if (!$this->isCustom()) {
-            $edit_func = $this->getVar('edit_func');
-            if (!$edit_func) {
+            $edit_func = $this->moduleBlockFunction((string) $this->getVar('edit_func', 'n'));
+            if (null === $edit_func) {
                 return false;
             }
-            if (file_exists(XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file'))) {
-                if (file_exists(XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/language/' . $GLOBALS['xoopsConfig']['language'] . '/blocks.php')) {
-                    include_once XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/language/' . $GLOBALS['xoopsConfig']['language'] . '/blocks.php';
-                } elseif (file_exists(XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/language/english/blocks.php')) {
-                    include_once XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/language/english/blocks.php';
-                }
-                include_once XOOPS_ROOT_PATH . '/modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file');
-                $options   = explode('|', $this->getVar('options'));
-                $edit_form = $edit_func($options);
-                if (!$edit_form) {
-                    return false;
-                }
+            $options   = explode('|', (string) $this->getVar('options'));
+            $edit_form = $edit_func($options);
+            if (!$edit_form) {
+                return false;
+            }
 
-                return $edit_form;
-            } else {
-                return false;
-            }
+            return $edit_form;
         } else {
             return false;
         }
@@ -711,26 +739,13 @@ class XoopsBlock extends XoopsObject
         $block = [];
         if (!$this->isCustom()) {
             // get block display function
-            $show_func = $this->getVar('show_func');
-            if (!$show_func) {
+            $show_func = $this->moduleBlockFunction((string) $this->getVar('show_func', 'n'));
+            if (null === $show_func) {
                 return false;
             }
-            if (!file_exists($func_file = $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file')))) {
-                return false;
-            }
-            // must get lang files b4 including the file
-            // some modules require it for code that is outside the function
-            xoops_loadLanguage('blocks', $this->getVar('dirname'));
-            include_once $func_file;
-
-            if (function_exists($show_func)) {
-                // execute the function
-                $options = explode('|', $this->getVar('options'));
-                $block   = $show_func($options);
-                if (!$block) {
-                    return false;
-                }
-            } else {
+            $options = explode('|', (string) $this->getVar('options'));
+            $block   = $show_func($options);
+            if (!$block) {
                 return false;
             }
         } else {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace kernel;
 
+use PHPUnit\Framework\Attributes\BeforeClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionClass;
 use XoopsBlock;
@@ -930,5 +931,45 @@ class XoopsBlockTest extends KernelTestCase
         $result = $block->buildTitle('Title <b>bold</b>', '');
 
         $this->assertEquals('Title <b>bold</b>', $result);
+    }
+
+    /**
+     * @return array<string, array{string, string, string, ?string}> [dirname, func_file, function, expected]
+     */
+    public static function moduleBlockCallbacks(): array
+    {
+        return [
+            'function of the block file'      => ['system', 'system_blocks.php', 'b_system_main_show', 'b_system_main_show'],
+            'edit function of the block file' => ['system', 'system_blocks.php', 'b_system_info_edit', 'b_system_info_edit'],
+            'PHP function'                    => ['system', 'system_blocks.php', 'phpinfo', null],
+            'core function outside module'    => ['system', 'system_blocks.php', 'xoops_getHandler', null],
+            'unknown function'                => ['system', 'system_blocks.php', 'b_no_such_block_show', null],
+            'empty function'                  => ['system', 'system_blocks.php', '', null],
+            'missing block file'              => ['system', 'no_such_file.php', 'b_system_main_show', null],
+            'dirname leaving modules'         => ['..', '../include/functions.php', 'xoops_getHandler', null],
+            'func_file leaving the module'    => ['system', '../../../include/functions.php', 'xoops_getHandler', null],
+        ];
+    }
+
+    /**
+     * A rejected callback is logged; create the logger (which installs its
+     * handlers) before the tests run.
+     */
+    #[BeforeClass]
+    public static function createLogger(): void
+    {
+        \XoopsLogger::getInstance();
+    }
+
+    #[DataProvider('moduleBlockCallbacks')]
+    public function testModuleBlockFunctionOnlyResolvesFunctionsOfTheBlocksModule(string $dirname, string $funcFile, string $function, ?string $expected): void
+    {
+        $block = new XoopsBlock();
+        $block->setVar('dirname', $dirname);
+        $block->setVar('func_file', $funcFile);
+
+        $resolve = new \ReflectionMethod($block, 'moduleBlockFunction');
+
+        $this->assertSame($expected, $resolve->invoke($block, $function));
     }
 }

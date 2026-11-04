@@ -265,12 +265,10 @@ abstract class SystemFineUploadHandler
 
         // Get size and name
         $file = Request::getArray($this->inputName, [], 'FILES');
-        $size = $file['size'] ?? 0;
-        // Pin the declared total size to POST so a GET/cookie value cannot
-        // understate the size and slip past the size-limit check below.
-        if (Request::hasVar('qqtotalfilesize', 'POST')) {
-            $size = Request::getInt('qqtotalfilesize', 0, 'POST');
-        }
+        // PHP measured $file['size'] from the bytes it received. The client's
+        // declared total (qqtotalfilesize, the whole file when chunked) can only
+        // raise the size the limit sees, never lower it below what arrived.
+        $size = max((int) ($file['size'] ?? 0), Request::getInt('qqtotalfilesize', 0, 'POST'));
 
         if (null === $name) {
             $name = $this->getName();
@@ -556,6 +554,50 @@ abstract class SystemFineUploadHandler
             }
         }
         rmdir($dir);
+    }
+
+    /**
+     * Set the server-side byte limit, capped at what PHP itself accepts so a
+     * configured limit above the php.ini limits does not make handleUpload()
+     * refuse every file. A limit of 0 or less means no limit.
+     *
+     * @param int $maxSize configured limit in bytes
+     * @return void
+     */
+    protected function setByteLimit(int $maxSize): void
+    {
+        if ($maxSize <= 0) {
+            return;
+        }
+        foreach (['upload_max_filesize', 'post_max_size'] as $ini) {
+            $value = trim((string) ini_get($ini));
+            $bytes = ('' === $value) ? 0 : (int) $this->toBytes($value);
+            if ($bytes > 0) {
+                $maxSize = min($maxSize, $bytes);
+            }
+        }
+        $this->sizeLimit = $maxSize;
+    }
+
+    /**
+     * Check an uploaded image against pixel limits. A limit of 0 means no limit.
+     *
+     * @param string $file      path of the uploaded temp file
+     * @param int    $maxWidth  maximum width in pixels
+     * @param int    $maxHeight maximum height in pixels
+     * @return string|null error message, or null when the image is acceptable
+     */
+    protected function pixelError(string $file, int $maxWidth, int $maxHeight): ?string
+    {
+        $size = getimagesize($file);
+        if (false === $size) {
+            return 'File is of an invalid type.';
+        }
+        if (($maxWidth > 0 && $size[0] > $maxWidth) || ($maxHeight > 0 && $size[1] > $maxHeight)) {
+            return sprintf('Image is too large. The limit is %d x %d pixels.', $maxWidth, $maxHeight);
+        }
+
+        return null;
     }
 
     /**

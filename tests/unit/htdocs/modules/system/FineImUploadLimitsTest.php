@@ -93,6 +93,23 @@ final class FineImUploadLimitsTest extends TestCase
     }
 
     #[Test]
+    public function declaredTotalCannotUnderstateTheReceivedSize(): void
+    {
+        $_FILES['qqfile'] = ['tmp_name' => $this->png(10, 10), 'name' => 'a.png', 'size' => 5000, 'error' => 0];
+        $_POST['qqtotalfilesize'] = '1';
+        $_SERVER['CONTENT_TYPE']  = 'multipart/form-data; boundary=x';
+        $_REQUEST['qqfilename']   = 'a.png';
+
+        try {
+            $result = $this->handler($this->category(1000, 0, 0))->handleUpload(sys_get_temp_dir());
+        } finally {
+            unset($_POST['qqtotalfilesize'], $_SERVER['CONTENT_TYPE'], $_REQUEST['qqfilename']);
+        }
+
+        self::assertSame('File is too large.', $result['error'] ?? null);
+    }
+
+    #[Test]
     public function zeroByteLimitMeansNoLimit(): void
     {
         self::assertNull($this->handler($this->category(0, 0, 0))->sizeLimit);

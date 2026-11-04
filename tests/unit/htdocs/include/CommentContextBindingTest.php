@@ -107,7 +107,7 @@ final class CommentContextBindingTest extends TestCase
     }
 
     #[Test]
-    public function anEditKeepsTheStoredRoot(): void
+    public function anEditKeepsTheStoredRootAndItem(): void
     {
         $code = $this->slice(
             'htdocs/include/comment_post.php',
@@ -117,13 +117,12 @@ final class CommentContextBindingTest extends TestCase
         $comment    = self::comment(12, 3, 9, 4);
         $com_modid  = 3;
         $com_rootid = 0; // posted value would make the reply its own root
+        $com_itemid = 55; // posted value of another item
         eval($code);
         self::assertSame(4, $com_rootid);
+        self::assertSame(9, $com_itemid);
     }
 
-    /**
-     * @return array<string, array{mixed, string, mixed, bool}> [comment, hosting dirname, user, allowed]
-     */
     private static function moderator(): object
     {
         return new class {
@@ -139,6 +138,9 @@ final class CommentContextBindingTest extends TestCase
         };
     }
 
+    /**
+     * @return array<string, array{mixed, string, mixed, bool}> [comment, hosting dirname, user, allowed]
+     */
     public static function replyTargets(): array
     {
         $admin = self::moderator();

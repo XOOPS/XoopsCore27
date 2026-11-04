@@ -19,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 use Tests\Unit\System\SourceFileTestTrait;
 
 require_once dirname(__DIR__, 2) . '/SourceFileTestTrait.php';
+require_once XOOPS_ROOT_PATH . '/kernel/image.php';
 
 /**
  * A delegated image administrator may change only images and categories they
@@ -40,6 +41,8 @@ final class ImageCategoryWriteGateTest extends TestCase
 
     public const WRITABLE = 5;
     public const FOREIGN  = 6;
+    /** A category id that every right check grants (as for the webmaster) but that does not exist. */
+    public const MISSING  = 7;
 
     private function gate(): string
     {
@@ -50,11 +53,13 @@ final class ImageCategoryWriteGateTest extends TestCase
         self::assertNotFalse($start, 'start marker missing');
         $end = strpos($this->sourceContent, $to, $start);
         self::assertNotFalse($end, 'end marker missing');
-        $handlerLine = "\$image_handler = xoops_getHandler('image');";
-        self::assertStringContainsString($handlerLine, $this->sourceContent);
+        $handlerLines = ["\$image_handler = xoops_getHandler('image');", "\$imgcat_handler = xoops_getHandler('imagecategory');"];
+        foreach ($handlerLines as $line) {
+            self::assertStringContainsString($line, $this->sourceContent);
+        }
 
-        // The image handler comes from the test, not xoops_getHandler().
-        return str_replace($handlerLine, '', substr($this->sourceContent, $start, $end - $start));
+        // The handlers come from the test, not xoops_getHandler().
+        return str_replace($handlerLines, '', substr($this->sourceContent, $start, $end - $start));
     }
 
     /**
@@ -72,6 +77,7 @@ final class ImageCategoryWriteGateTest extends TestCase
             'save within writable category'     => ['save', self::WRITABLE, self::WRITABLE, true],
             'save moves image to foreign cat'   => ['save', self::WRITABLE, self::FOREIGN, false],
             'save pulls image from foreign cat' => ['save', self::FOREIGN, self::WRITABLE, false],
+            'save moves image to missing cat'   => ['save', self::WRITABLE, self::MISSING, false],
             'toggle writable category'          => ['display_cat', 0, self::WRITABLE, true],
             'toggle foreign category'           => ['display_cat', 0, self::FOREIGN, false],
         ];
@@ -92,7 +98,15 @@ final class ImageCategoryWriteGateTest extends TestCase
         $gperm_handler = new class {
             public function checkRight(string $name, int $id, mixed $groups, int $mid): bool
             {
-                return 'imgcat_write' === $name && ImageCategoryWriteGateTest::WRITABLE === $id;
+                return 'imgcat_write' === $name
+                    && in_array($id, [ImageCategoryWriteGateTest::WRITABLE, ImageCategoryWriteGateTest::MISSING], true);
+            }
+        };
+        $imgcat_handler = new class {
+            public function get(int $id): mixed
+            {
+                return in_array($id, [ImageCategoryWriteGateTest::WRITABLE, ImageCategoryWriteGateTest::FOREIGN], true)
+                    ? new \stdClass() : false;
             }
         };
         $image_handler = new class($imageCategory) {

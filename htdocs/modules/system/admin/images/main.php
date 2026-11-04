@@ -59,14 +59,18 @@ if (isset($imgcat_id) && ($op === 'addfile' || $op === 'multiupload' || $op === 
 }
 
 // Image operations need WRITE on the category the image is stored in, and a
-// save that may move it also needs WRITE on the category it is moved to.
+// save that may move it also needs WRITE on the category it is moved to, which
+// must exist (the webmaster passes every right check, even for unknown ids).
 /** @var XoopsImageHandler $image_handler */
 $image_handler = xoops_getHandler('image');
+/** @var XoopsImagecategoryHandler $imgcat_handler */
+$imgcat_handler = xoops_getHandler('imagecategory');
 if (in_array($op, ['display_img', 'editimg', 'save', 'delfile', 'delfileok'], true)) {
     $image = $image_id > 0 ? $image_handler->get($image_id) : null;
     if (!is_object($image)
         || !$gperm_handler->checkRight('imgcat_write', (int) $image->getVar('imgcat_id'), $groups, $xoopsModule->mid())
-        || ('save' === $op && !$gperm_handler->checkRight('imgcat_write', $imgcat_id, $groups, $xoopsModule->mid()))
+        || ('save' === $op && (!is_object($imgcat_handler->get($imgcat_id))
+                || !$gperm_handler->checkRight('imgcat_write', $imgcat_id, $groups, $xoopsModule->mid())))
     ) {
         redirect_header('admin.php?fct=images', 1);
     }

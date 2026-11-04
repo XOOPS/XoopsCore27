@@ -947,6 +947,7 @@ class XoopsBlockTest extends KernelTestCase
             'empty function'                  => ['system', 'system_blocks.php', '', null],
             'missing block file'              => ['system', 'no_such_file.php', 'b_system_main_show', null],
             'dirname leaving modules'         => ['..', '../include/functions.php', 'xoops_getHandler', null],
+            'dirname with a path'             => ['system/../system', 'system_blocks.php', 'b_system_main_show', null],
             'func_file leaving the module'    => ['system', '../../../include/functions.php', 'xoops_getHandler', null],
         ];
     }

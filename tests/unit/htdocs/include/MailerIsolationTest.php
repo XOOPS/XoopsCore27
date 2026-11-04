@@ -46,7 +46,6 @@ final class MailerIsolationTest extends TestCase
         self::assertNotFalse($end);
         $code = substr($source, $start, $end + 2 - $start);
         eval(str_replace('function xoops_getMailer()', 'function xoops_getMailer_under_test()', $code));
-        $GLOBALS['xoopsConfig']['language'] ??= 'english';
         // xoopsmailer.php may already have been loaded by an earlier test with a
         // stubbed $xoops->path(), which skips its own include of this class.
         require_once XOOPS_ROOT_PATH . '/class/mail/xoopsmultimailer.php';
@@ -55,14 +54,25 @@ final class MailerIsolationTest extends TestCase
     #[Test]
     public function eachMessageStartsWithACleanMailer(): void
     {
-        $first = \xoops_getMailer_under_test();
-        $first->setToEmails('first@example.com');
-        $first->assign('X_ITEM', 'first item');
-        $first->setTemplate('first.tpl');
-        $first->setHTML(true);
+        $hadConfig = array_key_exists('xoopsConfig', $GLOBALS);
+        $saved     = $GLOBALS['xoopsConfig'] ?? null;
+        $GLOBALS['xoopsConfig']['language'] ??= 'english';
+        try {
+            $first = \xoops_getMailer_under_test();
+            $first->setToEmails('first@example.com');
+            $first->assign('X_ITEM', 'first item');
+            $first->setTemplate('first.tpl');
+            $first->setHTML(true);
 
-        $second = \xoops_getMailer_under_test();
-        $second->setToEmails('second@example.com');
+            $second = \xoops_getMailer_under_test();
+            $second->setToEmails('second@example.com');
+        } finally {
+            if ($hadConfig) {
+                $GLOBALS['xoopsConfig'] = $saved;
+            } else {
+                unset($GLOBALS['xoopsConfig']);
+            }
+        }
 
         self::assertNotSame($first, $second);
         self::assertSame(['second@example.com'], $second->toEmails);

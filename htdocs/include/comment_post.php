@@ -260,9 +260,11 @@ switch ($op) {
             if (!is_object($comment) || (int) $comment->getVar('com_modid') !== (int) $com_modid) {
                 redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
             }
-            // An edit keeps the comment's place in its thread; the posted root
-            // id would otherwise reset it below.
+            // An edit keeps the comment's place in its thread and item; the
+            // posted root and item ids would otherwise drive the counts,
+            // notifications and redirects below.
             $com_rootid = (int) $comment->getVar('com_rootid');
+            $com_itemid = (int) $comment->getVar('com_itemid');
 
             if (is_object($xoopsUser)) {
                 include_once $GLOBALS['xoops']->path('modules/system/constants.php');

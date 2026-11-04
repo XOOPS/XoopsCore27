@@ -598,20 +598,25 @@ class XoopsBlock extends XoopsObject
      */
     protected function moduleBlockFunction(string $function): ?string
     {
-        $dirname     = (string) $this->getVar('dirname', 'n');
-        $modulesRoot = realpath(XOOPS_ROOT_PATH . '/modules');
-        $moduleDir   = realpath(XOOPS_ROOT_PATH . '/modules/' . $dirname);
-        $file        = realpath(XOOPS_ROOT_PATH . '/modules/' . $dirname . '/blocks/' . $this->getVar('func_file', 'n'));
-        if ('' === $function || '' === $dirname || false === $modulesRoot || false === $moduleDir || false === $file
-            || dirname($moduleDir) !== $modulesRoot
-            || !str_starts_with($file, $moduleDir . DIRECTORY_SEPARATOR)
-        ) {
+        $dirname = (string) $this->getVar('dirname', 'n');
+        if ('' === $function || 1 !== preg_match('/^[A-Za-z0-9_-]+\z/', $dirname)) {
+            return null;
+        }
+        // A module directory may be a symlink; the file and the function only
+        // have to stay inside wherever it resolves to.
+        $moduleDir = realpath(XOOPS_ROOT_PATH . '/modules/' . $dirname);
+        $file      = realpath(XOOPS_ROOT_PATH . '/modules/' . $dirname . '/blocks/' . $this->getVar('func_file', 'n'));
+        if (false === $moduleDir || false === $file || !str_starts_with($file, $moduleDir . DIRECTORY_SEPARATOR)) {
+            $this->logBlockWarning("Block file of function {$function} is missing from module {$dirname}");
+
             return null;
         }
         // Some modules need their block strings outside the function body.
         xoops_loadLanguage('blocks', $dirname);
         include_once $file;
         if (!function_exists($function)) {
+            $this->logBlockWarning("Block function {$function} is not defined by module {$dirname}");
+
             return null;
         }
         $definedIn = (new \ReflectionFunction($function))->getFileName();

@@ -238,9 +238,12 @@ abstract class SystemFineUploadHandler
         }
 
         // Check that the max upload size specified in class configuration does not
-        // exceed size allowed by server config
-        if ($this->toBytes(ini_get('post_max_size')) < $this->sizeLimit ||
-            $this->toBytes(ini_get('upload_max_filesize')) < $this->sizeLimit) {
+        // exceed size allowed by server config (a server limit of 0 means none)
+        $serverLimits = array_filter(
+            [(int) $this->toBytes((string) ini_get('post_max_size')), (int) $this->toBytes((string) ini_get('upload_max_filesize'))],
+            static fn (int $bytes): bool => $bytes > 0
+        );
+        if (null !== $this->sizeLimit && [] !== $serverLimits && min($serverLimits) < $this->sizeLimit) {
             $neededRequestSize = max(1, $this->sizeLimit / 1024 / 1024) . 'M';
             return [
                 'error' => 'Server error. Increase post_max_size and upload_max_filesize to ' . $neededRequestSize,

@@ -236,7 +236,9 @@ final class XoopsMarkdown
      */
     private static function bound(string $source): string
     {
-        $lines = explode("\n", $source);
+        // Parsedown turns "\r\n" and a lone "\r" into "\n" before it splits, so
+        // the cap must see the same lines it will.
+        $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $source));
         foreach ($lines as &$line) {
             if (str_contains($line, "\t")) {
                 $expanded = '';
@@ -253,8 +255,9 @@ final class XoopsMarkdown
                 $line = $expanded;
             }
             // ponytail: per-line depth cap; a parser work budget would need a Parsedown fork
-            $markers = '(?:[ ]{0,3}>[ ]?)';
-            $capped = preg_match('/\A(' . $markers . '{' . self::MAX_QUOTE_DEPTH . '})(' . $markers . '+)/', $line, $match);
+            // Possessive quantifiers: a marker run never backtracks.
+            $markers = '(?:[ ]{0,3}+>[ ]?+)';
+            $capped = preg_match('/\A(' . $markers . '{' . self::MAX_QUOTE_DEPTH . '})(' . $markers . '++)/', $line, $match);
             if (1 === $capped) {
                 $line = $match[1] . str_replace('>', '\\>', $match[2]) . substr($line, strlen($match[0]));
             } elseif (false === $capped) {

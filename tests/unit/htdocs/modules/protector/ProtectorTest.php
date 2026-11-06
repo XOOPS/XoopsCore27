@@ -1273,4 +1273,15 @@ class ProtectorTest extends TestCase
         $this->assertFalse($this->protector->reliableIpMatches(['^10\.0\./24|.*'], '198.51.100.1'));
         $this->assertTrue($this->protector->reliableIpMatches(['^10\.0\.\#?'], '10.0.0.1'));
     }
+
+    #[Test]
+    public function addressFamiliesNeverCrossAndAnEmptyAddressMatchesNothing(): void
+    {
+        // An IPv4-mapped IPv6 request is an IPv6 address: a v4 entry does not vouch for it.
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '::ffff:127.0.0.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['::ffff:127.0.0.1'], '::ffff:127.0.0.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['0.0.0.0/0'], '2001:db8::1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['0.0.0.0/0'], '203.0.113.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['.*'], ''));
+    }
 }

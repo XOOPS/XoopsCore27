@@ -782,7 +782,8 @@ class Protector
                 continue;
             }
             // Legacy regex entry, compiled exactly as before (so no stored entry
-            // changes meaning): a pattern that fails to compile is no match, and
+            // changes meaning): a pattern that fails to compile, or one that hits
+            // the PCRE backtrack limit, is no match (the list fails closed), and
             // its warning (which names the pattern) stays off the page.
             set_error_handler(static fn (): bool => true);
             try {

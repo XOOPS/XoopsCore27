@@ -273,6 +273,16 @@ final class XoopsMarkdownTest extends TestCase
     }
 
     #[Test]
+    public function theDepthCapSeesTheLinesParsedownWillSplit(): void
+    {
+        $run = str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep';
+        foreach (["\r", "\r\n"] as $eol) {
+            $html = XoopsMarkdown::render('x' . $eol . $run);
+            $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), bin2hex($eol));
+        }
+    }
+
+    #[Test]
     public function theDepthCapHoldsWhenPcreGivesUpOnAMarkerRun(): void
     {
         $limit = ini_get('pcre.backtrack_limit');
@@ -291,7 +301,31 @@ final class XoopsMarkdownTest extends TestCase
     }
 
     #[Test]
-    public function preparePostStopsAfterItsByteBudget(): void
+    public function preparePostSkipsAFieldThatExceedsTheRemainingBudget(): void
+    {
+        $half  = str_repeat('a', intdiv(XoopsMarkdown::MAX_PREPARED_BYTES, 2) + 1);
+        $state = ['initial' => XoopsMarkdown::fingerprint('x'), 'marked' => '0'];
+        $post  = [
+            'a' => $half, 'b' => $half, 'c' => "# edited\n",
+            '_xoops_markdown' => ['a', 'b', 'c'],
+            '_xoops_markdown_state' => [
+                hash('sha256', 'a') => $state,
+                hash('sha256', 'b') => $state,
+                hash('sha256', 'c') => $state,
+            ],
+            '_xoops_markdown_save' => '1',
+        ];
+        $request = $post;
+
+        XoopsMarkdown::preparePost($post, $request);
+
+        $this->assertSame(XoopsMarkdown::wrap($half), $post['a']);
+        $this->assertSame($half, $post['b'], 'the second field exceeds the remaining budget');
+        $this->assertSame(XoopsMarkdown::wrap("# edited\n"), $post['c'], 'a later field that fits is still processed');
+    }
+
+    #[Test]
+    public function preparePostLeavesAFieldOverTheWholeBudgetAlone(): void
     {
         $big  = str_repeat('a', XoopsMarkdown::MAX_PREPARED_BYTES + 1);
         $post = [

@@ -251,8 +251,12 @@ function imageCacheKey(array $query, string $imageFilename): string
     if (($idDigits[0] ?? 0) > 0) {
         $params['id'] = (int) $idDigits[0];
         unset($params['url'], $params['src']);
-    } elseif (!empty($params['url'])) {
-        unset($params['src']);
+    } else {
+        // An id that selects nothing ("0", non-numeric) does not vary the key.
+        unset($params['id']);
+        if (!empty($params['url'])) {
+            unset($params['src']);
+        }
     }
     if (isset($params['filter'])) {
         $params['filter'] = array_slice((array) $params['filter'], 0, MAX_IMAGE_FILTERS);
@@ -435,8 +439,26 @@ if (!empty($imageId)) {
 // Get image_data from the Xoops cache only if the edited image has been cached after the latest modification
 // of the original image
 xoops_load('XoopsCache');
-// The key sees the id this script resolved, not the raw parameter.
+// The key sees each parameter as this script reads it below, not the raw
+// value, so "width=100abc" shares the entry of "width=100".
 $cacheQuery = Request::get('GET');
+$cacheReaders = [
+    'url'       => 'getUrl',
+    'src'       => 'getString',
+    'width'     => 'getInt',
+    'height'    => 'getInt',
+    'quality'   => 'getInt',
+    'angle'     => 'getFloat',
+    'color'     => 'getString',
+    'radius'    => 'getString',
+    'cropratio' => 'getString',
+    'filter'    => 'getArray',
+];
+foreach ($cacheReaders as $parameter => $reader) {
+    if (array_key_exists($parameter, $cacheQuery)) {
+        $cacheQuery[$parameter] = Request::$reader($parameter, null, 'GET');
+    }
+}
 if (Request::hasVar('id', 'GET')) {
     $cacheQuery['id'] = $imageId;
 }

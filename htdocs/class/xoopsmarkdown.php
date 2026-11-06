@@ -31,7 +31,7 @@ final class XoopsMarkdown
 {
     public const OPEN = '[xoops:markdown="1"]';
     public const CLOSE = '[/xoops:markdown]';
-    /** Blockquote markers per line beyond this render as text; Parsedown recurses once per marker. */
+    /** Blocks (quotes, list items) nested deeper than this render their source as text. */
     public const MAX_QUOTE_DEPTH = 16;
     /** preparePost() stops hashing and wrapping field text once this many bytes were processed. */
     public const MAX_PREPARED_BYTES = 4194304;
@@ -222,52 +222,77 @@ final class XoopsMarkdown
     }
 
     /**
-     * Bound the parser's work on untrusted source, line by line, in one pass.
+     * Expand tabs to Parsedown's 4-column stops in one pass.
      *
-     * Parsedown expands tabs by rebuilding the line once per tab, which is
-     * quadratic in the number of tabs, and recurses once per leading ">" with
-     * no depth option. Tabs are expanded here to the same 4-column stops, and
-     * blockquote markers beyond MAX_QUOTE_DEPTH are escaped so they render as
-     * text instead of nesting further.
+     * Parsedown rebuilds a line once per tab it holds, which is quadratic in
+     * the number of tabs; after this pass it finds none. Line endings are
+     * normalised first, as Parsedown does, so columns restart where it restarts.
      *
      * @param string $source Markdown source
      *
-     * @return string source with the same meaning up to the depth cap
+     * @return string source with the same meaning
      */
-    private static function bound(string $source): string
+    private static function expandTabs(string $source): string
     {
-        // Parsedown turns "\r\n" and a lone "\r" into "\n" before it splits, so
-        // the cap must see the same lines it will.
         $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $source));
         foreach ($lines as &$line) {
-            if (str_contains($line, "\t")) {
-                $expanded = '';
-                $column   = 0;
-                foreach (explode("\t", $line) as $i => $segment) {
-                    if ($i > 0) {
-                        $pad = 4 - $column % 4;
-                        $expanded .= str_repeat(' ', $pad);
-                        $column += $pad;
-                    }
-                    $expanded .= $segment;
-                    $column += mb_strlen($segment, 'UTF-8');
+            if (!str_contains($line, "\t")) {
+                continue;
+            }
+            $expanded = '';
+            $column   = 0;
+            foreach (explode("\t", $line) as $i => $segment) {
+                if ($i > 0) {
+                    $pad = 4 - $column % 4;
+                    $expanded .= str_repeat(' ', $pad);
+                    $column += $pad;
                 }
-                $line = $expanded;
+                $expanded .= $segment;
+                $column += mb_strlen($segment, 'UTF-8');
             }
-            // ponytail: per-line depth cap; a parser work budget would need a Parsedown fork
-            // Possessive quantifiers: a marker run never backtracks.
-            $markers = '(?:[ ]{0,3}+>[ ]?+)';
-            $capped = preg_match('/\A(' . $markers . '{' . self::MAX_QUOTE_DEPTH . '})(' . $markers . '++)/', $line, $match);
-            if (1 === $capped) {
-                $line = $match[1] . str_replace('>', '\\>', $match[2]) . substr($line, strlen($match[0]));
-            } elseif (false === $capped) {
-                // PCRE gave up on a marker run; escaping every marker keeps the cap.
-                $line = str_replace('>', '\\>', $line);
-            }
+            $line = $expanded;
         }
         unset($line);
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Parsedown with a nesting cap. A container (blockquote, list item) parses
+     * its content while element() renders it, one level of recursion per
+     * container with no limit of its own, in 1.7 and 1.8 alike; a line-based
+     * cap cannot hold because lazy continuation lets each line nest inside the
+     * last. A container below MAX_QUOTE_DEPTH renders its source as text.
+     *
+     * @return \Parsedown safe-mode parser
+     */
+    private static function parser(): \Parsedown
+    {
+        $parser = new class () extends \Parsedown {
+            private int $depth = 0;
+
+            protected function element(array $Element)
+            {
+                if (!in_array($Element['name'] ?? null, ['blockquote', 'li'], true)) {
+                    return parent::element($Element);
+                }
+                if ($this->depth >= XoopsMarkdown::MAX_QUOTE_DEPTH) {
+                    // 1.8 keeps the source lines under handler.argument, 1.7 under text.
+                    $lines = $Element['handler']['argument'] ?? $Element['text'] ?? [];
+
+                    return '<p>' . self::escape(implode("\n", (array) $lines)) . '</p>';
+                }
+                ++$this->depth;
+                try {
+                    return parent::element($Element);
+                } finally {
+                    --$this->depth;
+                }
+            }
+        };
+        $parser->setSafeMode(true);
+
+        return $parser;
     }
 
     /**
@@ -289,9 +314,7 @@ final class XoopsMarkdown
 
             return '<pre>' . htmlspecialchars($source, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</pre>';
         }
-        $parser = new \Parsedown();
-        $parser->setSafeMode(true);
-        $html = $parser->text(self::bound($source));
+        $html = self::parser()->text(self::expandTabs($source));
         if (!$images) {
             // Attributes in Parsedown's generated img elements are quoted and
             // escaped. Keep alternative text without bypassing doimage=0.

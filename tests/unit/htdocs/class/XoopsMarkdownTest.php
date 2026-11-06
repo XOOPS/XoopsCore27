@@ -259,6 +259,11 @@ final class XoopsMarkdownTest extends TestCase
         // A tab after one multibyte character pads to column 4, as Parsedown does.
         $this->assertSame($parsedown->text("é   b\n\tcode"), XoopsMarkdown::render("é\tb\n\tcode"));
         $this->assertStringContainsString('<pre><code>code</code></pre>', XoopsMarkdown::render("\tcode"));
+
+        // Parsedown alone rebuilds the line once per tab; one pass keeps this linear.
+        $start = microtime(true);
+        XoopsMarkdown::render('a' . str_repeat("\t", 40000) . 'b');
+        $this->assertLessThan(5.0, microtime(true) - $start, 'tab expansion must not be quadratic');
     }
 
     #[Test]
@@ -267,8 +272,8 @@ final class XoopsMarkdownTest extends TestCase
         $html = XoopsMarkdown::render(str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep');
 
         $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
-        // Parsedown 1.7 leaves a text ">" raw, 1.8 writes the entity.
-        $this->assertMatchesRegularExpression('/<p>(?:(?:>|&gt;) ){4}deep<\/p>/', $html);
+        // The 17th container renders its content as text (its own marker is consumed).
+        $this->assertMatchesRegularExpression('/<p>(?:&gt; ){3}deep<\/p>/', $html);
         $this->assertSame(3, substr_count(XoopsMarkdown::render("> > > x"), '<blockquote>'));
     }
 
@@ -283,21 +288,46 @@ final class XoopsMarkdownTest extends TestCase
     }
 
     #[Test]
-    public function theDepthCapHoldsWhenPcreGivesUpOnAMarkerRun(): void
+    public function theDepthCapCoversIndentedContinuationLines(): void
     {
-        $limit = ini_get('pcre.backtrack_limit');
-        $jit   = ini_get('pcre.jit');
-        ini_set('pcre.jit', '0');
-        ini_set('pcre.backtrack_limit', '100');
-        try {
-            $html = XoopsMarkdown::render(str_repeat('> ', 5000) . 'deep');
-        } finally {
-            ini_set('pcre.backtrack_limit', (string) $limit);
-            ini_set('pcre.jit', (string) $jit);
+        $run = str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep';
+        // Inside a quote, Parsedown continues it from an indented marker line.
+        $html = XoopsMarkdown::render("> top\n      " . $run);
+        $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), 'in a quote');
+        // After a paragraph, an indented marker line is a continuation line.
+        $html = XoopsMarkdown::render("text\n      " . $run);
+        $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), 'after a paragraph');
+        // Each container strips its own prefix before the next marker is read.
+        foreach (["> > top\n>     " . $run, "- top\n- " . $run, "- a\n  - " . $run, "1. " . $run, "1) " . $run] as $source) {
+            $html = XoopsMarkdown::render($source);
+            $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), $source);
         }
+        // Indented code keeps its markers as text.
+        $this->assertStringContainsString('<pre><code>&gt; &gt; code', XoopsMarkdown::render("    > > code"));
+    }
 
-        $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
+    #[Test]
+    public function theDepthCapHoldsAcrossLazyContinuationLines(): void
+    {
+        $run = str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep';
+        // Any non-blank line continues an open quote, so each line could nest
+        // inside the last; the cap is on the parser, not on a line.
+        foreach (["> top\nlazy\n- " . $run, str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH) . "top\n- " . $run] as $source) {
+            $html = XoopsMarkdown::render($source);
+            $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), $source);
+            $this->assertStringContainsString('deep', $html);
+        }
+        // 5000 markers on one line stay bounded.
+        $html = XoopsMarkdown::render(str_repeat('> ', 5000) . 'deep');
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
         $this->assertStringContainsString('deep', $html);
+        // List items nest through the same recursion and count toward the cap.
+        $lines = [];
+        for ($i = 0; $i < 40; ++$i) {
+            $lines[] = str_repeat('  ', $i) . '- item';
+        }
+        $html = XoopsMarkdown::render(implode("\n", $lines));
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<li>'));
     }
 
     #[Test]

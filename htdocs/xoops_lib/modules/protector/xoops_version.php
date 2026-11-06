@@ -111,7 +111,7 @@ $modversion['config'][]  = [
     'description' => $constpref . '_RELIABLE_IPSDSC',
     'formtype'    => 'textarea',
     'valuetype'   => 'array',
-    'default'     => '^192.168.|127.0.0.1',
+    'default'     => '^192\.168\.|127.0.0.1',
     'options'     => [],
 ];
 $modversion['config'][]  = [

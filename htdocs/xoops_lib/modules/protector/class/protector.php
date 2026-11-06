@@ -738,6 +738,52 @@ class Protector
     }
 
     /**
+     * Does the request address match a configured reliable IP?
+     *
+     * A literal address matches only itself and "address/bits" matches its
+     * subnet; any other entry is the legacy regular expression form. The
+     * shipped default 127.0.0.1 is a literal, so an IPv6 address whose text
+     * happens to fit that pattern no longer counts as reliable.
+     *
+     * @param array<int|string, mixed> $reliableIps configured entries
+     * @param string                   $remoteAddr  request address
+     *
+     * @return bool
+     */
+    public function reliableIpMatches(array $reliableIps, string $remoteAddr): bool
+    {
+        $request = new \Xmf\IPAddress($remoteAddr);
+        if (false === $request->asReadable()) {
+            return false;
+        }
+        foreach ($reliableIps as $entry) {
+            $entry = trim((string) $entry);
+            if ('' === $entry) {
+                continue;
+            }
+            if (false !== filter_var($entry, FILTER_VALIDATE_IP)) {
+                if ((new \Xmf\IPAddress($entry))->asReadable() === $request->asReadable()) {
+                    return true;
+                }
+                continue;
+            }
+            if (preg_match('/\A([0-9A-Fa-f.:]+)\/([0-9]{1,3})\z/', $entry, $cidr)
+                && false !== filter_var($cidr[1], FILTER_VALIDATE_IP)
+            ) {
+                if ($request->sameSubnet($cidr[1], (int) $cidr[2], (int) $cidr[2])) {
+                    return true;
+                }
+                continue;
+            }
+            if (1 === preg_match('/' . $entry . '/', $remoteAddr)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param string|false|null $ip
      *
      * @return bool

@@ -1216,4 +1216,35 @@ class ProtectorTest extends TestCase
             unlink($file);
         }
     }
+
+    // ---------------------------------------------------------------
+    // reliableIpMatches(): literal, subnet and legacy regex entries
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function aLiteralReliableAddressMatchesOnlyItself(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['127.0.0.1'], '127.0.0.1'));
+        // The text of this IPv6 address fits the old regex /127.0.0.1/; it is not loopback.
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '2001:db8:127a:0:0:1::5'));
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '127.0.0.10'));
+        $this->assertTrue($this->protector->reliableIpMatches(['::1'], '0:0:0:0:0:0:0:1'));
+    }
+
+    #[Test]
+    public function aSubnetEntryMatchesItsRange(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['10.1.0.0/16'], '10.1.200.7'));
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/16'], '10.2.0.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['2001:db8::/32'], '2001:db8:1::9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['2001:db8::/32'], '2001:db9::1'));
+    }
+
+    #[Test]
+    public function legacyRegexEntriesStillWorkAndBlankOnesAreIgnored(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['', '^192\.168\.'], '192.168.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['^192\.168\.'], '192.1680.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], 'not an address'));
+    }
 }

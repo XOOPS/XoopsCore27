@@ -36,6 +36,16 @@ class SystemBreadcrumbTest extends TestCase
     }
 
     #[Test]
+    public function constructorKeepsOnlyASectionName(): void
+    {
+        // render() reads a help file named after the directory.
+        $this->assertSame('', (new \SystemBreadcrumb('../../../system_header'))->_directory);
+        $this->assertSame('', (new \SystemBreadcrumb("users\n"))->_directory);
+        $this->assertSame('', (new \SystemBreadcrumb(null))->_directory);
+        $this->assertSame('my-section_2', (new \SystemBreadcrumb('my-section_2'))->_directory);
+    }
+
+    #[Test]
     public function constructorInitializesEmptyBread(): void
     {
         $bc = new \SystemBreadcrumb('test');

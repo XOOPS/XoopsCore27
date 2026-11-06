@@ -30,7 +30,9 @@ class SystemBreadcrumb
      */
     public function __construct($directory)
     {
-        $this->_directory = $directory;
+        // A section name only: render() also selects a help file by this value.
+        $directory = (string) $directory;
+        $this->_directory = preg_match('/\A[A-Za-z0-9_-]+\z/', $directory) ? $directory : '';
     }
 
     /**

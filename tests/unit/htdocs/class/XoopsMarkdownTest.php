@@ -249,4 +249,47 @@ final class XoopsMarkdownTest extends TestCase
         $this->assertStringContainsString('Parsedown is not installed', $out);
         $this->assertStringContainsString('<pre>**&lt;b&gt;x&lt;/b&gt;**</pre>', $out);
     }
+
+    #[Test]
+    public function tabsExpandToParsedownsColumnStopsInOnePass(): void
+    {
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+
+        // A tab after one multibyte character pads to column 4, as Parsedown does.
+        $this->assertSame($parsedown->text("é   b\n\tcode"), XoopsMarkdown::render("é\tb\n\tcode"));
+        $this->assertStringContainsString('<pre><code>code</code></pre>', XoopsMarkdown::render("\tcode"));
+    }
+
+    #[Test]
+    public function blockquotesNestNoDeeperThanTheCap(): void
+    {
+        $html = XoopsMarkdown::render(str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep');
+
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
+        $this->assertStringContainsString('&gt; &gt; &gt; &gt; deep', $html);
+        $this->assertSame(3, substr_count(XoopsMarkdown::render("> > > x"), '<blockquote>'));
+    }
+
+    #[Test]
+    public function preparePostStopsAfterItsByteBudget(): void
+    {
+        $big  = str_repeat('a', XoopsMarkdown::MAX_PREPARED_BYTES + 1);
+        $post = [
+            'big'     => $big,
+            'message' => "# edited\n",
+            '_xoops_markdown' => ['big', 'message', 'message'],
+            '_xoops_markdown_state' => [
+                hash('sha256', 'big')     => ['initial' => XoopsMarkdown::fingerprint('x'), 'marked' => '0'],
+                hash('sha256', 'message') => ['initial' => XoopsMarkdown::fingerprint('x'), 'marked' => '0'],
+            ],
+            '_xoops_markdown_save' => '1',
+        ];
+        $request = $post;
+
+        XoopsMarkdown::preparePost($post, $request);
+
+        $this->assertSame($big, $post['big']);
+        $this->assertSame("# edited\n", $post['message'], 'no field after the budget is processed');
+    }
 }

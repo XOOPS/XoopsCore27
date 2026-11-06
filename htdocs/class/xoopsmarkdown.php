@@ -31,6 +31,10 @@ final class XoopsMarkdown
 {
     public const OPEN = '[xoops:markdown="1"]';
     public const CLOSE = '[/xoops:markdown]';
+    /** Blockquote markers per line beyond this render as text; Parsedown recurses once per marker. */
+    public const MAX_QUOTE_DEPTH = 16;
+    /** preparePost() stops hashing and wrapping field text once this many bytes were processed. */
+    public const MAX_PREPARED_BYTES = 4194304;
 
     /** @var array<string, string> submitted text => wrapped document, for previewSource() */
     private static array $previews = [];
@@ -152,8 +156,11 @@ final class XoopsMarkdown
         if (!is_array($fields)) {
             return;
         }
-        foreach ($fields as $field) {
-            if (!is_string($field) || !preg_match('/\A[A-Za-z_][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])*\z/', $field)) {
+        // Each field path is processed once, and the text processed across all
+        // fields is bounded: this runs at bootstrap, before any authorization.
+        $budget = self::MAX_PREPARED_BYTES;
+        foreach (array_unique(array_filter($fields, 'is_string')) as $field) {
+            if (!preg_match('/\A[A-Za-z_][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])*\z/', $field)) {
                 continue;
             }
             preg_match_all('/[^\[\]]+/', $field, $parts);
@@ -172,6 +179,11 @@ final class XoopsMarkdown
                 $value = &$value[$key];
             }
             if (is_string($value)) {
+                $budget -= strlen($value);
+                if ($budget < 0) {
+                    unset($value);
+                    break;
+                }
                 $states = $post['_xoops_markdown_state'] ?? null;
                 $state = is_array($states) ? $states[hash('sha256', $field)] ?? null : null;
                 if (!is_array($state) || !is_string($state['initial'] ?? null)) {
@@ -209,6 +221,48 @@ final class XoopsMarkdown
     }
 
     /**
+     * Bound the parser's work on untrusted source, line by line, in one pass.
+     *
+     * Parsedown expands tabs by rebuilding the line once per tab, which is
+     * quadratic in the number of tabs, and recurses once per leading ">" with
+     * no depth option. Tabs are expanded here to the same 4-column stops, and
+     * blockquote markers beyond MAX_QUOTE_DEPTH are escaped so they render as
+     * text instead of nesting further.
+     *
+     * @param string $source Markdown source
+     *
+     * @return string source with the same meaning up to the depth cap
+     */
+    private static function bound(string $source): string
+    {
+        $lines = explode("\n", $source);
+        foreach ($lines as &$line) {
+            if (str_contains($line, "\t")) {
+                $expanded = '';
+                $column   = 0;
+                foreach (explode("\t", $line) as $i => $segment) {
+                    if ($i > 0) {
+                        $pad = 4 - $column % 4;
+                        $expanded .= str_repeat(' ', $pad);
+                        $column += $pad;
+                    }
+                    $expanded .= $segment;
+                    $column += mb_strlen($segment, 'UTF-8');
+                }
+                $line = $expanded;
+            }
+            // ponytail: per-line depth cap; a parser work budget would need a Parsedown fork
+            $markers = '(?:[ ]{0,3}>[ ]?)';
+            if (preg_match('/\A(' . $markers . '{' . self::MAX_QUOTE_DEPTH . '})(' . $markers . '+)/', $line, $match)) {
+                $line = $match[1] . str_replace('>', '\\>', $match[2]) . substr($line, strlen($match[0]));
+            }
+        }
+        unset($line);
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * Render untrusted source independently of legacy HTML/BBCode flags.
      *
      * @param string $source Markdown source
@@ -229,7 +283,7 @@ final class XoopsMarkdown
         }
         $parser = new \Parsedown();
         $parser->setSafeMode(true);
-        $html = $parser->text($source);
+        $html = $parser->text(self::bound($source));
         if (!$images) {
             // Attributes in Parsedown's generated img elements are quoted and
             // escaped. Keep alternative text without bypassing doimage=0.

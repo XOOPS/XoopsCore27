@@ -435,7 +435,12 @@ if (!empty($imageId)) {
 // Get image_data from the Xoops cache only if the edited image has been cached after the latest modification
 // of the original image
 xoops_load('XoopsCache');
-$edited_image_filename = imageCacheKey(Request::get('GET'), (string) $imageFilename);
+// The key sees the id this script resolved, not the raw parameter.
+$cacheQuery = Request::get('GET');
+if (Request::hasVar('id', 'GET')) {
+    $cacheQuery['id'] = $imageId;
+}
+$edited_image_filename = imageCacheKey($cacheQuery, (string) $imageFilename);
 $cached_image = XoopsCache::read($edited_image_filename);
 if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET') && !empty($cached_image)
     && ($cached_image['cached_time'] >= $imageCreatedTime)) {

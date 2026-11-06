@@ -327,7 +327,17 @@ final class XoopsMarkdownTest extends TestCase
             $lines[] = str_repeat('  ', $i) . '- item';
         }
         $html = XoopsMarkdown::render(implode("\n", $lines));
-        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<li>'));
+        // Parsedown 1.7 also emits sibling items for some of these lines, so
+        // measure the deepest open <li>, not the tag count.
+        $open = $deepest = 0;
+        foreach (preg_split('#(</?li>)#', $html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $token) {
+            if ($token === '<li>') {
+                $deepest = max($deepest, ++$open);
+            } elseif ($token === '</li>') {
+                --$open;
+            }
+        }
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, $deepest);
     }
 
     #[Test]

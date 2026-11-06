@@ -97,7 +97,8 @@ final class ImageCacheKeyTest extends TestCase
     #[Test]
     public function theScriptUsesTheKeyAndCapsTheFilterCount(): void
     {
-        self::assertStringContainsString("imageCacheKey(Request::get('GET'), (string) \$imageFilename)", $this->sourceContent);
+        self::assertStringContainsString("\$cacheQuery['id'] = \$imageId;", $this->sourceContent, 'the key uses the id the script resolved');
+        self::assertStringContainsString("imageCacheKey(\$cacheQuery, (string) \$imageFilename)", $this->sourceContent);
         self::assertStringNotContainsString("md5(\$_SERVER['REQUEST_URI'])", $this->sourceContent);
         self::assertStringContainsString("define('MAX_IMAGE_FILTERS', 8);", $this->sourceContent);
         self::assertStringContainsString('array_slice((array) $filter, 0, MAX_IMAGE_FILTERS)', $this->sourceContent);

@@ -81,12 +81,8 @@ function protector_postcommon()
     $remoteAddr = Request::getString('REMOTE_ADDR', '', 'SERVER');
     $reliable_ips = isset($conf['reliable_ips']) ? unserialize($conf['reliable_ips'], ['allowed_classes' => false]) : null;
 
-    if (is_array($reliable_ips)) {
-        foreach ($reliable_ips as $reliable_ip) {
-            if (!empty($reliable_ip) && preg_match('/' . $reliable_ip . '/', $remoteAddr)) {
-                return true;
-            }
-        }
+    if (is_array($reliable_ips) && $protector->reliableIpMatches($reliable_ips, $remoteAddr)) {
+        return true;
     }
 
     // user information (uid and can be banned)

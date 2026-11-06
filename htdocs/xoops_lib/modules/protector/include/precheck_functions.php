@@ -56,12 +56,7 @@ function protector_prepare()
             $reliable_ips = [];
         }
     }
-    $is_reliable = false;
-    foreach ($reliable_ips as $reliable_ip) {
-        if (!empty($reliable_ip) && preg_match('/' . $reliable_ip . '/', $_SERVER['REMOTE_ADDR'])) {
-            $is_reliable = true;
-        }
-    }
+    $is_reliable = $protector->reliableIpMatches($reliable_ips, (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
 
     // "DB Layer Trapper"
     $force_override = (strstr($_SERVER['REQUEST_URI'], 'protector/admin/index.php?page=advisory') !== false) ? true : false;

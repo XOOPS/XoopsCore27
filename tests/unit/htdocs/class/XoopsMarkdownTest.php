@@ -249,4 +249,140 @@ final class XoopsMarkdownTest extends TestCase
         $this->assertStringContainsString('Parsedown is not installed', $out);
         $this->assertStringContainsString('<pre>**&lt;b&gt;x&lt;/b&gt;**</pre>', $out);
     }
+
+    #[Test]
+    public function tabsExpandToParsedownsColumnStopsInOnePass(): void
+    {
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+
+        // A tab after one multibyte character pads to column 4, as Parsedown does.
+        $this->assertSame($parsedown->text("é   b\n\tcode"), XoopsMarkdown::render("é\tb\n\tcode"));
+        $this->assertStringContainsString('<pre><code>code</code></pre>', XoopsMarkdown::render("\tcode"));
+
+        // Parsedown alone rebuilds the line once per tab; one pass keeps this linear.
+        $start = microtime(true);
+        XoopsMarkdown::render('a' . str_repeat("\t", 40000) . 'b');
+        $this->assertLessThan(5.0, microtime(true) - $start, 'tab expansion must not be quadratic');
+    }
+
+    #[Test]
+    public function blockquotesNestNoDeeperThanTheCap(): void
+    {
+        $html = XoopsMarkdown::render(str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep');
+
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
+        // The 17th container renders its content as text (its own marker is consumed).
+        $this->assertMatchesRegularExpression('/<p>(?:&gt; ){3}deep<\/p>/', $html);
+        $this->assertSame(3, substr_count(XoopsMarkdown::render("> > > x"), '<blockquote>'));
+    }
+
+    #[Test]
+    public function theDepthCapSeesTheLinesParsedownWillSplit(): void
+    {
+        $run = str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep';
+        foreach (["\r", "\r\n"] as $eol) {
+            $html = XoopsMarkdown::render('x' . $eol . $run);
+            $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), bin2hex($eol));
+        }
+    }
+
+    #[Test]
+    public function theDepthCapCoversIndentedContinuationLines(): void
+    {
+        $run = str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep';
+        // Inside a quote, Parsedown continues it from an indented marker line.
+        $html = XoopsMarkdown::render("> top\n      " . $run);
+        $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), 'in a quote');
+        // After a paragraph, an indented marker line is a continuation line.
+        $html = XoopsMarkdown::render("text\n      " . $run);
+        $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), 'after a paragraph');
+        // Each container strips its own prefix before the next marker is read.
+        foreach (["> > top\n>     " . $run, "- top\n- " . $run, "- a\n  - " . $run, "1. " . $run, "1) " . $run] as $source) {
+            $html = XoopsMarkdown::render($source);
+            $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), $source);
+        }
+        // Indented code keeps its markers as text.
+        $this->assertStringContainsString('<pre><code>&gt; &gt; code', XoopsMarkdown::render("    > > code"));
+    }
+
+    #[Test]
+    public function theDepthCapHoldsAcrossLazyContinuationLines(): void
+    {
+        $run = str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep';
+        // Any non-blank line continues an open quote, so each line could nest
+        // inside the last; the cap is on the parser, not on a line.
+        foreach (["> top\nlazy\n- " . $run, str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH) . "top\n- " . $run] as $source) {
+            $html = XoopsMarkdown::render($source);
+            $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), $source);
+            $this->assertStringContainsString('deep', $html);
+        }
+        // 5000 markers on one line stay bounded.
+        $html = XoopsMarkdown::render(str_repeat('> ', 5000) . 'deep');
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
+        $this->assertStringContainsString('deep', $html);
+        // List items nest through the same recursion and count toward the cap.
+        $lines = [];
+        for ($i = 0; $i < 40; ++$i) {
+            $lines[] = str_repeat('  ', $i) . '- item';
+        }
+        $html = XoopsMarkdown::render(implode("\n", $lines));
+        // Parsedown 1.7 also emits sibling items for some of these lines, so
+        // measure the deepest open <li>, not the tag count.
+        $open = $deepest = 0;
+        foreach (preg_split('#(</?li>)#', $html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) as $token) {
+            if ($token === '<li>') {
+                $deepest = max($deepest, ++$open);
+            } elseif ($token === '</li>') {
+                --$open;
+            }
+        }
+        $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, $deepest);
+    }
+
+    #[Test]
+    public function preparePostSkipsAFieldThatExceedsTheRemainingBudget(): void
+    {
+        $half  = str_repeat('a', intdiv(XoopsMarkdown::MAX_PREPARED_BYTES, 2) + 1);
+        $state = ['initial' => XoopsMarkdown::fingerprint('x'), 'marked' => '0'];
+        $post  = [
+            'a' => $half, 'b' => $half, 'c' => "# edited\n",
+            '_xoops_markdown' => ['a', 'b', 'c'],
+            '_xoops_markdown_state' => [
+                hash('sha256', 'a') => $state,
+                hash('sha256', 'b') => $state,
+                hash('sha256', 'c') => $state,
+            ],
+            '_xoops_markdown_save' => '1',
+        ];
+        $request = $post;
+
+        XoopsMarkdown::preparePost($post, $request);
+
+        $this->assertSame(XoopsMarkdown::wrap($half), $post['a']);
+        $this->assertSame($half, $post['b'], 'the second field exceeds the remaining budget');
+        $this->assertSame(XoopsMarkdown::wrap("# edited\n"), $post['c'], 'a later field that fits is still processed');
+    }
+
+    #[Test]
+    public function preparePostLeavesAFieldOverTheWholeBudgetAlone(): void
+    {
+        $big  = str_repeat('a', XoopsMarkdown::MAX_PREPARED_BYTES + 1);
+        $post = [
+            'big'     => $big,
+            'message' => "# edited\n",
+            '_xoops_markdown' => ['big', 'message', 'message'],
+            '_xoops_markdown_state' => [
+                hash('sha256', 'big')     => ['initial' => XoopsMarkdown::fingerprint('x'), 'marked' => '0'],
+                hash('sha256', 'message') => ['initial' => XoopsMarkdown::fingerprint('x'), 'marked' => '0'],
+            ],
+            '_xoops_markdown_save' => '1',
+        ];
+        $request = $post;
+
+        XoopsMarkdown::preparePost($post, $request);
+
+        $this->assertSame($big, $post['big'], 'the field over budget is left alone');
+        $this->assertSame(XoopsMarkdown::wrap("# edited\n"), $post['message'], 'a later field within budget is still processed');
+    }
 }

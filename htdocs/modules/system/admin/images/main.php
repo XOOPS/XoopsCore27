@@ -468,8 +468,15 @@ switch ($op) {
         ], $imagecategory->getVar('imgcat_maxsize'), $imagecategory->getVar('imgcat_maxwidth'), $imagecategory->getVar('imgcat_maxheight'));
         $uploader->setPrefix('img');
         $err    = [];
-        $xoops_upload_file = Request::getArray('xoops_upload_file', [], 'POST');
+        // Only names of fields that were actually uploaded.
+        $xoops_upload_file = array_values(array_filter(
+            Request::getArray('xoops_upload_file', [], 'POST'),
+            static fn($name): bool => is_string($name) && Request::hasVar($name, 'FILES')
+        ));
         $ucount = count($xoops_upload_file);
+        if (0 === $ucount) {
+            $err[] = sprintf(_FAILFETCHIMG, 0);
+        }
         for ($i = 0; $i < $ucount; ++$i) {
             if ($uploader->fetchMedia($xoops_upload_file[$i])) {
                 if (!$uploader->upload()) {
@@ -519,7 +526,7 @@ switch ($op) {
             xoops_cp_footer();
             exit();
         }
-        redirect_header('admin.php?fct=images&op=listimg&imgcat_id=' . $image->getVar('imgcat_id'), 2, _AM_SYSTEM_DBUPDATED);
+        redirect_header('admin.php?fct=images&op=listimg&imgcat_id=' . $imgcat_id, 2, _AM_SYSTEM_DBUPDATED);
         break;
 
     case 'addcat':

@@ -811,4 +811,17 @@ class XoopsMediaUploaderTest extends TestCase
 
         $this->assertSame('', $uploader->mediaRealType);
     }
+
+    public function testFetchMediaReportsOnlyTheCurrentFilesErrors(): void
+    {
+        // A missing field used to add its error to the previous ones, so a
+        // request naming N absent fields produced N*(N+1)/2 error lines.
+        $uploader = $this->createUploader();
+        $uploader->extensionToMime = ['jpg' => 'image/jpeg'];
+
+        $uploader->fetchMedia('missing_one');
+        $uploader->fetchMedia('missing_two');
+
+        $this->assertSame([_ER_UP_FILENOTFOUND], $uploader->getErrors(false));
+    }
 }

@@ -738,6 +738,68 @@ class Protector
     }
 
     /**
+     * Does the request address match a configured reliable IP?
+     *
+     * A literal address matches only itself and "address/bits" matches its
+     * subnet; any other entry is the legacy regular expression form. The
+     * shipped default 127.0.0.1 is a literal, so an IPv6 address whose text
+     * happens to fit that pattern no longer counts as reliable.
+     *
+     * @param array<int|string, mixed> $reliableIps configured entries
+     * @param string                   $remoteAddr  request address
+     *
+     * @return bool
+     */
+    public function reliableIpMatches(array $reliableIps, string $remoteAddr): bool
+    {
+        $request = new \Xmf\IPAddress($remoteAddr);
+        if (false === $request->ipVersion()) {
+            return false;
+        }
+        foreach ($reliableIps as $entry) {
+            $entry = trim((string) $entry);
+            if ('' === $entry) {
+                continue;
+            }
+            // The default shipped before 2.7.4 is a regex whose dots match any
+            // character; a stored copy is read as the escaped pattern it meant.
+            if ('^192.168.' === $entry) {
+                $entry = '^192\.168\.';
+            }
+            if (false !== filter_var($entry, FILTER_VALIDATE_IP)) {
+                if ((new \Xmf\IPAddress($entry))->asReadable() === $request->asReadable()) {
+                    return true;
+                }
+                continue;
+            }
+            if (preg_match('/\A([0-9A-Fa-f.:]+)\/([0-9]{1,3})\z/', $entry, $cidr)
+                && false !== filter_var($cidr[1], FILTER_VALIDATE_IP)
+            ) {
+                $bits = 4 === (new \Xmf\IPAddress($cidr[1]))->ipVersion() ? 32 : 128;
+                if ((int) $cidr[2] <= $bits && $request->sameSubnet($cidr[1], (int) $cidr[2], (int) $cidr[2])) {
+                    return true;
+                }
+                continue;
+            }
+            // Legacy regex entry, compiled exactly as before (so no stored entry
+            // changes meaning): a pattern that fails to compile, or one that hits
+            // the PCRE backtrack limit, is no match (the list fails closed), and
+            // its warning (which names the pattern) stays off the page.
+            set_error_handler(static fn (): bool => true);
+            try {
+                $hit = preg_match('/' . $entry . '/', $remoteAddr);
+            } finally {
+                restore_error_handler();
+            }
+            if (1 === $hit) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param string|false|null $ip
      *
      * @return bool

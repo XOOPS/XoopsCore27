@@ -1216,4 +1216,72 @@ class ProtectorTest extends TestCase
             unlink($file);
         }
     }
+
+    // ---------------------------------------------------------------
+    // reliableIpMatches(): literal, subnet and legacy regex entries
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function aLiteralReliableAddressMatchesOnlyItself(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['127.0.0.1'], '127.0.0.1'));
+        // The text of this IPv6 address fits the old regex /127.0.0.1/; it is not loopback.
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '2001:db8:127a:0:0:1::5'));
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '127.0.0.10'));
+        $this->assertTrue($this->protector->reliableIpMatches(['::1'], '0:0:0:0:0:0:0:1'));
+    }
+
+    #[Test]
+    public function aSubnetEntryMatchesItsRange(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['10.1.0.0/16'], '10.1.200.7'));
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/16'], '10.2.0.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['2001:db8::/32'], '2001:db8:1::9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['2001:db8::/32'], '2001:db9::1'));
+    }
+
+    #[Test]
+    public function legacyRegexEntriesStillWorkAndBlankOnesAreIgnored(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['', '^192\.168\.'], '192.168.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['^192\.168\.'], '192.1680.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], 'not an address'));
+    }
+
+    #[Test]
+    public function aSubnetPrefixWiderThanTheAddressFamilyMatchesNothing(): void
+    {
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/33'], '10.1.0.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/33'], '192.0.2.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['2001:db8::/129'], '2001:db8::1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['10.1.0.0/32'], '10.1.0.0'));
+        $this->assertTrue($this->protector->reliableIpMatches(['2001:db8::1/128'], '2001:db8::1'));
+    }
+
+    #[Test]
+    public function theStoredPreEscapeDefaultIsReadAsTheDottedPrefix(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['^192.168.'], '192.168.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['^192.168.'], '192:168::1'));
+    }
+
+    #[Test]
+    public function aBrokenLegacyPatternIsNoMatchAndNoWarning(): void
+    {
+        $this->assertFalse($this->protector->reliableIpMatches(['10.0.0.('], '10.0.0.1'));
+        // An unescaped slash never compiled under the "/" delimiter; it still does not match.
+        $this->assertFalse($this->protector->reliableIpMatches(['^10\.0\./24|.*'], '198.51.100.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['^10\.0\.\#?'], '10.0.0.1'));
+    }
+
+    #[Test]
+    public function addressFamiliesNeverCrossAndAnEmptyAddressMatchesNothing(): void
+    {
+        // An IPv4-mapped IPv6 request is an IPv6 address: a v4 entry does not vouch for it.
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '::ffff:127.0.0.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['::ffff:127.0.0.1'], '::ffff:127.0.0.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['0.0.0.0/0'], '2001:db8::1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['0.0.0.0/0'], '203.0.113.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['.*'], ''));
+    }
 }

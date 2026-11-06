@@ -179,11 +179,12 @@ final class XoopsMarkdown
                 $value = &$value[$key];
             }
             if (is_string($value)) {
-                $budget -= strlen($value);
-                if ($budget < 0) {
+                $length = strlen($value);
+                if ($length > $budget) {
                     unset($value);
-                    break;
+                    continue;
                 }
+                $budget -= $length;
                 $states = $post['_xoops_markdown_state'] ?? null;
                 $state = is_array($states) ? $states[hash('sha256', $field)] ?? null : null;
                 if (!is_array($state) || !is_string($state['initial'] ?? null)) {
@@ -253,8 +254,12 @@ final class XoopsMarkdown
             }
             // ponytail: per-line depth cap; a parser work budget would need a Parsedown fork
             $markers = '(?:[ ]{0,3}>[ ]?)';
-            if (preg_match('/\A(' . $markers . '{' . self::MAX_QUOTE_DEPTH . '})(' . $markers . '+)/', $line, $match)) {
+            $capped = preg_match('/\A(' . $markers . '{' . self::MAX_QUOTE_DEPTH . '})(' . $markers . '+)/', $line, $match);
+            if (1 === $capped) {
                 $line = $match[1] . str_replace('>', '\\>', $match[2]) . substr($line, strlen($match[0]));
+            } elseif (false === $capped) {
+                // PCRE gave up on a marker run; escaping every marker keeps the cap.
+                $line = str_replace('>', '\\>', $line);
             }
         }
         unset($line);

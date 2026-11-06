@@ -245,6 +245,18 @@ function imageCacheKey(array $query, string $imageFilename): string
 {
     $known  = ['id', 'url', 'src', 'width', 'height', 'color', 'filter', 'radius', 'angle', 'cropratio', 'quality'];
     $params = array_intersect_key($query, array_flip($known));
+    // Only the source selector in use counts: id wins over url, url over src.
+    // The id is read the way Request::getInt() reads it: the first integer run.
+    preg_match('/-?\d+/', is_scalar($params['id'] ?? null) ? (string) $params['id'] : '', $idDigits);
+    if (($idDigits[0] ?? 0) > 0) {
+        $params['id'] = (int) $idDigits[0];
+        unset($params['url'], $params['src']);
+    } elseif (!empty($params['url'])) {
+        unset($params['src']);
+    }
+    if (isset($params['filter'])) {
+        $params['filter'] = array_slice((array) $params['filter'], 0, MAX_IMAGE_FILTERS);
+    }
     ksort($params);
 
     return 'editedimage_' . md5(serialize($params)) . '_' . $imageFilename;

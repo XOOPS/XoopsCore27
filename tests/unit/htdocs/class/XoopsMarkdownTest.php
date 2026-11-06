@@ -267,8 +267,27 @@ final class XoopsMarkdownTest extends TestCase
         $html = XoopsMarkdown::render(str_repeat('> ', XoopsMarkdown::MAX_QUOTE_DEPTH + 4) . 'deep');
 
         $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
-        $this->assertStringContainsString('&gt; &gt; &gt; &gt; deep', $html);
+        // Parsedown 1.7 leaves a text ">" raw, 1.8 writes the entity.
+        $this->assertMatchesRegularExpression('/<p>(?:(?:>|&gt;) ){4}deep<\/p>/', $html);
         $this->assertSame(3, substr_count(XoopsMarkdown::render("> > > x"), '<blockquote>'));
+    }
+
+    #[Test]
+    public function theDepthCapHoldsWhenPcreGivesUpOnAMarkerRun(): void
+    {
+        $limit = ini_get('pcre.backtrack_limit');
+        $jit   = ini_get('pcre.jit');
+        ini_set('pcre.jit', '0');
+        ini_set('pcre.backtrack_limit', '100');
+        try {
+            $html = XoopsMarkdown::render(str_repeat('> ', 5000) . 'deep');
+        } finally {
+            ini_set('pcre.backtrack_limit', (string) $limit);
+            ini_set('pcre.jit', (string) $jit);
+        }
+
+        $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
+        $this->assertStringContainsString('deep', $html);
     }
 
     #[Test]
@@ -289,7 +308,7 @@ final class XoopsMarkdownTest extends TestCase
 
         XoopsMarkdown::preparePost($post, $request);
 
-        $this->assertSame($big, $post['big']);
-        $this->assertSame("# edited\n", $post['message'], 'no field after the budget is processed');
+        $this->assertSame($big, $post['big'], 'the field over budget is left alone');
+        $this->assertSame(XoopsMarkdown::wrap("# edited\n"), $post['message'], 'a later field within budget is still processed');
     }
 }

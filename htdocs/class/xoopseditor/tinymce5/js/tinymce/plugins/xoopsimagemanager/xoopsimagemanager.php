@@ -128,6 +128,9 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
             static fn($name): bool => is_string($name) && \Xmf\Request::hasVar($name, 'FILES')
         ));
         $ucount = count($uploadFiles);
+        if ($ucount === 0) {
+            redirect_header($current_file . '?target=' . $targetQuery, 3, _FAILFETCHIMG);
+        }
         for ($i = 0; $i < $ucount; ++$i) {
             if ($uploader->fetchMedia($uploadFiles[$i])) {
                 if (!$uploader->upload()) {

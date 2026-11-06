@@ -40,6 +40,7 @@ final class ImageCacheKeyTest extends TestCase
     protected function setUp(): void
     {
         $this->loadSourceFile('htdocs/image.php');
+        defined('MAX_IMAGE_FILTERS') || define('MAX_IMAGE_FILTERS', 8);
         if (!function_exists('imageCacheKey')) {
             $start = strpos($this->sourceContent, 'function imageCacheKey(');
             self::assertNotFalse($start, 'imageCacheKey() missing');
@@ -68,6 +69,29 @@ final class ImageCacheKeyTest extends TestCase
         self::assertNotSame($base, imageCacheKey(['id' => '3', 'width' => '200'], 'pic.png'));
         self::assertNotSame($base, imageCacheKey(['id' => '3', 'width' => '100', 'filter' => ['IMG_FILTER_NEGATE']], 'pic.png'));
         self::assertNotSame($base, imageCacheKey(['id' => '3', 'width' => '100'], 'other.png'));
+    }
+
+    #[Test]
+    public function onlyTheSourceSelectorInUseAndTheAppliedFiltersCount(): void
+    {
+        $base = imageCacheKey(['id' => '3', 'width' => '100'], 'pic.png');
+        self::assertSame($base, imageCacheKey(['id' => '3', 'width' => '100', 'src' => 'a.png', 'url' => 'http://x/b.png'], 'pic.png'));
+        // Request::getInt('id') reads the first integer run: "0.1e2" is 0, so url/src still select.
+        self::assertNotSame(
+            imageCacheKey(['id' => '0.1e2', 'src' => '/a/pic.png'], 'pic.png'),
+            imageCacheKey(['id' => '0.1e2', 'src' => '/b/pic.png'], 'pic.png')
+        );
+        self::assertSame($base, imageCacheKey(['id' => '3abc', 'width' => '100', 'src' => 'a.png'], 'pic.png'));
+        $byUrl = imageCacheKey(['url' => 'http://x/b.png', 'width' => '100'], 'b.png');
+        self::assertSame($byUrl, imageCacheKey(['url' => 'http://x/b.png', 'src' => 'other.png', 'width' => '100'], 'b.png'));
+        self::assertNotSame($byUrl, imageCacheKey(['url' => 'http://x/c.png', 'width' => '100'], 'b.png'));
+
+        $eight = array_fill(0, MAX_IMAGE_FILTERS, 'IMG_FILTER_NEGATE');
+        $nine  = [...$eight, 'IMG_FILTER_GRAYSCALE'];
+        self::assertSame(
+            imageCacheKey(['id' => '3', 'filter' => $eight], 'pic.png'),
+            imageCacheKey(['id' => '3', 'filter' => $nine], 'pic.png')
+        );
     }
 
     #[Test]

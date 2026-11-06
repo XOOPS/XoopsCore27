@@ -1247,4 +1247,30 @@ class ProtectorTest extends TestCase
         $this->assertFalse($this->protector->reliableIpMatches(['^192\.168\.'], '192.1680.0.9'));
         $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], 'not an address'));
     }
+
+    #[Test]
+    public function aSubnetPrefixWiderThanTheAddressFamilyMatchesNothing(): void
+    {
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/33'], '10.1.0.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/33'], '192.0.2.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['2001:db8::/129'], '2001:db8::1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['10.1.0.0/32'], '10.1.0.0'));
+        $this->assertTrue($this->protector->reliableIpMatches(['2001:db8::1/128'], '2001:db8::1'));
+    }
+
+    #[Test]
+    public function theStoredPreEscapeDefaultIsReadAsTheDottedPrefix(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['^192.168.'], '192.168.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['^192.168.'], '192:168::1'));
+    }
+
+    #[Test]
+    public function aBrokenLegacyPatternIsNoMatchAndNoWarning(): void
+    {
+        $this->assertFalse($this->protector->reliableIpMatches(['10.0.0.('], '10.0.0.1'));
+        // An unescaped slash never compiled under the "/" delimiter; it still does not match.
+        $this->assertFalse($this->protector->reliableIpMatches(['^10\.0\./24|.*'], '198.51.100.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['^10\.0\.\#?'], '10.0.0.1'));
+    }
 }

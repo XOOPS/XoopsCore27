@@ -232,8 +232,10 @@ class XoopsMediaUploader
     public function fetchMedia($media_name, $index = null)
     {
         // Classified afresh for each file: a reused uploader must not judge
-        // this file by the previous file's extension.
+        // this file by the previous file's extension, and reports only this
+        // file's errors (a missing field used to add to the previous ones).
         $this->mediaRealType = '';
+        $this->errors = [];
         if (empty($this->extensionToMime)) {
             $this->setErrors(_ER_UP_MIMETYPELOAD);
 
@@ -280,7 +282,6 @@ class XoopsMediaUploader
                 $this->mediaRealType = $this->extensionToMime[$ext];
             }
         }
-        $this->errors = [];
         if ($this->mediaError > 0) {
             switch($this->mediaError) {
                 case UPLOAD_ERR_INI_SIZE:

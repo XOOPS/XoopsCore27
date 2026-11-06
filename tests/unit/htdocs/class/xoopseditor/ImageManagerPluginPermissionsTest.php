@@ -63,6 +63,17 @@ final class ImageManagerPluginPermissionsTest extends TestCase
 
     #[Test]
     #[DataProvider('pluginCopies')]
+    public function uploadBranchKeepsOnlyNamesOfFieldsThatWereUploaded(string $path): void
+    {
+        $this->loadSourceFile($path);
+        $branch = $this->slice("\$uploadFiles = array_values(array_filter(", 'for ($i = 0; $i < $ucount; ++$i) {');
+
+        // A posted name without a file would add a "not found" error per entry.
+        self::assertStringContainsString("is_string(\$name) && \\Xmf\\Request::hasVar(\$name, 'FILES')", $branch);
+    }
+
+    #[Test]
+    #[DataProvider('pluginCopies')]
     public function deleteBranchAuthorisesAgainstTheImagesOwnCategory(string $path): void
     {
         $this->loadSourceFile($path);

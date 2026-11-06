@@ -67,6 +67,7 @@ define('DEFAULT_IMAGE_QUALITY', 90);
 define('DEFAULT_BACKGROUND_COLOR', '000000');
 define('ONLY_LOCAL_IMAGES', true);
 define('ENABLE_IMAGEFILTER', true); // Set to false to avoid excessive server load
+define('MAX_IMAGE_FILTERS', 8); // Each filter walks the whole destination canvas once
 define('ENABLE_ROUNDCORNER', true); // Set to false to avoid excessive server load
 define('ENABLE_IMAGEROTATE', true); // Set to false to avoid excessive server load
 if (function_exists('mb_http_output')) {
@@ -228,6 +229,25 @@ function exitBlankImage()
     header('X-Content-Type-Options: nosniff');
     readfile(XOOPS_UPLOAD_PATH . '/blank.gif');
     exit();
+}
+
+/**
+ * Cache key of an edited image: the recognised request parameters only, in a
+ * fixed order, so a query string with extra or reordered parameters shares the
+ * entry instead of writing a new one.
+ *
+ * @param array<string, mixed> $query         GET parameters
+ * @param string               $imageFilename name of the source image
+ *
+ * @return string cache key
+ */
+function imageCacheKey(array $query, string $imageFilename): string
+{
+    $known  = ['id', 'url', 'src', 'width', 'height', 'color', 'filter', 'radius', 'angle', 'cropratio', 'quality'];
+    $params = array_intersect_key($query, array_flip($known));
+    ksort($params);
+
+    return 'editedimage_' . md5(serialize($params)) . '_' . $imageFilename;
 }
 
 /**
@@ -403,7 +423,7 @@ if (!empty($imageId)) {
 // Get image_data from the Xoops cache only if the edited image has been cached after the latest modification
 // of the original image
 xoops_load('XoopsCache');
-$edited_image_filename = 'editedimage_' . md5($_SERVER['REQUEST_URI']) . '_' . $imageFilename;
+$edited_image_filename = imageCacheKey(Request::get('GET'), (string) $imageFilename);
 $cached_image = XoopsCache::read($edited_image_filename);
 if (!Request::hasVar('nocache', 'GET') && !Request::hasVar('noservercache', 'GET') && !empty($cached_image)
     && ($cached_image['cached_time'] >= $imageCreatedTime)) {
@@ -658,7 +678,8 @@ if (ENABLE_IMAGEFILTER && !empty($filter)) {
         'IMG_FILTER_SMOOTH'         => [IMG_FILTER_SMOOTH, [1]],
         'IMG_FILTER_PIXELATE'       => [IMG_FILTER_PIXELATE, [1, 2]], // block size required, advanced-mode flag optional
     ];
-    $filterSet = (array) $filter;
+    // Bound the work: each accepted filter traverses the full destination canvas.
+    $filterSet = array_slice((array) $filter, 0, MAX_IMAGE_FILTERS);
     foreach ($filterSet as $currentFilter) {
         $rawFilterArgs = explode(',', (string) $currentFilter);
         $filterName    = trim((string) array_shift($rawFilterArgs));

@@ -468,7 +468,11 @@ switch ($op) {
         ], $imagecategory->getVar('imgcat_maxsize'), $imagecategory->getVar('imgcat_maxwidth'), $imagecategory->getVar('imgcat_maxheight'));
         $uploader->setPrefix('img');
         $err    = [];
-        $xoops_upload_file = Request::getArray('xoops_upload_file', [], 'POST');
+        // Only names of fields that were actually uploaded.
+        $xoops_upload_file = array_values(array_filter(
+            Request::getArray('xoops_upload_file', [], 'POST'),
+            static fn($name): bool => is_string($name) && Request::hasVar($name, 'FILES')
+        ));
         $ucount = count($xoops_upload_file);
         for ($i = 0; $i < $ucount; ++$i) {
             if ($uploader->fetchMedia($xoops_upload_file[$i])) {

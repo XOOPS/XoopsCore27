@@ -124,7 +124,12 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         ], $imgcat->getVar('imgcat_maxsize'), $imgcat->getVar('imgcat_maxwidth'), $imgcat->getVar('imgcat_maxheight'));
         $uploader->setPrefix('img');
         $err    = [];
-        $uploadFiles = \Xmf\Request::getArray('xoops_upload_file', [], 'POST');
+        // Only names of fields that were actually uploaded; a posted name
+        // without a file would only add a "not found" error per entry.
+        $uploadFiles = array_values(array_filter(
+            \Xmf\Request::getArray('xoops_upload_file', [], 'POST'),
+            static fn($name): bool => is_string($name) && \Xmf\Request::hasVar($name, 'FILES')
+        ));
         $ucount = count($uploadFiles);
         if ($ucount === 0) {
             redirect_header($current_file . '?target=' . $targetQuery, 3, _FAILFETCHIMG);

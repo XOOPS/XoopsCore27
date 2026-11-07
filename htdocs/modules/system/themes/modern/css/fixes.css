@@ -430,3 +430,14 @@ input.formbutton[type="reset"]:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
 }
+
+/* misc dark mode overwrite */
+body.dark-mode #xo-module-log .logger {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius);
+}
+body.dark-mode div.rmmenuicon a {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    width: 150px !important;
+}

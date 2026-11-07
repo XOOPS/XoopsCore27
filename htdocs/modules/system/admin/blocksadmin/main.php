@@ -200,6 +200,7 @@ switch ($op) {
         $xoBreadCrumb->addLink(_AM_SYSTEM_BLOCKS_ADDBLOCK);
         $xoBreadCrumb->render();
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         /** @var  SystemBlock $block */
         $block         = $block_handler->create();
@@ -219,7 +220,7 @@ switch ($op) {
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
             $block->setVar('visible', $visible);
-            if (!$block_handler->insert($block)) {
+            if (false === $block_handler->insert($block)) {
                 $error = true;
             }
         }
@@ -227,6 +228,7 @@ switch ($op) {
 
     case 'drag':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get variable
         $block_id = Request::getInt('bid', 0);
@@ -234,7 +236,7 @@ switch ($op) {
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
             $block->setVar('side', $side);
-            if (!$block_handler->insert($block)) {
+            if (false === $block_handler->insert($block)) {
                 $error = true;
             }
         }
@@ -242,6 +244,7 @@ switch ($op) {
 
     case 'order':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         if (Request::hasVar('blk', 'POST')) {
             $i = 0;
@@ -249,7 +252,7 @@ switch ($op) {
                 if ($order > 0) {
                     $block = $block_handler->get($order);
                     $block->setVar('weight', $i);
-                    if (!$block_handler->insert($block)) {
+                    if (false === $block_handler->insert($block)) {
                         $error = true;
                     }
                     ++$i;
@@ -264,9 +267,10 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
-        /** @var XoopsBlockHandler $block_handler */
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
-        $block         = $block_handler->create();
+        /** @var SystemBlock $block */
+        $block = $block_handler->create();
         $blockVars = [
             'title'      => Request::getString('title', '', 'POST'),
             'side'       => Request::getInt('side', 0, 'POST'),
@@ -280,7 +284,7 @@ switch ($op) {
         $content = Request::getText('content_block', '', 'POST');
         $block->setVar('content', $content);
         $myts = \MyTextSanitizer::getInstance();
-        echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', $block->getVar('c_type')) . '</div>';
+        echo '<div id="xo-preview-dialog" title="' . $block->getVar('title', 's') . '">' . $block->getContent('s', (string) $block->getVar('c_type')) . '</div>';
         break;
 
     case 'save':
@@ -288,6 +292,7 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -295,68 +300,31 @@ switch ($op) {
             $block = $block_handler->get($block_id);
         } else {
             $block = $block_handler->create();
-            // Clone (bid=0): a fresh object has no module metadata. The
-            // source block's binding only survives in the hidden fields
-            // emitted by SystemBlock::getForm('clone'); read them back so
-            // the clone keeps its module association and passes the
-            // not-null name validation. Normal new custom blocks post these
-            // empty/0, which is harmless (isCustom() path ignores them).
-            $clone_dirname   = Request::getString('dirname', '', 'POST');
-            $clone_func_file = Request::getString('func_file', '', 'POST');
-            $clone_template  = Request::getString('template', '', 'POST');
-            $clone_show_func = Request::getString('show_func', '', 'POST');
-            $clone_edit_func = Request::getString('edit_func', '', 'POST');
-
-            // Reject tampered hidden inputs. dirname/func_file are later
-            // used to locate and include_once the module block PHP file,
-            // template is persisted as the block's Smarty template name,
-            // and show/edit_func are called as functions when the block
-            // renders or exposes options. Legitimate clone values come
-            // from a trusted DB row, so these checks never reject real
-            // clones but block path traversal / code injection via a
-            // forged POST.
-            //
-            // dirname is a single module directory segment (never contains
-            // a separator).
-            if ($clone_dirname !== ''
-                && (false !== strpos($clone_dirname, '/')
-                    || false !== strpos($clone_dirname, '\\')
-                    || false !== strpos($clone_dirname, '..')
-                    || false !== strpos($clone_dirname, "\0"))) {
+            // A clone of a module block (type D) copies its module binding and
+            // callbacks from the stored source block named by clone_bid; the
+            // form never supplies them. A new custom block has none.
+            if ('D' === Request::getString('block_type', '', 'POST')) {
+                $source = $block_handler->get(Request::getInt('clone_bid', 0, 'POST'));
+                if (!is_object($source) || $source->isNew() || $source->isCustom()) {
+                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
+                }
+                foreach (['mid', 'func_num', 'func_file', 'show_func', 'edit_func', 'template', 'dirname', 'name'] as $key) {
+                    $block->setVar($key, $source->getVar($key, 'n'));
+                }
+            }
+        }
+        // A stored block keeps its type: relabelling it would lift the protection
+        // the delete handler applies to system and module blocks. A new block is
+        // only ever custom or a clone; a forged M/S row would let the delete
+        // handler count a duplicate and release the genuine module block.
+        if ($block->isNew()) {
+            $block_type = Request::getString('block_type', '', 'POST');
+            if (!in_array($block_type, ['C', 'D'], true)) {
                 redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
             }
-            // func_file is the block PHP file under modules/<dirname>/blocks/
-            // (a subdirectory is allowed - some modules nest block files);
-            // template is a Smarty template name. Neither legitimately
-            // contains traversal, backslashes, NUL or an absolute path, so
-            // reject those while still permitting an internal '/'.
-            foreach ([$clone_func_file, $clone_template] as $clone_path) {
-                if ($clone_path !== ''
-                    && (false !== strpos($clone_path, '..')
-                        || false !== strpos($clone_path, '\\')
-                        || false !== strpos($clone_path, "\0")
-                        || str_starts_with($clone_path, '/'))) {
-                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
-                }
-            }
-            foreach ([$clone_show_func, $clone_edit_func] as $clone_func) {
-                if ($clone_func !== '' && !preg_match('/^[A-Za-z_]\w*$/', $clone_func)) {
-                    redirect_header('admin.php?fct=blocksadmin', 3, _AM_SYSTEM_BLOCKS_INVALID_CLONE);
-                }
-            }
-
-            $block->setVars([
-                'mid'       => Request::getInt('mid', 0, 'POST'),
-                'func_num'  => Request::getInt('func_num', 0, 'POST'),
-                'func_file' => $clone_func_file,
-                'show_func' => $clone_show_func,
-                'edit_func' => $clone_edit_func,
-                'template'  => $clone_template,
-                'dirname'   => $clone_dirname,
-                'name'      => Request::getString('name', '', 'POST'),
-            ]);
+        } else {
+            $block_type = (string) $block->getVar('block_type');
         }
-        $block_type = Request::getString('block_type', '');
         $block->setVar('block_type', $block_type);
 
         $blockVars = [
@@ -462,6 +430,7 @@ switch ($op) {
 
     case 'edit':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
@@ -496,16 +465,11 @@ switch ($op) {
         $block_id = Request::getInt('bid', 0);
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
-            if ($block->getVar('block_type') === 'S') {
-                redirect_header('admin.php?fct=blocksadmin', 4, _AM_SYSTEM_BLOCKS_SYSTEMCANT);
-            } elseif ($block->getVar('block_type') === 'M') {
-                // Fix for duplicated blocks created in 2.0.9 module update
-                // A module block can be deleted if there is more than 1 that
-                // has the same func_num/show_func which is mostly likely
-                // be the one that was duplicated in 2.0.9
-                if (1 >= $count = $block_handler->countSimilarBlocks($block->getVar('mid'), $block->getVar('func_num'), $block->getVar('show_func'))) {
-                    redirect_header('admin.php?fct=blocksadmin', 4, _AM_SYSTEM_BLOCKS_MODULECANT);
-                }
+            if (!is_object($block)) {
+                redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
+            }
+            if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
+                redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
             }
             // Define main template
             $GLOBALS['xoopsOption']['template_main'] = 'system_header.tpl';
@@ -531,12 +495,20 @@ switch ($op) {
             redirect_header('admin.php?fct=blocksadmin', 3, implode('<br>', $GLOBALS['xoopsSecurity']->getErrors()));
         }
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);
         if ($block_id > 0) {
             $block = $block_handler->get($block_id);
-            if ($block_handler->delete($block)) {
+            // The confirmation step can be skipped by posting here directly.
+            if (!is_object($block)) {
+                redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
+            }
+            if (null !== ($refusal = $block_handler->deletionRefusal($block))) {
+                redirect_header('admin.php?fct=blocksadmin', 4, $refusal);
+            }
+            if ($block_handler->deleteGuarded($block)) {
                 // Delete Group link
                 $blocklinkmodule_handler = xoops_getModuleHandler('blocklinkmodule');
                 $blocklinkmodule         = $blocklinkmodule_handler->getObjects(new CriteriaCompo(new Criteria('block_id', $block_id)));
@@ -562,6 +534,8 @@ switch ($op) {
                 }
                 redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_BLOCKS_DBUPDATED);
             }
+            // The guarded delete refused: its sibling went in the meantime.
+            redirect_header('admin.php?fct=blocksadmin', 4, $block_handler->deletionRefusal($block) ?? _AM_SYSTEM_DBERROR);
         } else {
             redirect_header('admin.php?fct=blocksadmin', 1, _AM_SYSTEM_DBERROR);
         }
@@ -569,6 +543,7 @@ switch ($op) {
 
     case 'clone':
         // Initialize blocks handler
+        /** @var SystemBlockHandler $block_handler */
         $block_handler = xoops_getModuleHandler('block');
         // Get block id
         $block_id = Request::getInt('bid', 0);

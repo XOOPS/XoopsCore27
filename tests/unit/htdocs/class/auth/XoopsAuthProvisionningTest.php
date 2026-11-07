@@ -438,6 +438,104 @@ class XoopsAuthProvisionningTest extends TestCase
     }
 
     #[Test]
+    public function changeKeepsTheStoredHashWhileThePasswordIsUnchanged(): void
+    {
+        // Every directory sign-in runs change(); a fresh salt each time would end
+        // the account's other sessions, whose stamp is bound to the hash.
+        $this->ensureMemberHandlerReady();
+        $instance = $this->createConfiguredInstance();
+        $hash = password_hash('secret', PASSWORD_DEFAULT);
+        $user = new XoopsUser();
+        $user->setVar('uname', 'ldapuser');
+        $user->setVar('pass', $hash);
+
+        // The hash is decided before the save; the save fails on the stub
+        // database and ends in the bootstrap's redirect exception.
+        $change = static function (string $password) use ($instance, $user): void {
+            try {
+                $instance->change($user, [], 'ldapuser', $password);
+            } catch (\RedirectHeaderException $e) {
+            }
+        };
+
+        $change('secret');
+        $this->assertSame($hash, $user->getVar('pass', 'n'));
+
+        $change('changed');
+        $this->assertNotSame($hash, $user->getVar('pass', 'n'));
+        $this->assertTrue(password_verify('changed', $user->getVar('pass', 'n')));
+
+        // The password is kept exactly as the directory bind accepted it: a
+        // backslash survives, so 'a\nb' (backslash, n) never verifies as 'anb'.
+        $literal = password_hash('a\nb', PASSWORD_DEFAULT);
+        $user->setVar('pass', $literal);
+        $change('a\nb');
+        $this->assertSame($literal, $user->getVar('pass', 'n'));
+        $change('anb');
+        $this->assertNotSame($literal, $user->getVar('pass', 'n'));
+        $this->assertFalse(password_verify('anb', $literal));
+    }
+
+    /**
+     * getXoopsUser() against the rows the database collation returned.
+     *
+     * @param list<string> $names unames of the rows the query returns
+     */
+    private function lookUp(string $uname, array $names): XoopsUser|false
+    {
+        $member = xoops_getHandler('member'); // loads kernel/user.php
+        $rows   = [];
+        foreach ($names as $name) {
+            $user = new XoopsUser();
+            $user->setVar('uname', $name);
+            $rows[] = $user;
+        }
+        $prop  = (new ReflectionClass($member))->getProperty('userHandler');
+        $saved  = $prop->getValue($member);
+        $prop->setValue($member, new class ($rows) extends XoopsUserHandler {
+            public function __construct(private array $rows)
+            {
+            }
+
+            public function &getObjects(?\CriteriaElement $criteria = null, $id_as_key = false, $as_object = true)
+            {
+                $rows = $this->rows;
+
+                return $rows;
+            }
+        });
+        try {
+            return $this->createConfiguredInstance()->getXoopsUser($uname);
+        } finally {
+            $prop->setValue($member, $saved);
+        }
+    }
+
+    #[Test]
+    public function getXoopsUserKeepsTheCaseInsensitiveExactMatch(): void
+    {
+        $user = $this->lookUp('Admin', ['admin']);
+        $this->assertInstanceOf(XoopsUser::class, $user);
+        $this->assertSame('admin', $user->getVar('uname', 'n'));
+    }
+
+    #[Test]
+    public function getXoopsUserDropsAnAccentInsensitiveNearMiss(): void
+    {
+        $this->assertFalse($this->lookUp('admín', ['admin']));
+    }
+
+    #[Test]
+    public function getXoopsUserPicksTheExactNameAmongCandidates(): void
+    {
+        $user = $this->lookUp('admín', ['admin', 'admín']);
+        $this->assertInstanceOf(XoopsUser::class, $user);
+        $this->assertSame('admín', $user->getVar('uname', 'n'));
+        // Two rows equal apart from case stay ambiguous.
+        $this->assertFalse($this->lookUp('admin', ['admin', 'ADMIN']));
+    }
+
+    #[Test]
     public function getXoopsUserReturnsFalseWithLongUsername(): void
     {
         $this->ensureMemberHandlerReady();

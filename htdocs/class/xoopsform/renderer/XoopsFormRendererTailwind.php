@@ -84,63 +84,17 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
     }
 
     /**
-     * Encode a value for use inside a JavaScript string literal in an inline
-     * `<script>` block.
+     * Escape an option label. The other renderers print labels raw, so callers
+     * pass them already encoded ("Fish &amp; Chips"): an entity is kept, not
+     * encoded twice, while markup is still escaped.
      *
-     * Uses `json_encode` with `JSON_HEX_*` flags so the result cannot break out
-     * of the surrounding `<script>` via `</script>`, cannot escape the string
-     * via single/double quotes, and cannot introduce HTML entities via `&`.
-     * The returned value INCLUDES its own surrounding quotes — do not wrap it
-     * in `"..."` at the call site.
+     * @param mixed $label option label
      *
-     * @param string $value raw value to encode
-     *
-     * @return string JSON-encoded string literal including surrounding quotes
+     * @return string escaped label
      */
-    protected function esJs(string $value): string
+    protected function escLabel($label): string
     {
-        try {
-            return json_encode(
-                $value,
-                JSON_HEX_TAG | JSON_HEX_QUOT | JSON_HEX_APOS | JSON_HEX_AMP
-                | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
-            );
-        } catch (\JsonException $e) {
-            trigger_error(
-                'XoopsFormRendererTailwind::esJs: ' . $e->getMessage(),
-                E_USER_WARNING,
-            );
-
-            return '""';
-        }
-    }
-
-    /**
-     * Build a safe JavaScript function call expression, with each argument
-     * encoded through {@see esJs()}.
-     *
-     * Returns e.g. `xoopsCodeUrl("textarea_id", "Enter URL", "Enter title")`.
-     * The result is ready for embedding in a single-quoted HTML attribute
-     * (`onclick='...'` or `href='#' onclick='...; return false;'`) because
-     * `esJs()` hex-escapes both quote characters — so neither the inner JS
-     * quotes nor any locale-provided quote can break the attribute delimiters.
-     *
-     * Do NOT build `$fn` from user input — the function name is concatenated
-     * verbatim. It is intended to be a hard-coded JavaScript function literal.
-     *
-     * @param string               $fn   JavaScript function name (safe literal)
-     * @param array<int, int|string> $args arguments to encode, in order
-     *
-     * @return string JavaScript expression of the form `fn("a","b",…)`
-     */
-    protected function buildJsCall(string $fn, array $args): string
-    {
-        $encoded = [];
-        foreach ($args as $arg) {
-            $encoded[] = $this->esJs((string) $arg);
-        }
-
-        return $fn . '(' . implode(', ', $encoded) . ')';
+        return htmlspecialchars((string) $label, ENT_QUOTES | ENT_HTML5, 'UTF-8', false);
     }
 
     /**
@@ -330,14 +284,25 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
             ++$idSuffix;
             $checked = $this->isOptionChecked($value, $elementValue) ? ' checked' : '';
             $inputId = $this->esc($elementId . $idSuffix);
+            $labelHtml = $type === 'radio' ? $this->renderOptionLabel((string) $name) : $this->escLabel((string) $name);
+            $ariaLabel = '';
+            if ($type === 'radio' && preg_match('~^\s*<img [^>]* alt=""\s*>\s*$~', $labelHtml)) {
+                $attributes = new \DOMDocument();
+                $attributes->loadHTML('<input' . $extra . '>', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+                $input = $attributes->getElementsByTagName('input')->item(0);
+                if ($input instanceof \DOMElement && !$input->hasAttribute('aria-label') && !$input->hasAttribute('aria-labelledby')) {
+                    $caption = trim(strip_tags((string) $element->getCaption()));
+                    $ariaLabel = ' aria-label="' . $this->esc(($caption !== '' ? $caption . ': ' : '') . (string) $value) . '"';
+                }
+            }
             $ret .= '<label class="' . $labelCls . '">'
                 . '<input class="' . $type . ' ' . $type . '-primary" type="' . $type . '"'
                 . self::ATTR_NAME . $this->esc($elementName) . '"'
                 . ' id="' . $inputId . '"'
-                . self::ATTR_TITLE_LEAD . $this->esc(strip_tags((string) $name)) . '"'
+                . self::ATTR_TITLE_LEAD . $this->escLabel(strip_tags((string) $name)) . '"'
                 . self::ATTR_VALUE . $this->esc($value) . '"'
-                . $checked . $extra . '>'
-                . '<span class="label-text">' . $this->esc((string) $name) . $delimiter . '</span>'
+                . $checked . $ariaLabel . $extra . '>'
+                . '<span class="label-text">' . $labelHtml . $delimiter . '</span>'
                 . '</label>';
         }
         $ret .= '</div>';
@@ -360,6 +325,36 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
         }
 
         return (string) $optionValue === (string) $current;
+    }
+
+    /**
+     * Keep message icons without allowing arbitrary markup or image event handlers in option labels.
+     */
+    protected function renderOptionLabel(string $label): string
+    {
+        if (stripos($label, '<img ') !== false) {
+            $document = new \DOMDocument();
+            if ($document->loadHTML('<?xml encoding="UTF-8">' . $label, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING)) {
+                $image = $document->getElementsByTagName('img')->item(0);
+                if ($image instanceof \DOMElement) {
+                    $src = $image->getAttribute('src');
+                    if (str_starts_with($src, '/') || preg_match('~^https?://~i', $src)) {
+                        $rendered = '';
+                        foreach ($image->parentNode->childNodes as $node) {
+                            if ($node === $image) {
+                                $rendered .= '<img src="' . $this->esc($src) . '" alt="' . $this->esc($image->getAttribute('alt')) . '">';
+                            } elseif ($node instanceof \DOMText) {
+                                $rendered .= $this->esc($node->nodeValue);
+                            }
+                        }
+
+                        return $rendered;
+                    }
+                }
+            }
+        }
+
+        return $this->escLabel($label);
     }
 
     /**
@@ -682,7 +677,7 @@ EOJS;
         foreach ($options as $optValue => $optName) {
             $selected = in_array((string) $optValue, $valueStrings, true) ? ' selected' : '';
             $ret .= '<option value="' . $this->esc($optValue) . '"' . $selected . '>'
-                . $this->esc($optName) . '</option>';
+                . $this->escLabel($optName) . '</option>';
         }
         $ret .= '</select>';
 

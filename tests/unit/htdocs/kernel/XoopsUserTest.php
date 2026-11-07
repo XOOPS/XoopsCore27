@@ -644,4 +644,19 @@ class XoopsUserTest extends KernelTestCase
         $this->assertEquals(1, $user->uid);
         $this->assertEquals('test', $user->uname);
     }
+
+    public function testReplacePasswordHashComparesTheStoredHashByteForByte(): void
+    {
+        // users.pass has a case-insensitive collation: a hash differing only in
+        // letter case must not satisfy the compare-and-swap.
+        $db = $this->createMockDatabase();
+        $db->expects($this->once())->method('exec')
+           ->with("UPDATE xoops_users SET pass = 'new' WHERE uid = 7 AND CAST(pass AS BINARY) = CAST('\$2y\$10\$Old' AS BINARY)")
+           ->willReturn(true);
+        $db->method('getAffectedRows')->willReturn(0);
+        $handler = $this->createHandler('XoopsUserHandler', $db);
+        $this->setProtectedProperty($handler, 'table', 'xoops_users');
+
+        $this->assertFalse($handler->replacePasswordHash(7, '$2y$10$Old', 'new'));
+    }
 }

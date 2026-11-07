@@ -528,7 +528,8 @@ class xos_opal_Theme
             if (session_id() && strpos($uri, session_id())) {
                 $uri = preg_replace("/([\?&])(" . session_id() . "$|" . session_id() . '&)/', "\\1", $uri);
             }
-            $this->contentCacheId = $this->generateCacheId('page_' . substr(md5($uri), 0, 8));
+            // The full digest: 32 bits of MD5 let two URIs share one cached page.
+            $this->contentCacheId = $this->generateCacheId('page_' . hash('sha256', $uri));
             if ($this->template->isCached($template, $this->contentCacheId)) {
                 $xoopsLogger = XoopsLogger::getInstance();
                 $xoopsLogger->addExtra($template, sprintf('Cached (regenerates every %d seconds)', $this->contentCacheLifetime));
@@ -1181,14 +1182,35 @@ class xos_opal_Theme
             $value = preg_replace('/<\{\s*xoInboxCount(?:\s+[^}]*)?\s*\}>/i', $replacement, $value) ?? $value;
         }
 
-        $value = strip_tags($value, '<span><i><b><em><strong><small>');
-        $value = preg_replace('/\s+on\w+\s*=\s*["\'][^"\']*["\']/i', '', $value);
-        $value = preg_replace('/\s+on\w+\s*=\s*\S+/i', '', $value);
-        $value = preg_replace('/\s+style\s*=\s*["\'][^"\']*["\']/i', '', $value);
-        $value = preg_replace('/\s+style\s*=\s*\S+/i', '', $value);
-        $value = preg_replace('/javascript\s*:/i', '', $value);
+        return self::filterMenuAffix($value);
+    }
 
-        return $value;
+    /**
+     * Reduce a stored menu prefix/suffix to its allowed markup.
+     *
+     * Affixes hold icons and short emphasis (<i class="fa ...">, <span>,
+     * <b>, <em>, <strong>, <small>). A parser-based allowlist keeps exactly
+     * that and the class attribute: attribute-stripping regexes missed
+     * separators browsers accept (<span/onmouseover=...>). Also used by the
+     * menu administration list, so both render the same thing.
+     *
+     * @param string $value stored affix
+     * @return string safe HTML fragment
+     */
+    public static function filterMenuAffix(string $value): string
+    {
+        static $purifier = null;
+        if ('' === $value) {
+            return '';
+        }
+        if (null === $purifier) {
+            $purifier = new \HTMLPurifier([
+                'Cache.DefinitionImpl' => null,
+                'HTML.Allowed'         => 'span[class],i[class],b,em,strong,small',
+            ]);
+        }
+
+        return $purifier->purify($value);
     }
 
     /**

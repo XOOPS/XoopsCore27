@@ -231,6 +231,11 @@ class XoopsMediaUploader
      */
     public function fetchMedia($media_name, $index = null)
     {
+        // Classified afresh for each file: a reused uploader must not judge
+        // this file by the previous file's extension, and reports only this
+        // file's errors (a missing field used to add to the previous ones).
+        $this->mediaRealType = '';
+        $this->errors = [];
         if (empty($this->extensionToMime)) {
             $this->setErrors(_ER_UP_MIMETYPELOAD);
 
@@ -277,7 +282,6 @@ class XoopsMediaUploader
                 $this->mediaRealType = $this->extensionToMime[$ext];
             }
         }
-        $this->errors = [];
         if ($this->mediaError > 0) {
             switch($this->mediaError) {
                 case UPLOAD_ERR_INI_SIZE:
@@ -486,6 +490,18 @@ class XoopsMediaUploader
         $this->savedFileName = iconv('UTF-8', 'ASCII//TRANSLIT', $this->savedFileName);
         $this->savedFileName = preg_replace('!\s+!', '_', $this->savedFileName);
         $this->savedFileName = preg_replace("/[^a-zA-Z0-9\._-]/", '', $this->savedFileName);
+        // Once more on the final name: stripping characters can join a new
+        // inner extension (shell.p#hp.jpg is now shell.php.jpg).
+        $this->savedFileName = $this->sanitizeExtensionsIn((string) $this->savedFileName);
+        // The allowlist checked the uploaded name, not this one: a target name
+        // (or the stripping above: shell.ph#p) can still end in an executable
+        // extension, and a dot-file (.htaccess) configures the directory.
+        $savedExt = strtolower((string) pathinfo($this->savedFileName, PATHINFO_EXTENSION));
+        if (str_starts_with($this->savedFileName, '.')
+            || in_array($savedExt, array_map('strtolower', (array) $this->extensionsToBeSanitized), true)) {
+            $this->setErrors(_ER_UP_INVALIDFILENAME);
+            return false;
+        }
 
         $this->savedDestination = $this->uploadDir . '/' . $this->savedFileName;
 
@@ -672,13 +688,30 @@ class XoopsMediaUploader
             return null;
         }
 
-        $patterns = [];
-        $replaces = [];
-        foreach ($this->extensionsToBeSanitized as $ext) {
-            $patterns[] = "/\." . preg_quote($ext, '/') . "\./i";
-            $replaces[] = '_' . $ext . '.';
+        $this->mediaName = $this->sanitizeExtensionsIn((string) $this->mediaName);
+        // The name actually saved: random-filename mode copied the original
+        // name into it before this ran (x.php.jpg would stay x.php.jpg).
+        if (isset($this->targetFileName)) {
+            $this->targetFileName = $this->sanitizeExtensionsIn((string) $this->targetFileName);
         }
-        $this->mediaName = preg_replace($patterns, $replaces, $this->mediaName);
+    }
+
+    /**
+     * Turn every inner ".ext." of a listed extension into "_ext."
+     *
+     * A lookahead leaves the dot for the next match, so x.php.php.jpg
+     * becomes x_php_php.jpg rather than x_php.php.jpg.
+     *
+     * @param string $name file name
+     * @return string
+     */
+    private function sanitizeExtensionsIn(string $name): string
+    {
+        foreach ((array) $this->extensionsToBeSanitized as $ext) {
+            $name = (string) preg_replace('/\.' . preg_quote((string) $ext, '/') . '(?=\.)/i', '_' . $ext, $name);
+        }
+
+        return $name;
     }
 
     /**

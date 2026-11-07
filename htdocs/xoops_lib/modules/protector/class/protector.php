@@ -358,11 +358,42 @@ class Protector
     }
 
     /**
+     * Read a file under a shared lock.
+     *
+     * Pairs with writeFileInPlace(): that fallback truncates and rewrites under
+     * an exclusive lock, so a reader holding a shared lock never sees the
+     * emptied or half-written file in between.
+     *
+     * @param string $path file to read
+     * @return string|null its content, null when it cannot be opened, locked or read
+     */
+    private static function readFileLocked(string $path): ?string
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+        $fp = fopen($path, 'r');
+        if (false === $fp) {
+            return null;
+        }
+        // Without the lock (a filesystem that has none) the file is still read:
+        // a list taken as empty would lift every ban.
+        $locked  = flock($fp, LOCK_SH);
+        $content = stream_get_contents($fp);
+        if ($locked) {
+            flock($fp, LOCK_UN);
+        }
+        fclose($fp);
+
+        return false === $content ? null : $content;
+    }
+
+    /**
      * Replace a file's contents in place under an exclusive lock.
      *
      * The fallback for a directory that refuses new files, such as a document
      * root PHP may not write to that holds a writable .htaccess: the ban still
-     * applies, but a reader that takes no lock can briefly see a partial file,
+     * applies, a reader of the ban list takes a shared lock (readFileLocked()),
      * and a write that fails after truncation can leave the file empty or
      * partial instead of keeping the old content. Every step is checked; the
      * caller holds the error handler.
@@ -407,7 +438,7 @@ class Protector
      * @param string $content new contents
      * @return bool true when the target now holds the whole new content
      */
-    protected static function writeFileAtomic(string $path, string $content): bool
+    protected static function writeFileAtomic(string $path, string $content, bool $inPlaceFallback = true): bool
     {
         $tmp = '';
         set_error_handler(static fn (): bool => true);
@@ -435,7 +466,8 @@ class Protector
                 // Only a directory that refuses new files justifies the in-place
                 // fallback (the ban must still apply). A full disk or quota also
                 // fails this open, and there the old content must stay.
-                return !is_writable(dirname($path))
+                return $inPlaceFallback
+                    && !is_writable(dirname($path))
                     && is_file($path)
                     && self::writeFileInPlace($path, $content);
             }
@@ -509,6 +541,23 @@ class Protector
     }
 
     /**
+     * Replace the administrator IP allowlist (group1 IPs) atomically.
+     *
+     * Readers take no lock, so the file is never truncated in place (an empty
+     * allowlist would lift the restriction); the existing file's mode is kept.
+     * No in-place fallback: in a directory that refuses new files the write
+     * fails and the old list stays, rather than truncating the live file.
+     *
+     * @param string[] $ips
+     *
+     * @return bool
+     */
+    public function write_file_group1ips(array $ips): bool
+    {
+        return static::writeFileAtomic(static::get_filepath4group1ips(), serialize(array_unique($ips)) . "\n", false);
+    }
+
+    /**
      * @param int  $jailed_time
      * @param string|false|null $ip
      *
@@ -539,9 +588,10 @@ class Protector
         $bad_ips_serialized = null;
         $filepath = Protector::get_filepath4badips();
         if (file_exists($filepath)) {
-            $filepath4badips = file($filepath);
-            if (is_array($filepath4badips) && isset($filepath4badips[0])) {
-                [$bad_ips_serialized] = $filepath4badips;
+            // Shared lock: the in-place fallback writer truncates under LOCK_EX.
+            $content = self::readFileLocked($filepath);
+            if (null !== $content && '' !== $content) {
+                $bad_ips_serialized = strtok($content, "\n");
             }
         }
         // trim() required: write_file_badips() appends "\n" after the serialized payload
@@ -684,6 +734,68 @@ class Protector
             }
         }
         $this->ip_matched_info = null;
+        return false;
+    }
+
+    /**
+     * Does the request address match a configured reliable IP?
+     *
+     * A literal address matches only itself and "address/bits" matches its
+     * subnet; any other entry is the legacy regular expression form. The
+     * shipped default 127.0.0.1 is a literal, so an IPv6 address whose text
+     * happens to fit that pattern no longer counts as reliable.
+     *
+     * @param array<int|string, mixed> $reliableIps configured entries
+     * @param string                   $remoteAddr  request address
+     *
+     * @return bool
+     */
+    public function reliableIpMatches(array $reliableIps, string $remoteAddr): bool
+    {
+        $request = new \Xmf\IPAddress($remoteAddr);
+        if (false === $request->ipVersion()) {
+            return false;
+        }
+        foreach ($reliableIps as $entry) {
+            $entry = trim((string) $entry);
+            if ('' === $entry) {
+                continue;
+            }
+            // The default shipped before 2.7.4 is a regex whose dots match any
+            // character; a stored copy is read as the escaped pattern it meant.
+            if ('^192.168.' === $entry) {
+                $entry = '^192\.168\.';
+            }
+            if (false !== filter_var($entry, FILTER_VALIDATE_IP)) {
+                if ((new \Xmf\IPAddress($entry))->asReadable() === $request->asReadable()) {
+                    return true;
+                }
+                continue;
+            }
+            if (preg_match('/\A([0-9A-Fa-f.:]+)\/([0-9]{1,3})\z/', $entry, $cidr)
+                && false !== filter_var($cidr[1], FILTER_VALIDATE_IP)
+            ) {
+                $bits = 4 === (new \Xmf\IPAddress($cidr[1]))->ipVersion() ? 32 : 128;
+                if ((int) $cidr[2] <= $bits && $request->sameSubnet($cidr[1], (int) $cidr[2], (int) $cidr[2])) {
+                    return true;
+                }
+                continue;
+            }
+            // Legacy regex entry, compiled exactly as before (so no stored entry
+            // changes meaning): a pattern that fails to compile, or one that hits
+            // the PCRE backtrack limit, is no match (the list fails closed), and
+            // its warning (which names the pattern) stays off the page.
+            set_error_handler(static fn (): bool => true);
+            try {
+                $hit = preg_match('/' . $entry . '/', $remoteAddr);
+            } finally {
+                restore_error_handler();
+            }
+            if (1 === $hit) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -1287,16 +1399,14 @@ class Protector
             return false;
         }
 
-        $query = '';
-        $query .= (empty($ip)) ? '' : '&ip=' . $ip;
-        $query .= (empty($email)) ? '' : '&email=' . $email;
-        $query .= (empty($username)) ? '' : '&username=' . $username;
-
-        if (empty($query)) {
+        // Encoded per parameter: an email holding "#" or "&" must not cut off or add parameters.
+        $params = array_filter(['ip' => $ip, 'email' => $email, 'username' => $username], static fn($v): bool => !empty($v));
+        if ([] === $params) {
             return false;
         }
 
-        $url = 'http://www.stopforumspam.com/api?f=json' . $query;
+        // HTTPS: the identifiers are personal data, and the verdict must not be replaceable in transit.
+        $url = 'https://www.stopforumspam.com/api?f=json&' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
         $ch  = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -1511,10 +1621,16 @@ class Protector
         $ip4sql  = $xoopsDB->quote($ip->asReadable());
         $uri4sql = $xoopsDB->quote($uri);
 
-        $victim_uname = empty($_COOKIE['autologin_uname']) ? $_POST['uname'] : $_COOKIE['autologin_uname'];
-        // some UA send 'deleted' as a value of the deleted cookie.
-        if ('deleted' === $victim_uname) {
-            return null;
+        // A password POST always counts against the name it submits; an
+        // autologin cookie (which the client controls) must not replace it.
+        // Read as postcheck_functions.php does when it decides to call this.
+        $victim_uname = \Xmf\Request::getString('uname', '', 'POST');
+        if ('' === $victim_uname) {
+            $victim_uname = \Xmf\Request::getString('autologin_uname', '', 'COOKIE');
+            // some UA send 'deleted' as a value of the deleted cookie.
+            if ('' === $victim_uname || 'deleted' === $victim_uname) {
+                return null;
+            }
         }
         $mal4sql = $xoopsDB->quote("BRUTE FORCE: $victim_uname");
 
@@ -1555,6 +1671,31 @@ class Protector
     }
 
     /**
+     * Lower-case host of a link written without its scheme ("host:port/path",
+     * or text following "http://"): the authority ends at a path, query,
+     * fragment, quote, bracket or white space, a userinfo part ("user@") is
+     * dropped and so is a port. An IPv6 literal keeps its brackets, as
+     * parse_url() reports it ("[::1]").
+     *
+     * @param string $link link text after the scheme
+     * @return string host, '' for none
+     */
+    protected static function linkHost(string $link): string
+    {
+        // the literal must end the authority ("[::1]@attacker.test" is userinfo, not this host)
+        if (1 === preg_match('#^(?:[^/?\#\s\[\]"\'<>\\\\@]*@)?(\[[0-9a-f:.%]+\])(?::\d*)?(?=$|[/?\#\s\[\]"\'<>\\\\])#i', $link, $ipv6)) {
+            return strtolower($ipv6[1]);
+        }
+        $authority = (string) preg_replace('#[/?\#\s\[\]"\'<>\\\\].*$#s', '', $link);
+        $at        = strrpos($authority, '@');
+        if (false !== $at) {
+            $authority = substr($authority, $at + 1);
+        }
+
+        return strtolower((string) preg_replace('#:\d*$#', '', $authority));
+    }
+
+    /**
      * @param $val
      */
     protected function _spam_check_point_recursive($val)
@@ -1568,19 +1709,24 @@ class Protector
             $path_array = parse_url(XOOPS_URL);
             $http_host  = empty($path_array['host']) ? 'www.xoops.org' : $path_array['host'];
 
-            // count URI up
-            $count = -1;
-            foreach (preg_split('#https?\:\/\/#i', $val) as $fragment) {
-                if (0 !== strncmp($fragment, $http_host, strlen($http_host))) {
-                    ++$count;
+            // count URI up; a link is local only when its parsed host IS this host
+            // (example.com.attacker.test and example.com:80@attacker.test are other sites)
+            $localHost = strtolower($http_host);
+            // the text before the first scheme is no link, whatever it starts with
+            foreach (array_slice(preg_split('#https?\:\/\/#i', $val), 1) as $fragment) {
+                if (self::linkHost($fragment) !== $localHost) {
+                    ++$this->_spamcount_uri;
                 }
             }
-            if ($count > 0) {
-                $this->_spamcount_uri += $count;
-            }
 
-            // count BBCode likd [url=www....] up (without [url=http://...])
-            $this->_spamcount_uri += count(preg_split('/\[url=(?!http|\\"http|\\\'http|' . $http_host . ')/i', $val)) - 1;
+            // count BBCode like [url=www....] up (without [url=http://...], counted above)
+            if (preg_match_all('/\[url=\\\\?["\']?([^\]\s"\'\\\\]*)/i', $val, $targets)) {
+                foreach ($targets[1] as $target) {
+                    if (1 !== preg_match('#^https?://#i', $target) && self::linkHost($target) !== $localHost) {
+                        ++$this->_spamcount_uri;
+                    }
+                }
+            }
         }
     }
 

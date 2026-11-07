@@ -192,6 +192,8 @@ if (is_object($pm) && Request::hasVar('action', 'POST')) {
 $start                        = Request::getInt('start', 0, 'GET');
 $total_messages               = Request::getInt('total_messages', 0, 'GET');
 $GLOBALS['xoopsOption']['template_main'] = 'pm_readpmsg.tpl';
+// Never page-cached: the same URL (?start=N) shows each member their own mail.
+$GLOBALS['xoopsConfig']['module_cache'][$GLOBALS['xoopsModule']->getVar('mid')] = 0;
 include $GLOBALS['xoops']->path('header.php');
 
 if (!is_object($pm)) {
@@ -256,7 +258,11 @@ if (is_object($pm) && !empty($pm)) {
         $GLOBALS['xoopsTpl']->assign('poster', $poster);
     }
 
-    if ($pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid') && $pm->getVar('read_msg') == 0) {
+    // Mark read only when the browser shows this as a page (another site's frame,
+    // image or fetch must not flip the flag); a header-less client keeps the old behaviour.
+    $fetchDest = strtolower((string) xoops_getenv('HTTP_SEC_FETCH_DEST'));
+    if (('' === $fetchDest || 'document' === $fetchDest)
+        && $pm->getVar('to_userid') == $GLOBALS['xoopsUser']->getVar('uid') && $pm->getVar('read_msg') == 0) {
         $pm_handler->setRead($pm);
     }
 

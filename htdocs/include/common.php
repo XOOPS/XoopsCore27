@@ -322,11 +322,9 @@ $xoopsUserIsAdmin = false;
 $member_handler   = xoops_getHandler('member');
 /** @var \XoopsSessionHandler $sess_handler */
 $sess_handler     = xoops_getHandler('session');
-// SSL session bridge: transfers session ID from HTTP to HTTPS via POST
-$sslSessionId = \Xmf\Request::getString($xoopsConfig['sslpost_name'], '', 'POST');
-if ($xoopsConfig['use_ssl'] && $sslSessionId !== '' && preg_match('/^[a-zA-Z0-9,-]{26,128}$/', $sslSessionId)) {
-    session_id($sslSessionId); // NOSONAR - required for SSL bridging, input is regex-validated above
-} elseif ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '' && $xoopsConfig['session_expire'] > 0) {
+// Custom session settings apply to every start, the SSL bridge's too: the
+// session handler expires a session by session.gc_maxlifetime.
+if ($xoopsConfig['use_mysession'] && $xoopsConfig['session_name'] != '' && $xoopsConfig['session_expire'] > 0) {
     session_name($xoopsConfig['session_name']);
     session_cache_expire($xoopsConfig['session_expire']);
     // gc_maxlifetime can only be changed before the session starts.
@@ -336,6 +334,11 @@ if ($xoopsConfig['use_ssl'] && $sslSessionId !== '' && preg_match('/^[a-zA-Z0-9,
     ) {
         trigger_error('The session lifetime setting could not be applied.', E_USER_WARNING);
     }
+}
+// SSL session bridge: transfers session ID from HTTP to HTTPS via POST
+$sslSessionId = \Xmf\Request::getString($xoopsConfig['sslpost_name'], '', 'POST');
+if ($xoopsConfig['use_ssl'] && $sslSessionId !== '' && preg_match('/^[a-zA-Z0-9,-]{26,128}$/', $sslSessionId)) {
+    session_id($sslSessionId); // NOSONAR - required for SSL bridging, input is regex-validated above
 }
 
 session_set_save_handler($sess_handler, true);
@@ -425,8 +428,16 @@ if (empty($_SESSION['xoopsUserId'])
             }
         }
     }
-    if (null !== $rememberUser) {
+    // The identity changes from anonymous to the account: a fresh session ID,
+    // so an ID chosen by someone else (a planted cookie, the SSL bridge's
+    // posted ID) never becomes an authenticated session. A failed rotation
+    // signs nobody in; the cookie stays for the next request.
+    if (null !== $rememberUser && !$sess_handler->regenerate_id(true)) {
+        $rememberClaims = false;
+    } elseif (null !== $rememberUser) {
         $_SESSION['xoopsUserId'] = $rememberUser->getVar('uid');
+        // The token's own fingerprint matched the current hash just above.
+        $_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint($rememberUser);
     } else {
         // Not a cookie login: the restore block must not renew a refused token.
         $rememberClaims = false;
@@ -445,6 +456,18 @@ if (!empty($_SESSION['xoopsUserId'])) {
     // restored from the session store or from the remember-me cookie (whose
     // own checks ran above, before the session was seeded).
     $endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();
+    if (!$endSession) {
+        // A password change ends every session established with the old
+        // password. Every sign-in path stamps the session, so a session
+        // without a stamp predates this check and could have been opened with
+        // a password changed since: it ends too (a one-time sign-out of
+        // sessions opened before this check existed).
+        xoops_load('XoopsUserUtility');
+        $sessionPfp = $_SESSION['xoopsUserPfp'] ?? null;
+        $endSession = !is_string($sessionPfp)
+            || !hash_equals(XoopsUserUtility::sessionFingerprint($xoopsUser), $sessionPfp);
+        unset($sessionPfp);
+    }
     $factorRow  = null;
     if (!$endSession) {
         // The factor row, read on every request so an enrolment in another

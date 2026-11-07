@@ -69,6 +69,7 @@ class SystemBlock extends XoopsBlock
                     break;
                 case 'clone':
                     $title = _AM_SYSTEM_BLOCKS_CLONEBLOCK;
+                    $cloneSource = (int) $this->getVar('bid');
                     $this->setVar('bid', 0);
                     if ($this->isCustom()) {
                         $this->setVar('block_type', 'C');
@@ -185,14 +186,11 @@ class SystemBlock extends XoopsBlock
         $form->addElement(new XoopsFormSelectGroup(_AM_SYSTEM_BLOCKS_GROUP, 'groups', true, $groups, 5, true));
 
         $form->addElement(new XoopsFormHidden('block_type', $this->getVar('block_type')));
-        $form->addElement(new XoopsFormHidden('mid', $this->getVar('mid')));
-        $form->addElement(new XoopsFormHidden('func_num', $this->getVar('func_num')));
-        $form->addElement(new XoopsFormHidden('func_file', $this->getVar('func_file')));
-        $form->addElement(new XoopsFormHidden('show_func', $this->getVar('show_func')));
-        $form->addElement(new XoopsFormHidden('edit_func', $this->getVar('edit_func')));
-        $form->addElement(new XoopsFormHidden('template', $this->getVar('template')));
-        $form->addElement(new XoopsFormHidden('dirname', $this->getVar('dirname')));
-        $form->addElement(new XoopsFormHidden('name', $this->getVar('name')));
+        // A clone names its source block; the save handler copies the module
+        // binding and callbacks from that stored row, never from the form.
+        if (isset($cloneSource)) {
+            $form->addElement(new XoopsFormHidden('clone_bid', $cloneSource));
+        }
         $form->addElement(new XoopsFormHidden('bid', $this->getVar('bid')));
         $form->addElement(new XoopsFormHidden('op', $op));
         $form->addElement(new XoopsFormHidden('fct', 'blocksadmin'));
@@ -217,27 +215,17 @@ class SystemBlock extends XoopsBlock
     {
         global $xoopsConfig;
         if (!$this->isCustom()) {
-            $edit_func = $this->getVar('edit_func');
-            if (!$edit_func) {
+            $edit_func = $this->moduleBlockFunction((string) $this->getVar('edit_func', 'n'));
+            if (null === $edit_func) {
                 return false;
             }
-            if (file_exists($GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file')))) {
-                if (file_exists($file = $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/language/' . $xoopsConfig['language'] . '/blocks.php'))) {
-                    include_once $file;
-                } elseif (file_exists($file = $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/language/english/blocks.php'))) {
-                    include_once $file;
-                }
-                include_once $GLOBALS['xoops']->path('modules/' . $this->getVar('dirname') . '/blocks/' . $this->getVar('func_file'));
-                $options   = explode('|', (string) $this->getVar('options'));
-                $edit_form = $edit_func($options);
-                if (!$edit_form) {
-                    return false;
-                }
+            $options   = explode('|', (string) $this->getVar('options'));
+            $edit_form = $edit_func($options);
+            if (!$edit_form) {
+                return false;
+            }
 
-                return $edit_form;
-            } else {
-                return false;
-            }
+            return $edit_form;
         } else {
             return false;
         }
@@ -319,7 +307,7 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
     /**
      * @param XoopsObject|SystemBlock $obj
      *
-     * @return int|bool object id on success, otherwise false
+     * @return int|false object id on success, otherwise false
      */
     public function insert(XoopsObject $obj, $force = true)
     {
@@ -677,6 +665,75 @@ class SystemBlockHandler extends XoopsPersistableObjectHandler
         }
 
         return $ret;
+    }
+
+    /**
+     * Why a block may not be deleted, or null when it may.
+     *
+     * System blocks are never deleted; a module block only when another
+     * module block with the same function exists (the duplicates left by the
+     * 2.0.9 module update). Used by both the confirmation and the final delete.
+     *
+     * @param XoopsBlock $block block as stored
+     * @return string|null language string explaining the refusal
+     */
+    public function deletionRefusal(XoopsBlock $block): ?string
+    {
+        if ($block->getVar('block_type') === 'S') {
+            return _AM_SYSTEM_BLOCKS_SYSTEMCANT;
+        }
+        if ($block->getVar('block_type') === 'M') {
+            // Count module blocks only: a custom block posted with the same
+            // module and function must not count as the surviving copy.
+            $criteria = new CriteriaCompo(new Criteria('mid', (int) $block->getVar('mid')));
+            $criteria->add(new Criteria('func_num', (int) $block->getVar('func_num')));
+            // allowEmptyValue: an empty show_func must still be compared, or
+            // a sibling with a different function inflates the count.
+            $criteria->add(new Criteria('show_func', trim((string) $block->getVar('show_func')), '=', '', '', true));
+            $criteria->add(new Criteria('block_type', 'M'));
+            if (1 >= $this->getCount($criteria)) {
+                return _AM_SYSTEM_BLOCKS_MODULECANT;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Delete a block the administrator may delete.
+     *
+     * deletionRefusal() counts in one statement and the delete runs in a
+     * second, so two requests deleting the last two copies of a module block
+     * could each see the other and both succeed. For a module block the
+     * sibling check is part of the DELETE itself, one statement under one
+     * table lock, and zero affected rows is a refusal.
+     *
+     * @param XoopsBlock $block block as stored
+     * @return bool true when the row is gone
+     */
+    public function deleteGuarded(XoopsBlock $block): bool
+    {
+        if ($block->getVar('block_type') !== 'M') {
+            return null === $this->deletionRefusal($block) && $this->delete($block);
+        }
+        $table = $this->db->prefix('newblocks');
+        $bid   = (int) $block->getVar('bid');
+        // MySQL refuses to read the table being deleted from unless the
+        // subquery is a materialized derived table; LIMIT 1 forces that on
+        // MySQL 5.7 before 5.7.11. The same columns as deletionRefusal().
+        $sql = sprintf(
+            'DELETE FROM `%1$s` WHERE bid = %2$u AND EXISTS (SELECT 1 FROM (SELECT bid FROM `%1$s` WHERE mid = %3$u AND func_num = %4$u AND show_func = %5$s AND block_type = \'M\' AND bid <> %2$u LIMIT 1) AS sibling)',
+            $table,
+            $bid,
+            (int) $block->getVar('mid'),
+            (int) $block->getVar('func_num'),
+            $this->db->quote(trim((string) $block->getVar('show_func')))
+        );
+
+        /** @var XoopsMySQLDatabase $db */
+        $db = $this->db;
+
+        return $db->exec($sql) && 1 === $db->getAffectedRows();
     }
 
     /**

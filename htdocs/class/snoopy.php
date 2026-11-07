@@ -91,7 +91,7 @@ class Snoopy
     public $error = ""; // error messages sent here
     public $response_code = ""; // response code returned from server
     public $headers = []; // headers returned from server sent here
-    public $maxlength = 500000; // max return data length (body)
+    public $maxlength = 500000; // read chunk size for the body; a body, received or gzip-decoded, may be at most 20 times this
     public $read_timeout = 0; // timeout on read operations, in seconds
     // supported only since PHP 4 Beta 4
     // set to 0 to disallow timeouts
@@ -126,12 +126,137 @@ class Snoopy
     public $_submit_type = "application/x-www-form-urlencoded"; // default submit type
     public $_mime_boundary = ""; // MIME boundary for multipart/form-data submit type
     public $_redirectaddr = false; // will be set if page fetched is a redirect
+    public $_originLeaves = 0; // counts _leaveOrigin() clearing the state for another origin
     public $_redirectdepth = 0; // increments on an http redirect
     public $_frameurls = []; // frame src urls
     public $_framedepth = 0; // increments on frame depth
 
     public $_isproxy = false; // set if using a proxy server
     public $_fp_timeout = 30; // timeout for socket connection
+
+    /**
+     * Forget origin-bound credentials before following a redirect elsewhere.
+     *
+     * Basic-auth credentials, cookies and Authorization/Cookie raw headers
+     * belong to the origin (scheme, host, port) they were set for; a redirect
+     * to another origin, https to http included, must not carry them there.
+     * The previous response's headers go too: the next request would read
+     * their Set-Cookie lines back into the cookie jar. Returns $url unchanged.
+     *
+     * @param string $url  redirect target
+     * @param string $from URL of the response that redirected
+     * @return string
+     */
+    public function _leaveOrigin($url, $from)
+    {
+        $target = $this->_origin($url);
+        if (null === $target || $target === $this->_origin($from)) {
+            return (string) $url; // relative, or the same origin
+        }
+        ++$this->_originLeaves;
+        $this->user    = '';
+        $this->pass    = '';
+        $this->cookies = [];
+        $this->headers = [];
+        foreach (array_keys($this->rawheaders) as $name) {
+            if (in_array(strtolower((string) $name), ['authorization', 'cookie'], true)) {
+                unset($this->rawheaders[$name]);
+            }
+        }
+
+        return (string) $url;
+    }
+
+    /**
+     * scheme://host:port of an absolute URL, null for a relative one
+     *
+     * @param string $url
+     * @return string|null
+     */
+    public function _origin($url): ?string
+    {
+        $parts = parse_url((string) $url);
+        if (!is_array($parts) || !isset($parts['host'])) {
+            return null;
+        }
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
+        $port   = (int) ($parts['port'] ?? ('https' === $scheme ? 443 : 80));
+
+        return $scheme . '://' . strtolower((string) $parts['host']) . ':' . $port;
+    }
+
+    /**
+     * Whether a redirect target is an http(s) URL on the origin being fetched.
+     *
+     * Compares the parsed scheme, host and port: a textual prefix would accept
+     * example.com.attacker.test or example.com@attacker.test, and the same
+     * host on another port or scheme is another service.
+     *
+     * @param string $url  absolute redirect target
+     * @param string $from URL of the response that redirected
+     * @return bool
+     */
+    public function _isOnSite($url, $from): bool
+    {
+        $scheme = strtolower((string) parse_url((string) $url, PHP_URL_SCHEME));
+        $origin = $this->_origin($url);
+
+        return in_array($scheme, ['http', 'https'], true)
+            && null !== $origin && $origin === $this->_origin($from);
+    }
+
+    /**
+     * Fetch a frame of the page at $from.
+     *
+     * A frame on another origin, or one that redirects to another, is fetched
+     * without the page's credentials. When it left the page's origin, the
+     * page's state comes back afterwards: its credentials, which the next
+     * frame or request may still need, and its response headers and redirect,
+     * so the other origin's Set-Cookie never reaches the page's cookie jar.
+     *
+     * @param string $frameurl frame source
+     * @param string $from     URL of the page that holds the frame
+     * @return void
+     */
+    public function _fetchFrame($frameurl, $from): void
+    {
+        $saved  = [$this->user, $this->pass, $this->cookies, $this->rawheaders, $this->headers, $this->_redirectaddr];
+        $leaves = $this->_originLeaves;
+        $this->fetch($this->_leaveOrigin($frameurl, $from));
+        if ($this->_originLeaves !== $leaves) {
+            [$this->user, $this->pass, $this->cookies, $this->rawheaders, $this->headers, $this->_redirectaddr] = $saved;
+        }
+    }
+
+    /**
+     * Whether a URI holds a control character (CR/LF would split the request line).
+     *
+     * @param string $URI
+     * @return bool
+     */
+    public function _hasControlChars($URI): bool
+    {
+        return 1 === preg_match('/[\x00-\x1f\x7f]/', (string) $URI);
+    }
+
+    /**
+     * Follow a redirect of submit(): the form body is re-posted only to the
+     * same origin; a query-string target or another origin is fetched by GET.
+     *
+     * @param string $from      the URI that answered with the redirect
+     * @param array  $formvars
+     * @param array  $formfiles
+     * @return bool whether the followed request succeeded
+     */
+    public function _followSubmitRedirect($from, $formvars, $formfiles): bool
+    {
+        $next = $this->_leaveOrigin($this->_redirectaddr, $from);
+        if (strpos($next, '?') > 0 || $this->_origin($next) !== $this->_origin($from)) {
+            return (bool) $this->fetch($next);
+        }
+
+        return (bool) $this->submit($next, $formvars, $formfiles);
+    }
 
     /*======================================================================*\
         Function:	fetch
@@ -144,6 +269,10 @@ class Snoopy
 
     public function fetch($URI)
     {
+        if ($this->_hasControlChars($URI)) {
+            $this->error = 'Invalid URI';
+            return false;
+        }
 
         //preg_match("|^([^:]+)://([^:/]+)(:[\d]+)*(.*)|",$URI,$URI_PARTS);
         $URI_PARTS = parse_url($URI);
@@ -169,24 +298,29 @@ class Snoopy
                 if ($this->_connect($fp)) {
                     if ($this->_isproxy) {
                         // using proxy, send entire URI
-                        $this->_httprequest($URI, $fp, $URI, $this->_httpmethod);
+                        $sent = $this->_httprequest($URI, $fp, $URI, $this->_httpmethod);
                     } else {
                         $path = $URI_PARTS["path"] . ($URI_PARTS["query"] ? "?" . $URI_PARTS["query"] : "");
                         // no proxy, send only the path
-                        $this->_httprequest($path, $fp, $URI, $this->_httpmethod);
+                        $sent = $this->_httprequest($path, $fp, $URI, $this->_httpmethod);
                     }
 
                     $this->_disconnect($fp);
+                    if (!$sent) {
+                        return false; // a timeout or an undecodable body, as the https branch reports
+                    }
 
                     if ($this->_redirectaddr) {
                         /* url was redirected, check if we've hit the max depth */
                         if ($this->maxredirs > $this->_redirectdepth) {
                             // only follow redirect if it's on this site, or offsiteok is true
-                            if (preg_match("|^http://" . preg_quote($this->host) . "|i", $this->_redirectaddr) || $this->offsiteok) {
+                            if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                $this->fetch($this->_redirectaddr);
+                                if (!$this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI))) {
+                                    return false; // the followed request failed
+                                }
                             }
                         }
                     }
@@ -197,8 +331,8 @@ class Snoopy
 
                         while (list(, $frameurl) = each($frameurls)) {
                             if ($this->_framedepth < $this->maxframes) {
-                                $this->fetch($frameurl);
-                                $this->_framedepth++;
+                                $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
+                                $this->_fetchFrame($frameurl, $URI);
                             } else {
                                 break;
                             }
@@ -239,11 +373,13 @@ class Snoopy
                     /* url was redirected, check if we've hit the max depth */
                     if ($this->maxredirs > $this->_redirectdepth) {
                         // only follow redirect if it's on this site, or offsiteok is true
-                        if (preg_match("|^http://" . preg_quote($this->host) . "|i", $this->_redirectaddr) || $this->offsiteok) {
+                        if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            $this->fetch($this->_redirectaddr);
+                            if (!$this->fetch($this->_leaveOrigin($this->_redirectaddr, $URI))) {
+                                return false; // the followed request failed
+                            }
                         }
                     }
                 }
@@ -254,8 +390,8 @@ class Snoopy
 
                     while (list(, $frameurl) = each($frameurls)) {
                         if ($this->_framedepth < $this->maxframes) {
-                            $this->fetch($frameurl);
-                            $this->_framedepth++;
+                            $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
+                            $this->_fetchFrame($frameurl, $URI);
                         } else {
                             break;
                         }
@@ -285,6 +421,10 @@ class Snoopy
 
     public function submit($URI, $formvars = "", $formfiles = "")
     {
+        if ($this->_hasControlChars($URI)) {
+            $this->error = 'Invalid URI';
+            return false;
+        }
         unset($postdata);
 
         $postdata = $this->_prepare_post_body($formvars, $formfiles);
@@ -312,14 +452,17 @@ class Snoopy
                 if ($this->_connect($fp)) {
                     if ($this->_isproxy) {
                         // using proxy, send entire URI
-                        $this->_httprequest($URI, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
+                        $sent = $this->_httprequest($URI, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
                     } else {
                         $path = $URI_PARTS["path"] . ($URI_PARTS["query"] ? "?" . $URI_PARTS["query"] : "");
                         // no proxy, send only the path
-                        $this->_httprequest($path, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
+                        $sent = $this->_httprequest($path, $fp, $URI, $this->_submit_method, $this->_submit_type, $postdata);
                     }
 
                     $this->_disconnect($fp);
+                    if (!$sent) {
+                        return false; // a timeout or an undecodable body, as the https branch reports
+                    }
 
                     if ($this->_redirectaddr) {
                         /* url was redirected, check if we've hit the max depth */
@@ -329,15 +472,12 @@ class Snoopy
                             }
 
                             // only follow redirect if it's on this site, or offsiteok is true
-                            if (preg_match("|^http://" . preg_quote($this->host) . "|i", $this->_redirectaddr) || $this->offsiteok) {
+                            if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                                 /* follow the redirect */
                                 $this->_redirectdepth++;
                                 $this->lastredirectaddr = $this->_redirectaddr;
-                                if (strpos($this->_redirectaddr, "?") > 0) {
-                                    $this->fetch($this->_redirectaddr);
-                                } // the redirect has changed the request method from post to get
-                                else {
-                                    $this->submit($this->_redirectaddr, $formvars, $formfiles);
+                                if (!$this->_followSubmitRedirect($URI, $formvars, $formfiles)) {
+                                    return false; // the followed request failed
                                 }
                             }
                         }
@@ -349,8 +489,8 @@ class Snoopy
 
                         while (list(, $frameurl) = each($frameurls)) {
                             if ($this->_framedepth < $this->maxframes) {
-                                $this->fetch($frameurl);
-                                $this->_framedepth++;
+                                $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
+                                $this->_fetchFrame($frameurl, $URI);
                             } else {
                                 break;
                             }
@@ -396,15 +536,12 @@ class Snoopy
                         }
 
                         // only follow redirect if it's on this site, or offsiteok is true
-                        if (preg_match("|^http://" . preg_quote($this->host) . "|i", $this->_redirectaddr) || $this->offsiteok) {
+                        if ($this->_isOnSite($this->_redirectaddr, $URI) || $this->offsiteok) {
                             /* follow the redirect */
                             $this->_redirectdepth++;
                             $this->lastredirectaddr = $this->_redirectaddr;
-                            if (strpos($this->_redirectaddr, "?") > 0) {
-                                $this->fetch($this->_redirectaddr);
-                            } // the redirect has changed the request method from post to get
-                            else {
-                                $this->submit($this->_redirectaddr, $formvars, $formfiles);
+                            if (!$this->_followSubmitRedirect($URI, $formvars, $formfiles)) {
+                                return false; // the followed request failed
                             }
                         }
                     }
@@ -416,8 +553,8 @@ class Snoopy
 
                     while (list(, $frameurl) = each($frameurls)) {
                         if ($this->_framedepth < $this->maxframes) {
-                            $this->fetch($frameurl);
-                            $this->_framedepth++;
+                            $this->_framedepth++; // before recursing: a frame cycle must still reach the limit
+                            $this->_fetchFrame($frameurl, $URI);
                         } else {
                             break;
                         }
@@ -910,6 +1047,8 @@ class Snoopy
             $this->headers[] = $currentHeader;
         }
 
+        // The received body has the same bound as a decoded one: a server that never stops
+        // sending must not exhaust memory before the inflate limit below is reached.
         $results = '';
         do {
             $_data = fread($fp, $this->maxlength);
@@ -917,13 +1056,23 @@ class Snoopy
                 break;
             }
             $results .= $_data;
+            if (strlen($results) > $this->maxlength * 20) {
+                $this->error = 'Response is larger than the size limit';
+                return false;
+            }
         } while (true);
 
         // gunzip
         if ($is_gzipped) {
             // per https://www.php.net/manual/en/function.gzencode.php
             $results = substr($results, 10);
-            $results = gzinflate($results);
+            // Bound the decoded size too: a small compressed body can inflate to gigabytes.
+            // Past the bound, or on corrupt data, gzinflate() fails: report it, never a partial body.
+            $results = gzinflate($results, $this->maxlength * 20);
+            if (false === $results) {
+                $this->error = 'Compressed response is invalid or larger than the size limit';
+                return false;
+            }
         }
 
         if ($this->read_timeout > 0 && $this->_check_timeout($fp)) {

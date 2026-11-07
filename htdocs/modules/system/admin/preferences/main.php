@@ -488,7 +488,22 @@ switch ($op) {
         $new_session_name   = Request::getString('session_name', '', 'POST');
         $new_session_expire = Request::getInt('session_expire', 0, 'POST');
         if (!empty($new_use_mysession) && $xoopsConfig['use_mysession'] == 0 && $new_session_name !== '' && $new_session_expire > 0) {
-            xoops_setcookie($new_session_name, session_id(), time() + (60 * $new_session_expire), '/', XOOPS_COOKIE_DOMAIN, 0);
+            // Secure as the session handler set it for the session cookie (the
+            // protocol, or forced on by session_cookie_secure / SameSite=None),
+            // or as session_cookie_secure is saved in this same request (the
+            // handler read the old value); null leaves it to the protocol.
+            // HttpOnly on.
+            $sessionSecure = (Request::getInt('session_cookie_secure', 0, 'POST') === 1 || session_get_cookie_params()['secure']) ? true : null;
+            // SameSite likewise: as saved in this request, else as the handler applied it.
+            $sessionSameSite = Request::getString('session_cookie_samesite', '', 'POST');
+            if (!in_array($sessionSameSite, ['Lax', 'Strict', 'None'], true)) {
+                $sessionSameSite = (string) (session_get_cookie_params()['samesite'] ?? '');
+                $sessionSameSite = in_array($sessionSameSite, ['Lax', 'Strict', 'None'], true) ? $sessionSameSite : 'Lax';
+            }
+            if ('None' === $sessionSameSite) {
+                $sessionSecure = true; // browsers drop SameSite=None without Secure
+            }
+            xoops_setcookie($new_session_name, session_id(), time() + (60 * $new_session_expire), '/', XOOPS_COOKIE_DOMAIN, $sessionSecure, true, $sessionSameSite);
         }
 
         // Clean cached files, may take long time

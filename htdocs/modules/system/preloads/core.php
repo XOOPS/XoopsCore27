@@ -207,7 +207,7 @@ class SystemCorePreload extends XoopsPreloadItem
             $GLOBALS['xoTheme']->addScript('', ['type' => 'text/javascript'], '
             (function($){
                 $(document).ready(function(){
-                $.jGrowl("' . $_SESSION['redirect_message'] . '", {  life:3000 , position: "center", speed: "slow" });
+                $.jGrowl(' . self::redirectMessageLiteral() . ', {  life:3000 , position: "center", speed: "slow" });
             });
             })(jQuery);
             ');
@@ -230,11 +230,29 @@ class SystemCorePreload extends XoopsPreloadItem
             $GLOBALS['xoTheme']->addScript('', ['type' => 'text/javascript'], '
             (function($){
             $(document).ready(function(){
-                $.jGrowl("' . $_SESSION['redirect_message'] . '", {  life:3000 , position: "center", speed: "slow" });
+                $.jGrowl(' . self::redirectMessageLiteral() . ', {  life:3000 , position: "center", speed: "slow" });
             });
             })(jQuery);
             ');
             unset($_SESSION['redirect_message']);
         }
+    }
+
+    /**
+     * The session's redirect message as a JavaScript string literal for jGrowl.
+     *
+     * jGrowl shows the message as HTML: keep its line breaks, render
+     * everything else as text, and hand it over as a real JavaScript string
+     * (json_encode escapes quotes, backslashes and "<").
+     *
+     * @return string
+     */
+    private static function redirectMessageLiteral(): string
+    {
+        $message = (string) $_SESSION['redirect_message'];
+        $message = strip_tags((string) preg_replace('#<br\s*/?>#i', "\n", $message));
+        $message = nl2br(htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false), false);
+
+        return (string) json_encode($message, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 }

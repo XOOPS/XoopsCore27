@@ -87,11 +87,13 @@ class XoopsFormButtonTray extends XoopsFormElement
     /**
      * XoopsFormButtonTray::getType()
      *
-     * @return string
+     * @return string button, submit or reset; anything else becomes submit
      */
     public function getType()
     {
-        return $this->_type;
+        $type = strtolower((string) $this->_type);
+
+        return in_array($type, ['button', 'submit', 'reset'], true) ? $type : 'submit';
     }
 
     /**

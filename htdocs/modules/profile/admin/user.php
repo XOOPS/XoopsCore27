@@ -95,6 +95,10 @@ switch ($op) {
             if (!is_object($user)) {
                 redirect_header('user.php', 3, _US_NOEDITRIGHT);
             }
+            // Same rule as the edit form: only a webmaster may change a webmaster.
+            if (in_array(XOOPS_GROUP_ADMIN, $user->getGroups()) && !in_array(XOOPS_GROUP_ADMIN, $GLOBALS['xoopsUser']->getGroups())) {
+                redirect_header('user.php', 3, _US_NOEDITRIGHT);
+            }
             $profile = $profile_handler->get($uid);
             if (!is_object($profile)) {
                 $profile = $profile_handler->create();
@@ -106,7 +110,8 @@ switch ($op) {
             if (count($fields) > 0) {
                 foreach (array_keys($fields) as $i) {
                     $fieldname = $fields[$i]->getVar('field_name');
-                    if (in_array($fieldname, $userfields)) {
+                    if (in_array($fieldname, $userfields)
+                        && !$profile_handler->_fHandler->isAccountControlVar($fieldname)) {
                         $default = $fields[$i]->getVar('field_default');
                         if ($default === '' || $default === null) {
                             continue;
@@ -142,8 +147,12 @@ switch ($op) {
             $errors[] = $stop;
         }
 
+        // uname, email, level and pass are set (and validated) above; a field of that name must not override them.
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
+            if ($profile_handler->_fHandler->isAccountControlVar($fieldname)) {
+                continue;
+            }
             if (in_array($fields[$i]->getVar('field_id'), $editable_fields) && Request::hasVar($fieldname, 'POST')) {
                 $fieldValue = Request::getVar($fieldname, null, 'POST');
                 if (in_array($fieldname, $userfields)) {
@@ -160,6 +169,7 @@ switch ($op) {
 
         if (count($errors) == 0) {
             if ($handler->insertUser($user)) {
+                XoopsUserUtility::refreshSessionFingerprint($user);
                 $profile->setVar('profile_id', $user->getVar('uid'));
                 $profile_handler->insert($profile);
                 include_once $GLOBALS['xoops']->path('/modules/system/constants.php');

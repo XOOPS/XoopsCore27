@@ -68,8 +68,17 @@ if ($op === 'save') {
             $profile->setVar('profile_id', $edituser->getVar('uid'));
         }
 
+        $protected = $profile_handler->_fHandler->getProtectedUserVars();
+        // The installer lets webmasters edit their own rank; nothing else protected.
+        if (in_array(XOOPS_GROUP_ADMIN, $GLOBALS['xoopsUser']->getGroups())) {
+            $protected = array_diff($protected, ['rank']);
+        }
         foreach (array_keys($fields) as $i) {
             $fieldname = $fields[$i]->getVar('field_name');
+            // Column names are case-insensitive: a field named PASS writes pass.
+            if (in_array(strtolower(trim((string) $fieldname)), $protected, true)) {
+                continue;
+            }
             if (in_array($fields[$i]->getVar('field_id'), $editable_fields) && Request::hasVar($fieldname, 'POST')) {
                 $value = $fields[$i]->getValueForSave(Request::getVar($fieldname, null, 'POST'));
                 if (in_array($fieldname, $profile_handler->getUserVars())) {

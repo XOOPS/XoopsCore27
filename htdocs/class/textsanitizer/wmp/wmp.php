@@ -75,7 +75,8 @@ EOH;
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->patterns[] = "/\[wmp=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/wmp\]/sU";
+        // No [ ] < > in any group: later BBCode would otherwise expand inside the attributes.
+        $myts->patterns[] = "/\[wmp=(['\"]?)([^\"'<>\[\]]*),([^\"'<>\[\]]*)\\1]([^\"'<>\[\]]*)\[\/wmp\]/sU";
         $rp             = "<object classid=\"clsid:6BF52A52-394A-11D3-B153-00C04F79FAA6\" id=\"WindowsMediaPlayer\" width=\"\\2\" height=\"\\3\">\n";
         $rp .= "<param name=\"URL\" value=\"\\4\">\n";
         $rp .= "<param name=\"AutoStart\" value=\"0\">\n";

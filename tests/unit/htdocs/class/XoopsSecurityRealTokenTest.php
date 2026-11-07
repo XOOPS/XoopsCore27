@@ -35,6 +35,64 @@ use PHPUnit\Framework\TestCase;
 #[CoversNothing]
 final class XoopsSecurityRealTokenTest extends TestCase
 {
+    /**
+     * The real isSameOrigin() (sign-in intent and checkReferer() both use it):
+     * scheme, host and effective port must all match XOOPS_URL exactly.
+     */
+    #[Test]
+    public function realClassSameOriginComparesSchemeHostAndPortExactly(): void
+    {
+        $root   = var_export(XOOPS_ROOT_PATH, true);
+        $script = <<<PHP
+<?php
+declare(strict_types=1);
+define('XOOPS_ROOT_PATH', {$root});
+define('XOOPS_DB_PREFIX', 'xt');
+define('XOOPS_URL', 'http://example.test');
+require XOOPS_ROOT_PATH . '/xoops_lib/vendor/autoload.php';
+\$xoopsLogger = new class { public function addExtra(string \$a, string \$b): void {} };
+require XOOPS_ROOT_PATH . '/class/xoopssecurity.php';
+\$s = new XoopsSecurity();
+\$r = [];
+foreach (json_decode(\$argv[1], true) as \$url) {
+    \$r[\$url] = \$s->isSameOrigin(\$url);
+}
+echo json_encode(\$r);
+PHP;
+        $expected = [
+            'http://example.test'                  => true,
+            'http://example.test/user.php?op=x'    => true,
+            'http://EXAMPLE.test:80/'              => true,
+            'http://example.test.attacker.test/'   => false, // prefix-sharing host
+            'http://example.test@attacker.test/'   => false, // userinfo: the host is attacker.test
+            'http://attacker.test/?example.test'   => false,
+            'http://example.test:8080/'            => false, // non-default port
+            'https://example.test/'                => false, // other scheme, other default port
+            'null'                                 => false,
+            ''                                     => false,
+            '/user.php'                            => false, // no host
+        ];
+        $file = (string) tempnam(sys_get_temp_dir(), 'xsec');
+        try {
+            file_put_contents($file, $script);
+            $process = proc_open(
+                [PHP_BINARY, $file, json_encode(array_keys($expected), JSON_THROW_ON_ERROR)],
+                [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                $pipes
+            );
+            self::assertIsResource($process);
+            $output = stream_get_contents($pipes[1]);
+            $errors = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            self::assertSame(0, proc_close($process), $errors . $output);
+        } finally {
+            unlink($file);
+        }
+
+        self::assertSame($expected, json_decode((string) $output, true, 512, JSON_THROW_ON_ERROR));
+    }
+
     #[Test]
     public function realClassTokenContract(): void
     {

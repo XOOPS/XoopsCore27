@@ -45,9 +45,10 @@ switch ($op) {
         $sortby_arr      = [];
 
         // Dynamic fields
+        /** @var ProfileProfileHandler $profile_handler */
         $profile_handler = xoops_getModuleHandler('profile');
         // Get fields
-        $fields = $profile_handler->loadFields();
+        $fields = $profile_handler->loadSearchFields(); // never an account-control column
         // Get ids of fields that can be searched
         /** @var  XoopsGroupPermHandler $gperm_handler */
         $gperm_handler     = xoops_getHandler('groupperm');
@@ -98,7 +99,9 @@ switch ($op) {
                     $size    = min(count($options), 10);
                     $element = new XoopsFormSelect($fields[$i]->getVar('field_title'), $fields[$i]->getVar('field_name'), null, $size, true);
                     asort($options);
-                    $element->addOptionArray($options);
+                    include_once __DIR__ . '/include/forms.php';
+                    // stored labels are text, as on the registration and edit forms
+                    $element->addOptionArray(profile_encodeOptionLabels($options));
                     $searchform->addElement($element);
                     unset($element);
                     break;
@@ -171,9 +174,10 @@ switch ($op) {
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
         // Dynamic fields
+        /** @var ProfileProfileHandler $profile_handler */
         $profile_handler = xoops_getModuleHandler('profile');
         // Get fields
-        $fields = $profile_handler->loadFields();
+        $fields = $profile_handler->loadSearchFields(); // never an account-control column: no predicate, sort key or column
         // Get ids of fields that can be searched
         /** @var  XoopsGroupPermHandler $gperm_handler */
         $gperm_handler     = xoops_getHandler('groupperm');

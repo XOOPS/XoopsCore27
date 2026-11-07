@@ -50,6 +50,14 @@ class MytsTextfilter extends MyTextSanitizerExtension
 
             return $text;
         }
+        // Frameworks/purifier is not part of the core package, but the bundled
+        // HTMLPurifier is: use it rather than the pattern list below, which
+        // keeps event-handler attributes.
+        // The site's own tags and patterns from config.textfilter.php still
+        // apply afterwards.
+        if (class_exists('HTMLPurifier')) {
+            $text = (new \HTMLPurifier(['Cache.DefinitionImpl' => null]))->purify((string) $text);
+        }
 
         $tags    = [];
         $search  = [];

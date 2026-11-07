@@ -23,6 +23,7 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 require_once XOOPS_ROOT_PATH . '/kernel/menuscategory.php';
 require_once XOOPS_ROOT_PATH . '/kernel/menusitems.php';
 require_once XOOPS_ROOT_PATH . '/modules/system/class/SystemMenusTree.php';
+require_once XOOPS_ROOT_PATH . '/class/theme.php'; // xos_opal_Theme::filterMenuAffix()
 
 use Xmf\Request;
 
@@ -112,7 +113,10 @@ function menus_require_token(bool $isAjax): void
 function menus_sanitize_url(string $url): string
 {
     // Decode HTML entities so encoded schemes (&#106;avascript:) don't bypass the check
-    $url = trim(html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    $url = html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    // Browsers drop tabs and line breaks anywhere in a URL and trim leading
+    // and trailing controls and spaces: "java<TAB>script:" is javascript:.
+    $url = trim(str_replace(["\t", "\n", "\r"], '', $url), "\x00..\x20\x7F");
     if ($url === '' || $url === '#') {
         return $url;
     }
@@ -285,8 +289,8 @@ switch ($op) {
                     'id'        => (int) $item->getVar('items_id'),
                     'pid'       => (int) $item->getVar('items_pid'),
                     'title'     => $item->getAdminTitle(),
-                    'prefix'    => $item->getVar('items_prefix', 'n'),
-                    'suffix'    => $item->getVar('items_suffix', 'n'),
+                    'prefix'    => \xos_opal_Theme::filterMenuAffix((string) $item->getVar('items_prefix', 'n')),
+                    'suffix'    => \xos_opal_Theme::filterMenuAffix((string) $item->getVar('items_suffix', 'n')),
                     'url'       => (string) $item->getVar('items_url', 'n'),
                     'active'    => (int) $item->getVar('items_active'),
                     'protected' => (int) $item->getVar('items_protected'),
@@ -296,8 +300,8 @@ switch ($op) {
             $catData[] = [
                 'id'          => $cid,
                 'title'       => $cat->getAdminTitle(),
-                'prefix'      => $cat->getVar('category_prefix', 'n'),
-                'suffix'      => $cat->getVar('category_suffix', 'n'),
+                'prefix'      => \xos_opal_Theme::filterMenuAffix((string) $cat->getVar('category_prefix', 'n')),
+                'suffix'      => \xos_opal_Theme::filterMenuAffix((string) $cat->getVar('category_suffix', 'n')),
                 'url'         => (string) $cat->getVar('category_url', 'n'),
                 'target'      => (int) $cat->getVar('category_target') === 1 ? '_blank' : '_self',
                 'active'      => (int) $cat->getVar('category_active'),
@@ -457,8 +461,8 @@ switch ($op) {
                 'id'        => (int) $item->getVar('items_id'),
                 'pid'       => (int) $item->getVar('items_pid'),
                 'title'     => $item->getAdminTitle(),
-                'prefix'    => $item->getVar('items_prefix', 'n'),
-                'suffix'    => $item->getVar('items_suffix', 'n'),
+                'prefix'    => \xos_opal_Theme::filterMenuAffix((string) $item->getVar('items_prefix', 'n')),
+                'suffix'    => \xos_opal_Theme::filterMenuAffix((string) $item->getVar('items_suffix', 'n')),
                 'url'       => (string) $item->getVar('items_url', 'n'),
                 'active'    => (int) $item->getVar('items_active'),
                 'protected' => (int) $item->getVar('items_protected'),

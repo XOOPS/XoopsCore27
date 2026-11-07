@@ -65,8 +65,10 @@ if ('' === $uname || '' === $pass) {
     $xoopsAuth = XoopsAuthFactory::getAuthConnection($uname);
     $user      = $xoopsAuth->authenticate($uname, $pass);
 
-    // For XOOPS 2.2*
-    if (!is_object($user)) {
+    // For XOOPS 2.2*: the legacy local hash stands in only for the local
+    // provider. A directory provider's refusal is final; a local fallback
+    // would accept a password the directory rejected.
+    if (!is_object($user) && $xoopsAuth instanceof XoopsAuthXoops) {
         try {
             $criteria = new CriteriaCompo(new Criteria('loginname', $uname));
             $criteria->add(new Criteria('pass', md5($pass)));
@@ -136,6 +138,8 @@ if ('' === $uname || '' === $pass) {
         $_SESSION                    = [];
         $_SESSION['xoopsUserId']     = $user->getVar('uid');
         $_SESSION['xoopsUserGroups'] = $user->getGroups();
+        xoops_load('XoopsUserUtility');
+        $_SESSION['xoopsUserPfp']    = XoopsUserUtility::sessionFingerprint($user);
         // The stamp include/common.php checks on every request: without it an
         // enrolled webmaster signed in while the policy is off loses this
         // session on the redirect.

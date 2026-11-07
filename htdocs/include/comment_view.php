@@ -50,6 +50,10 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             }
             $com_mode = empty($com_mode) ? $xoopsConfig['com_mode'] : $com_mode;
         }
+        // The mode is placed in links and inline handlers: only the three real modes pass.
+        if (!in_array($com_mode, ['flat', 'thread', 'nest'], true)) {
+            $com_mode = 'nest';
+        }
         $xoopsTpl->assign('comment_mode', $com_mode);
         if (!Request::hasVar('com_order', 'GET')) {
             if (is_object($xoopsUser)) {
@@ -100,23 +104,26 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
                 $extra_params = '';
                 foreach ($comment_config['extraParams'] as $extra_param) {
                     // This page is included in the module hosting page -- param could be from anywhere
-                    if (isset(${$extra_param})) {
-                        $extra_params .= $extra_param . '=' . ${$extra_param} . '&amp;';
+                    $extra_local = get_defined_vars()[$extra_param] ?? null;
+                    if (null !== $extra_local) {
+                        $extra_value = (string) $extra_local;
                     } elseif (Request::hasVar($extra_param, 'POST')) {
-                        $extra_params .= $extra_param . '=' . Request::getString($extra_param, '', 'POST') . '&amp;';
+                        $extra_value = Request::getString($extra_param, '', 'POST');
                     } elseif (Request::hasVar($extra_param, 'GET')) {
-                        $extra_params .= $extra_param . '=' . Request::getString($extra_param, '', 'GET') . '&amp;';
+                        $extra_value = Request::getString($extra_param, '', 'GET');
                     } else {
-                        $extra_params .= $extra_param . '=&amp;';
+                        $extra_value = '';
                     }
-                    //$extra_params .= isset(${$extra_param}) ? $extra_param .'='.${$extra_param}.'&amp;' : $extra_param .'=&amp;';
+                    // The URL is printed unescaped into href attributes by the thread template.
+                    $extra_params .= rawurlencode((string) $extra_param) . '=' . rawurlencode($extra_value) . '&amp;';
                 }
                 $comment_url .= $extra_params;
             }
             $xoopsTpl->assign('comment_url', $comment_url . $comment_config['itemName'] . '=' . $com_itemid . '&amp;com_mode=thread&amp;com_order=' . $com_order);
             if (!empty($com_id) && !empty($com_rootid) && ($com_id != $com_rootid)) {
-                // Show specific thread tree
-                $comments = $comment_handler->getThread($com_rootid, $com_id);
+                // Show specific thread tree. The ids come from the request: only
+                // comments of this module and item, which $admin_view was checked for.
+                $comments = $comment_handler->getThread($com_rootid, $com_id, null, $xoopsModule->getVar('mid'), $com_itemid);
                 //                if (false != $comments) {
                 if (!empty($comments)) {  // getThread always returns array - changed in 2.5.9
                     include_once $GLOBALS['xoops']->path('class/commentrenderer.php');
@@ -130,7 +137,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
                 $c_count      = count($top_comments);
                 if ($c_count > 0) {
                     for ($i = 0; $i < $c_count; ++$i) {
-                        $comments = $comment_handler->getThread($top_comments[$i]->getVar('com_rootid'), $top_comments[$i]->getVar('com_id'));
+                        $comments = $comment_handler->getThread($top_comments[$i]->getVar('com_rootid'), $top_comments[$i]->getVar('com_id'), null, $xoopsModule->getVar('mid'), $com_itemid);
                         //                        if (false != $comments) {
                         if (!empty($comments)) {  // $getThread always returns array - changed in 2.5.9
                             include_once $GLOBALS['xoops']->path('class/commentrenderer.php');
@@ -148,7 +155,7 @@ if (XOOPS_COMMENT_APPROVENONE != $xoopsModuleConfig['com_rule']) {
             $c_count      = count($top_comments);
             if ($c_count > 0) {
                 for ($i = 0; $i < $c_count; ++$i) {
-                    $comments = $comment_handler->getThread($top_comments[$i]->getVar('com_rootid'), $top_comments[$i]->getVar('com_id'));
+                    $comments = $comment_handler->getThread($top_comments[$i]->getVar('com_rootid'), $top_comments[$i]->getVar('com_id'), null, $xoopsModule->getVar('mid'), $com_itemid);
                     include_once $GLOBALS['xoops']->path('class/commentrenderer.php');
                     $renderer = XoopsCommentRenderer::instance($xoopsTpl);
                     $renderer->setComments($comments);

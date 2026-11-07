@@ -798,4 +798,30 @@ class XoopsMediaUploaderTest extends TestCase
         $uploader->deniedMimeTypes = [];
         $this->assertTrue($uploader->checkMimeType());
     }
+
+    public function testFetchMediaForgetsThePreviousFilesClassification(): void
+    {
+        // A reused uploader classified the last file as an image; the next
+        // file must be judged on its own, even when fetchMedia() stops early.
+        $uploader = $this->createUploader();
+        $uploader->extensionToMime = ['jpg' => 'image/jpeg'];
+        $uploader->mediaRealType   = 'image/jpeg';
+
+        $uploader->fetchMedia('no_such_field');
+
+        $this->assertSame('', $uploader->mediaRealType);
+    }
+
+    public function testFetchMediaReportsOnlyTheCurrentFilesErrors(): void
+    {
+        // A missing field used to add its error to the previous ones, so a
+        // request naming N absent fields produced N*(N+1)/2 error lines.
+        $uploader = $this->createUploader();
+        $uploader->extensionToMime = ['jpg' => 'image/jpeg'];
+
+        $uploader->fetchMedia('missing_one');
+        $uploader->fetchMedia('missing_two');
+
+        $this->assertSame([_ER_UP_FILENOTFOUND], $uploader->getErrors(false));
+    }
 }

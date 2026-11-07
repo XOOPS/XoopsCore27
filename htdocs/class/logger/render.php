@@ -45,7 +45,11 @@ if ($mode === 'popup') {
 ';
     $lines = preg_split("/(\r\n|\r|\n)( *)/", $content);
     foreach ($lines as $line) {
-        $ret .= "\n" . 'debug_window.document.writeln("' . str_replace(['"', '</'], ['\"', '<\/'], $line) . '");';
+        // A JavaScript string literal, backslashes included: escaping only
+        // quotes let a logged "\x3c" rebuild markup inside the popup.
+        $ret .= "\n" . 'debug_window.document.writeln('
+            . json_encode($line, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE)
+            . ');';
     }
     $ret .= '
     debug_window.focus();

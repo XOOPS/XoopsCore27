@@ -130,7 +130,7 @@ final class AlternateLoginPathsTest extends TestCase
     {
         foreach (['htdocs/class/xml/rpc/xmlrpcapi.php', 'extras/login.php'] as $file) {
             $this->loadSourceFile($file);
-            $login = strpos($this->sourceContent, '->loginUser(');
+            $login = strpos($this->sourceContent, 'extras/login.php' === $file ? 'xoops_login_authenticate(' : '->loginUser(');
             $gate  = strpos($this->sourceContent, 'XoopsUser2faHandler::mustChallenge(XoopsUser2faHandler::policy(');
             self::assertNotFalse($login, $file);
             self::assertNotFalse($gate, $file);

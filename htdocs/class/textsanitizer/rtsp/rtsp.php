@@ -72,7 +72,8 @@ EOH;
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->patterns[] = "/\[rtsp=(['\"]?)([^\"']*),([^\"']*)\\1]([^\"]*)\[\/rtsp\]/sU";
+        // No [ ] < > in any group: later BBCode would otherwise expand inside the attributes.
+        $myts->patterns[] = "/\[rtsp=(['\"]?)([^\"'<>\[\]]*),([^\"'<>\[\]]*)\\1]([^\"'<>\[\]]*)\[\/rtsp\]/sU";
         $rp             = "<object classid=\"clsid:CFCDAA03-8BE4-11cf-B84B-0020AFBBCCFA\" HEIGHT='\\3' ID=Player WIDTH='\\2' VIEWASTEXT>";
         $rp .= "<param NAME=\"_ExtentX\" VALUE=\"12726\">";
         $rp .= "<param NAME=\"_ExtentY\" VALUE=\"8520\">";

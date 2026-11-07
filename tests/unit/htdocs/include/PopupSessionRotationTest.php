@@ -24,6 +24,11 @@ final class PopupSessionRotationTest extends TestCase
         file_put_contents($directory . '/language/english/user.php', '<?php');
         mkdir($directory . '/include');
         copy(dirname(__DIR__, 4) . '/htdocs/include/twofactor.php', $directory . '/include/twofactor.php');
+        // The popup signs in through the site's own check; this stub stands in for it.
+        file_put_contents(
+            $directory . '/include/loginsession.php',
+            '<?php function xoops_login_authenticate(string $u, string $p) { return xoops_getHandler(\'member\')->loginUser($u, $p); }'
+        );
         $source = file_get_contents(dirname(__DIR__, 4) . '/extras/login.php');
         $source = str_replace("'/path/to/xoops/directory'", var_export($directory, true), $source);
         file_put_contents($directory . '/popup.php', $source);
@@ -49,7 +54,7 @@ namespace {
     // an earlier identity on the same session must not survive a failed rotation
     $_SESSION['xoopsUserId'] = 7;
     register_shutdown_function(static function () use ($initial): void {
-        file_put_contents(__DIR__ . '/result.json', json_encode(['initial' => $initial, 'final' => session_id(), 'uid' => $_SESSION['xoopsUserId'] ?? null]));
+        file_put_contents(__DIR__ . '/result.json', json_encode(['initial' => $initial, 'final' => session_id(), 'uid' => $_SESSION['xoopsUserId'] ?? null, 'pfp' => $_SESSION['xoopsUserPfp'] ?? null]));
     });
     $sess_handler = new class {
         public function regenerate_id(bool $delete): bool { return ($GLOBALS['argv'][1] ?? '') === 'fail' ? false : session_regenerate_id($delete); }
@@ -73,6 +78,10 @@ namespace {
             public function insertUser(object $user): bool { return true; }
         };
     }
+    class XoopsUserUtility {
+        public static function sessionFingerprint(object $user): string { return 'sfp'; }
+    }
+    function xoops_load(string $name): void {}
     function xoops_loadLanguage(string $name): void {}
     function xoops_getcss(string $theme): string { return ''; }
     function xoops_error(string $message): void { echo $message; }
@@ -94,6 +103,7 @@ PHP;
                 if ($mode === 'success') {
                     self::assertNotSame($result['initial'], $result['final'], $errors);
                     self::assertSame(9, $result['uid']);
+                    self::assertSame('sfp', $result['pfp'], 'Popup login must stamp the session fingerprint');
                 } else {
                     self::assertNull($result['uid'], 'Failed session rotation must never authenticate the old session');
                 }
@@ -101,6 +111,7 @@ PHP;
         } finally {
             foreach (glob($directory . '/*') as $file) { if (is_file($file)) { unlink($file); } }
             unlink($directory . '/include/twofactor.php');
+            unlink($directory . '/include/loginsession.php');
             rmdir($directory . '/include');
             unlink($directory . '/language/english/user.php');
             rmdir($directory . '/language/english');

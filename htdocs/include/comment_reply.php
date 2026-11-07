@@ -42,6 +42,10 @@ if ($com_mode == '') {
         $com_mode = $xoopsConfig['com_mode'];
     }
 }
+// The mode is placed in links and inline handlers: only the three real modes pass.
+if (!in_array($com_mode, ['flat', 'thread', 'nest'], true)) {
+    $com_mode = 'nest';
+}
 if (!Request::hasVar('com_order', 'GET')) {
     if (is_object($xoopsUser)) {
         $com_order = $xoopsUser->getVar('uorder');
@@ -53,6 +57,32 @@ if (!Request::hasVar('com_order', 'GET')) {
 }
 $comment_handler = xoops_getHandler('comment');
 $comment         = $comment_handler->get($com_id);
+
+// The reply page quotes the comment, so the id alone must not reach another
+// module's comment, or a pending or hidden one, unless the visitor may moderate it.
+$reply_allowed = is_object($comment) && (int) $comment->getVar('com_id') > 0;
+$reply_moderator = false;
+if ($reply_allowed && is_object($xoopsUser)) {
+    include_once $GLOBALS['xoops']->path('modules/system/constants.php');
+    /** @var XoopsGroupPermHandler $sysperm_handler */
+    $sysperm_handler = xoops_getHandler('groupperm');
+    $reply_moderator = $xoopsUser->isAdmin($comment->getVar('com_modid'))
+        || $sysperm_handler->checkRight('system_admin', XOOPS_SYSTEM_COMMENT, $xoopsUser->getGroups());
+}
+// Only moderators reach any module's comment from the System comment manager; elsewhere the
+// comment must belong to the hosting module, and an inactive one is open to moderators only.
+if ($reply_allowed) {
+    if ('system' === $xoopsModule->getVar('dirname')) {
+        $reply_allowed = $reply_moderator;
+    } else {
+        $reply_allowed = (int) $comment->getVar('com_modid') === (int) $xoopsModule->getVar('mid')
+            && ($reply_moderator || XOOPS_COMMENT_ACTIVE == $comment->getVar('com_status'));
+    }
+}
+if (!$reply_allowed) {
+    redirect_header(XOOPS_URL . '/', 1, _NOPERM);
+}
+unset($reply_allowed, $reply_moderator);
 
 // Start edit by voltan
 if ($comment->getVar('com_uid') == 0 && $comment->getVar('com_user') != '') {

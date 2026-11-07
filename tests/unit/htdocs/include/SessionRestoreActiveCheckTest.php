@@ -76,6 +76,76 @@ final class SessionRestoreActiveCheckTest extends TestCase
     }
 
     #[Test]
+    public function aChangedPasswordEndsTheSession(): void
+    {
+        // Runs for a loaded active account, before the factor check. A missing,
+        // malformed or mismatched stamp ends the session: adopting the current
+        // hash for an unstamped session would let it survive a reset.
+        $active = strpos($this->restore, '$endSession = !is_object($xoopsUser) || !$xoopsUser->isActive();');
+        $check  = strpos($this->restore, "\$sessionPfp = \$_SESSION['xoopsUserPfp'] ?? null;");
+        $factor = strpos($this->restore, "xoops_getHandler('user2fa')->getRow(");
+        self::assertNotFalse($active);
+        self::assertNotFalse($check);
+        self::assertNotFalse($factor);
+        self::assertLessThan($check, $active);
+        self::assertLessThan($factor, $check);
+
+        $flat = (string) preg_replace('/\s+/', ' ', substr($this->restore, $check, $factor - $check));
+        self::assertStringContainsString('$endSession = !is_string($sessionPfp) || !hash_equals(XoopsUserUtility::sessionFingerprint($xoopsUser), $sessionPfp);', $flat);
+        self::assertStringNotContainsString("\$_SESSION['xoopsUserPfp'] =", $flat, 'an unstamped session must not be adopted');
+
+        // Login stamps the fresh session from the authenticated object.
+        $login = file_get_contents(dirname($this->filePath) . '/loginsession.php');
+        self::assertNotFalse($login);
+        $set = substr($login, (int) strpos($login, 'function xoops_login_set_session('));
+        self::assertStringContainsString("\$_SESSION['xoopsUserPfp'] = XoopsUserUtility::sessionFingerprint(\$user);", $set);
+        self::assertLessThan(
+            strpos($set, "\$_SESSION['xoopsUserPfp']"),
+            strpos($set, '$_SESSION = [];')
+        );
+    }
+
+    #[Test]
+    public function everySignInPathStampsTheSession(): void
+    {
+        // An unstamped session is ended, so every place that writes
+        // xoopsUserId must write the fingerprint beside it.
+        $root = dirname($this->filePath, 3);
+        foreach ([
+            'htdocs/include/loginsession.php',
+            'htdocs/include/common.php',
+            'htdocs/install/include/functions.php',
+            'extras/login.php',
+            'upgrade/login.php',
+        ] as $file) {
+            $src = (string) file_get_contents($root . '/' . $file);
+            $writes = preg_match_all("/\\\$_SESSION\['xoopsUserId'\]\s*=[^=]/", $src);
+            self::assertGreaterThan(0, $writes, $file);
+            self::assertSame(
+                $writes,
+                preg_match_all("/\\\$_SESSION\['xoopsUserPfp'\]\s*=\s*XoopsUserUtility::sessionFingerprint\(/", $src),
+                $file . ': every xoopsUserId write needs a fingerprint stamp'
+            );
+        }
+    }
+
+    #[Test]
+    public function everySelfServicePasswordSaveReStampsTheCurrentSession(): void
+    {
+        $root = dirname($this->filePath, 3);
+        foreach ([
+            'htdocs/edituser.php'                      => '$edituser',
+            'htdocs/modules/profile/changepass.php'    => "\$GLOBALS['xoopsUser']",
+            'htdocs/modules/system/admin/users/main.php' => '$edituser',
+            'htdocs/modules/profile/admin/user.php'    => '$user',
+        ] as $file => $var) {
+            $src = file_get_contents($root . '/' . $file);
+            self::assertNotFalse($src, $file);
+            self::assertStringContainsString("XoopsUserUtility::refreshSessionFingerprint({$var});", $src, $file);
+        }
+    }
+
+    #[Test]
     public function groupsComeFromTheDatabaseNotTheSessionCopy(): void
     {
         self::assertStringNotContainsString("setGroups(\$_SESSION['xoopsUserGroups'])", $this->restore);
@@ -143,6 +213,24 @@ final class SessionRestoreActiveCheckTest extends TestCase
         self::assertNotFalse($reject, 'the rejection branch must clear the cookie-login flag');
         self::assertLessThan((int) strpos($block, 'xoops_setcookie(', $decide), $reject);
         self::assertSame(2, substr_count(substr($block, $reject), "xoops_setcookie(\$GLOBALS['xoopsConfig']['usercookie'], null, time() - 3600"));
+    }
+
+    #[Test]
+    public function aCookieLoginRotatesTheSessionIdBeforeSeedingIt(): void
+    {
+        // Anonymous -> signed in is an identity change: a session ID someone
+        // else chose (planted cookie, SSL bridge POST) must not become the
+        // authenticated session. A failed rotation seeds nothing.
+        $blockStart = strpos($this->sourceContent, '$rememberClaims = false;');
+        $seed       = strpos($this->sourceContent, "\$_SESSION['xoopsUserId'] = \$rememberUser->getVar('uid');", (int) $blockStart);
+        self::assertNotFalse($blockStart);
+        self::assertNotFalse($seed);
+        $rotate = strrpos(substr($this->sourceContent, 0, $seed), 'if (null !== $rememberUser && !$sess_handler->regenerate_id(true)) {');
+        self::assertNotFalse($rotate, 'the session is rotated before the cookie seeds it');
+        self::assertGreaterThan($blockStart, $rotate);
+        $failure = substr($this->sourceContent, $rotate, $seed - $rotate);
+        self::assertStringContainsString('$rememberClaims = false;', $failure, 'a failed rotation is not a cookie login');
+        self::assertStringContainsString('} elseif (null !== $rememberUser) {', $failure);
     }
 
     #[Test]

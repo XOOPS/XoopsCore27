@@ -223,10 +223,23 @@ class XoopsSecurity
         if ($ref == '') {
             return false;
         }
+
+        return $this->isSameOrigin((string) $ref);
+    }
+
+    /**
+     * Whether a URL (or a bare Origin header value) has the scheme, host and port of XOOPS_URL
+     *
+     * @param string $url absolute URL or origin
+     *
+     * @return bool
+     */
+    public function isSameOrigin(string $url): bool
+    {
         // Compare scheme, host, and effective port exactly. A prefix match
         // (strpos === 0) accepts sibling hosts such as example.com.attacker.test, and a
         // host-only match would accept http vs https or an alternate port (SECURITY.md L-5).
-        $refParts  = parse_url($ref);
+        $refParts  = parse_url($url);
         $baseParts = parse_url(XOOPS_URL);
         if ($refParts === false || $baseParts === false || empty($refParts['host']) || empty($baseParts['host'])) {
             return false;
@@ -310,6 +323,12 @@ class XoopsSecurity
                         continue;
                     }
                     if (1 === preg_match('/' . $bi . '/', $ip)) {
+                        // Debug rendering may already be on, and the debug-audience check
+                        // comes later: switch the logger off so its output callback
+                        // shows a banned visitor nothing on the way out.
+                        if (isset($GLOBALS['xoopsLogger']) && is_object($GLOBALS['xoopsLogger'])) {
+                            $GLOBALS['xoopsLogger']->activated = false;
+                        }
                         exit();
                     }
                 }

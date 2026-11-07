@@ -793,11 +793,8 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
 {
     global $xoopsConfig, $xoopsLogger, $xoopsUserIsAdmin;
 
-    $xoopsPreload = XoopsPreload::getInstance();
-    $xoopsPreload->triggerEvent('core.include.functions.redirectheader.start', [$url, $time, $message, $addredirect, $allowExternalLink]);
-    // under normal circumstance this event will exit, so listen for the .start above
-    $xoopsPreload->triggerEvent('core.include.functions.redirectheader', [$url, $time, $message, $addredirect, $allowExternalLink]);
-
+    // Check the target before any preload sees it: the System preload sends the
+    // Location header itself and exits when redirect_message_ajax is on.
     if (preg_match('/[\x00-\x1F\x7F]|about:|script:/i', $url)) {
         if (!preg_match('/^\b(java)?script:([\s]*)history\.go\(-\d*\)([\s]*[;]*[\s]*)$/si', $url)) {
             $url = XOOPS_URL;
@@ -818,6 +815,12 @@ function redirect_header($url, $time = 3, $message = '', $addredirect = true, $a
             $url = XOOPS_URL;
         }
     }
+
+    $xoopsPreload = XoopsPreload::getInstance();
+    $xoopsPreload->triggerEvent('core.include.functions.redirectheader.start', [$url, $time, $message, $addredirect, $allowExternalLink]);
+    // under normal circumstance this event will exit, so listen for the .start above
+    $xoopsPreload->triggerEvent('core.include.functions.redirectheader', [$url, $time, $message, $addredirect, $allowExternalLink]);
+
     if (defined('XOOPS_CPFUNC_LOADED')) {
         $theme = 'default';
     } else {
@@ -970,25 +973,17 @@ function xoops_getcss($theme = '')
  */
 function xoops_getMailer()
 {
-    static $mailer;
     global $xoopsConfig;
-    if (is_object($mailer)) {
-        return $mailer;
-    }
     include_once XOOPS_ROOT_PATH . '/class/xoopsmailer.php';
     if (file_exists($file = XOOPS_ROOT_PATH . '/language/' . $xoopsConfig['language'] . '/xoopsmailerlocal.php')) {
         include_once $file;
     } elseif (file_exists($file = XOOPS_ROOT_PATH . '/language/english/xoopsmailerlocal.php')) {
         include_once $file;
     }
-    unset($mailer);
-    if (class_exists('XoopsMailerLocal')) {
-        $mailer = new XoopsMailerLocal();
-    } else {
-        $mailer = new XoopsMailer();
-    }
 
-    return $mailer;
+    // A new mailer per call: a shared instance carried the previous message's
+    // recipients, tags, template and HTML mode into the next one.
+    return class_exists('XoopsMailerLocal') ? new XoopsMailerLocal() : new XoopsMailer();
 }
 
 /**

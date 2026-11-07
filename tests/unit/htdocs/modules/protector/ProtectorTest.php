@@ -773,7 +773,7 @@ class ProtectorTest extends TestCase
      * Call Protector::writeFileAtomic() and fail the test if any PHP warning
      * escapes it (PHP's file warnings name the full server path).
      */
-    private function writeAtomic(string $path, string $content, string $class = \Protector::class): bool
+    private function writeAtomic(string $path, string $content, string $class = \Protector::class, bool $inPlaceFallback = true): bool
     {
         $leaked = [];
         set_error_handler(static function (int $errno, string $message) use (&$leaked): bool {
@@ -782,7 +782,7 @@ class ProtectorTest extends TestCase
             return true;
         });
         try {
-            $result = (new \ReflectionMethod($class, 'writeFileAtomic'))->invoke(null, $path, $content);
+            $result = (new \ReflectionMethod($class, 'writeFileAtomic'))->invoke(null, $path, $content, $inPlaceFallback);
         } finally {
             restore_error_handler();
         }
@@ -907,6 +907,33 @@ class ProtectorTest extends TestCase
             $this->assertTrue($this->writeAtomic($path, "deny from 192.0.2.1\n"));
             $this->assertSame("deny from 192.0.2.1\n", file_get_contents($path));
             $this->assertSame(['.htaccess'], array_values(array_diff(scandir($dir) ?: [], ['.', '..'])));
+        } finally {
+            chmod($dir, 0755);
+            unlink($path);
+            rmdir($dir);
+        }
+    }
+
+    /**
+     * The administrator IP allowlist is read without a lock: it is never
+     * truncated in place, so in a read-only directory the write fails and the
+     * old list stays.
+     */
+    #[Test]
+    public function writeFileAtomicWithoutFallbackKeepsTheOldFileWhenTheDirectoryIsReadOnly(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR || (function_exists('posix_geteuid') && 0 === posix_geteuid())) {
+            $this->markTestSkipped('A read-only directory cannot refuse new files here (Windows, or running as root).');
+        }
+        $dir  = sys_get_temp_dir() . '/protector-ro-' . bin2hex(random_bytes(6));
+        $path = $dir . '/group1ips';
+        mkdir($dir);
+        file_put_contents($path, "old list\n");
+        chmod($path, 0644);
+        chmod($dir, 0555);
+        try {
+            $this->assertFalse($this->writeAtomic($path, "new list\n", \Protector::class, false));
+            $this->assertSame("old list\n", file_get_contents($path));
         } finally {
             chmod($dir, 0755);
             unlink($path);
@@ -1104,5 +1131,157 @@ class ProtectorTest extends TestCase
     {
         $result = $this->protector->stopForumSpamLookup('', '', '');
         $this->assertFalse($result);
+    }
+
+    #[Test]
+    public function stopForumSpamIsAskedOverHttpsWithAnEncodedQuery(): void
+    {
+        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/xoops_lib/modules/protector/class/protector.php');
+        $this->assertStringContainsString("'https://www.stopforumspam.com/api?f=json&' . http_build_query(\$params, '', '&', PHP_QUERY_RFC3986)", $source);
+        $this->assertStringNotContainsString('http://www.stopforumspam.com', $source);
+        // what the encoder makes of a fragment delimiter inside an email
+        $this->assertSame('email=a%23b%26username%3Dx%40y.test', http_build_query(['email' => 'a#b&username=x@y.test'], '', '&', PHP_QUERY_RFC3986));
+    }
+
+    #[Test]
+    public function onlyLinksToThisVeryHostAreExemptFromTheLinkCount(): void
+    {
+        $host  = (string) parse_url(XOOPS_URL, PHP_URL_HOST);
+        $count = function (string $text): int {
+            $p = new class extends \Protector {
+                public function __construct()
+                {
+                }
+
+                public function countLinks(string $text): int
+                {
+                    $this->_spamcount_uri = 0;
+                    $this->_spam_check_point_recursive($text);
+
+                    return $this->_spamcount_uri;
+                }
+            };
+
+            return $p->countLinks($text);
+        };
+        $this->assertSame(0, $count("see http://{$host}/a and https://{$host}:8080/b and http://{$host}"));
+        $this->assertSame(1, $count("see http://{$host}.attacker.test/a"));
+        $this->assertSame(1, $count("see http://{$host}evil.test/a"));
+        $this->assertSame(1, $count('see http://elsewhere.test/a'));
+        $this->assertSame(0, $count("[url={$host}/page]x[/url]"));
+        $this->assertSame(1, $count("[url={$host}.attacker.test]x[/url]"));
+        // the host is parsed: a userinfo part before "@" is not the host
+        $this->assertSame(1, $count("see http://{$host}:80@attacker.test/a"));
+        $this->assertSame(1, $count("[url={$host}:80@attacker.test]x[/url]"));
+        // a local link ends at a bracket, quote or white space too
+        $this->assertSame(0, $count("[url=http://{$host}]Home[/url]"));
+        $this->assertSame(0, $count("<a href=\"http://{$host}\">Home</a> or http://{$host} here"));
+        $this->assertSame(0, $count("[url=\"{$host}\"]x[/url]"));
+        $this->assertSame(1, $count('[url=www.elsewhere.test]x[/url]'));
+        // text before the first link is no link: a leading local host cannot hide one
+        $this->assertSame(1, $count(strtoupper($host) . ' http://attacker.test'));
+        $this->assertSame(2, $count('elsewhere.test http://a.test http://b.test'));
+
+        // an IPv6 literal keeps its brackets, as parse_url() reports XOOPS_URL's host
+        $linkHost = \Closure::bind(static fn (string $link): string => static::linkHost($link), null, \Protector::class);
+        $this->assertSame((string) parse_url('http://[::1]/x', PHP_URL_HOST), $linkHost('[::1]/x'));
+        $this->assertSame('[::1]', $linkHost('[::1]:8080/x'));
+        $this->assertSame('[fe80::1]', $linkHost('user@[FE80::1]/x'));
+        $this->assertSame('[::1]', $linkHost('[::1]'));
+        $this->assertNotSame('[::1]', $linkHost('[::1]@attacker.test/x'));
+        $this->assertNotSame('[::1]', $linkHost('[::1]:80@attacker.test/x'));
+        $this->assertNotSame('[::1]', $linkHost('[::1]evil.test/x'));
+        $this->assertSame('example.test', $linkHost('example.test]x[/url]'));
+    }
+
+    #[Test]
+    public function theBanListIsReadUnderTheWritersLock(): void
+    {
+        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/xoops_lib/modules/protector/class/protector.php');
+        $get    = substr($source, (int) strpos($source, 'public function get_bad_ips('), 600);
+        $this->assertStringContainsString('self::readFileLocked($filepath)', $get);
+        $this->assertStringNotContainsString('file($filepath)', $get);
+
+        $read = new \ReflectionMethod(\Protector::class, 'readFileLocked');
+        $file = (string) tempnam(sys_get_temp_dir(), 'ban');
+        try {
+            file_put_contents($file, "a:0:{}\nsecond line");
+            $this->assertSame("a:0:{}\nsecond line", $read->invoke(null, $file));
+            $this->assertNull($read->invoke(null, $file . '.missing'));
+            // a failed lock still reads the list: taken as empty, it would lift every ban
+            $body = substr($source, (int) strpos($source, 'private static function readFileLocked('), 900);
+            $this->assertStringContainsString('$locked  = flock($fp, LOCK_SH);', $body);
+            $this->assertStringContainsString("\$content = stream_get_contents(\$fp);\n        if (\$locked) {", $body);
+        } finally {
+            unlink($file);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // reliableIpMatches(): literal, subnet and legacy regex entries
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function aLiteralReliableAddressMatchesOnlyItself(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['127.0.0.1'], '127.0.0.1'));
+        // The text of this IPv6 address fits the old regex /127.0.0.1/; it is not loopback.
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '2001:db8:127a:0:0:1::5'));
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '127.0.0.10'));
+        $this->assertTrue($this->protector->reliableIpMatches(['::1'], '0:0:0:0:0:0:0:1'));
+    }
+
+    #[Test]
+    public function aSubnetEntryMatchesItsRange(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['10.1.0.0/16'], '10.1.200.7'));
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/16'], '10.2.0.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['2001:db8::/32'], '2001:db8:1::9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['2001:db8::/32'], '2001:db9::1'));
+    }
+
+    #[Test]
+    public function legacyRegexEntriesStillWorkAndBlankOnesAreIgnored(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['', '^192\.168\.'], '192.168.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['^192\.168\.'], '192.1680.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], 'not an address'));
+    }
+
+    #[Test]
+    public function aSubnetPrefixWiderThanTheAddressFamilyMatchesNothing(): void
+    {
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/33'], '10.1.0.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['10.1.0.0/33'], '192.0.2.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['2001:db8::/129'], '2001:db8::1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['10.1.0.0/32'], '10.1.0.0'));
+        $this->assertTrue($this->protector->reliableIpMatches(['2001:db8::1/128'], '2001:db8::1'));
+    }
+
+    #[Test]
+    public function theStoredPreEscapeDefaultIsReadAsTheDottedPrefix(): void
+    {
+        $this->assertTrue($this->protector->reliableIpMatches(['^192.168.'], '192.168.0.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['^192.168.'], '192:168::1'));
+    }
+
+    #[Test]
+    public function aBrokenLegacyPatternIsNoMatchAndNoWarning(): void
+    {
+        $this->assertFalse($this->protector->reliableIpMatches(['10.0.0.('], '10.0.0.1'));
+        // An unescaped slash never compiled under the "/" delimiter; it still does not match.
+        $this->assertFalse($this->protector->reliableIpMatches(['^10\.0\./24|.*'], '198.51.100.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['^10\.0\.\#?'], '10.0.0.1'));
+    }
+
+    #[Test]
+    public function addressFamiliesNeverCrossAndAnEmptyAddressMatchesNothing(): void
+    {
+        // An IPv4-mapped IPv6 request is an IPv6 address: a v4 entry does not vouch for it.
+        $this->assertFalse($this->protector->reliableIpMatches(['127.0.0.1'], '::ffff:127.0.0.1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['::ffff:127.0.0.1'], '::ffff:127.0.0.1'));
+        $this->assertFalse($this->protector->reliableIpMatches(['0.0.0.0/0'], '2001:db8::1'));
+        $this->assertTrue($this->protector->reliableIpMatches(['0.0.0.0/0'], '203.0.113.9'));
+        $this->assertFalse($this->protector->reliableIpMatches(['.*'], ''));
     }
 }

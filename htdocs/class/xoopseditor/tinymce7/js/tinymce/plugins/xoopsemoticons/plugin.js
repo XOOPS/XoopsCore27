@@ -41,7 +41,8 @@
                     if (data.data.src != '')
                     {
                         setTimeout(() => {
-                            editor.insertContent('<img src="' + data.data.src + '" alt="' + data.data.title + '" title="' + data.data.title + '">');
+                            // createHTML encodes the attribute values (the title is stored text)
+                            editor.insertContent(editor.dom.createHTML('img', {src: data.data.src, alt: data.data.title, title: data.data.title}));
                             instance.close();
                         }, 300);
                     }

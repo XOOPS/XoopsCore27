@@ -55,7 +55,11 @@ $options = [
     'lifetime' => 0,
     'path'     => '/',
     'domain'   => null,
-    'secure'   => false,
+    // The installer session holds the database and administrator credentials:
+    // over HTTPS its cookie must never be sent over plain HTTP.
+    'secure'   => (!empty($_SERVER['HTTPS']) && 'off' !== strtolower((string) $_SERVER['HTTPS']))
+        || 443 === (int) ($_SERVER['SERVER_PORT'] ?? 0)
+        || 'https' === strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')),
     'httponly' => true,
     'samesite' => 'Lax',
 ];
@@ -64,6 +68,23 @@ if (empty($xoopsOption['hascommon'])) {
     $xoopsOption['nocommon'] = true;
     session_set_cookie_params($options);
     session_start();
+    // A session begun over HTTP keeps its non-Secure cookie when resumed over
+    // HTTPS (PHP does not reissue it): rotate once, which sends a Secure one.
+    // Every wizard step that takes credentials is a POST: a session id
+    // planted in the operator's browser stops working before any of them is stored.
+    $isPost      = 'POST' === ($_SERVER['REQUEST_METHOD'] ?? '');
+    $needsSecure = $options['secure'] && empty($_SESSION['installer_secure_cookie']);
+    if ($isPost || $needsSecure) {
+        if (session_regenerate_id(true)) {
+            if ($options['secure']) {
+                $_SESSION['installer_secure_cookie'] = true;
+            }
+        } elseif ($isPost) {
+            // No step runs on a session id that could not be replaced.
+            http_response_code(500);
+            exit('The installer could not renew its session. Check the PHP session settings, then reload this page.');
+        } // a GET retries the Secure rotation on the next request
+    }
 }
 
 //@include __DIR__ . '/../../mainfile.php';

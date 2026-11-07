@@ -93,6 +93,57 @@ final class FineImUploadLimitsTest extends TestCase
     }
 
     #[Test]
+    public function declaredTotalCannotUnderstateTheReceivedSize(): void
+    {
+        $_FILES['qqfile'] = ['tmp_name' => $this->png(10, 10), 'name' => 'a.png', 'size' => 5000, 'error' => 0];
+        $_POST['qqtotalfilesize'] = '1';
+        $_SERVER['CONTENT_TYPE']  = 'multipart/form-data; boundary=x';
+        $_REQUEST['qqfilename']   = 'a.png';
+
+        try {
+            $result = $this->handler($this->category(1000, 0, 0))->handleUpload(sys_get_temp_dir());
+        } finally {
+            unset($_POST['qqtotalfilesize'], $_SERVER['CONTENT_TYPE'], $_REQUEST['qqfilename']);
+        }
+
+        self::assertSame('File is too large.', $result['error'] ?? null);
+    }
+
+    #[Test]
+    public function unlimitedServerSettingsDoNotRejectEveryUpload(): void
+    {
+        // post_max_size and upload_max_filesize of 0 mean "no limit".
+        $handler = new class ((object) ['cat' => 7], $this->category(1000, 0, 0)) extends \SystemFineImUploadHandler {
+            public function __construct(\stdClass $claims, private \XoopsImagecategory $fixture)
+            {
+                parent::__construct($claims);
+            }
+
+            protected function category(): ?\XoopsImagecategory
+            {
+                return $this->fixture;
+            }
+
+            protected function toBytes($str)
+            {
+                return 0;
+            }
+        };
+        $_FILES['qqfile'] = ['tmp_name' => $this->png(10, 10), 'name' => 'a.png', 'size' => 5000, 'error' => 0];
+        $_SERVER['CONTENT_TYPE'] = 'multipart/form-data; boundary=x';
+        $_REQUEST['qqfilename']  = 'a.png';
+
+        try {
+            $result = $handler->handleUpload(sys_get_temp_dir());
+        } finally {
+            unset($_SERVER['CONTENT_TYPE'], $_REQUEST['qqfilename']);
+        }
+
+        // The upload reaches the byte check instead of the server-limit error.
+        self::assertSame('File is too large.', $result['error'] ?? null);
+    }
+
+    #[Test]
     public function zeroByteLimitMeansNoLimit(): void
     {
         self::assertNull($this->handler($this->category(0, 0, 0))->sizeLimit);

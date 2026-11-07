@@ -64,16 +64,45 @@ class Smarty4TemplateRepair extends ScannerProcess
         $this->patterns[] = '/(<{foreachq[[:space:]]+)/';
         $this->replacements[] = '<{foreach ';
 
+        // Undo earlier runs of this repair. A quoted argument holding }> was
+        // quoted across the following tags (with any text between them):
+        // <{xoAppUrl '/}> <{$dir}><{$file' }> becomes <{xoAppUrl '/'}> <{$dir}><{$file }>
+        // A $variable first argument gets its quotes removed instead.
+        // A Smarty variable name may start with digits ($5foo); $5 alone is text.
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])(\$\d*[a-zA-Z_][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->replacements[] = '$1$3$4$5';
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])((?!\$\d*[a-zA-Z_])[^\'"{}][^\'"{}]*)((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->replacements[] = '$1$2$3$2$4$5';
+        // An empty first argument had nothing to quote; drop both quotes:
+        // <{xoAppUrl '}><{$x'}> becomes <{xoAppUrl }><{$x}>
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\s+)([\'"])((?:}>[^\'"{}]*<{[^\'"{}]*)+)\2(\s*}>)/';
+        $this->replacements[] = '$1$3$4';
+        // ...and a variable it quoted into literal text, with any modifiers or
+        // index, and the trailing space the attribute patterns could keep:
+        // <{xoAppUrl '$x|escape '}> becomes <{xoAppUrl $x|escape}>
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s)\'(\$\d*[a-zA-Z_][^\s\'"={}]*)\s*\'(\s*}>)/';
+        $this->replacements[] = '$1$2$3';
+        // Double quotes were written only inside a single-quoted attribute:
+        // '<{xoAppUrl $item.file}>' became '<{xoAppUrl "$item.file"}>'. Anywhere
+        // else "$theme.css" is $theme followed by the text .css, so keep it.
+        $this->patterns[] = '/((?<=\')<{xo[a-zA-Z\d]*\b(?:[^}>\'"]|\'[^\'}]*\'|"[^"}]*")*\s)"(\$\d*[a-zA-Z_][^\s\'"={}]*)\s*"(\s*}>)/';
+        $this->replacements[] = '$1$2$3';
+
+        // The argument classes below exclude { } > so a match ends at the
+        // first closing }>, not at the end of a directly following tag.
+        // A tag whose argument holds a $variable is left alone: quoting it
+        // would turn the variable into literal text.
+
         // For double quotes
-        $this->patterns[] = '/("<{xo[a-zA-Z\d]*\b[^}>]*?)\s*([^\'"}=]+(?:=[^\'"}=]*)*)\s?}>/';
+        $this->patterns[] = '/("<{xo[a-zA-Z\d]*\b(?![^}>]*\$)[^}>]*?)\s*([^\s\'"}=][^\'"}=]*(?:=[^\'"}=]*)*)\s?}>/';
         $this->replacements[] = "$1 '$2'}>";
 
         // For single quotes
-        $this->patterns[] = "/(\'<{xo[a-zA-Z\d]*\b[^}>]*?)\s*([^\'\"=]+(?:=[^\'\"=]*)*)\s?}>/";
+        $this->patterns[] = "/(\'<{xo[a-zA-Z\d]*\b(?![^}>]*\\$)[^}>]*?)\s*([^\s\'\"=}{>][^\'\"=}{>]*(?:=[^\'\"=}{>]*)*)\s?}>/";
         $this->replacements[] = '$1 "$2"}>';
 
-        // For no surrounding quotes
-        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\b[^}>]*?)\s+([^\s\'\"=]+)(\s*}>)/';
+        // For no surrounding quotes; a $variable argument is left unquoted
+        $this->patterns[] = '/(<{xo[a-zA-Z\d]*\b[^}>]*?)\s+([^\s\'\"=}{>$]+)(\s*}>)/';
         $this->replacements[] = '$1 \'$2\'$3';
     }
 

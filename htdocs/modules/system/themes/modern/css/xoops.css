@@ -108,7 +108,7 @@ body.dark-mode .confirmMsg {
     background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-light);
-    border-left-color: var(--border);
+    border-left: 4px solid var(--text-primary);
     border-radius: var(--radius);
 }
 

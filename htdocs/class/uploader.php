@@ -133,7 +133,7 @@ class XoopsMediaUploader
         14 => 'iff',
         15 => 'wbmp',
         16 => 'xbm',
-        17 => 'webp',
+        IMAGETYPE_WEBP => 'webp',
     ];
     public $randomFilename  = false;
 
@@ -514,7 +514,7 @@ class XoopsMediaUploader
         $ext = strtolower(substr(strrchr($this->savedDestination, '.'), 1));
         if (in_array($ext, $this->imageExtensions)) {
             $info = getimagesize($this->savedDestination);
-            if ($info === false || $this->imageExtensions[(int) $info[2]] != $ext) {
+            if ($info === false || ($this->imageExtensions[(int) $info[2]] ?? null) !== $ext) {
                 $this->setErrors(_ER_UP_SUSPICIOUSREFUSED);
                 unlink($this->savedDestination);
                 return false;

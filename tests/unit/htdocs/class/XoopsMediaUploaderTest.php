@@ -42,12 +42,6 @@ class XoopsMediaUploaderTest extends TestCase
             'php', 'phtml', 'phtm', 'pht', 'php3', 'php4', 'php5', 'php7', 'php8',
             'phar', 'shtml', 'cgi', 'pl', 'asp',
         ];
-        $uploader->imageExtensions = [
-            1 => 'gif', 2 => 'jpg', 3 => 'png', 4 => 'swf', 5 => 'psd',
-            6 => 'bmp', 7 => 'tif', 8 => 'tif', 9 => 'jpc', 10 => 'jp2',
-            11 => 'jpx', 12 => 'jb2', 13 => 'swc', 14 => 'iff', 15 => 'wbmp',
-            16 => 'xbm', 17 => 'webp',
-        ];
         $uploader->allowUnknownTypes = false;
         $uploader->mediaRealType = '';
         $uploader->uploadDir = '';
@@ -647,13 +641,51 @@ class XoopsMediaUploaderTest extends TestCase
         $this->assertSame('gif', $uploader->imageExtensions[1]);
         $this->assertSame('jpg', $uploader->imageExtensions[2]);
         $this->assertSame('png', $uploader->imageExtensions[3]);
-        $this->assertSame('webp', $uploader->imageExtensions[17]);
+        $this->assertSame('webp', $uploader->imageExtensions[IMAGETYPE_WEBP]);
+        $this->assertArrayNotHasKey(IMAGETYPE_ICO, $uploader->imageExtensions);
     }
 
     public function testDefaultImageExtensionsCount(): void
     {
         $uploader = $this->createUploader();
         $this->assertCount(17, $uploader->imageExtensions);
+    }
+
+    /**
+     * Regression for #301: a real WebP file must map back to 'webp' through
+     * the same getimagesize() type lookup _copyFile() performs, and PNG bytes
+     * under a .webp name must not.
+     */
+    public function testImageExtensionsMatchGetimagesizeForWebp(): void
+    {
+        if (!function_exists('imagewebp')) {
+            $this->markTestSkipped('GD WebP support is not available');
+        }
+        $uploader = $this->createUploader();
+        $base     = tempnam(sys_get_temp_dir(), 'xo');
+        $file     = $base . '.webp';
+        try {
+            $im = imagecreatetruecolor(4, 4);
+            imagewebp($im, $file);
+            imagedestroy($im);
+            $info = getimagesize($file);
+            $this->assertIsArray($info);
+            $this->assertSame(IMAGETYPE_WEBP, $info[2]);
+            $this->assertSame('webp', $uploader->imageExtensions[$info[2]] ?? null);
+
+            $im = imagecreatetruecolor(4, 4);
+            imagepng($im, $file);
+            imagedestroy($im);
+            $info = getimagesize($file);
+            $this->assertIsArray($info);
+            $this->assertNotSame('webp', $uploader->imageExtensions[$info[2]] ?? null);
+        } finally {
+            foreach ([$file, $base] as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+        }
     }
 
     public function testDefaultAllowUnknownTypes(): void

@@ -8,6 +8,7 @@ Enhancements:
 - the System section in the Modern admin theme sidebar is hidden when the user has no system menu items (modules/system/themes/modern/xotpl/xo_sidebar.tpl)
 
 Bug fixes:
+- the media uploader accepts valid .webp images again: its image-type map listed WebP under the number PHP uses for ICO, so every WebP upload was deleted as suspicious; the map now uses IMAGETYPE_WEBP and an image type it does not know is refused without a PHP warning (class/uploader.php) (#301)
 - Markdown rendering bounds its work on untrusted text: tabs are expanded in one pass before Parsedown sees them (its own expansion rebuilt the line once per tab), blockquote markers deeper than 16 per line render as text, and the bootstrap preprocessing of Markdown form fields handles each field path once and stops after 4 MiB of text (class/xoopsmarkdown.php)
 - image.php applies at most 8 filters to an edited image, and caches an edited image under the parameters it recognises, in a fixed order, so unknown or reordered query parameters no longer each write a new cache entry (image.php)
 - the media uploader reports only the current file's errors: a request naming several absent upload fields no longer repeats the earlier errors for every later one, and the image manager and the images admin accept only names of fields that were actually uploaded (class/uploader.php, class/xoopseditor/tinymce5, class/xoopseditor/tinymce7, modules/system/admin/images/main.php)

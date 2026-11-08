@@ -451,5 +451,8 @@ body.dark-mode div.rmmenuicon a:hover {
 }
 /* resize rmmenuicon link for longer words */
 body div.rmmenuicon a {
-    width: 150px !important;
+    width: auto !important;
+    min-width: 75px;
+    max-width: 150px;
+    color: var(--text-primary);
 }

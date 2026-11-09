@@ -17,6 +17,7 @@ body.dark-mode {
     /* Dark Borders */
     --border: #334155;
     --border-light: #475569;
+    --border-bright: #94a3b8;
 
     /* Dark Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);

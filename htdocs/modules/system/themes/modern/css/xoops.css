@@ -105,9 +105,8 @@ body.dark-mode .resultMsg {
 }
 
 body.dark-mode .confirmMsg {
-    background: #172554;
-    color: #93c5fd;
-    border-left-color: #60a5fa;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 

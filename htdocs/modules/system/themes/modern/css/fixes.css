@@ -430,3 +430,29 @@ input.formbutton[type="reset"]:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
 }
+
+/* misc dark mode overwrite */
+body.dark-mode #xo-module-log .logger {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius);
+    border-color: var(--border) !important;
+}
+body.dark-mode #xo-module-log .logger [style*="color:#ff0000"] {
+    color: #fca5a5 !important;
+}
+body.dark-mode div.rmmenuicon a {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-bright);
+}
+body.dark-mode div.rmmenuicon a:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-light);
+}
+/* resize rmmenuicon link for longer words */
+body div.rmmenuicon a {
+    width: auto !important;
+    min-width: 75px;
+    max-width: 150px;
+    color: var(--text-primary);
+}

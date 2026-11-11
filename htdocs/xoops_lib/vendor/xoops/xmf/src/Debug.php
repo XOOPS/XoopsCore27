@@ -41,7 +41,6 @@ class Debug extends Kint
             $class = get_called_class();
             parent::$aliases[] = array($class, 'dump');
             parent::$aliases[] = array($class, 'backtrace');
-            parent::$enabled_mode = true;
             parent::$mode_default = Kint::MODE_RICH;
             // display output inline ::folder = false, true puts all output at bottom of window
             \Kint\Renderer\RichRenderer::$folder = false;
@@ -90,8 +89,39 @@ class Debug extends Kint
     public static function startTrace($tracefile = '', $collect_params = '3', $collect_return = 'On')
     {
         if (function_exists('xdebug_start_trace')) {
-            ini_set('xdebug.collect_params', $collect_params);
+            // Xdebug 3.0-3.2 always record argument values; 3.3+ can only leave them out (0)
+            // or record them in full, so refuse any request in between
+            $xdebugVersion = (string) phpversion('xdebug');
+            $level = (int) $collect_params;
+            $honoured = $level >= 3
+                || version_compare($xdebugVersion, '3', '<')
+                || ($level === 0 && version_compare($xdebugVersion, '3.3', '>='));
+            if (!$honoured) {
+                trigger_error(
+                    "Xdebug {$xdebugVersion} cannot limit parameters to level {$level}; trace not started",
+                    E_USER_WARNING
+                );
+                return;
+            }
+            // a setting locked by php_admin_value would record the arguments the caller left out
+            if (ini_set('xdebug.collect_params', $collect_params) === false && $level < 3) {
+                trigger_error(
+                    "Xdebug {$xdebugVersion} could not limit parameters to level {$level}; trace not started",
+                    E_USER_WARNING
+                );
+                return;
+            }
             ini_set('xdebug.collect_return', $collect_return);
+            $returnLocked = !filter_var($collect_return, FILTER_VALIDATE_BOOLEAN)
+                // fail closed: a value that is not plainly off counts as on
+                && filter_var(ini_get('xdebug.collect_return'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== false;
+            if ($returnLocked) {
+                trigger_error(
+                    "Xdebug {$xdebugVersion} could not leave out return values; trace not started",
+                    E_USER_WARNING
+                );
+                return;
+            }
             if ($tracefile == '') {
                 $tracefile = XOOPS_VAR_PATH . '/logs/php_trace';
             }

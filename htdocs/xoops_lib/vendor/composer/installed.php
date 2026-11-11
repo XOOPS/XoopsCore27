@@ -3,11 +3,11 @@
         'name' => 'xoopscore27/libraries',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => 'cfbac97abb8e5bb981a588b3ca6918bd99209fe4',
+        'reference' => '56f93c1b68a87d6a244dc713dc36807ce952e7c8',
         'type' => 'metapackage',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => false,
+        'dev' => true,
     ),
     'versions' => array(
         'boenrobot/money_format_polyfill' => array(
@@ -260,9 +260,9 @@
             'dev_requirement' => false,
         ),
         'xoops/xmf' => array(
-            'pretty_version' => 'v1.3.3',
-            'version' => '1.3.3.0',
-            'reference' => '503968036436a44b2fd32d90f3c9e6651b834ed9',
+            'pretty_version' => 'v1.3.4-RC1',
+            'version' => '1.3.4.0-RC1',
+            'reference' => '900e65cde826752b4ba87dbab66c0b30954b2468',
             'type' => 'library',
             'install_path' => __DIR__ . '/../xoops/xmf',
             'aliases' => array(),
@@ -271,7 +271,7 @@
         'xoopscore27/libraries' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => 'cfbac97abb8e5bb981a588b3ca6918bd99209fe4',
+            'reference' => '56f93c1b68a87d6a244dc713dc36807ce952e7c8',
             'type' => 'metapackage',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

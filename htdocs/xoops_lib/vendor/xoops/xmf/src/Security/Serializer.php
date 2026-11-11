@@ -42,6 +42,7 @@ final class Serializer
     private const MAX_LEGACY_SIZE = 6666668;
     private const JSON_DEPTH = 512;
     private const JSON_FLAGS = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR;
+    private const MALFORMED = 'Failed to unserialize payload';
 
     /** @var \Closure|null Optional logger for legacy format detection */
     private static $legacyLogger = null;
@@ -69,6 +70,8 @@ final class Serializer
      */
     public static function toJson($data): string
     {
+        $budget = self::MAX_SIZE;
+        self::guardExpandedSize($data, 0, $budget);
         $json = json_encode($data, self::JSON_FLAGS);
 
         if (\strlen($json) > self::MAX_SIZE) {
@@ -78,6 +81,145 @@ final class Serializer
         }
 
         return $json;
+    }
+
+    /**
+     * Reject data whose JSON form cannot fit in MAX_SIZE before json_encode() builds it.
+     *
+     * Unserialized data can share one array between many references; json_encode()
+     * writes it out once per use, so a payload of a few hundred bytes expands
+     * exponentially; a string shared by many entries is likewise written once per
+     * entry. Every number, boolean and null takes its encoded length, every array its
+     * brackets and commas, and every string value or object key at least its quoted length
+     * (the flags never shrink a string), so data over that lower bound can never
+     * pass the size check after encoding.
+     *
+     * @param mixed $data
+     * @param int   $depth  nesting level of $data
+     * @param int   $budget encoded bytes still allowed
+     *
+     * @throws RuntimeException If the encoded data must exceed MAX_SIZE bytes
+     */
+    private static function guardExpandedSize($data, int $depth, int &$budget): void
+    {
+        // an object stays a JSON object even when its properties are named 0, 1, 2...
+        $isObject = \is_object($data);
+        // json_encode() encodes what jsonSerialize() returns; walking it calls it one extra time
+        if ($data instanceof \JsonSerializable) {
+            $serialized = $data->jsonSerialize();
+            // an object returned as itself is encoded by its public properties
+            $isObject = $serialized === $data;
+            $data = $isObject ? self::jsonProperties($data) : $serialized;
+        } elseif ($data instanceof \BackedEnum) {
+            // json_encode() writes only the backing value, not the name
+            $data = $data->value;
+        } elseif (\is_object($data)) {
+            $data = self::jsonProperties($data);
+        }
+        // json_encode() reports the depth error itself
+        // jsonSerialize() returned an object; the depth bound stops one that returns itself
+        if (\is_object($data)) {
+            if ($depth < self::JSON_DEPTH) {
+                self::guardExpandedSize($data, $depth + 1, $budget);
+            }
+            return;
+        }
+        $budget -= self::encodedOwnSize($data);
+        if ($budget < 0) {
+            throw new RuntimeException(
+                sprintf('Serialized JSON exceeds maximum allowed size of %d bytes', self::MAX_SIZE)
+            );
+        }
+        if (!\is_array($data) || $depth >= self::JSON_DEPTH) {
+            return;
+        }
+        // a list is a JSON array; an object, or any other array, writes every key,
+        // integer keys too, as a quoted string followed by a colon
+        $isObject = $isObject || !array_is_list($data);
+        foreach ($data as $key => $value) {
+            $budget -= $isObject ? \strlen((string) $key) + 3 : 0;
+            self::guardExpandedSize($value, $depth + 1, $budget);
+        }
+    }
+
+    /**
+     * The bytes json_encode() writes for a value itself, not counting array elements:
+     * a string is quoted, an array has its two brackets and a comma between elements,
+     * a number or literal its exact encoded length
+     *
+     * @param mixed $data anything but an object
+     */
+    private static function encodedOwnSize($data): int
+    {
+        return match (true) {
+            \is_string($data) => \strlen($data) + 2,
+            \is_array($data) => 1 + max(\count($data), 1),
+            \is_int($data) => \strlen((string) $data),
+            // the throw flag leaves json_last_error() alone; INF and NAN fail to encode,
+            // which json_encode() in toJson() reports
+            \is_float($data) => is_finite($data) ? \strlen(json_encode($data, JSON_THROW_ON_ERROR)) : 1,
+            $data === false => 5,
+            $data === null, $data === true => 4,
+            default => 1,
+        };
+    }
+
+    /**
+     * The entries json_encode() writes for an object.
+     *
+     * json_encode() writes the public properties as get_object_vars() sees them from
+     * outside, through their get hooks. An ArrayObject or ArrayIterator without
+     * STD_PROP_LIST writes its storage instead, which only an array cast reads. Other
+     * classes derived from an internal one, such as DateTime, may add entries to the
+     * cast table that get_object_vars() does not see, so those are added. Cast keys
+     * starting with NUL belong to non-public properties, which json_encode() skips.
+     *
+     * ponytail: a key in both tables counts with its get_object_vars() value; a subclass
+     * of DateTime or a like class whose get hook shrinks a property is undercounted
+     * here and still rejected by the size check after encoding; a virtual property of
+     * such a subclass, which json_encode() skips, is counted anyway.
+     *
+     * The cast copies an ArrayObject's storage table: memory in proportion to the
+     * input already held, freed before the next value, never to the JSON output.
+     *
+     * @return array<int|string, mixed>
+     */
+    private static function jsonProperties(object $object): array
+    {
+        if ($object instanceof \ArrayObject || $object instanceof \ArrayIterator) {
+            if (($object->getFlags() & \ArrayObject::STD_PROP_LIST) === 0) {
+                return self::publicTable($object);
+            }
+            return get_object_vars($object);
+        }
+        $properties = get_object_vars($object);
+        $root = $object::class;
+        while (($parent = get_parent_class($root)) !== false) {
+            $root = $parent;
+        }
+        if ($root !== \stdClass::class && (new \ReflectionClass($root))->isInternal()) {
+            $properties += self::publicTable($object);
+        }
+
+        return $properties;
+    }
+
+    /**
+     * An object's array cast without the NUL-prefixed keys of its non-public properties
+     *
+     * @return array<int|string, mixed>
+     */
+    private static function publicTable(object $object): array
+    {
+        $table = (array) $object;
+        // unset() copies the table only when there is something to drop
+        foreach ($table as $key => $value) {
+            if (\is_string($key) && str_starts_with($key, "\0")) {
+                unset($table[$key]);
+            }
+        }
+
+        return $table;
     }
 
     /**
@@ -257,7 +399,6 @@ final class Serializer
 
         try {
             self::validateInput($payload);
-            self::validateSecurity($payload, empty($allowedClasses));
             $result = self::unserialize($payload, $allowedClasses);
 
             if (self::$debugMode) {
@@ -308,10 +449,10 @@ final class Serializer
     {
         // base64 input may be up to a third larger than the MAX_SIZE that toLegacy() allows
         self::validateInput($payload, self::MAX_LEGACY_SIZE);
-        self::validateSecurity($payload, empty($allowedClasses));
 
         // Try plain PHP serialize first
-        if (\strlen($payload) <= self::MAX_SIZE && self::tryUnserialize($payload, $allowedClasses, $result)) {
+        $error = null;
+        if (\strlen($payload) <= self::MAX_SIZE && self::tryUnserialize($payload, $allowedClasses, $result, $error)) {
             self::logLegacy($payload);
             return $result;
         }
@@ -319,6 +460,10 @@ final class Serializer
         // Check if it looks like base64 before attempting decode
         if (!self::isLikelyBase64($payload)) {
             self::validateInput($payload);
+            // a well-formed payload refused for its classes reports that, as the base64 path does
+            if ($error instanceof UnexpectedValueException && $error->getMessage() !== self::MALFORMED) {
+                throw $error;
+            }
             throw new RuntimeException('Invalid legacy format: not serialized or base64');
         }
 
@@ -337,7 +482,6 @@ final class Serializer
         }
 
         self::logLegacy($payload);
-        self::validateSecurity($decoded, empty($allowedClasses));
 
         return self::unserialize($decoded, $allowedClasses);
     }
@@ -723,28 +867,6 @@ final class Serializer
     }
 
     /**
-     * Secondary defense against object injection in scalar/array payloads.
-     *
-     * PHP serialized objects use NUL bytes to mark private/protected
-     * property visibility boundaries. Legitimate scalar/array payloads
-     * should never contain them. This complements allowed_classes=false
-     * set in unserialize().
-     *
-     * @param string $payload
-     * @param bool   $noObjects
-     *
-     * @return void
-     *
-     * @throws RuntimeException
-     */
-    private static function validateSecurity(string $payload, bool $noObjects): void
-    {
-        if ($noObjects && strpos($payload, "\0") !== false) {
-            throw new RuntimeException('NUL bytes detected in scalar/array payload');
-        }
-    }
-
-    /**
      * Core unserialize with error handling
      *
      * @param string                   $payload
@@ -752,10 +874,13 @@ final class Serializer
      *
      * @return mixed
      *
-     * @throws UnexpectedValueException
+     * @throws UnexpectedValueException On an object, class or enum token of a class that is not
+     *                                  allowed, or a payload that does not unserialize
      */
     private static function unserialize(string $payload, array $allowedClasses)
     {
+        self::assertAllowedTokens($payload, $allowedClasses);
+
         /** @var array{allowed_classes: array<int, class-string>|false} $options */
         $options = ['allowed_classes' => $allowedClasses !== [] ? array_values($allowedClasses) : false];
 
@@ -776,11 +901,153 @@ final class Serializer
             restore_error_handler();
         }
 
-        if ($result === false && $payload !== 'b:0;') {
-            throw new UnexpectedValueException('Failed to unserialize payload');
+        // serialized false is the one value unserialize() reports as false; trailing bytes pass as elsewhere
+        if ($result === false && !str_starts_with($payload, 'b:0;')) {
+            throw new UnexpectedValueException(self::MALFORMED);
         }
 
         return $result;
+    }
+
+    /**
+     * Reject object (O:), custom class (C:) and enum (E:) tokens whose class is not allowed.
+     *
+     * allowed_classes does not cover enums: PHP 8.1+ still autoloads an enum
+     * class that is not on the list (or when the option is false) and returns
+     * the case. Walking the serialize() grammar, with string and class-name
+     * bodies skipped by their declared length, finds every token without false
+     * positives on text inside strings. Like unserialize(), the walk ends after
+     * the first complete value, so trailing bytes (a newline) pass. Anything the
+     * walk does not recognise is refused rather than handed on; that includes the
+     * escaped-string form S:, which serialize() never writes, so no XOOPS data
+     * carries it.
+     *
+     * @param string             $payload
+     * @param array<int, string> $allowedClasses classes that may appear (empty = none)
+     *
+     * @return void
+     *
+     * @throws UnexpectedValueException On an object, class or enum token of a class that is not
+     *                                  allowed, or a token outside the serialize() grammar
+     */
+    private static function assertAllowedTokens(string $payload, array $allowedClasses): void
+    {
+        $allowed = array_map(
+            static fn($class): string => strtolower(ltrim((string) $class, '\\')),
+            $allowedClasses
+        );
+        $length = \strlen($payload);
+        $pos = 0;
+        $depth = 0;
+        $scalar = '/\G(?:i:[-+]?\d+|d:(?:[-+]?[0-9.]+(?:[eE][-+]?\d+)?|NAN|-?INF)|b:[01]|[rR]:\d+|N);/';
+        do {
+            $token = $pos < $length ? $payload[$pos] : '';
+            if ($token === 'O' || $token === 'C' || $token === 'E') {
+                $pos = self::skipClassToken($payload, $pos, $allowed, $depth);
+                continue;
+            }
+            if ($token === '}' && $depth > 0) {
+                ++$pos;
+                --$depth;
+            } elseif ($token === 'a' && preg_match('/\Ga:\d+:\{/', $payload, $m, 0, $pos)) {
+                $pos += \strlen($m[0]);
+                ++$depth;
+            } elseif (
+                $token === 's'
+                && preg_match('/\Gs:(\d+):"/', $payload, $m, 0, $pos)
+                && (int) $m[1] <= $length
+                && substr($payload, $pos + \strlen($m[0]) + (int) $m[1], 2) === '";'
+            ) {
+                $pos += \strlen($m[0]) + (int) $m[1] + 2;
+            } elseif (preg_match($scalar, $payload, $m, 0, $pos)) {
+                $pos += \strlen($m[0]);
+            } else {
+                throw new UnexpectedValueException(self::MALFORMED);
+            }
+        } while ($depth > 0);
+    }
+
+    /**
+     * Check one O:, C: or E: token against the allowed classes and step past its header.
+     *
+     * O: opens a property list walked like an array, C: carries opaque data of
+     * a declared length, and E: is a complete "Class:Case" value.
+     *
+     * @param string             $payload
+     * @param int                $pos     offset of the token letter
+     * @param array<int, string> $allowed lower-case allowed class names
+     * @param int                $depth   open array/object bodies, raised for O:
+     *
+     * @return int offset after the token's header (O:) or the whole token (C:, E:)
+     *
+     * @throws UnexpectedValueException On a class that is not allowed, or a malformed token
+     */
+    private static function skipClassToken(string $payload, int $pos, array $allowed, int &$depth): int
+    {
+        $token = $payload[$pos];
+        // declared lengths beyond the payload are refused before any offset arithmetic
+        if (!preg_match('/\G[OCE]:(\d+):"/', $payload, $m, 0, $pos) || (int) $m[1] > \strlen($payload)) {
+            throw new UnexpectedValueException(self::MALFORMED);
+        }
+        $nameStart = $pos + \strlen($m[0]);
+        $name = (string) substr($payload, $nameStart, (int) $m[1]);
+        $pos = $nameStart + (int) $m[1];
+        // an enum names "Class:Case"; class names cannot contain a colon
+        $class = $token === 'E' ? strstr($name, ':', true) : $name;
+        if ($class === false || !\in_array(strtolower($class), $allowed, true)) {
+            // UnexpectedValueException is a RuntimeException, and what toObject() reports for a wrong class
+            throw new UnexpectedValueException('Objects and enums are not allowed in this payload');
+        }
+        if ($token === 'E') {
+            if (substr($payload, $pos, 2) !== '";') {
+                throw new UnexpectedValueException(self::MALFORMED);
+            }
+            return $pos + 2;
+        }
+        if ($token === 'O') {
+            if (!preg_match('/\G":\d+:\{/', $payload, $m, 0, $pos)) {
+                throw new UnexpectedValueException(self::MALFORMED);
+            }
+            ++$depth;
+            return $pos + \strlen($m[0]);
+        }
+        if (
+            !preg_match('/\G":(\d+):\{/', $payload, $m, 0, $pos)
+            || (int) $m[1] > \strlen($payload)
+            || substr($payload, $pos + \strlen($m[0]) + (int) $m[1], 1) !== '}'
+        ) {
+            throw new UnexpectedValueException(self::MALFORMED);
+        }
+        self::assertBodyClassesAllowed((string) substr($payload, $pos + \strlen($m[0]), (int) $m[1]), $allowed);
+        return $pos + \strlen($m[0]) + (int) $m[1] + 1;
+    }
+
+    /**
+     * Check every class-bearing token (O:, C:, E:) in a C: body against the allowed classes.
+     *
+     * The class decodes its own body, and allowed_classes does not stop an enum
+     * inside it from autoloading; an unlisted object inside it comes back as a
+     * __PHP_Incomplete_Class instead of the exception the top level throws. The
+     * body format is the class's own, so string values in it cannot be skipped
+     * safely: a declared string length the class reads differently could hide a
+     * real token. Every match counts, even one inside a string, so a rare valid
+     * payload is refused rather than a class let through.
+     *
+     * @param string             $body    the C: token's data
+     * @param array<int, string> $allowed lower-case allowed class names
+     *
+     * @return void
+     *
+     * @throws UnexpectedValueException On a class-bearing token whose class is not allowed
+     */
+    private static function assertBodyClassesAllowed(string $body, array $allowed): void
+    {
+        preg_match_all('/[OCE]:\d+:"([^":]*)[":]/', $body, $classes);
+        foreach ($classes[1] as $class) {
+            if (!\in_array(strtolower(ltrim($class, '\\')), $allowed, true)) {
+                throw new UnexpectedValueException('Objects and enums are not allowed in this payload');
+            }
+        }
     }
 
     /**
@@ -792,16 +1059,19 @@ final class Serializer
      * @param string             $payload
      * @param array<int, string> $allowedClasses
      * @param mixed              $result         set to the unserialized value on success
+     * @param \Throwable|null    $error          set to the failure, or null on success
      *
      * @return bool true on success
      */
-    private static function tryUnserialize(string $payload, array $allowedClasses, &$result): bool
+    private static function tryUnserialize(string $payload, array $allowedClasses, &$result, &$error = null): bool
     {
+        $error = null;
         try {
             $result = self::unserialize($payload, $allowedClasses);
             return true;
         } catch (\Throwable $e) {
             $result = null;
+            $error = $e;
             return false;
         }
     }
@@ -840,7 +1110,8 @@ final class Serializer
 
             case 'O':
             case 'C':
-                return (bool) preg_match('/^[OC]:\d+:"/', $str);
+            case 'E':
+                return (bool) preg_match('/^[OCE]:\d+:"/', $str);
 
             default:
                 return false;

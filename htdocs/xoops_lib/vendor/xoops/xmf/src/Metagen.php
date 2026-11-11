@@ -37,6 +37,11 @@ class Metagen
     public const ELLIPSIS = "...";
 
     /**
+     * Distinct search terms getSearchSummary() looks for; later terms are ignored.
+     */
+    private const MAX_SEARCH_TERMS = 32;
+
+    /**
      * assignTitle set the page title
      *
      * @param string $title page title
@@ -290,7 +295,8 @@ class Metagen
      * added to the string when broken.
      *
      * @param string $haystack the string to summarize
-     * @param mixed  $needles  search term, array of search terms, or null
+     * @param mixed  $needles  search term, array of search terms, or null; only the first
+     *                         32 distinct terms (ignoring case) are looked for
      * @param int    $length   maximum character length for the summary
      *
      * @return string a substring of haystack
@@ -420,18 +426,67 @@ class Metagen
     protected static function getNeedlePositions($haystack, $needles)
     {
         $pos = array();
-        $needles = empty($needles) ? array() : (array) $needles;
-        foreach ($needles as $needle) {
-            if (function_exists('mb_stripos')) {
+        foreach (self::uniqueSearchTerms($needles) as $needle) {
+            if (self::foldsWithMbstring()) {
                 $i = mb_stripos($haystack, $needle, 0, static::ENCODING);
             } else {
                 $i = stripos($haystack, $needle, 0);
             }
             if ($i !== false) {
+                // getSearchSummary() counts characters whenever mb_strlen() exists; stripos() counts bytes
+                if (!self::foldsWithMbstring() && function_exists('mb_strlen')) {
+                    $i = mb_strlen(substr($haystack, 0, $i), self::ENCODING);
+                }
                 $pos[] = $i; // only store matches
+                if ($i === 0) {
+                    break; // no later needle can start earlier
+                }
             }
         }
         return $pos;
+    }
+
+    /**
+     * The scalar search terms as strings, one per case-insensitive term, at most MAX_SEARCH_TERMS
+     * (each term scans the whole text, so this bounds the work).
+     * Lazy, so the caller's early exit also stops the normalization of the remaining terms.
+     *
+     * @param mixed $needles search term, array of search terms, or null
+     *
+     * @return \Generator<int, string>
+     */
+    private static function uniqueSearchTerms($needles)
+    {
+        $seen = array();
+        foreach (empty($needles) ? array() : (array) $needles as $needle) {
+            if (!is_scalar($needle)) {
+                continue;
+            }
+            $needle = (string) $needle;
+            // case variants are one term; mb_stripos() uses simple case folding, stripos() folds like strtolower()
+            $key = self::foldsWithMbstring()
+                ? mb_convert_case($needle, MB_CASE_FOLD_SIMPLE, self::ENCODING)
+                : strtolower($needle);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            if (count($seen) >= self::MAX_SEARCH_TERMS) {
+                return;
+            }
+            $seen[$key] = true;
+            yield $needle;
+        }
+    }
+
+    /**
+     * Whether the summary search uses mbstring. The term deduplication and the search
+     * must fold case the same way, so both decide from this one check.
+     *
+     * @return bool
+     */
+    private static function foldsWithMbstring()
+    {
+        return function_exists('mb_stripos') && function_exists('mb_convert_case');
     }
 
     /**
@@ -451,6 +506,11 @@ class Metagen
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES, self::ENCODING);
         $text = htmlspecialchars_decode($text, ENT_QUOTES);
+        // Decoding can turn encoded text (&amp;lt;b&amp;gt;, &#x3c;svg&#x3e;) back into tags: drop complete ones,
+        // then keep any other "<" from opening a tag, which HTML does only before a letter, "/", "!" or "?".
+        // strip_tags() would also drop text such as "x <5" or everything after an unclosed "<b".
+        $text = (string) preg_replace('~<[A-Za-z/!?][^<>]*>~', '', $text);
+        $text = (string) preg_replace('~<(?=[A-Za-z/!?])~', '< ', $text);
         $text = str_replace(')', ' ', $text);
         $text = str_replace('(', ' ', $text);
         $text = str_replace(':', ' ', $text);

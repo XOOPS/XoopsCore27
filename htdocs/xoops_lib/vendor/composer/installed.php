@@ -260,9 +260,9 @@
             'dev_requirement' => false,
         ),
         'xoops/xmf' => array(
-            'pretty_version' => 'v1.3.3',
-            'version' => '1.3.3.0',
-            'reference' => '503968036436a44b2fd32d90f3c9e6651b834ed9',
+            'pretty_version' => 'v1.3.4-RC1',
+            'version' => '1.3.4.0-RC1',
+            'reference' => '900e65cde826752b4ba87dbab66c0b30954b2468',
             'type' => 'library',
             'install_path' => __DIR__ . '/../xoops/xmf',
             'aliases' => array(),

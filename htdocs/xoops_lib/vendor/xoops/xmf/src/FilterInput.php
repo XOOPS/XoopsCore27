@@ -41,6 +41,31 @@ class FilterInput
      */
     private const MAX_FILTER_PASSES = 10;
 
+    /**
+     * Deepest array nesting process() descends into (PHP's own
+     * max_input_nesting_level defaults to 64).
+     */
+    private const MAX_ARRAY_DEPTH = 32;
+
+    /**
+     * Encoding used to decode entities in attribute values
+     */
+    private const ENCODING = 'UTF-8';
+
+    /**
+     * Attributes a browser loads or follows as a URL; their values may use only
+     * SAFE_URL_SCHEMES or no scheme (a relative URL).
+     */
+    private const URL_ATTRIBUTES = [
+        'action', 'background', 'cite', 'codebase', 'data', 'dynsrc', 'formaction', 'href', 'icon',
+        'imagesrcset', 'longdesc', 'lowsrc', 'manifest', 'ping', 'poster', 'src', 'srcset', 'xlink:href',
+    ];
+
+    /** URL attributes holding a comma-separated list of URLs, each with an optional descriptor */
+    private const URL_LIST_ATTRIBUTES = ['imagesrcset', 'srcset'];
+
+    private const SAFE_URL_SCHEMES = ['http', 'https', 'mailto'];
+
     protected $tagsArray;         // default is empty array
     protected $attrArray;         // default is empty array
 
@@ -158,14 +183,7 @@ class FilterInput
     public function process($source)
     {
         if (is_array($source)) {
-            // clean all elements in this array
-            foreach ($source as $key => $value) {
-                // filter element for XSS and other 'bad' code etc.
-                if (is_string($value)) {
-                    $source[$key] = $this->remove($this->decode($value));
-                }
-            }
-            return $source;
+            return $this->processArray($source, 1);
         }
         if (is_string($source)) {
             // clean this string
@@ -190,15 +208,34 @@ class FilterInput
      */
     public static function clean($source, $type = 'string')
     {
-        static $filter = null;
+        // getInstance() caches per class, so a subclass's policy never leaks
+        // into FilterInput::clean() (a method-local static would be shared)
+        return static::getInstance()->cleanVar($source, $type);
+    }
 
-        // need an instance for methods, since this is supposed to be static
-        // we must instantiate the class - this will take defaults
-        if (!is_object($filter)) {
-            $filter = static::getInstance();
+    /**
+     * Filter every string in an array, descending into nested arrays.
+     * Arrays nested deeper than MAX_ARRAY_DEPTH are dropped.
+     *
+     * @param array<mixed> $source array to be 'cleaned'
+     * @param int          $depth  nesting level of $source
+     *
+     * @return array<mixed> 'cleaned' array
+     */
+    private function processArray(array $source, int $depth): array
+    {
+        foreach ($source as $key => $value) {
+            if (is_string($value)) {
+                $source[$key] = $this->remove($this->decode($value));
+            } elseif (is_array($value)) {
+                if ($depth >= self::MAX_ARRAY_DEPTH) {
+                    unset($source[$key]);
+                } else {
+                    $source[$key] = $this->processArray($value, $depth + 1);
+                }
+            }
         }
-
-        return $filter->cleanVar($source, $type);
+        return $source;
     }
 
     /**
@@ -277,16 +314,33 @@ class FilterInput
             case 'WEBURL':
                 /** @var string $result */
                 $result = trim((string) $this->process($source));
-                // reject protocol-relative URLs (//evil.example) and non-http(s) schemes
-                if (str_starts_with($result, '//')) {
+                // reject protocol-relative URLs (//evil.example) and non-http(s) schemes;
+                // browsers read a backslash as a slash, so /\evil.example is protocol-relative too;
+                // an entity before the first / ? # can hide a scheme from parse_url()
+                // (javascript&colon;, java&Tab;script:, javascript&#0058) that the browser decodes,
+                // and one right after a leading / can hide the second slash (/&sol;, /&Tab;/);
+                // in the authority an entity or %-escape moves the host the browser uses
+                // (https://evil&sol;@good is evil.example to a browser, good to parse_url())
+                if (
+                    str_starts_with($result, '//')
+                    || str_contains($result, '\\')
+                    || preg_match('#^(?:/&|[^/?\#]*&)#', $result)
+                    || preg_match('#^https?://[^/?\#]*[&%]#i', $result)
+                ) {
                     $result = '';
                 }
                 if ($result !== '') {
                     $urlparts = parse_url($result);
+                    // an unparseable value (javascript://host:99999/...) has no checkable scheme.
+                    // The scheme is read as a browser reads it: parse_url() takes javascript:1/x
+                    // for host:port with no scheme. http(s) needs // and a host, since browsers
+                    // send https:/&sol;host, http:/host and https:host to whatever host follows.
+                    // A relative value has no host, though parse_url() reports one for good.example/a:80/x
+                    $hasScheme = 1 === preg_match('#^[a-z][a-z0-9+.\-]*:#i', $result);
                     if (
-                        is_array($urlparts)
-                        && !empty($urlparts['scheme'])
-                        && !($urlparts['scheme'] === 'http' || $urlparts['scheme'] === 'https')
+                        !is_array($urlparts)
+                        || ($hasScheme && (!preg_match('#^https?://#', $result) || empty($urlparts['host'])))
+                        || (!$hasScheme && isset($urlparts['host']))
                     ) {
                         $result = '';
                     }
@@ -351,53 +405,59 @@ class FilterInput
      */
     protected function filterTags($source)
     {
-        // filter pass setup
-        $preTag = null;
-        $postTag = $source;
-        // find initial tag's position
-        $tagOpen_start = strpos($source, '<');
+        // filter pass setup; $pos is where the unprocessed text starts. Walking $source by
+        // offset (instead of re-copying the remainder for every tag) keeps a pass linear.
+        $preTag = '';
+        $pos = 0;
+        // first ">" at or after $pos + 1, kept while $pos moves inside the same tag
+        $tagClose = -1;
+        // per tag name: next "</name" at or after $pos + 1, or false when there is none
+        $closeTagAt = array();
+        // ponytail: bytes the close-tag searches may scan in all (32 passes over the input). Past
+        // it, a name needing a new search counts as unclosed ("<x />"), so many distinct unclosed
+        // names stay linear; an index of every close tag cost ~35x the input in memory.
+        $scanBudget = 32 * max(strlen($source), 4096);
         // iterate through string until no tags left
-        while ($tagOpen_start !== false) {
+        while (($tagOpen = strpos($source, '<', $pos)) !== false) {
             // process tag iteratively
-            $preTag .= substr($postTag, 0, $tagOpen_start);
-            $postTag = substr($postTag, $tagOpen_start);
-            $fromTagOpen = substr($postTag, 1);
+            $preTag .= substr($source, $pos, $tagOpen - $pos);
+            $pos = $tagOpen;
             // end of tag
-            $tagOpen_end = strpos($fromTagOpen, '>');
-            if ($tagOpen_end === false) {
-                break;
+            if ($tagClose <= $pos) {
+                $tagClose = strpos($source, '>', $pos + 1);
+                if ($tagClose === false) {
+                    break;
+                }
             }
-            // next start of tag (for nested tag assessment)
-            $tagOpen_nested = strpos($fromTagOpen, '<');
-            if (($tagOpen_nested !== false) && ($tagOpen_nested < $tagOpen_end)) {
-                $preTag .= $this->stripTagOpeners(substr($postTag, 0, ($tagOpen_nested + 1)));
-                $postTag = substr($postTag, ($tagOpen_nested + 1));
-                $tagOpen_start = strpos($postTag, '<');
+            $tagOpen_end = $tagClose - $pos - 1;
+            // a "<" inside the tag (nested tag assessment) restarts the tag there
+            $tagOpen_nested = strcspn($source, '<', $pos + 1, $tagOpen_end);
+            if ($tagOpen_nested < $tagOpen_end) {
+                $preTag .= $this->stripTagOpeners(substr($source, $pos, $tagOpen_nested + 1));
+                $pos += $tagOpen_nested + 1;
                 continue;
             }
-            $currentTag = substr($fromTagOpen, 0, $tagOpen_end);
-            $tagLength = strlen($currentTag);
+            $currentTag = substr($source, $pos + 1, $tagOpen_end);
+            $tagLength = $tagOpen_end;
             if (!$tagOpen_end) {
                 // "<>" is not a tag: keep it as text and move past it. Appending the whole
                 // remainder here made every pass longer, so remove() never terminated.
                 $preTag .= '<>';
-                $postTag = substr($postTag, 2);
-                $tagOpen_start = strpos($postTag, '<');
+                $pos += 2;
                 continue;
             }
             // iterate through tag finding attribute pairs - setup
-            $tagLeft = $currentTag;
             $attrSet = array();
-            $currentSpace = strpos($tagLeft, ' ');
+            $currentSpace = strpos($currentTag, ' ');
             if (substr($currentTag, 0, 1) === "/") {
                 // is end tag
                 $isCloseTag = true;
-                list($tagName) = explode(' ', $currentTag);
+                list($tagName) = explode(' ', $currentTag, 2);
                 $tagName = substr($tagName, 1);
             } else {
                 // is start tag
                 $isCloseTag = false;
-                list($tagName) = explode(' ', $currentTag);
+                list($tagName) = explode(' ', $currentTag, 2);
             }
             // excludes all "non-regular" tagnames OR remove if xssauto is on and tag is blacklisted.
             // An empty (or "0") tag name is already rejected by the regex below, so a
@@ -407,42 +467,44 @@ class FilterInput
                 || ((in_array(strtolower($tagName), $this->tagBlacklist))
                     && ($this->xssAuto))
             ) {
-                $postTag = substr($postTag, ($tagLength + 2));
-                $tagOpen_start = strpos($postTag, '<');
+                $pos += $tagLength + 2;
                 // don't append this tag
                 continue;
             }
             // this while is needed to support attribute values with spaces in!
+            // Offsets into $currentTag; the quote positions are cached the same way as $tagClose.
+            $lastEquals = strrpos($currentTag, '=');
+            $openQuotes = -1;
+            $closeQuotes = -1;
             while ($currentSpace !== false) {
-                $fromSpace = substr($tagLeft, ($currentSpace + 1));
-                $nextSpace = strpos($fromSpace, ' ');
-                $openQuotes = strpos($fromSpace, '"');
-                $closeQuotes = strpos(substr($fromSpace, ($openQuotes + 1)), '"') + $openQuotes + 1;
-                // another equals exists
-                if (strpos($fromSpace, '=') !== false) {
-                    // opening and closing quotes exists
-                    if (
-                        ($openQuotes !== false)
-                        && (strpos(substr($fromSpace, ($openQuotes + 1)), '"') !== false)
-                    ) {
-                        $attr = substr($fromSpace, 0, ($closeQuotes + 1));
-                    } else {
-                        $attr = substr($fromSpace, 0, $nextSpace);
-                    }
-                    // one or neither exist
-                } else {
-                    // no more equals exist
-                    $attr = substr($fromSpace, 0, $nextSpace);
+                $attrStart = $currentSpace + 1;
+                // first quote pair at or after the attribute start
+                if ($openQuotes !== false && $openQuotes < $attrStart) {
+                    $openQuotes = strpos($currentTag, '"', $attrStart);
                 }
+                if ($openQuotes !== false && $closeQuotes !== false && $closeQuotes <= $openQuotes) {
+                    $closeQuotes = strpos($currentTag, '"', $openQuotes + 1);
+                }
+                if (
+                    // another equals exists, and opening and closing quotes exist
+                    ($lastEquals !== false && $lastEquals >= $attrStart)
+                    && ($openQuotes !== false && $closeQuotes !== false)
+                ) {
+                    $attrLength = $closeQuotes - $attrStart + 1;
+                } else {
+                    // up to the next space; none left means an empty attr (the remainder, below)
+                    $nextSpace = strpos($currentTag, ' ', $attrStart);
+                    $attrLength = ($nextSpace === false) ? 0 : $nextSpace - $attrStart;
+                }
+                $attr = substr($currentTag, $attrStart, $attrLength);
                 // last attr pair
                 if (!$attr) {
-                    $attr = $fromSpace;
+                    $attr = substr($currentTag, $attrStart);
                 }
                 // add to attribute pairs array
                 $attrSet[] = $attr;
                 // next inc
-                $tagLeft = substr($fromSpace, strlen($attr));
-                $currentSpace = strpos($tagLeft, ' ');
+                $currentSpace = strpos($currentTag, ' ', $attrStart + strlen($attr));
             }
             // appears in array specified by user
             $tagFound = in_array(strtolower($tagName), $this->tagsArray);
@@ -456,8 +518,18 @@ class FilterInput
                     for ($i = 0; $i < $attrSetCount; ++$i) {
                         $preTag .= ' ' . $attrSet[$i];
                     }
-                    // reformat single tags to XHTML
-                    if (strpos($fromTagOpen, "</" . $tagName)) {
+                    // reformat single tags to XHTML: a later "</name..." keeps it open (searched once
+                    // per name and again only after $pos passes the match; see $scanBudget)
+                    $closeAt = $closeTagAt[$tagName] ?? -1;
+                    if ($closeAt !== false && $closeAt <= $pos) {
+                        $closeAt = false;
+                        if ($scanBudget > 0) {
+                            $closeAt = strpos($source, '</' . $tagName, $pos + 1);
+                            $scanBudget -= ($closeAt === false ? strlen($source) : $closeAt) - $pos;
+                        }
+                        $closeTagAt[$tagName] = $closeAt;
+                    }
+                    if ($closeAt !== false) {
                         $preTag .= '>';
                     } else {
                         $preTag .= ' />';
@@ -468,11 +540,10 @@ class FilterInput
                 }
             }
             // find next tag's start
-            $postTag = substr($postTag, ($tagLength + 2));
-            $tagOpen_start = strpos($postTag, '<');
+            $pos += $tagLength + 2;
         }
         // append any code after end of tags; an unclosed "<img ..." must not survive as a tag opener
-        $preTag .= $this->stripTagOpeners($postTag);
+        $preTag .= $this->stripTagOpeners(substr($source, $pos));
 
         return $preTag;
     }
@@ -490,6 +561,34 @@ class FilterInput
     protected function stripTagOpeners($text)
     {
         return preg_replace('#<(?=[a-z/!?])#i', '', $text) ?? '';
+    }
+
+    /**
+     * Whether a URL attribute uses only safe schemes (a data: link opens attacker content).
+     * Other attributes always pass.
+     *
+     * @param string $name  attribute name, lower case
+     * @param string $value value as a browser reads it: entities decoded, controls and
+     *                      whitespace removed, lower case
+     */
+    private static function hasSafeUrlSchemes(string $name, string $value): bool
+    {
+        if (!in_array($name, self::URL_ATTRIBUTES, true)) {
+            return true;
+        }
+        // a comma may be part of a single URL (/a,b:c is relative); in a list it may end one,
+        // and splitting at every comma checks each URL's start, rejecting at most a few valid ones
+        $urls = in_array($name, self::URL_LIST_ATTRIBUTES, true) ? explode(',', $value) : [$value];
+        foreach ($urls as $url) {
+            if (
+                preg_match('#^([a-z][a-z0-9+.\-]*):#', $url, $scheme) === 1
+                && !in_array($scheme[1], self::SAFE_URL_SCHEMES, true)
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -544,9 +643,8 @@ class FilterInput
             // auto strip attr's with "javascript:
             // Check the value as a browser reads it: named entities decoded ("&colon;", "&Tab;")
             // and whitespace/control characters removed ("java\tscript:").
-            $attrValue = strtolower(
-                preg_replace('/[\x00-\x20]+/', '', html_entity_decode($attrSubSet[1], ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? ''
-            );
+            $decoded = html_entity_decode($attrSubSet[1], ENT_QUOTES | ENT_HTML5, self::ENCODING);
+            $attrValue = strtolower(preg_replace('/[\x00-\x20]+/', '', $decoded) ?? '');
             if (
                 ((strpos($attrValue, 'expression') !== false)
                     && (strtolower($attrSubSet[0]) === 'style'))
@@ -555,6 +653,7 @@ class FilterInput
                 || (strpos($attrValue, 'vbscript:') !== false)
                 || (strpos($attrValue, 'mocha:') !== false)
                 || (strpos($attrValue, 'livescript:') !== false)
+                || !self::hasSafeUrlSchemes(strtolower($attrSubSet[0]), $attrValue)
             ) {
                 continue;
             }

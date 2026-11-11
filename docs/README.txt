@@ -57,8 +57,9 @@ Copy the new files over the web root. There are no database changes since
 2.7.4; running the upgrade wizard is harmless but not required.
 
 - Module developers: XMF 1.3.4 rejects some input that 1.3.3 accepted.
-  Xmf\Module\Helper\Session and Xmf\Security\Serializer no longer store or
-  return objects and enums, so store scalars and arrays. HTML accepted through
+  Xmf\Module\Helper\Session no longer stores or returns objects and enums, so
+  store scalars and arrays. Xmf\Security\Serializer rejects a stored object or
+  enum unless its class is passed as allowed. HTML accepted through
   Xmf\Request with MASK_ALLOW_HTML keeps link and image addresses only when
   they are relative or use http, https or mailto, so data:, tel: and ftp:
   addresses are removed. Xmf\Database\Tables::executeQueue() needs

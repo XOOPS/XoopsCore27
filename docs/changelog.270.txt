@@ -84,6 +84,9 @@ Bug fixes:
 - the image and avatar uploaders check the byte limit against the size PHP received, so a smaller declared total no longer passes; avatar uploads enforce the configured avatar byte and pixel limits on the server (modules/system/class/fineuploadhandler.php, fineimuploadhandler.php, fineavataruploadhandler.php)
 - a cloned module block takes its module, file, functions and template from the stored source block, not from the form; module block display and option functions run only when the module's own code defines them (modules/system/admin/blocksadmin/main.php, modules/system/class/block.php, kernel/block.php)
 
+Libraries and assets:
+- symfony/yaml 7.4.23, which bounds the time its parser spends on a crafted document (Symfony advisory GHSA-hwfg-qwvh-2wfx) (xoops_lib/composer.dist.lock, xoops_lib/vendor/symfony/yaml)
+
 ===================================
 2.7.4                     2026-10
 ===================================

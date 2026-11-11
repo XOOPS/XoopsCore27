@@ -67,7 +67,9 @@ Upgrading from 2.7.3 or earlier
 Copy the new files over the web root and run the upgrade wizard. From 2.7.3 it
 creates the user_2fa table and the two-factor preference, registers the
 SCEditor emoticons as smileys, and adds the Editors preferences. No
-mainfile.php changes are needed.
+mainfile.php changes are needed. The notes under "Upgrading from 2.7.4" apply
+to this upgrade as well; in particular, replace any copy of extras/login.php,
+because an older copy skips the two-factor step.
 
 - Two-factor authentication needs the PHP sodium extension; the wizard reports
   whether it is available. Operations notes, including key backup and the

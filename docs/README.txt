@@ -46,12 +46,24 @@ Changes since 2.7.4
 - image.php serves a picture with the type its content decodes as, limits the
   filters applied to an edited image and sends nosniff on every response.
 - Uploads strip every inner executable extension, and the file cache refuses
-  keys that contain a path. See docs/changelog.270.txt for the full list.
+  keys that contain a path.
+- Bundled libraries: XMF 1.3.4 RC1, which tightens input filtering, safe
+  serialization, search highlighting and database identifier quoting, and
+  symfony/yaml 7.4.23. See docs/changelog.270.txt for the full list.
 
 Upgrading from 2.7.4
 -----------------------------------
 Copy the new files over the web root. There are no database changes since
 2.7.4; running the upgrade wizard is harmless but not required.
+
+- Module developers: XMF 1.3.4 rejects some input that 1.3.3 accepted.
+  Xmf\Module\Helper\Session and Xmf\Security\Serializer no longer store or
+  return objects and enums, so store scalars and arrays. HTML accepted through
+  Xmf\Request with MASK_ALLOW_HTML keeps link and image addresses only when
+  they are relative or use http, https or mailto, so data:, tel: and ftp:
+  addresses are removed. Xmf\Database\Tables::executeQueue() needs
+  executeQueue(true) to write from a GET request. Release notes:
+  https://github.com/XOOPS/xmf/releases/tag/v1.3.4-RC1
 
 - If your site used the Dark admin theme, it now loads Transition; switch dark
   mode on with the toggle in the header. The leftover

@@ -5,6 +5,83 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.5-Beta1] - 2026-11-12
+
+### Bug Fixes
+- Fixes suggestion mamba
+- Fixes suggested mamba
+- Fixes for dark mode
+- **uploader**: Map WebP to IMAGETYPE_WEBP so valid .webp uploads are accepted
+- **upgrade**: Restore empty-argument tags and never quote a lone space
+- **upgrade**: Recover digit-led variables and keep double-quoted interpolation
+- **upgrade**: Restore only real variables and trailing-space quotes
+- **upgrade**: Restore every quote form the old Smarty 4 repair produced
+- **upgrade**: Keep Smarty 4 quote repair inside its own tag
+- **editor**: Contain layouts and repair SCEditor behavior (#291)
+- **auth**: Keep the stored hash on directory sign-in; keep template defaults for undefined keys
+- **installer**: Rewrite only executable define() calls when writing mainfile.php
+- **cp_header**: Redirect when the admin URL names a module that is not installed
+- **kernel**: Run deletes through exec() and render the CP header once
+- **theme/modern**: Load labels in the selected theme header
+- **theme/modern**: Defer language loading until theme initialization
+- **system**: Address admin dark-mode review findings
+- **admin**: Match system menu items by the parsed fct value
+- **upgrade**: Stop the 2.4.0 patch re-queuing after 2.7.3
+- **theme**: Drop xoops_theme_select from the selector redirect and name the redirect_header theme
+- **theme**: Keep one session store for the selected theme
+
+### Documentation
+- **release**: State the Serializer and Session changes separately
+- **release**: Prepare 2.7.5 Beta 1
+- **release**: Repeat the copied login file note for upgrades from 2.7.3 or earlier
+- **release**: Update README and library pack description for 2.7.5 Beta 1
+- Record admin theme dark modes and dark theme removal
+
+### Features
+- **system**: Add admin dark modes and retire the dark theme
+
+### Miscellaneous
+- **xoops_lib**: Update symfony/yaml to 7.4.23
+- **lib**: Update the bundled XMF library to 1.3.4 RC1
+- **profile**: Drop the commented-out field install SQL
+
+### Other
+- Update version to 2.7.5-Beta1
+- Fix CSS for dark mode menu icon styles
+- Suggestions AI
+- Suggestion AI
+- Show/hide section SYSTEM
+- Dark mode support of custom settings (#279)
+
+### Refactor
+- **edituser**: Save the uploaded avatar through the member handler
+
+### Security
+- Key the image cache on the parameters the script reads
+- Key the image cache on the resolved id and measure list nesting depth
+- Cap Markdown nesting in the parser instead of rewriting markers
+- Apply the Markdown depth cap to the lines Parsedown splits
+- Bound reliable-IP prefixes, key the image cache on the selector in use, keep the Markdown cap under PCRE limits
+- Match reliable IPs as addresses and keep the breadcrumb to a section name
+- Cap image filters, key the image cache on recognised parameters, report upload errors once
+- Bound Markdown parser work on untrusted text
+- Tighten comment context, image category rights, upload limits and block clone callbacks (#298)
+- Tighten form handler names, profile fields, BBCode attributes, sign-in intent and password rehash (#297)
+- Tighten directory sign-in, sessions, BBCode attributes, template lookup and admin output (#296)
+- Tighten redirects, login counting, user search, section toggles and profile fields (#293)
+- Link only text between tags and decode the textarea preview once
+- Harden comment, installer, admin and library input paths (#290)
+- Close review gaps in session stamps, define rewrite and pickers
+- Harden config writer, password-change sessions and image pickers
+- **protector**: Keep chained rewrites, skip vanished values
+- Restore Protector sanitising, strict password and avatar checks
+
+### Testing
+- Guard the textarea preview against every later decoder
+- **cp_header**: Execute the missing-module guard against a stub handler
+- **theme/transition**: Wait for computed colors before assertions
+- **upgrade**: Cover the 2.4.0 patch's leading-column key check (#281)
+
 ## [v2.7.4] - 2026-10-17
 
 ### Bug Fixes

@@ -78,6 +78,51 @@ final class Upgrade270CleanupLibrariesTest extends TestCase
         self::assertTrue($patch->check_cleanuplibraries(), 'a guarded leftover must not re-flag the task');
     }
 
+    #[Test]
+    public function loneHtaccessLeftByAnEarlierRunIsStillPending(): void
+    {
+        $this->removeTree($this->basePath . 'vendor');
+        $patch = $this->patch();
+
+        self::assertFalse($patch->check_cleanuplibraries());
+        self::assertTrue($patch->apply_cleanuplibraries());
+        self::assertDirectoryDoesNotExist($this->basePath);
+    }
+
+    #[Test]
+    public function symlinkedLibrariesAreNeverTraversed(): void
+    {
+        $external = sys_get_temp_dir() . '/xoops-extlib-' . bin2hex(random_bytes(4));
+        mkdir($external . '/vendor', 0777, true);
+        file_put_contents($external . '/README.md', 'not ours');
+        file_put_contents($external . '/vendor/autoload.php', '<?php');
+        $this->removeTree(rtrim($this->basePath, '/'));
+        $link = rtrim($this->basePath, '/');
+
+        try {
+            set_error_handler(static fn (): bool => true);
+            try {
+                $linked = symlink($external, $link);
+            } finally {
+                restore_error_handler();
+            }
+            if (!$linked) {
+                self::markTestSkipped('symlinks are not available here');
+            }
+            $patch = $this->patch();
+
+            self::assertTrue($patch->check_cleanuplibraries());
+            self::assertTrue($patch->apply_cleanuplibraries());
+            self::assertFileExists($external . '/README.md');
+            self::assertFileExists($external . '/vendor/autoload.php');
+        } finally {
+            if (is_link($link)) {
+                (PHP_OS_FAMILY === 'Windows') ? rmdir($link) : unlink($link);
+            }
+            $this->removeTree($external);
+        }
+    }
+
     private function patch(): Upgrade_270
     {
         return new Upgrade_270(

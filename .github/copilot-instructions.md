@@ -26,14 +26,15 @@ tests/                        # PHPUnit tests
 ## Build & Test
 
 ```bash
-# Libraries are managed via Composer in htdocs/xoops_lib/ (lock is gitignored)
-cd htdocs/xoops_lib
-cp composer.dist.json composer.json && cp composer.dist.lock composer.lock
-composer install              # Install dependencies
+# Run from the repository root; each subshell starts there.
+# Libraries are managed via Composer in htdocs/xoops_lib/ (the copied composer.json/lock are gitignored)
+(cd htdocs/xoops_lib && cp composer.dist.json composer.json && cp composer.dist.lock composer.lock && composer install)
 
-# PHPUnit is installed globally (composer global require phpunit/phpunit:^11.2)
-cd tests         && phpunit --configuration phpunit.xml.dist
-cd upgrade/tests && phpunit --configuration phpunit.xml.dist
+# PHPUnit is installed globally; Composer's global bin dir
+# (composer global config bin-dir --absolute) must be on PATH
+composer global require phpunit/phpunit:^11.2
+(cd tests         && phpunit --configuration phpunit.xml.dist)
+(cd upgrade/tests && phpunit --configuration phpunit.xml.dist)
 ```
 
 Starting with XOOPS 2.7.0, the external `xoops/base-requires25` metapackage has been dropped; all dependencies are listed directly in `htdocs/xoops_lib/composer.dist.json`.
@@ -70,9 +71,8 @@ Code must run on PHP 8.2 through 8.5. Features introduced in PHP 8.0, 8.1, and 8
 ## Testing Guidelines
 
 - Test classes extend `\PHPUnit\Framework\TestCase`.
-- Tests must work across PHPUnit 9.6, 10.5, and 11.x.
+- Tests run on PHPUnit 11 (CI installs `^11.2`); mark test methods with the `#[Test]` attribute.
 - Tests must be fully isolated — no XOOPS installation required for unit tests.
-- Name test methods `test{MethodName}` or `test{MethodName}{Scenario}`.
 
 ## Pull Request Checklist
 

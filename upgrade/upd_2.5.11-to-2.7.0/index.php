@@ -472,6 +472,9 @@ class Upgrade_270 extends XoopsUpgrade
     public function check_cleanuplibraries(): bool
     {
         $basePath = XOOPS_ROOT_PATH . '/class/libraries/';
+        if (self::librariesAreLinked($basePath)) {
+            return true; // a site's own symlink setup is left alone
+        }
         foreach ($this->librariesTopLevel as $item) {
             if (file_exists($basePath . $item)) {
                 return false;
@@ -485,7 +488,9 @@ class Upgrade_270 extends XoopsUpgrade
             }
         }
 
-        return true;
+        // A deny-all .htaccess left alone (by a 2.7.x release, or an earlier run
+        // of this task) still needs removing; beside a site's own files it stays.
+        return !self::holdsOnlyHtaccess($basePath);
     }
 
     /**
@@ -502,6 +507,12 @@ class Upgrade_270 extends XoopsUpgrade
         $basePath   = XOOPS_ROOT_PATH . '/class/libraries/';
         $vendorPath = $basePath . 'vendor/';
         $success    = true;
+
+        if (self::librariesAreLinked($basePath)) {
+            $this->logs[] = 'Skipped: class/libraries/ or its vendor/ is a symbolic link';
+
+            return true;
+        }
 
         // Delete top-level obsolete items
         foreach ($this->librariesTopLevel as $item) {
@@ -540,8 +551,10 @@ class Upgrade_270 extends XoopsUpgrade
         // that still holds files (a site's own additions) is reported, not forced.
         if ($success) {
             foreach ([$vendorPath, $basePath] as $emptyDir) {
-                if ($emptyDir === $basePath) {
-                    $this->removeLoneHtaccess($basePath);
+                // The shipped deny-all .htaccess goes only once it is the last
+                // entry, so files a site added there keep its protection.
+                if ($emptyDir === $basePath && self::holdsOnlyHtaccess($basePath)) {
+                    $this->removeLeftover($basePath . '.htaccess');
                 }
                 if (!$this->removeLeftover($emptyDir)) {
                     $this->logs[] = sprintf('Could not remove directory (it may still contain files): %s', $this->relativePath($emptyDir));
@@ -553,26 +566,42 @@ class Upgrade_270 extends XoopsUpgrade
     }
 
     /**
-     * Delete the shipped deny-all class/libraries/.htaccess once nothing else
-     * is left beside it, so the empty directory can be removed.
+     * Whether class/libraries/ is a real directory whose only entry is .htaccess.
      *
-     * While a site's own files remain, the file stays and keeps protecting them.
-     * It is not in $librariesTopLevel on purpose: check_cleanuplibraries() would
-     * then keep reporting the task as pending on every such site.
+     * Shared by check_ and apply_ so the task stays idempotent: a lone .htaccess
+     * guards nothing and is pending removal, while one beside a site's own files
+     * is kept and does not re-flag the task. (.htaccess is deliberately not in
+     * $librariesTopLevel, which would delete it unconditionally and report it
+     * pending on every such site.)
      *
      * @param string $basePath class/libraries/ path with trailing slash
      *
-     * @return void
+     * @return bool
      */
-    private function removeLoneHtaccess(string $basePath): void
+    private static function holdsOnlyHtaccess(string $basePath): bool
     {
-        if (!is_dir($basePath)) {
-            return;
+        $dir = rtrim($basePath, '/\\');
+        if (!is_dir($dir)) {
+            return false;
         }
-        $entries = scandir($basePath);
-        if (is_array($entries) && array_values(array_diff($entries, ['.', '..'])) === ['.htaccess']) {
-            $this->removeLeftover($basePath . '.htaccess');
-        }
+        $entries = scandir($dir);
+
+        return is_array($entries) && array_values(array_diff($entries, ['.', '..'])) === ['.htaccess'];
+    }
+
+    /**
+     * Whether class/libraries/ or its vendor/ is a symbolic link.
+     *
+     * The task never deletes through one: a linked target can lie outside the
+     * web root and hold files of the same names that are not ours to remove.
+     *
+     * @param string $basePath class/libraries/ path with trailing slash
+     *
+     * @return bool
+     */
+    private static function librariesAreLinked(string $basePath): bool
+    {
+        return is_link(rtrim($basePath, '/\\')) || is_link($basePath . 'vendor');
     }
 
     // =========================================================================

@@ -31,7 +31,7 @@ class MytsLi extends MyTextSanitizerExtension
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->patterns[]     = "/\[li](.*)\[\/li\]/sU";
+        $myts->patterns[]     = '/\[li](.*)\[\/li\]/sU';
         $myts->replacements[] = '<li>\\1</li>';
 
         return true;

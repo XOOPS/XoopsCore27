@@ -2,7 +2,7 @@
 
 // Prevent direct access
 if (basename($_SERVER['SCRIPT_FILENAME']) === 'ComposerInfo.php') {
-    header("HTTP/1.0 403 Forbidden");
+    http_response_code(403);
     exit('Access Denied');
 }
 
@@ -24,7 +24,7 @@ class ComposerInfo
         } catch (Exception $e) {
             // Handle any exception and log the error using XOOPS Logger
             $xoopsLogger->handleError(E_USER_ERROR, $e->getMessage(), __FILE__, __LINE__);
-            echo "An error occurred. Please try again later.";
+            echo 'An error occurred. Please try again later.';
         }
     }
 
@@ -36,19 +36,19 @@ class ComposerInfo
             $composerLockFile = $composerLockPath . '.dist.lock';
         }
         if (!file_exists($composerLockFile)) {
-            throw new InvalidArgumentException("Failed to read the file: " . $composerLockFile);
+            throw new InvalidArgumentException('Failed to read the file: ' . $composerLockFile);
         }
 
         $composerLockData = file_get_contents($composerLockFile);
 
         if ($composerLockData === false) {
-            throw new RuntimeException("Failed to read the file: " . $composerLockFile);
+            throw new RuntimeException('Failed to read the file: ' . $composerLockFile);
         }
 
         $composerData = json_decode($composerLockData, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new JsonException("Failed to decode JSON data: " . json_last_error_msg());
+            throw new JsonException('Failed to decode JSON data: ' . json_last_error_msg());
         }
 
         return $composerData['packages'] ?? [];

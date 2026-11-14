@@ -889,7 +889,7 @@ class XoopsModuleHandler extends XoopsObjectHandler
         if (self::$hasShowInMenu !== null) {
             return self::$hasShowInMenu;
         }
-        $check = $db->query("SHOW COLUMNS FROM " . $db->prefix('modules') . " LIKE 'show_in_menu'");
+        $check = $db->query('SHOW COLUMNS FROM ' . $db->prefix('modules') . " LIKE 'show_in_menu'");
         self::$hasShowInMenu = $db->isResultSet($check) && ($check instanceof \mysqli_result) && false !== $db->fetchArray($check);
         return self::$hasShowInMenu;
     }

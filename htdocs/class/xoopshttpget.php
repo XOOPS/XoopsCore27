@@ -38,7 +38,7 @@ class XoopsHttpGet
             $this->useCurl = false;
             $urlFopen = (int) ini_get('allow_url_fopen');
             if ($urlFopen === 0) {
-                throw new \RuntimeException("CURL extension or allow_url_fopen ini setting is required.");
+                throw new \RuntimeException('CURL extension or allow_url_fopen ini setting is required.');
             }
         }
     }

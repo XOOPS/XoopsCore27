@@ -92,7 +92,7 @@ final class AlternateLoginPathsTest extends TestCase
     public function popupDoesNotAutomaticallyDowngradeToAnHttpCore(): void
     {
         $this->loadSourceFile('extras/login.php');
-        $start = strpos($this->sourceContent, "            // The SSL bridge");
+        $start = strpos($this->sourceContent, '            // The SSL bridge');
         self::assertNotFalse($start);
         $end = strpos($this->sourceContent, "        if (!\$GLOBALS['sess_handler']->regenerate_id", $start);
         self::assertNotFalse($end);

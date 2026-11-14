@@ -440,7 +440,7 @@ class XoopsFormRendererTailwind implements XoopsFormRendererInterface, XoopsForm
 
             $ret .= '<br>' . "<div id='" . $name . "_hidden' class='card bg-base-200 mt-2'>"
                 . "<div class='card-body p-4'>"
-                . "<div class='card-title text-sm'>" . $button . "</div>"
+                . "<div class='card-title text-sm'>" . $button . '</div>'
                 . "<div id='" . $name . "_hidden_data'>" . $this->esc(_XOOPS_FORM_PREVIEW_CONTENT) . '</div>'
                 . '</div></div>';
         }

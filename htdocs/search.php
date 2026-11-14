@@ -276,7 +276,7 @@ switch ($action) {
                             $results_arr[$i]['image_link'] = 'images/icons/posticon2.gif';
                         }
                         $results_arr[$i]['image_title'] = $module->getVar('name');
-                        if (!preg_match("/^http[s]*:\/\//i", $results[$i]['link'])) {
+                        if (!preg_match('/^http[s]*:\/\//i', $results[$i]['link'])) {
                             $results[$i]['link'] = 'modules/' . $module->getVar('dirname') . '/' . $results[$i]['link'];
                         }
                         $results_arr[$i]['link'] = $results[$i]['link'];
@@ -408,7 +408,7 @@ switch ($action) {
                     $results_arr['image_link'] = 'images/icons/posticon2.gif';
                 }
                 $results_arr['image_title'] = $module->getVar('name');
-                if (!preg_match("/^http[s]*:\/\//i", $results[$i]['link'])) {
+                if (!preg_match('/^http[s]*:\/\//i', $results[$i]['link'])) {
                     $results[$i]['link'] = 'modules/' . $module->getVar('dirname') . '/' . $results[$i]['link'];
                 }
                 $results_arr['link'] = $results[$i]['link'];

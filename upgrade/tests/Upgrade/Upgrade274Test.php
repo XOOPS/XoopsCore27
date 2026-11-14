@@ -376,10 +376,12 @@ final class Upgrade274Test extends TestCase
 
         // Everything is now present: the check passes and a second run writes nothing.
         $written = count($this->exec);
-        self::assertTrue($patch->check_editorprefs(), implode("
-", $patch->logs));
-        self::assertTrue($patch->apply_editorprefs(), implode("
-", $patch->logs));
+        self::assertTrue($patch->check_editorprefs(), implode(
+            '
+', $patch->logs));
+        self::assertTrue($patch->apply_editorprefs(), implode(
+            '
+', $patch->logs));
         self::assertCount($written, $this->exec);
     }
 

@@ -1108,9 +1108,9 @@ class ProtectorTest extends TestCase
     public function intvalAllrequestsendidLeavesNonIdKeysAlone(): void
     {
         $this->protector->_done_intval = false;
-        $_GET['name'] = "test value with spaces";
+        $_GET['name'] = 'test value with spaces';
         $this->protector->intval_allrequestsendid();
-        $this->assertSame("test value with spaces", $_GET['name']);
+        $this->assertSame('test value with spaces', $_GET['name']);
         unset($_GET['name']);
     }
 

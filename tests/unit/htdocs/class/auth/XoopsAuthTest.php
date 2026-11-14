@@ -155,7 +155,7 @@ class XoopsAuthTest extends TestCase
     {
         $this->auth->setErrors(1, "\n\ttabbed and newlined\n");
         $errors = $this->auth->getErrors();
-        $this->assertSame("tabbed and newlined", $errors[1]);
+        $this->assertSame('tabbed and newlined', $errors[1]);
     }
 
     #[Test]

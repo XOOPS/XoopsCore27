@@ -20,21 +20,21 @@ class MyTextSanitizerTest extends TestCase
 
     public function testEmailConversion()
     {
-        $input    = "Contact us at info@example.com for more information.";
+        $input    = 'Contact us at info@example.com for more information.';
         $expected = 'Contact us at <a href="mailto:info@example.com">info@example.com</a> for more information.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testHttpUrlConversion()
     {
-        $input    = "Visit our website at http://www.example.com.";
+        $input    = 'Visit our website at http://www.example.com.';
         $expected = 'Visit our website at <a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a>.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testFtpUrlConversion()
     {
-        $input    = "Our ftp is ftp://ftp.example.com.";
+        $input    = 'Our ftp is ftp://ftp.example.com.';
         $expected = 'Our ftp is <a href="ftp://ftp.example.com" target="_blank" rel="external">ftp://ftp.example.com</a>.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
@@ -51,14 +51,14 @@ class MyTextSanitizerTest extends TestCase
 
     public function testMultipleUrlsAndEmails()
     {
-        $input    = "Visit us at http://www.example.com or https://secure.example.com. Contact us at info@example.com.";
+        $input    = 'Visit us at http://www.example.com or https://secure.example.com. Contact us at info@example.com.';
         $expected = 'Visit us at <a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a> or <a href="https://secure.example.com" target="_blank" rel="external noopener nofollow">https://secure.example.com</a>. Contact us at <a href="mailto:info@example.com">info@example.com</a>.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testInvalidUrlsAndEmails()
     {
-        $input    = "Visit us at http:/www.example.com. Contact us at info@.com.";
+        $input    = 'Visit us at http:/www.example.com. Contact us at info@.com.';
         $expected = 'Visit us at http:/www.example.com. Contact us at info@.com.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
@@ -89,12 +89,12 @@ class MyTextSanitizerTest extends TestCase
     public function testVariousUrls()
     {
         $testCases = [
-            "Visit https://www.example.com for more info"                                      => 'Visit <a href="https://www.example.com" target="_blank" rel="external noopener nofollow">https://www.example.com</a> for more info',
-            "Check out www.example.org"                                                        => 'Check out <a href="http://www.example.org" target="_blank" rel="external noopener nofollow">http://www.example.org</a>',
-            "Email me at test@example.net"                                                     => 'Email me at <a href="mailto:test@example.net">test@example.net</a>',
-            "FTP link: ftp://ftp.example.com/files"                                            => 'FTP link: <a href="ftp://ftp.example.com/files" target="_blank" rel="external">ftp://ftp.example.com/files</a>',
-            "This is some text with a link on the next line:<br />https://www.another-example.com" => 'This is some text with a link on the next line:<br /><a href="https://www.another-example.com" target="_blank" rel="external noopener nofollow">https://www.another-example.com</a>',
-            "This is some text with a link on the next line:<br>https://www.another-example.com" => 'This is some text with a link on the next line:<br><a href="https://www.another-example.com" target="_blank" rel="external noopener nofollow">https://www.another-example.com</a>',
+            'Visit https://www.example.com for more info'                                          => 'Visit <a href="https://www.example.com" target="_blank" rel="external noopener nofollow">https://www.example.com</a> for more info',
+            'Check out www.example.org'                                                            => 'Check out <a href="http://www.example.org" target="_blank" rel="external noopener nofollow">http://www.example.org</a>',
+            'Email me at test@example.net'                                                         => 'Email me at <a href="mailto:test@example.net">test@example.net</a>',
+            'FTP link: ftp://ftp.example.com/files'                                                => 'FTP link: <a href="ftp://ftp.example.com/files" target="_blank" rel="external">ftp://ftp.example.com/files</a>',
+            'This is some text with a link on the next line:<br />https://www.another-example.com' => 'This is some text with a link on the next line:<br /><a href="https://www.another-example.com" target="_blank" rel="external noopener nofollow">https://www.another-example.com</a>',
+            'This is some text with a link on the next line:<br>https://www.another-example.com'   => 'This is some text with a link on the next line:<br><a href="https://www.another-example.com" target="_blank" rel="external noopener nofollow">https://www.another-example.com</a>',
         ];
 
         foreach ($testCases as $input => $expected) {
@@ -105,21 +105,21 @@ class MyTextSanitizerTest extends TestCase
 
     public function testUrlsWithParentheses()
     {
-        $input    = "Visit our website (http://www.example.com) for more info.";
+        $input    = 'Visit our website (http://www.example.com) for more info.';
         $expected = 'Visit our website (<a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a>) for more info.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testUrlsWithBrackets()
     {
-        $input    = "Check out this link [http://www.example.com].";
+        $input    = 'Check out this link [http://www.example.com].';
         $expected = 'Check out this link [<a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a>].';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testUrlsWithAngularBrackets()
     {
-        $input    = "Visit <http://www.example.com> for more info.";
+        $input    = 'Visit <http://www.example.com> for more info.';
         $expected = 'Visit <<a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a>> for more info.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
@@ -127,49 +127,49 @@ class MyTextSanitizerTest extends TestCase
 
     public function testUrlsWithAngularBrackets2()
     {
-        $input    = "Visit <http://www.example.com> for more info.";
+        $input    = 'Visit <http://www.example.com> for more info.';
         $expected = 'Visit <<a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a>> for more info.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testUrlsWithAngularBrackets3()
     {
-        $input    = "Visit <http://www.example.com> for more info.";
+        $input    = 'Visit <http://www.example.com> for more info.';
         $expected = 'Visit <<a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a>> for more info.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testUrlsWithoutProtocol()
     {
-        $input    = "Visit www.example.com for more info.";
+        $input    = 'Visit www.example.com for more info.';
         $expected = 'Visit <a href="http://www.example.com" target="_blank" rel="external noopener nofollow">http://www.example.com</a> for more info.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testSftpUrlConversion()
     {
-        $input    = "Our sftp is sftp://sftp.example.com.";
+        $input    = 'Our sftp is sftp://sftp.example.com.';
         $expected = 'Our sftp is <a href="sftp://sftp.example.com" target="_blank" rel="external">sftp://sftp.example.com</a>.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testEmailAddressWithPlusSign()
     {
-        $input    = "Contact us at john+doe@example.com for more information.";
+        $input    = 'Contact us at john+doe@example.com for more information.';
         $expected = 'Contact us at <a href="mailto:john+doe@example.com">john+doe@example.com</a> for more information.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testUrlWithTildeCharacter()
     {
-        $input    = "Visit https://www.example.com/~user for more info.";
+        $input    = 'Visit https://www.example.com/~user for more info.';
         $expected = 'Visit <a href="https://www.example.com/~user" target="_blank" rel="external noopener nofollow">https://www.example.com/~user</a> for more info.';
         $this->assertEquals($expected, $this->sanitizer->makeClickable($input));
     }
 
     public function testMakeClickableMultiLine3()
     {
-        $text     = "No elitr elit quis nobis soluta cum sanctus fugiat dolor liber facer, sint exercitation kasd et nonumy assum commodi laboris culpa, commodo diam labore nisl illum consectetur nihil elitr invidunt non tempor. Invidunt facilisi soluta nisi te anim soluta labore, cillum elitr quis tempor congue vel liber est aliquyam cupiditat obcaecat tempor obcaecat sint no elit. Nostrud dignissim aliquid. https://www.monxoops.fr/modules/newbb/viewtopic.php?topic_id=139&post_id=1440#forumpost1440 and this email: test@example.com Vel ipsum eiusmod. Kasd accusam nisi.";
+        $text     = 'No elitr elit quis nobis soluta cum sanctus fugiat dolor liber facer, sint exercitation kasd et nonumy assum commodi laboris culpa, commodo diam labore nisl illum consectetur nihil elitr invidunt non tempor. Invidunt facilisi soluta nisi te anim soluta labore, cillum elitr quis tempor congue vel liber est aliquyam cupiditat obcaecat tempor obcaecat sint no elit. Nostrud dignissim aliquid. https://www.monxoops.fr/modules/newbb/viewtopic.php?topic_id=139&post_id=1440#forumpost1440 and this email: test@example.com Vel ipsum eiusmod. Kasd accusam nisi.';
         $expected = 'No elitr elit quis nobis soluta cum sanctus fugiat dolor liber facer, sint exercitation kasd et nonumy assum commodi laboris culpa, commodo diam labore nisl illum consectetur nihil elitr invidunt non tempor. Invidunt facilisi soluta nisi te anim soluta labore, cillum elitr quis tempor congue vel liber est aliquyam cupiditat obcaecat tempor obcaecat sint no elit. Nostrud dignissim aliquid. ' .
                     '<a href="https://www.monxoops.fr/modules/newbb/viewtopic.php?topic_id=139&amp;post_id=1440#forumpost1440" target="_blank" rel="external noopener nofollow">https://www.monxoops.fr/modules/newbb/viewtopic.php?topic_id=139&amp;post_id=1440#forumpost1440</a>' .
                     ' and this email: ' . '<a href="mailto:test@example.com">test@example.com</a> ' . 'Vel ipsum eiusmod. Kasd accusam nisi.';
@@ -200,10 +200,10 @@ class MyTextSanitizerTest extends TestCase
     {
         $testCases = [
             // Test for file paths
-            "Check this file path: file:///usr/local/bin" => 'Check this file path: <a href="file:///usr/local/bin" target="_blank" rel="external">file:///usr/local/bin</a>',
+            'Check this file path: file:///usr/local/bin'      => 'Check this file path: <a href="file:///usr/local/bin" target="_blank" rel="external">file:///usr/local/bin</a>',
 
             // Test for custom protocol
-            "Use the custom protocol: custom://myapp/resource" => 'Use the custom protocol: <a href="custom://myapp/resource" target="_blank" rel="external">custom://myapp/resource</a>',
+            'Use the custom protocol: custom://myapp/resource' => 'Use the custom protocol: <a href="custom://myapp/resource" target="_blank" rel="external">custom://myapp/resource</a>',
         ];
 
         foreach ($testCases as $input => $expected) {
@@ -216,10 +216,10 @@ class MyTextSanitizerTest extends TestCase
     {
         $testCases = [
             // Prevent javascript URLs
-            "Don't click this: javascript:alert('XSS')" => "Don't click this: javascript:alert('XSS')",
+            "Don't click this: javascript:alert('XSS')"  => "Don't click this: javascript:alert('XSS')",
 
             // Disallow unsupported protocols
-            "Unsupported protocol: gopher://example.com" => "Unsupported protocol: gopher://example.com",
+            'Unsupported protocol: gopher://example.com' => 'Unsupported protocol: gopher://example.com',
         ];
 
         foreach ($testCases as $input => $expected) {

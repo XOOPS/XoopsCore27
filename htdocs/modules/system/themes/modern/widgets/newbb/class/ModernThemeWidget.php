@@ -65,7 +65,7 @@ class NewbbModernThemeWidget implements ModernThemeWidgetInterface
         // Total topics
         $topics = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('newbb_topics')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('newbb_topics')
         );
         if ($result) {
             list($topics) = $xoopsDB->fetchRow($result);
@@ -74,7 +74,7 @@ class NewbbModernThemeWidget implements ModernThemeWidgetInterface
         // Total posts
         $posts = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('newbb_posts')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('newbb_posts')
         );
         if ($result) {
             list($posts) = $xoopsDB->fetchRow($result);
@@ -84,7 +84,7 @@ class NewbbModernThemeWidget implements ModernThemeWidgetInterface
         $today = 0;
         $todayStart = mktime(0, 0, 0);
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('newbb_posts')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('newbb_posts')
             . " WHERE `post_time` >= $todayStart"
         );
         if ($result) {
@@ -94,9 +94,9 @@ class NewbbModernThemeWidget implements ModernThemeWidgetInterface
         // Recent posts
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `subject`, `post_time`, `poster_name`"
-            . " FROM " . $xoopsDB->prefix('newbb_posts')
-            . " ORDER BY `post_time` DESC LIMIT 5"
+            'SELECT `subject`, `post_time`, `poster_name`'
+            . ' FROM ' . $xoopsDB->prefix('newbb_posts')
+            . ' ORDER BY `post_time` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

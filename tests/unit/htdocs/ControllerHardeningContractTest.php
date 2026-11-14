@@ -78,7 +78,7 @@ final class ControllerHardeningContractTest extends TestCase
     public function installerOutputIsEscapedForItsContext(): void
     {
         $this->assertStringContainsString(
-            'htmlspecialchars(json_encode($wizard->pageURI("+1"), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES)',
+            "htmlspecialchars(json_encode(\$wizard->pageURI('+1'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES)",
             self::src('install/include/install_tpl.php')
         );
         $this->assertStringContainsString('htmlspecialchars((string) $v, ENT_QUOTES)', self::src('install/page_configsave.php'));

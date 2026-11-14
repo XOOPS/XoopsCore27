@@ -267,23 +267,23 @@ class XoopsComments extends XoopsObject
         global $xoopsConfig, $xoopsUser;
         echo "<form method='get' action='" . htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES | ENT_HTML5, 'UTF-8') . "'><table width='100%' border='0' cellspacing='1' cellpadding='2'><tr><td class='bg1' align='center'><select name='mode'><option value='nocomments'";
         if ($mode === 'nocomments') {
-            echo " selected";
+            echo ' selected';
         }
         echo '>' . _NOCOMMENTS . "</option><option value='flat'";
         if ($mode === 'flat') {
-            echo " selected";
+            echo ' selected';
         }
         echo '>' . _FLAT . "</option><option value='thread'";
         if ($mode === 'thread' || $mode == '') {
-            echo " selected";
+            echo ' selected';
         }
         echo '>' . _THREADED . "</option></select><select name='order'><option value='0'";
         if ($order != 1) {
-            echo " selected";
+            echo ' selected';
         }
         echo '>' . _OLDESTFIRST . "</option><option value='1'";
         if ($order == 1) {
-            echo " selected";
+            echo ' selected';
         }
         echo '>' . _NEWESTFIRST . "</option></select><input type='hidden' name='item_id' value='" . (int) $item_id . "' /><input type='submit' value='" . _CM_REFRESH . "' />";
         if ($xoopsConfig['anonpost'] == 1 || $xoopsUser) {

@@ -129,7 +129,7 @@ class SystemMaintenanceTest extends KernelTestCase
         $method = new \ReflectionMethod($maintenance, 'isValidTable');
         $method->setAccessible(true);
 
-        $this->assertFalse($method->invoke($maintenance, "users; DROP TABLE users; --"));
+        $this->assertFalse($method->invoke($maintenance, 'users; DROP TABLE users; --'));
         $this->assertFalse($method->invoke($maintenance, "users' OR '1'='1"));
     }
 

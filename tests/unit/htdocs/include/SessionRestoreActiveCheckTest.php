@@ -177,8 +177,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
         // is written, so a token for a missing or inactive account, or one whose
         // fingerprint no longer matches, never becomes a session at all.
         $blockStart = strpos($this->sourceContent, '$rememberClaims = false;');
-        $blockEnd   = strpos($this->sourceContent, "/**
- * Log user in", (int) $blockStart);
+        $blockEnd   = strpos($this->sourceContent, "/**\n * Log user in", (int) $blockStart);
         self::assertNotFalse($blockStart);
         self::assertNotFalse($blockEnd);
         $block = substr($this->sourceContent, $blockStart, $blockEnd - $blockStart);
@@ -200,8 +199,7 @@ final class SessionRestoreActiveCheckTest extends TestCase
 
         // A signed token can still carry a malformed claim; it is type-checked
         // and compared in constant time, never coerced into a string.
-        $decision = substr($block, $decide, (int) strpos($block, ";
-", $decide) - $decide);
+        $decision = substr($block, $decide, (int) strpos($block, ';', $decide) - $decide);
         self::assertStringContainsString('$rememberCandidate->isActive()', $decision);
         self::assertStringContainsString('is_string($rememberClaims->pfp ?? null)', $decision);
         self::assertStringContainsString('hash_equals(XoopsUserUtility::rememberFingerprint($rememberCandidate, $rememberSigningKey), $rememberClaims->pfp)', $decision);

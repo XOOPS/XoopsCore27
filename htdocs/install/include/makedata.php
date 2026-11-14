@@ -68,7 +68,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
     foreach ($seed['categories'] as $key => $definition) {
         $categoryId = $dbm->insert(
             'menuscategory',
-            " (`category_title`, `category_prefix`, `category_suffix`, `category_url`, `category_target`, `category_position`, `category_protected`, `category_active`) VALUES ("
+            ' (`category_title`, `category_prefix`, `category_suffix`, `category_url`, `category_target`, `category_position`, `category_protected`, `category_active`) VALUES ('
             . "'" . addslashes($definition['title']) . "', "
             . "'" . addslashes($definition['prefix']) . "', "
             . "'" . addslashes($definition['suffix']) . "', "
@@ -105,7 +105,7 @@ function system_menu_install_seed_defaults($dbm, array $groups, int $moduleId): 
     foreach ($seed['items'] as $definition) {
         $itemId = $dbm->insert(
             'menusitems',
-            " (`items_pid`, `items_cid`, `items_title`, `items_prefix`, `items_suffix`, `items_url`, `items_target`, `items_position`, `items_protected`, `items_active`) VALUES ("
+            ' (`items_pid`, `items_cid`, `items_title`, `items_prefix`, `items_suffix`, `items_url`, `items_target`, `items_position`, `items_protected`, `items_active`) VALUES ('
             . (int) $definition['pid'] . ', '
             . $categoryIds['account'] . ', '
             . "'" . addslashes($definition['title']) . "', "
@@ -224,8 +224,8 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
         $dbm->insert('group_permission', $gpCols . ' VALUES(0,' . $groups['XOOPS_GROUP_ADMIN'] . ',' . $sysAdminItem . ",1,'system_admin')");
     }
     // data for table 'banner'
-    $dbm->insert('banner', " (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, " . $dbm->db->quote(XOOPS_URL . '/images/banners/xoops_banner_2.gif') . ", 'http://xoops.org/', 1008813250, 0, '')");
-    $dbm->insert('banner', " (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, " . $dbm->db->quote(XOOPS_URL . '/images/banners/xoopsifyIt.gif') . ", 'http://xoops.org/', 1008813250, 1, '')");
+    $dbm->insert('banner', ' (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, ' . $dbm->db->quote(XOOPS_URL . '/images/banners/xoops_banner_2.gif') . ", 'http://xoops.org/', 1008813250, 0, '')");
+    $dbm->insert('banner', ' (bid, cid, imptotal, impmade, clicks, imageurl, clickurl, date, htmlbanner, htmlcode) VALUES (0, 1, 0, 1, 0, ' . $dbm->db->quote(XOOPS_URL . '/images/banners/xoopsifyIt.gif') . ", 'http://xoops.org/', 1008813250, 1, '')");
     // default theme
     $time = time();
     $dbm->insert('tplset', " (tplset_id, tplset_name, tplset_desc, tplset_credits, tplset_created) VALUES (1, 'default', 'XOOPS Default Template Set', '', " . $time . ')');
@@ -244,7 +244,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
     // when new columns are added to the modules table (e.g. show_in_menu).
     $dbm->insert(
         'modules',
-        " (mid, name, version, last_update, weight, show_in_menu, isactive, dirname, hasmain, hasadmin, hassearch, hasconfig, hascomments, hasnotification)"
+        ' (mid, name, version, last_update, weight, show_in_menu, isactive, dirname, hasmain, hasadmin, hassearch, hasconfig, hascomments, hasnotification)'
         . " VALUES (1, '" . addslashes(_MI_SYSTEM_NAME) . "', '" . addslashes($modversion['version']) . "', " . $time . ", 0, 1, 1, 'system', 0, 1, 0, 0, 0, 0)"
     );
     if (!system_menu_install_seed_defaults($dbm, $groups, 1)) {
@@ -282,7 +282,7 @@ function make_data($dbm, $adminname, $hashedAdminPass, $adminmail, $language, $g
                 . ' block_type, c_type, isactive, dirname, func_file, show_func, edit_func, template, bcachetime, last_modified)'
                 . ' VALUES (0, 1, ' . $func_num . ", '" . addslashes($options) . "', '" . addslashes($newblock['name']) . "', '" . addslashes($newblock['name']) . "', '', 0, 0, " . $visible . ", 'S', 'H', 1, 'system', '" . addslashes($newblock['file']) . "', '" . addslashes($newblock['show_func']) . "', '" . addslashes($edit_func) . "', '" . addslashes($newblock['template']) . "', 0, " . $time . ')'
             );
-            $newtplid = $dbm->insert('tplfile', " (tpl_id, tpl_refid, tpl_module, tpl_tplset, tpl_file, tpl_desc, tpl_lastmodified, tpl_lastimported, tpl_type) VALUES (0, " . $newbid . ", 'system', 'default', '" . addslashes($newblock['template']) . "', '" . addslashes($newblock['description']) . "', " . $time . ', ' . $time . ", 'block')");
+            $newtplid = $dbm->insert('tplfile', ' (tpl_id, tpl_refid, tpl_module, tpl_tplset, tpl_file, tpl_desc, tpl_lastmodified, tpl_lastimported, tpl_type) VALUES (0, ' . $newbid . ", 'system', 'default', '" . addslashes($newblock['template']) . "', '" . addslashes($newblock['description']) . "', " . $time . ', ' . $time . ", 'block')");
             $tplsource = fread($fp, filesize(XOOPS_ROOT_PATH . '/modules/system/templates/blocks/' . $newblock['template']));
             fclose($fp);
             $dbm->insert('tplsource', ' (tpl_id, tpl_source) VALUES (' . $newtplid . ", '" . addslashes($tplsource) . "')");

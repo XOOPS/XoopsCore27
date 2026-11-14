@@ -21,8 +21,8 @@ require XOOPS_TRUST_PATH . '/modules/' . $mytrustdirname . '/admin/admin_header.
 
 xoops_cp_header();
 
-$queryFormat = "SELECT `type`, '%s' as age, COUNT(*) as count FROM `" . $xoopsDB->prefix($mydirname . "_log")
-    . "` WHERE `timestamp` > NOW() - INTERVAL %d SECOND GROUP BY `type`, 2 ";
+$queryFormat = "SELECT `type`, '%s' as age, COUNT(*) as count FROM `" . $xoopsDB->prefix($mydirname . '_log')
+               . '` WHERE `timestamp` > NOW() - INTERVAL %d SECOND GROUP BY `type`, 2 ';
 
 $sql = '';
 $sql .= sprintf($queryFormat, 'month', 30 * 24 * 60 * 60);

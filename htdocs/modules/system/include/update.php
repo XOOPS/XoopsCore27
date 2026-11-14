@@ -282,10 +282,10 @@ function system_menu_exec_or_throw(XoopsMySQLDatabase $db, string $sql): void
 function system_menu_drop_parent_foreign_keys(XoopsMySQLDatabase $db, string $tableName): void
 {
     $result = $db->query(
-        "SELECT CONSTRAINT_NAME, TABLE_NAME
+        'SELECT CONSTRAINT_NAME, TABLE_NAME
          FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-         WHERE REFERENCED_TABLE_NAME = " . $db->quote($db->prefix($tableName)) . "
-           AND TABLE_SCHEMA = DATABASE()"
+         WHERE REFERENCED_TABLE_NAME = ' . $db->quote($db->prefix($tableName)) . '
+           AND TABLE_SCHEMA = DATABASE()'
     );
     if (!$db->isResultSet($result) || !($result instanceof \mysqli_result)) {
         return;
@@ -345,17 +345,17 @@ function system_menu_create_tables(XoopsMySQLDatabase $db): void
 
     // Re-add FK if it was dropped on an existing table (CREATE TABLE IF NOT EXISTS is a no-op)
     $fkCheck = $db->query(
-        "SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS"
-        . " WHERE CONSTRAINT_NAME = " . $db->quote($fkName)
-        . " AND TABLE_NAME = " . $db->quote($prefix)
-        . " AND TABLE_SCHEMA = DATABASE()"
+        'SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS'
+        . ' WHERE CONSTRAINT_NAME = ' . $db->quote($fkName)
+        . ' AND TABLE_NAME = ' . $db->quote($prefix)
+        . ' AND TABLE_SCHEMA = DATABASE()'
     );
     if ($db->isResultSet($fkCheck) && ($fkCheck instanceof \mysqli_result) && 0 === $db->getRowsNum($fkCheck)) {
         system_menu_exec_or_throw(
             $db,
             "ALTER TABLE `{$prefix}` ADD CONSTRAINT `{$fkName}`"
             . " FOREIGN KEY (`items_cid`) REFERENCES `{$db->prefix('menuscategory')}` (`category_id`)"
-            . " ON DELETE CASCADE"
+            . ' ON DELETE CASCADE'
         );
     }
 }
@@ -380,11 +380,11 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
 
     // Drop self-referencing FK on items_pid (incompatible with 0-as-root convention)
     $result = $db->query(
-        "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE"
-        . " WHERE TABLE_SCHEMA = DATABASE()"
-        . " AND TABLE_NAME = " . $db->quote($itemTable)
+        'SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE'
+        . ' WHERE TABLE_SCHEMA = DATABASE()'
+        . ' AND TABLE_NAME = ' . $db->quote($itemTable)
         . " AND COLUMN_NAME = 'items_pid'"
-        . " AND REFERENCED_TABLE_NAME IS NOT NULL"
+        . ' AND REFERENCED_TABLE_NAME IS NOT NULL'
     );
     if ($db->isResultSet($result) && ($result instanceof \mysqli_result)) {
         while ($row = $db->fetchArray($result)) {
@@ -415,22 +415,22 @@ function system_menu_normalize_schema(XoopsMySQLDatabase $db): void
     system_menu_exec_or_throw(
         $db,
         "UPDATE `{$catTable}` SET `category_url` = " . $db->quote('index.php')
-        . " WHERE `category_protected` = 1 AND `category_url` = " . $db->quote('/')
+        . ' WHERE `category_protected` = 1 AND `category_url` = ' . $db->quote('/')
     );
 
     // Restore the category FK after type normalization if it is absent.
     $fkCheck = $db->query(
-        "SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS"
-        . " WHERE CONSTRAINT_NAME = " . $db->quote($fkName)
-        . " AND TABLE_NAME = " . $db->quote($itemTable)
-        . " AND TABLE_SCHEMA = DATABASE()"
+        'SELECT 1 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS'
+        . ' WHERE CONSTRAINT_NAME = ' . $db->quote($fkName)
+        . ' AND TABLE_NAME = ' . $db->quote($itemTable)
+        . ' AND TABLE_SCHEMA = DATABASE()'
     );
     if ($db->isResultSet($fkCheck) && ($fkCheck instanceof \mysqli_result) && 0 === $db->getRowsNum($fkCheck)) {
         system_menu_exec_or_throw(
             $db,
             "ALTER TABLE `{$itemTable}` ADD CONSTRAINT `{$fkName}`"
             . " FOREIGN KEY (`items_cid`) REFERENCES `{$catTable}` (`category_id`)"
-            . " ON DELETE CASCADE"
+            . ' ON DELETE CASCADE'
         );
     }
 }
@@ -451,16 +451,16 @@ function system_menu_ensure_category(XoopsMySQLDatabase $db, array $definition):
     $table = $db->prefix('menuscategory');
     $result = $db->query(
         "SELECT `category_id`, `category_active` FROM `{$table}`"
-        . " WHERE `category_title` = " . $db->quote($definition['title'])
-        . " AND `category_protected` = " . (int) $definition['protected']
-        . " ORDER BY `category_id` ASC"
+        . ' WHERE `category_title` = ' . $db->quote($definition['title'])
+        . ' AND `category_protected` = ' . (int)$definition['protected']
+        . ' ORDER BY `category_id` ASC'
     );
     if ($db->isResultSet($result) && ($result instanceof \mysqli_result) && ($row = $db->fetchArray($result))) {
         // Existing row: only sync seed-owned content fields (prefix, suffix, url).
         // Preserve admin-maintained layout fields (position, target, active).
         system_menu_exec_or_throw($db, sprintf(
-            "UPDATE `%s` SET `category_prefix` = %s, `category_suffix` = %s, `category_url` = %s"
-            . " WHERE `category_id` = %d",
+            'UPDATE `%s` SET `category_prefix` = %s, `category_suffix` = %s, `category_url` = %s'
+            . ' WHERE `category_id` = %d',
             $table,
             $db->quote($definition['prefix']),
             $db->quote($definition['suffix']),
@@ -471,9 +471,9 @@ function system_menu_ensure_category(XoopsMySQLDatabase $db, array $definition):
     }
 
     system_menu_exec_or_throw($db, sprintf(
-        "INSERT INTO `%s` (`category_title`,`category_prefix`,`category_suffix`,`category_url`,"
-        . "`category_target`,`category_position`,`category_protected`,`category_active`)"
-        . " VALUES (%s, %s, %s, %s, %d, %d, %d, %d)",
+        'INSERT INTO `%s` (`category_title`,`category_prefix`,`category_suffix`,`category_url`,'
+        . '`category_target`,`category_position`,`category_protected`,`category_active`)'
+        . ' VALUES (%s, %s, %s, %s, %d, %d, %d, %d)',
         $table,
         $db->quote($definition['title']),
         $db->quote($definition['prefix']),
@@ -503,9 +503,9 @@ function system_menu_ensure_item(XoopsMySQLDatabase $db, int $categoryId, array 
 {
     $table = $db->prefix('menusitems');
     $result = $db->query(sprintf(
-        "SELECT `items_id`, `items_active` FROM `%s`"
-        . " WHERE `items_cid` = %d AND `items_title` = %s AND `items_protected` = %d"
-        . " ORDER BY `items_id` ASC",
+        'SELECT `items_id`, `items_active` FROM `%s`'
+        . ' WHERE `items_cid` = %d AND `items_title` = %s AND `items_protected` = %d'
+        . ' ORDER BY `items_id` ASC',
         $table,
         $categoryId,
         $db->quote($definition['title']),
@@ -515,8 +515,8 @@ function system_menu_ensure_item(XoopsMySQLDatabase $db, int $categoryId, array 
         // Existing row: only sync seed-owned content fields (prefix, suffix, url).
         // Preserve admin-maintained layout fields (pid, position, target, active).
         system_menu_exec_or_throw($db, sprintf(
-            "UPDATE `%s` SET `items_prefix` = %s, `items_suffix` = %s, `items_url` = %s"
-            . " WHERE `items_id` = %d",
+            'UPDATE `%s` SET `items_prefix` = %s, `items_suffix` = %s, `items_url` = %s'
+            . ' WHERE `items_id` = %d',
             $table,
             $db->quote($definition['prefix']),
             $db->quote($definition['suffix']),
@@ -527,9 +527,9 @@ function system_menu_ensure_item(XoopsMySQLDatabase $db, int $categoryId, array 
     }
 
     system_menu_exec_or_throw($db, sprintf(
-        "INSERT INTO `%s` (`items_cid`,`items_pid`,`items_title`,`items_prefix`,`items_suffix`,"
-        . "`items_url`,`items_target`,`items_position`,`items_protected`,`items_active`)"
-        . " VALUES (%d, %d, %s, %s, %s, %s, %d, %d, %d, %d)",
+        'INSERT INTO `%s` (`items_cid`,`items_pid`,`items_title`,`items_prefix`,`items_suffix`,'
+        . '`items_url`,`items_target`,`items_position`,`items_protected`,`items_active`)'
+        . ' VALUES (%d, %d, %s, %s, %s, %s, %d, %d, %d, %d)',
         $table,
         $categoryId,
         (int) $definition['pid'],

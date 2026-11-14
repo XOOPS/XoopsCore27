@@ -71,7 +71,7 @@ class ModernThemeCompatibilityTest
      */
     private function testFileStructure()
     {
-        echo "→ Testing file structure... ";
+        echo '→ Testing file structure... ';
 
         $requiredFiles = [
             'modern.php',
@@ -114,7 +114,7 @@ class ModernThemeCompatibilityTest
      */
     private function testXOOPSFunctions()
     {
-        echo "→ Testing XOOPS function compatibility... ";
+        echo '→ Testing XOOPS function compatibility... ';
 
         if (!defined('XOOPS_ROOT_PATH')) {
             define('XOOPS_ROOT_PATH', realpath(__DIR__ . '/../../../../../..'));
@@ -169,7 +169,7 @@ class ModernThemeCompatibilityTest
      */
     private function testDatabaseQueries()
     {
-        echo "→ Testing database query syntax... ";
+        echo '→ Testing database query syntax... ';
 
         $classFile = __DIR__ . '/../modern.php';
         $content = file_get_contents($classFile);
@@ -191,7 +191,7 @@ class ModernThemeCompatibilityTest
 
         // Check for proper prepared statements (no direct variable interpolation)
         if (preg_match('/query\([\'"][^\'"]*\$[^\'"]*[\'"]\)/', $content)) {
-            $this->warnings[] = "Potential SQL injection risk - use prepared statements";
+            $this->warnings[] = 'Potential SQL injection risk - use prepared statements';
         }
 
         if (!$foundBad) {
@@ -206,7 +206,7 @@ class ModernThemeCompatibilityTest
      */
     private function testTemplateFiles()
     {
-        echo "→ Testing Smarty template syntax... ";
+        echo '→ Testing Smarty template syntax... ';
 
         $templateDir = __DIR__ . '/../xotpl/';
         $templates = glob($templateDir . '*.tpl');
@@ -221,12 +221,12 @@ class ModernThemeCompatibilityTest
             $closeTags = preg_match_all('/^[^{]*\}>/', $content);
 
             if ($openTags != $closeTags) {
-                $this->warnings[] = "Potential unclosed Smarty tag in: " . basename($template);
+                $this->warnings[] = 'Potential unclosed Smarty tag in: ' . basename($template);
             }
 
             // Check for common mistakes
             if (strpos($content, '{$') !== false && strpos($content, '<{$') === false) {
-                $this->warnings[] = "Possible incorrect Smarty syntax in: " . basename($template);
+                $this->warnings[] = 'Possible incorrect Smarty syntax in: ' . basename($template);
                 $syntaxOk = false;
             }
         }
@@ -243,7 +243,7 @@ class ModernThemeCompatibilityTest
      */
     private function testJavaScriptFiles()
     {
-        echo "→ Testing JavaScript files... ";
+        echo '→ Testing JavaScript files... ';
 
         $jsFiles = [
             __DIR__ . '/../js/theme.js',
@@ -260,7 +260,7 @@ class ModernThemeCompatibilityTest
 
                 // Check for jQuery dependency
                 if (strpos($content, 'jQuery') === false && strpos($content, '$') !== false) {
-                    $this->warnings[] = "File may have jQuery dependency: " . basename($file);
+                    $this->warnings[] = 'File may have jQuery dependency: ' . basename($file);
                 }
 
                 // Basic syntax check (balanced braces)
@@ -268,7 +268,7 @@ class ModernThemeCompatibilityTest
                 $close = substr_count($content, '}');
 
                 if ($open != $close) {
-                    $this->errors[] = "Unbalanced braces in: " . basename($file);
+                    $this->errors[] = 'Unbalanced braces in: ' . basename($file);
                     $jsOk = false;
                 }
             }
@@ -286,7 +286,7 @@ class ModernThemeCompatibilityTest
      */
     private function testCSSFiles()
     {
-        echo "→ Testing CSS files... ";
+        echo '→ Testing CSS files... ';
 
         $cssFiles = [
             __DIR__ . '/../css/modern.css',
@@ -304,13 +304,13 @@ class ModernThemeCompatibilityTest
                 $close = substr_count($content, '}');
 
                 if ($open != $close) {
-                    $this->errors[] = "Unbalanced braces in: " . basename($file);
+                    $this->errors[] = 'Unbalanced braces in: ' . basename($file);
                     $cssOk = false;
                 }
 
                 // Check for CSS variables
                 if (strpos($content, '--') !== false && strpos($content, ':root') === false) {
-                    $this->warnings[] = "CSS variables used but :root may be missing in: " . basename($file);
+                    $this->warnings[] = 'CSS variables used but :root may be missing in: ' . basename($file);
                 }
             }
         }
@@ -327,7 +327,7 @@ class ModernThemeCompatibilityTest
      */
     private function testPermissions()
     {
-        echo "→ Testing file permissions... ";
+        echo '→ Testing file permissions... ';
 
         $themeDir = __DIR__ . '/../';
         $permOk = true;
@@ -339,7 +339,7 @@ class ModernThemeCompatibilityTest
 
         foreach ($files as $file) {
             if (!is_readable($file)) {
-                $this->errors[] = "File not readable: " . basename($file);
+                $this->errors[] = 'File not readable: ' . basename($file);
                 $permOk = false;
             }
         }
@@ -356,14 +356,14 @@ class ModernThemeCompatibilityTest
      */
     private function testDependencies()
     {
-        echo "→ Testing external dependencies... ";
+        echo '→ Testing external dependencies... ';
 
         // Chart.js should be loaded via CDN (check in template)
         $themeFile = __DIR__ . '/../modern.php';
         $content = file_get_contents($themeFile);
 
         if (strpos($content, 'chart.js') === false && strpos($content, 'Chart.js') === false) {
-            $this->warnings[] = "Chart.js CDN reference may be missing";
+            $this->warnings[] = 'Chart.js CDN reference may be missing';
         }
 
         $this->pass();
@@ -398,9 +398,9 @@ class ModernThemeCompatibilityTest
         echo "╚══════════════════════════════════════════════════════════╝\n";
         echo "\n";
 
-        echo "Passed: " . $this->passed . "\n";
-        echo "Failed: " . $this->failed . "\n";
-        echo "Warnings: " . count($this->warnings) . "\n";
+        echo 'Passed: ' . $this->passed . "\n";
+        echo 'Failed: ' . $this->failed . "\n";
+        echo 'Warnings: ' . count($this->warnings) . "\n";
         echo "\n";
 
         if (!empty($this->errors)) {

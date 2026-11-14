@@ -813,7 +813,7 @@ class CriteriaTest extends TestCase
 
     public function testRenderInWithUnsafeSqlInjection(): void
     {
-        $c = new Criteria('uid', "1; DROP TABLE users--", 'IN');
+        $c = new Criteria('uid', '1; DROP TABLE users--', 'IN');
 
         // Not safe, so it should be wrapped in quote()
         $result = $c->render($this->db);

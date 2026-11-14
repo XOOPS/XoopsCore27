@@ -141,7 +141,7 @@ class XoopsBlockPhpBlockTest extends KernelTestCase
             . "defined('XOOPS_ROOT_PATH') || exit('Restricted access');\n"
             . "if (!function_exists('{$functionName}')) {\n"
             . "    function {$functionName}() {\n"
-            . "        return " . var_export($returnValue, true) . ";\n"
+                . '        return ' . var_export($returnValue, true) . ";\n"
             . "    }\n"
             . "}\n";
         $written = file_put_contents($filePath, $code);

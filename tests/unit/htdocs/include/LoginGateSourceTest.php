@@ -83,9 +83,11 @@ final class LoginGateSourceTest extends TestCase
         self::assertLessThan($pending, $headers);
         $helper = file_get_contents(dirname(__DIR__, 4) . '/htdocs/include/twofactor.php');
         $body   = substr($helper, strpos($helper, 'function xoops_2fa_sensitive_headers('));
-        $body   = substr($body, 0, strpos($body, "
+        $body   = substr($body, 0, strpos($body,
+            '
 }
-"));
+'
+        ));
         foreach (["header('Cache-Control: no-store');", "header('Referrer-Policy: no-referrer');", "header('X-Frame-Options: DENY');", 'header_register_callback($send);'] as $line) {
             self::assertStringContainsString($line, $body);
         }

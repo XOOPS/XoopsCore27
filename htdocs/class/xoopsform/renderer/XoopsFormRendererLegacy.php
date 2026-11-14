@@ -137,7 +137,7 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
     public function renderFormColorPicker(XoopsFormColorPicker $element)
     {
         if (isset($GLOBALS['xoTheme'])) {
-            $GLOBALS['xoTheme']->addScript("browse.php?Frameworks/jquery/jquery.js");
+            $GLOBALS['xoTheme']->addScript('browse.php?Frameworks/jquery/jquery.js');
             $GLOBALS['xoTheme']->addScript('include/spectrum.js');
             $GLOBALS['xoTheme']->addStylesheet('include/spectrum.css');
         } else {
@@ -174,7 +174,7 @@ class XoopsFormRendererLegacy implements XoopsFormRendererInterface
             } else {
                 $GLOBALS['xoTheme']->addScript('/class/textsanitizer/image/image.js', ['type' => 'text/javascript']);
             }
-            $button = "<button type='button' class='btn btn-primary' onclick=\"" . $this->jsHandler('form_instantPreview', [XOOPS_URL, $element->getName(false), XOOPS_URL . '/images', (int) $element->doHtml, (string) $GLOBALS['xoopsSecurity']->createToken()]) . "\" title='" . _PREVIEW . "'>" . _PREVIEW . "</button>";
+            $button = "<button type='button' class='btn btn-primary' onclick=\"" . $this->jsHandler('form_instantPreview', [XOOPS_URL, $element->getName(false), XOOPS_URL . '/images', (int) $element->doHtml, (string) $GLOBALS['xoopsSecurity']->createToken()]) . "\" title='" . _PREVIEW . "'>" . _PREVIEW . '</button>';
 
             $ret .= '<br>' . "<div id='" . $element->getName() . "_hidden' style='display: block;'> " . '   <fieldset>' . '       <legend>' . $button . '</legend>' . "       <div id='" . $element->getName() . "_hidden_data'>" . _XOOPS_FORM_PREVIEW_CONTENT . '</div>' . '   </fieldset>' . '</div>';
         }

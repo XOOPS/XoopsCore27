@@ -192,10 +192,10 @@ switch ($op) {
             $hashedPasswd = password_hash($newPasswd, PASSWORD_DEFAULT);
             // Check column width before storing hash to avoid truncation
             $table  = $xoopsDB->prefix('bannerclient');
-            $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
-                    . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                    . " AND `TABLE_NAME` = " . $xoopsDB->quote($table)
-                    . " AND `COLUMN_NAME` = 'passwd' LIMIT 1";
+            $sql    = 'SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`'
+                      . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                      . ' AND `TABLE_NAME` = ' . $xoopsDB->quote($table)
+                      . " AND `COLUMN_NAME` = 'passwd' LIMIT 1";
             $colResult = $xoopsDB->query($sql);
             $colLen = 0;
             if ($xoopsDB->isResultSet($colResult) && $colResult instanceof \mysqli_result) {

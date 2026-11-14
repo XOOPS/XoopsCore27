@@ -342,7 +342,7 @@ class XoopsLoggerAdditionalTest extends TestCase
         $message = "Table '" . XOOPS_DB_PREFIX . "_users' doesn't exist";
         $result = $ref->invoke($this->logger, $message);
         self::assertStringNotContainsString(XOOPS_DB_PREFIX . '_', $result);
-        self::assertStringContainsString("users", $result);
+        self::assertStringContainsString('users', $result);
     }
 
     #[Test]

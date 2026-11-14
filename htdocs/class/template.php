@@ -312,7 +312,7 @@ class XoopsTpl extends Smarty
      */
     public function assign_by_ref($tpl_var, &$value)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use assignByRef");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use assignByRef');
         $this->assignByRef($tpl_var, $value);
     }
 
@@ -326,7 +326,7 @@ class XoopsTpl extends Smarty
      */
     public function append_by_ref($tpl_var, &$value, $merge = false)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use appendByRef");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use appendByRef');
         $this->appendByRef($tpl_var, $value, $merge);
     }
 
@@ -338,7 +338,7 @@ class XoopsTpl extends Smarty
      */
     public function clear_assign($tpl_var)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use clearAssign");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use clearAssign');
         $this->clearAssign($tpl_var);
     }
 
@@ -355,7 +355,7 @@ class XoopsTpl extends Smarty
      */
     public function register_function($function, $function_impl, $cacheable = true, $cache_attrs = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerPlugin');
         $this->registerPlugin('function', $function, $function_impl, $cacheable, $cache_attrs);
     }
 
@@ -367,7 +367,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_function($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterPlugin');
         $this->unregisterPlugin('function', $function);
     }
 
@@ -393,7 +393,7 @@ class XoopsTpl extends Smarty
     ) {
         $allowed     = (array)$allowed;
         $smarty_args = (bool)$smarty_args;
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerObject");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerObject');
         $this->registerObject($object, $object_impl, $allowed, $smarty_args, $block_methods);
     }
 
@@ -405,7 +405,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_object($object)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterObject");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterObject');
         $this->unregisterObject($object);
     }
 
@@ -422,7 +422,7 @@ class XoopsTpl extends Smarty
      */
     public function register_block($block, $block_impl, $cacheable = true, $cache_attrs = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerPlugin');
         $this->registerPlugin('block', $block, $block_impl, $cacheable, $cache_attrs);
     }
 
@@ -434,7 +434,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_block($block)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterPlugin');
         $this->unregisterPlugin('block', $block);
     }
 
@@ -450,7 +450,7 @@ class XoopsTpl extends Smarty
      */
     public function register_compiler_function($function, $function_impl, $cacheable = true)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerPlugin');
         $this->registerPlugin('compiler', $function, $function_impl, $cacheable);
     }
 
@@ -462,7 +462,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_compiler_function($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterPlugin');
         $this->unregisterPlugin('compiler', $function);
     }
 
@@ -477,7 +477,7 @@ class XoopsTpl extends Smarty
      */
     public function register_modifier($modifier, $modifier_impl)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerPlugin');
         $this->registerPlugin('modifier', $modifier, $modifier_impl);
     }
 
@@ -489,7 +489,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_modifier($modifier)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterPlugin");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterPlugin');
         $this->unregisterPlugin('modifier', $modifier);
     }
 
@@ -502,7 +502,7 @@ class XoopsTpl extends Smarty
      */
     public function register_resource($type, $functions)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerResource");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerResource');
         $this->registerResource($type, $functions);
     }
 
@@ -514,7 +514,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_resource($type)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterResource");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterResource');
         $this->unregisterResource($type);
     }
 
@@ -528,7 +528,7 @@ class XoopsTpl extends Smarty
      */
     public function register_prefilter($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerFilter');
         $this->registerFilter('pre', $function);
     }
 
@@ -540,7 +540,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_prefilter($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterFilter');
         $this->unregisterFilter('pre', $function);
     }
 
@@ -554,7 +554,7 @@ class XoopsTpl extends Smarty
      */
     public function register_postfilter($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerFilter');
         $this->registerFilter('post', $function);
     }
 
@@ -566,7 +566,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_postfilter($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterFilter');
         $this->unregisterFilter('post', $function);
     }
 
@@ -580,7 +580,7 @@ class XoopsTpl extends Smarty
      */
     public function register_outputfilter($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use registerFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use registerFilter');
         $this->registerFilter('output', $function);
     }
 
@@ -592,7 +592,7 @@ class XoopsTpl extends Smarty
      */
     public function unregister_outputfilter($function)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use unregisterFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use unregisterFilter');
         $this->unregisterFilter('output', $function);
     }
 
@@ -607,7 +607,7 @@ class XoopsTpl extends Smarty
      */
     public function load_filter($type, $name)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use loadFilter");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use loadFilter');
         $this->loadFilter($type, $name);
     }
 
@@ -624,7 +624,7 @@ class XoopsTpl extends Smarty
      */
     public function clear_cache($tpl_file = null, $cache_id = null, $compile_id = null, $exp_time = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use clearCache");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use clearCache');
         return $this->clearCache($tpl_file, $cache_id, $compile_id, $exp_time);
     }
 
@@ -638,7 +638,7 @@ class XoopsTpl extends Smarty
      */
     public function clear_all_cache($exp_time = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use clearCache");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use clearCache');
         return $this->clearCache(null, null, null, $exp_time);
     }
 
@@ -656,7 +656,7 @@ class XoopsTpl extends Smarty
      */
     public function is_cached($tpl_file, $cache_id = null, $compile_id = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use isCached");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use isCached');
         return $this->isCached($tpl_file, $cache_id, $compile_id);
     }
 
@@ -666,7 +666,7 @@ class XoopsTpl extends Smarty
      */
     public function clear_all_assign()
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use clearAllAssign");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use clearAllAssign');
         $this->clearAllAssign();
     }
 
@@ -682,7 +682,7 @@ class XoopsTpl extends Smarty
      */
     public function clear_compiled_tpl($tpl_file = null, $compile_id = null, $exp_time = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use clearCompiledTemplate");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use clearCompiledTemplate');
         return $this->clearCompiledTemplate($tpl_file, $compile_id, $exp_time);
     }
 
@@ -697,7 +697,7 @@ class XoopsTpl extends Smarty
      */
     public function template_exists($tpl_file)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use templateExists");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use templateExists');
         return $this->templateExists($tpl_file);
     }
 
@@ -711,7 +711,7 @@ class XoopsTpl extends Smarty
      */
     public function get_template_vars($name = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use getTemplateVars");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use getTemplateVars');
         return $this->getTemplateVars($name);
     }
 
@@ -725,7 +725,7 @@ class XoopsTpl extends Smarty
      */
     public function get_config_vars($name = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use getConfigVars");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use getConfigVars');
         return $this->getConfigVars($name);
     }
 
@@ -739,7 +739,7 @@ class XoopsTpl extends Smarty
      */
     public function config_load($file, $section = null, $scope = 'global')
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use ConfigLoad");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use ConfigLoad');
         $this->ConfigLoad($file, $section, $scope);
     }
 
@@ -753,7 +753,7 @@ class XoopsTpl extends Smarty
      */
     public function get_registered_object($name)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use getRegisteredObject");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use getRegisteredObject');
         return $this->getRegisteredObject($name);
     }
 
@@ -765,7 +765,7 @@ class XoopsTpl extends Smarty
      */
     public function clear_config($var = null)
     {
-        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . " is deprecated, please use clearConfig");
+        $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated, please use clearConfig');
         $this->clearConfig($var);
     }
 }

@@ -71,7 +71,7 @@ class PedigreeModernThemeWidget implements ModernThemeWidgetInterface
         // Total published animals (not soft-deleted)
         $result = $xoopsDB->query(
             "SELECT COUNT(*) FROM `$table`"
-            . " WHERE `is_published` = 1 AND (`is_deleted` = 0 OR `is_deleted` IS NULL)"
+            . ' WHERE `is_published` = 1 AND (`is_deleted` = 0 OR `is_deleted` IS NULL)'
         );
         if ($result) {
             list($published) = $xoopsDB->fetchRow($result);
@@ -80,7 +80,7 @@ class PedigreeModernThemeWidget implements ModernThemeWidgetInterface
         // Total animals (including unpublished, excluding deleted)
         $result = $xoopsDB->query(
             "SELECT COUNT(*) FROM `$table`"
-            . " WHERE `is_deleted` = 0 OR `is_deleted` IS NULL"
+            . ' WHERE `is_deleted` = 0 OR `is_deleted` IS NULL'
         );
         if ($result) {
             list($total) = $xoopsDB->fetchRow($result);
@@ -88,7 +88,7 @@ class PedigreeModernThemeWidget implements ModernThemeWidgetInterface
 
         // Distinct owners
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('pedigree_owners')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('pedigree_owners')
         );
         if ($result) {
             list($owners) = $xoopsDB->fetchRow($result);
@@ -97,10 +97,10 @@ class PedigreeModernThemeWidget implements ModernThemeWidgetInterface
         // Recent animals
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `id`, `name`, `breed`, `species`, `is_published`, `created_at`"
+            'SELECT `id`, `name`, `breed`, `species`, `is_published`, `created_at`'
             . " FROM `$table`"
-            . " WHERE `is_deleted` = 0 OR `is_deleted` IS NULL"
-            . " ORDER BY `created_at` DESC LIMIT 5"
+            . ' WHERE `is_deleted` = 0 OR `is_deleted` IS NULL'
+            . ' ORDER BY `created_at` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

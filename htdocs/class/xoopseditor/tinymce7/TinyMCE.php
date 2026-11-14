@@ -251,7 +251,7 @@ HTML;
 
 		} catch (\JsonException $e) {
 			error_log('Failed to render TinyMCE config: ' . $e->getMessage());
-			return "<!-- TinyMCE failed to render due to a configuration error: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . " -->";
+			return '<!-- TinyMCE failed to render due to a configuration error: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . ' -->';
 		}
 	}
 }

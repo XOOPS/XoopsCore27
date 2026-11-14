@@ -95,9 +95,9 @@ if (file_exists($mainfile)) {
 
 if (!defined('XOOPS_ROOT_PATH')) {
     define('XOOPS_ROOT_PATH', str_replace("\\", '/', realpath('../')));
-    define("XOOPS_PATH", $_SESSION['settings']['PATH'] ?? "");
-    define("XOOPS_VAR_PATH", $_SESSION['settings']['VAR_PATH'] ?? "");
-    define("XOOPS_URL", $_SESSION['settings']['URL'] ?? "");
+    define('XOOPS_PATH', $_SESSION['settings']['PATH'] ?? '');
+    define('XOOPS_VAR_PATH', $_SESSION['settings']['VAR_PATH'] ?? '');
+    define('XOOPS_URL', $_SESSION['settings']['URL'] ?? '');
 }
 
 date_default_timezone_set(@date_default_timezone_get());

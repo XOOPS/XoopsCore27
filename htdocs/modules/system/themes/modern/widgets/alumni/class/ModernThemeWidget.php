@@ -85,7 +85,7 @@ class AlumniModernThemeWidget implements ModernThemeWidgetInterface
         // Total connections
         $connections = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('alumni_connections')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('alumni_connections')
         );
         if ($result) {
             list($connections) = $xoopsDB->fetchRow($result);
@@ -94,8 +94,8 @@ class AlumniModernThemeWidget implements ModernThemeWidgetInterface
         // Recent alumni profiles
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `profile_id`, `first_name`, `last_name`, `status`,"
-            . " `graduation_year`, `created`"
+            'SELECT `profile_id`, `first_name`, `last_name`, `status`,'
+            . ' `graduation_year`, `created`'
             . " FROM `$table` ORDER BY `created` DESC LIMIT 5"
         );
         if ($result) {

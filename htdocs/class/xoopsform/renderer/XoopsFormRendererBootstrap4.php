@@ -265,7 +265,7 @@ class XoopsFormRendererBootstrap4 implements XoopsFormRendererInterface, XoopsFo
                 XOOPS_URL . '/images',
                 (int) $element->doHtml,
                 (string) $GLOBALS['xoopsSecurity']->createToken(),
-            ]) . "\" title='" . _PREVIEW . "'>" . _PREVIEW . "</button>";
+            ]) . "\" title='" . _PREVIEW . "'>" . _PREVIEW . '</button>';
 
             $ret .= '<br>' . "<div id='" . $element->getName() . "_hidden' style='display: block;'> "
                 . '   <fieldset>' . '       <legend>' . $button . '</legend>'

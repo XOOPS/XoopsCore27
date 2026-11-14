@@ -294,7 +294,7 @@ class XoopsLogger
             }
 
             $backTrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $miniTrace = "<br> trace: ";
+            $miniTrace = '<br> trace: ';
             foreach ($backTrace as $i => $trace) {
                 // Check if 'file' and 'line' exist in the current trace step
                 $file = $trace['file'] ?? '(unknown file)';

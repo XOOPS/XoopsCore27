@@ -28,7 +28,7 @@ if (isset($fct) && $fct === 'users') {
 $error = false;
 if ($admintest != 0) {
     if (isset($fct) && $fct !== '') {
-        $fct = preg_replace("/[^a-z0-9_\-]/i", '', (string) $fct);
+        $fct = preg_replace('/[^a-z0-9_\-]/i', '', (string) $fct);
         if (file_exists(XOOPS_ROOT_PATH . '/modules/' . $xoopsModule->getVar('dirname', 'n') . '/admin/' . $fct . '/xoops_version.php')) {
             // Load language file
             system_loadLanguage($fct, $xoopsModule->getVar('dirname', 'n'));

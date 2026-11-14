@@ -183,7 +183,7 @@ abstract class XoopsDatabase
     public function quoteString(string $str)
     {
            if (is_object($GLOBALS['xoopsLogger'])) {
-             $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ ." is deprecated since XOOPS 2.7.0, use quote() instead.");
+             $GLOBALS['xoopsLogger']->addDeprecated(__METHOD__ . ' is deprecated since XOOPS 2.7.0, use quote() instead.');
          }
         return $this->quote($str);
     }

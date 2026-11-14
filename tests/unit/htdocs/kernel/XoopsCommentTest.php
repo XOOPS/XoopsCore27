@@ -983,16 +983,16 @@ class XoopsCommentTest extends KernelTestCase
     {
         $sql = $this->threadQuery([5, 7, null, 3, 9]);
 
-        $this->assertMatchesRegularExpression("/com_rootid\W+=\W+5\b/", $sql);
-        $this->assertMatchesRegularExpression("/com_modid\W+=\W+3\b/", $sql);
-        $this->assertMatchesRegularExpression("/com_itemid\W+=\W+9\b/", $sql);
+        $this->assertMatchesRegularExpression('/com_rootid\W+=\W+5\b/', $sql);
+        $this->assertMatchesRegularExpression('/com_modid\W+=\W+3\b/', $sql);
+        $this->assertMatchesRegularExpression('/com_itemid\W+=\W+9\b/', $sql);
     }
 
     public function testGetThreadWithoutContextKeepsItsFormerQuery(): void
     {
         $sql = $this->threadQuery([5, 7]);
 
-        $this->assertMatchesRegularExpression("/com_rootid\W+=\W+5\b/", $sql);
+        $this->assertMatchesRegularExpression('/com_rootid\W+=\W+5\b/', $sql);
         $this->assertStringNotContainsString('com_modid', $sql);
         $this->assertStringNotContainsString('com_itemid', $sql);
     }

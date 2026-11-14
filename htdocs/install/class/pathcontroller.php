@@ -203,7 +203,7 @@ class PathController
         } catch (Exception $e) {
             // Log or handle error
             error_log('Failed to register autoloader: ' . $e->getMessage());
-            throw new RuntimeException("Could not configure autoloader for the new library path.");
+            throw new RuntimeException('Could not configure autoloader for the new library path.');
         }
     }
 

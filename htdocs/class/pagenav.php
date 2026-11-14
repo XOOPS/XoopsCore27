@@ -246,7 +246,7 @@ class XoopsPageNav
         $pageNavTpl->assign('pageNavType', $type);
         $pageNavTpl->assign('pageNavigation', $navigation);
 
-        return $pageNavTpl->fetch("db:system_pagenav.tpl");
+        return $pageNavTpl->fetch('db:system_pagenav.tpl');
 
     }
 }

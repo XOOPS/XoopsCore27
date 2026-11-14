@@ -474,7 +474,7 @@ class XoopsMediaUploader
     public function _copyFile($chmod)
     {
         $matched = [];
-        if (!preg_match("/\.([a-zA-Z0-9]+)$/", $this->mediaName, $matched)) {
+        if (!preg_match('/\.([a-zA-Z0-9]+)$/', $this->mediaName, $matched)) {
             $this->setErrors(_ER_UP_INVALIDFILENAME);
             return false;
         }
@@ -489,7 +489,7 @@ class XoopsMediaUploader
 
         $this->savedFileName = iconv('UTF-8', 'ASCII//TRANSLIT', $this->savedFileName);
         $this->savedFileName = preg_replace('!\s+!', '_', $this->savedFileName);
-        $this->savedFileName = preg_replace("/[^a-zA-Z0-9\._-]/", '', $this->savedFileName);
+        $this->savedFileName = preg_replace('/[^a-zA-Z0-9\._-]/', '', $this->savedFileName);
         // Once more on the final name: stripping characters can join a new
         // inner extension (shell.p#hp.jpg is now shell.php.jpg).
         $this->savedFileName = $this->sanitizeExtensionsIn((string) $this->savedFileName);

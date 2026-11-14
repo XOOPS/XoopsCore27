@@ -10,6 +10,7 @@ return array(
     'chillerlan\\QRCode\\' => array($vendorDir . '/chillerlan/php-qrcode/src'),
     'Xoops\\SmartyExtensions\\' => array($vendorDir . '/xoops/smartyextensions/src'),
     'Xoops\\RegDom\\' => array($vendorDir . '/xoops/regdom/src'),
+    'Xoops\\ModuleTools\\' => array($vendorDir . '/xoops/moduletools/src'),
     'Xoops\\Helpers\\' => array($vendorDir . '/xoops/helpers/src'),
     'Xmf\\' => array($vendorDir . '/xoops/xmf/src'),
     'Webmozart\\Assert\\' => array($vendorDir . '/webmozart/assert/src'),

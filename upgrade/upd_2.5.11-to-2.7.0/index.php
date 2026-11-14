@@ -540,6 +540,9 @@ class Upgrade_270 extends XoopsUpgrade
         // that still holds files (a site's own additions) is reported, not forced.
         if ($success) {
             foreach ([$vendorPath, $basePath] as $emptyDir) {
+                if ($emptyDir === $basePath) {
+                    $this->removeLoneHtaccess($basePath);
+                }
                 if (!$this->removeLeftover($emptyDir)) {
                     $this->logs[] = sprintf('Could not remove directory (it may still contain files): %s', $this->relativePath($emptyDir));
                 }
@@ -547,6 +550,29 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         return $success;
+    }
+
+    /**
+     * Delete the shipped deny-all class/libraries/.htaccess once nothing else
+     * is left beside it, so the empty directory can be removed.
+     *
+     * While a site's own files remain, the file stays and keeps protecting them.
+     * It is not in $librariesTopLevel on purpose: check_cleanuplibraries() would
+     * then keep reporting the task as pending on every such site.
+     *
+     * @param string $basePath class/libraries/ path with trailing slash
+     *
+     * @return void
+     */
+    private function removeLoneHtaccess(string $basePath): void
+    {
+        if (!is_dir($basePath)) {
+            return;
+        }
+        $entries = scandir($basePath);
+        if (is_array($entries) && array_values(array_diff($entries, ['.', '..'])) === ['.htaccess']) {
+            $this->removeLeftover($basePath . '.htaccess');
+        }
     }
 
     // =========================================================================

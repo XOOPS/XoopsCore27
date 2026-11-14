@@ -306,8 +306,8 @@ switch ($op) {
             $form->addElement(new XoopsFormHidden('redirect', XOOPS_URL . '/modules/' . $module->getVar('dirname') . '/' . $module->getInfo('adminindex')));
         }
         for ($i = 0; $i < $count; ++$i) {
-            $title       = defined($config[$i]->getVar('conf_title')) ? constant($config[$i]->getVar('conf_title')) : $config[$i]->getVar('conf_title');
-            $description = defined($config[$i]->getVar('conf_desc')) ? constant($config[$i]->getVar('conf_desc')) : $config[$i]->getVar('conf_desc');
+            $title       = defined($config[$i]->getVar('conf_title')) ? constant($config[$i]->getVar('conf_title')) : htmlspecialchars($config[$i]->getVar('conf_title'), ENT_QUOTES, 'UTF-8');
+            $description = defined($config[$i]->getVar('conf_desc')) ? constant($config[$i]->getVar('conf_desc')) : htmlspecialchars($config[$i]->getVar('conf_desc'), ENT_QUOTES, 'UTF-8');
             switch ($config[$i]->getVar('conf_formtype')) {
 
                 case 'textarea':

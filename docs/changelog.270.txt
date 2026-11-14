@@ -4,6 +4,8 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 2.7.5 NOT RELEASED
 ===================================
 Bug fixes:
+- the fatal-error page shows the error message and backtrace only to a webmaster while debugging is enabled; everyone else sees "Internal server error". The page is now sent with HTTP 500 instead of 200, and registered loggers such as the debug file log still record the full detail. This is stricter than before, when the detail went to every visitor whatever the debug settings (class/logger/xoopslogger.php, include/defines.php)
+- the debug panel decides for itself who receives it, using the debugLevel setting (0 everyone, 1 members, 2 administrators, which is also the rule for unknown values). A page that ended before the end of the bootstrap, such as a preload redirect, could otherwise send it to any visitor (class/logger/xoopslogger.php, include/common.php)
 - the 2.5.11 to 2.7.0 upgrade removes the obsolete class/libraries/ folder completely: its deny-all .htaccess is deleted once it is the last file there (it stays beside files a site added), and the unused Composer and php-jwt stub files 2.7.x still shipped under class/libraries/vendor are gone from the release (upgrade/upd_2.5.11-to-2.7.0/index.php, class/libraries) (#313)
 
 ===================================

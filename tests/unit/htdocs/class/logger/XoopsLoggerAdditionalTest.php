@@ -453,9 +453,19 @@ class XoopsLoggerAdditionalTest extends TestCase
     // render — active path with placeholder substitution
     // ---------------------------------------------------------------
 
+    /**
+     * render() now checks who receives the panel (XoopsLoggerAudienceTest). These tests
+     * are about the dump itself, so they settle the audience as allowed.
+     */
+    private function allowDebugAudience(): void
+    {
+        (new \ReflectionProperty(XoopsLogger::class, 'audience'))->setValue($this->logger, true);
+    }
+
     #[Test]
     public function renderReplacesPlaceholderWithLogOutput(): void
     {
+        $this->allowDebugAudience();
         $this->logger->activated = true;
         $this->logger->addExtra('TestKey', 'TestValue');
 
@@ -471,6 +481,7 @@ class XoopsLoggerAdditionalTest extends TestCase
     #[Test]
     public function renderAppendsWhenNoPlaceholder(): void
     {
+        $this->allowDebugAudience();
         $this->logger->activated = true;
 
         $output = '<html><body>No placeholder here</body></html>';
@@ -483,6 +494,7 @@ class XoopsLoggerAdditionalTest extends TestCase
     #[Test]
     public function renderDisablesActivatedAndRenderingEnabled(): void
     {
+        $this->allowDebugAudience();
         $this->logger->activated = true;
         $this->logger->renderingEnabled = true;
 

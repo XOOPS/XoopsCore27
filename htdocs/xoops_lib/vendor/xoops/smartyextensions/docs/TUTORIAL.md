@@ -113,7 +113,7 @@ Most functions support an `assign` parameter that stores the result in a templat
 
 ```smarty
 <{generate_url route="/search" params=$queryParams assign="searchUrl"}>
-<a href="<{$searchUrl}>">Search</a>
+<a href="<{$searchUrl|escape}>">Search</a>
 ```
 
 **Important**: Functions that return boolean or structured data (like `validate_form`, `is_user_logged_in`, `has_user_permission`, `xo_get_current_user`) should always be used with `assign`. Their direct output is either empty or a stringified `'1'`/`''`, which is rarely useful in templates.
@@ -123,9 +123,13 @@ Most functions support an `assign` parameter that stores the result in a templat
 <{is_user_logged_in}>
 
 <{* Right — assign and use as a condition *}>
+<{nocache}>
 <{is_user_logged_in assign="loggedIn"}>
 <{if $loggedIn}>Welcome back!<{/if}>
+<{/nocache}>
 ```
+
+With output caching on, wrap a user-dependent `assign` and every tag that reads the variable in `<{nocache}>`. The function itself runs on every request, but a later `<{if $loggedIn}>` is compiled as cacheable: its branch is decided once, when the cache is written, from a variable that may still be unset at that point, and that branch is then served to every visitor.
 
 ---
 
@@ -170,7 +174,7 @@ Output: `<p>First paragraph.</p><p>Second paragraph.<br>With a line break.</p>`
 
 ### Highlighting search terms
 
-> **HTML output warning**: `highlight_text` wraps matches in `<span>` tags and returns raw HTML. Ensure the source text is already escaped or trusted. Do not apply `|escape` after this modifier.
+> **HTML output warning**: `highlight_text` wraps matches in `<span>` tags and returns raw HTML. Ensure the source text is already escaped or trusted. Do not apply `|escape` after this modifier. A custom class may contain only letters, digits, `_`, `-` and spaces (up to 64 characters); anything else falls back to `highlight`.
 
 ```smarty
 <{* Wrap matches in <span class="highlight"> *}>
@@ -258,8 +262,10 @@ Uses the ICU NumberFormatter when the `intl` extension is available:
 <{$product.price|format_currency:"EUR":"de_DE"}>
 
 <{* Fallback symbol when intl is not loaded *}>
-<{$product.price|format_currency:"GBP":"en_GB":"&pound;"}>
+<{$product.price|format_currency:"GBP":"en_GB":"£"}>
 ```
+
+Date, number and currency modifiers return HTML-escaped text, so pass literal characters (`£`, a no-break space) rather than entities such as `&pound;` or `&nbsp;`, and do not apply `|escape` after them. If Smarty's `$escape_html` is on, print them with `nofilter` (`<{$product.price|format_currency nofilter}>`), or the escaping is applied twice.
 
 ### Number formatting
 
@@ -288,7 +294,7 @@ Output: `1.45 MB`
 <{$user.phone|format_phone_number}>
 ```
 
-Input `"5551234567"` becomes `(555) 123-4567`. Input `"15551234567"` becomes `+1 (555) 123-4567`.
+Input `"5551234567"` becomes `(555) 123-4567`. Input `"15551234567"` becomes `+1 (555) 123-4567`. Any other input is returned HTML-escaped, so do not add `|escape`.
 
 ### Gravatar URLs
 
@@ -321,8 +327,11 @@ NavigationExtension provides URL manipulation, breadcrumbs, pagination, and soci
 
 ```smarty
 <{generate_url route="/modules/news/article.php" params=$queryParams assign="articleUrl"}>
-<a href="<{$articleUrl}>">Read article</a>
+<a href="<{$articleUrl|escape}>">Read article</a>
 ```
+
+A route with an executable scheme such as `javascript:` or `data:` produces an empty string, so check the result when the route comes from user data.
+The `|escape` assumes Smarty's default `$escape_html` off; with it on, omit `|escape`.
 
 ### Canonical URLs
 
@@ -362,7 +371,7 @@ Works with `youtube.com/watch?v=`, `youtu.be/`, `youtube.com/embed/`, and `youtu
 
 ### Making URLs clickable
 
-> **HTML output warning**: `linkify` returns raw HTML with `<a>` tags. The surrounding text is not escaped. Pass only trusted or pre-sanitized content to avoid XSS. Do not apply `|escape` after this modifier.
+> **Plain text in, HTML out**: `linkify` HTML-escapes its input (already-escaped text such as `&amp;` is left as-is, not double-escaped) and then turns `http(s)://` URLs into `<a>` tags. Any markup in the input is displayed as text, so do not pass HTML. Do not apply `|escape` after this modifier.
 
 ```smarty
 <{$comment.body|linkify}>
@@ -431,7 +440,7 @@ Renders Bootstrap 5 pagination controls:
 <{render_pagination totalPages=$totalPages currentPage=$currentPage urlPattern="/news/?page={page}"}>
 ```
 
-The `{page}` placeholder in `urlPattern` is replaced with each page number.
+The `{page}` placeholder in `urlPattern` is replaced with each page number. Up to 100 pages are listed in full; beyond that the list switches to first/last plus two pages either side of the current one, and a `window` you pass is capped at 20.
 
 ### QR codes
 
@@ -481,7 +490,7 @@ DataExtension provides data manipulation, file utilities, and CSV/XML generation
 <pre><{$config|pretty_print_json}></pre>
 ```
 
-Also works with JSON strings (decodes, then re-encodes with formatting).
+Also works with JSON strings (decodes, then re-encodes with formatting). The result is HTML-escaped for display (`<`, `>` and `&` are encoded; quotes are left readable), so use it as element text, not inside an attribute, and do not add `|escape`.
 
 ### File information
 
@@ -590,7 +599,25 @@ FormExtension provides form rendering with automatic CSRF token injection.
 <{form_close}>
 ```
 
-The `form_open` function automatically injects a hidden CSRF token field for POST forms when `XoopsSecurity` is available.
+The `form_open` function automatically injects a hidden CSRF token field for POST forms when `XoopsSecurity` is available. The token is only added when the form submits back to this site: a relative `action`, or an absolute one with the same scheme, host and port as `XOOPS_URL`. Forms posting anywhere else never receive it.
+
+`form_input` passes extra parameters through as attributes, but drops names that are not plain attribute names, any `on*` event handler, and a `formaction` pointing off-site.
+
+#### Relative actions and `<base href>`
+
+`form_open` and `form_input` emit relative actions (`action="index.php"`, `formaction="index.php?op=delete"`) unchanged, and `form_open` still adds the CSRF token to a relative POST form. Where the token goes is up to the browser: it resolves a non-empty relative action against the document base URL **when the form is submitted**; an empty action uses the document URL. An attacker who can already inject HTML can add `<base href="https://evil.example/">`, even after the form, and send the form, token included, to their own server, provided it is the first `<base href>` in the document. Root-relative actions (`/modules/x/save.php`) are affected the same way, and so are core `XoopsForm` forms and hand-written ones.
+
+This needs an existing HTML-injection bug, so fix that bug first. This library keeps relative actions as they are: it cannot reliably infer the effective document base from inside a template (proxies, AJAX fragments and blocks shown on many pages all change it), and rewriting only its own forms would leave every other form and relative `<script src>` exposed. The broader defence is a page-level policy. Send this header from the site (web server config, a theme/preload `header()` call, or Protector):
+
+```
+Content-Security-Policy: base-uri 'self'
+```
+
+`base-uri 'self'` makes the browser ignore a `<base>` that points to another origin. It permits the same-origin module base XOOPS itself emits (`header.php` adds one for start-page handling); audit custom themes and deployments for external bases before enabling it. A same-origin `<base>` can still change which local path a relative action reaches.
+
+`form-action 'self'` additionally blocks direct off-origin submissions. Audit legitimate external destinations (payment gateways, external search) and redirect chains before enabling it, and list those domains after `'self'`. Browsers enforce it differently across redirects, so it is not a portable guarantee against a same-origin endpoint forwarding the token.
+
+To verify, on a test page with no earlier `<base href>`, submit forms with `action="index.php"`, `"../news/save.php"`, `"?op=save"` and a root-relative action, plus a submit button with a relative `formaction`. Inject `<base href="https://evil.example/">` once before and once after the form, with and without the header. In the browser's Network panel, check each request URL and that the token goes only to the site. With the header, the console reports the `base-uri` violation and every form reaches its normal destination. Separately check that the start-page module still works with the header enabled.
 
 ### File upload form
 
@@ -785,11 +812,14 @@ Use the `xo_permission` block to conditionally show content:
 ### Permission check functions
 
 ```smarty
+<{* nocache: the results depend on the current user (see "Important" above) *}>
+<{nocache}>
 <{is_user_logged_in assign="loggedIn"}>
 
 <{has_user_permission permission="module_admin" module_id=1 item_id=0 assign="isAdmin"}>
 
 <{user_has_role role="1" assign="isInGroup"}>
+<{/nocache}>
 ```
 
 ### String sanitization
@@ -808,7 +838,9 @@ Use the `xo_permission` block to conditionally show content:
 <{$value|sanitize_string_for_xml}>
 ```
 
-`sanitize_url` allows these schemes: `http://`, `https://`, `ftp://`, `mailto:`, relative paths (`/path`, `page.html`), and hash fragments (`#section`). All other schemes (including `javascript:`, `data:`, and entity-encoded variants) are blocked and return an empty string.
+`sanitize_url` allows these schemes: `http://`, `https://`, `ftp://`, `mailto:`, relative paths (`/path`, `page.html`), and hash fragments (`#section`). All other schemes (including `javascript:`, `data:`, and entity-encoded variants) are blocked and return an empty string. The accepted URL is returned HTML-escaped (`&` becomes `&amp;`, quotes become `&quot;`), ready to drop into an attribute — do not add `|escape` after it.
+
+`form_open`, `form_input` (`src`, `formaction`), `embed_pdf`, `render_breadcrumbs` and `render_pagination` apply the same scheme check: an unsafe `action` renders as `action=""`, an unsafe PDF URL renders nothing, an unsafe breadcrumb becomes plain text, and an unsafe pagination pattern links to `#`.
 
 ### Email privacy
 
@@ -844,15 +876,21 @@ XoopsCoreExtension provides template functions that interact with XOOPS configur
 
 ```smarty
 <{xo_get_config name="sitename" assign="siteName"}>
-<title><{$siteName}></title>
+<title><{$siteName|escape}></title>
 
 <{xo_get_config name="slogan" assign="slogan"}>
-<p><{$slogan}></p>
+<p><{$slogan|escape}></p>
 ```
+
+Direct output (`<{xo_get_config name="sitename"}>`) is already HTML-escaped; an
+`assign`ed value is raw, so escape it when you print it. The `|escape` above is for
+Smarty's default `$escape_html` off; with `$escape_html` on, print `<{$siteName}>`
+without it (Smarty 4 would encode it twice).
 
 ### Current user
 
 ```smarty
+<{nocache}>
 <{xo_get_current_user assign="user"}>
 <{if $user}>
   <p>Hello, <{$user.uname}>!</p>
@@ -862,6 +900,7 @@ XoopsCoreExtension provides template functions that interact with XOOPS configur
 <{else}>
   <a href="user.php">Login</a>
 <{/if}>
+<{/nocache}>
 ```
 
 The returned array contains: `uid`, `uname`, `name`, `email`, `groups`, `is_admin`.
@@ -881,8 +920,12 @@ Builds a module-relative URL. When `XOOPS_URL` is defined, the output is a full 
 
 ```smarty
 <{xo_module_url module="news" path="article.php" params=$queryParams assign="articleUrl"}>
-<a href="<{$articleUrl}>">Read article</a>
+<a href="<{$articleUrl|escape}>">Read article</a>
 ```
+
+Direct output is HTML-escaped; an `assign`ed URL is raw, so escape it in the attribute.
+The `|escape` above is for Smarty's default `$escape_html` off; with `$escape_html` on,
+print `<{$articleUrl}>` without it (Smarty 4 would encode the `&` in the query string twice).
 
 Example output with `XOOPS_URL` = `https://example.com`: `https://example.com/modules/news/article.php?id=42`
 

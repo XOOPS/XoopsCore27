@@ -6,6 +6,12 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 Bug fixes:
 - the 2.5.11 to 2.7.0 upgrade removes the obsolete class/libraries/ folder completely: its deny-all .htaccess is deleted once it is the last file there (it stays beside files a site added), and the unused Composer and php-jwt stub files 2.7.x still shipped under class/libraries/vendor are gone from the release (upgrade/upd_2.5.11-to-2.7.0/index.php, class/libraries) (#313)
 
+Libraries and assets:
+- update the bundled XMF library to 1.3.4 RC2: a code-style cleanup only (single-quoted strings), with no behaviour changes since 1.3.4 RC1 (xoops_lib/composer.dist.lock, xoops_lib/vendor/xoops/xmf)
+- update the bundled xoops/helpers library to 1.1.0: Filesystem::unzip() refuses archives that would write through links or existing special files and caps the decompressed size (new $maxBytes, 1 GiB by default), zip() and the directory copy, move and delete methods keep links and junctions inside their root, and the fallback file cache uses a private per-user directory with SHA-256 entry names (a one-time cache miss). <{asset_url}> now HTML-escapes the URL, so templates must drop any |escape after it (xoops_lib/composer.dist.json, xoops_lib/vendor/xoops/helpers)
+- update the bundled xoops/smartyextensions library to 2.0.0 Beta1 (constraint ^2.0@beta): sanitize_url, linkify, pretty_print_json, format_phone_number, format_date, relative_time, format_currency, number_format, mask_email, datetime_diff, and the direct output of xo_get_config and get_session_data now HTML-escape their own output. Module and theme templates must remove any |escape after them, or the output is double-encoded; linkify now takes plain text and shows HTML passed to it as text (xoops_lib/composer.dist.json, xoops_lib/vendor/xoops/smartyextensions)
+- bundle xoops/moduletools 1.6.0 for module install, admin and test tooling. It requires PHP 8.4, so only modules that check for PHP 8.4 may use it; the core never loads it, and Composer's platform check is turned off so PHP 8.2 and 8.3 sites still boot (xoops_lib/composer.dist.json, xoops_lib/vendor/xoops/moduletools)
+
 ===================================
 2.7.5 Beta 1                  2026-11
 ===================================

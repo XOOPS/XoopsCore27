@@ -815,7 +815,7 @@ class XoopsMemberHandler
             return false;
         }
 
-        $level = (int)($GLOBALS['xoopsConfig']['debugLevel'] ?? 0);
+        $level = XoopsLogger::debugLevel();
         $user = $GLOBALS['xoopsUser'] ?? null;
         $isAdmin = (bool)($GLOBALS['xoopsUserIsAdmin'] ?? false);
 

@@ -14,7 +14,10 @@ declare(strict_types=1);
 /**
  * Runs XoopsLogger's fatal path in its own process, because that path ends in exit().
  *
- * Usage: php fatal-screen-runner.php <guest|member|developer|throwing> <error|exception>
+ * Usage: php fatal-screen-runner.php <guest|member|developer|throwing> <error|exception> [panel]
+ *
+ * "panel" turns the debug panel on for an audience of everyone (debugLevel 0), so the
+ * page also carries whatever render() adds when exit() flushes the buffer.
  *
  * Prints the page the visitor would receive, then a line "--RESULT--" and a JSON object
  * with the HTTP status and the messages the registered logger recorded.
@@ -64,7 +67,32 @@ $logger->addLogger(new class {
     }
 });
 
+if ('panel' === ($argv[3] ?? '')) {
+    // render.php's query table asks the database for its table prefix.
+    final class XoopsDatabaseFactory
+    {
+        public static function getDatabaseConnection(): object
+        {
+            return new class {
+                public function prefix(): string
+                {
+                    return 'xoops';
+                }
+            };
+        }
+    }
+    include XOOPS_ROOT_PATH . '/language/english/logger.php';
+    $GLOBALS['xoopsConfig'] = ['debugLevel' => 0];
+    $logger->activated      = true;
+    $logger->enableRendering();
+}
+
 register_shutdown_function(static function (): void {
+    // Shutdown functions run before PHP flushes the buffers: flush the page (and any
+    // panel render() adds) first, so the result line stays last.
+    while (ob_get_level() > 0) {
+        ob_end_flush();
+    }
     echo "\n--RESULT--\n", json_encode([
         'status'   => http_response_code(),
         'recorded' => $GLOBALS['recorded'],

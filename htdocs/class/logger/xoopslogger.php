@@ -398,6 +398,9 @@ class XoopsLogger
             if (!$this->canSeeErrorDetail()) {
                 $errstr       = 'Internal server error';
                 $includeTrace = false;
+                // The panel lists the stored message too, and exit() below flushes it
+                // through render(): debugLevel 0 or 1 would show it to this requester.
+                $this->activated = false;
             }
             if (!headers_sent()) {
                 http_response_code(500);
@@ -473,11 +476,7 @@ class XoopsLogger
         if (null !== $this->audience) {
             return $this->audience;
         }
-        $config = $GLOBALS['xoopsConfig'] ?? null;
-        // Only a whole number counts. A cast would turn '' or a typo into 0, "everyone".
-        $raw     = is_array($config) ? ($config['debugLevel'] ?? null) : null;
-        $level   = is_int($raw) || (is_string($raw) && ctype_digit($raw)) ? (int) $raw : 2;
-        $allowed = is_array($config) && match ($level) {
+        $allowed = is_array($GLOBALS['xoopsConfig'] ?? null) && match (self::debugLevel()) {
             0       => true,
             1       => is_object($GLOBALS['xoopsUser'] ?? null),
             default => !empty($GLOBALS['xoopsUserIsAdmin']),
@@ -487,6 +486,28 @@ class XoopsLogger
         }
 
         return $allowed;
+    }
+
+    /**
+     * The configured debugLevel: 0 everyone, 1 members, 2 administrators.
+     *
+     * Only 0 and 1 (as int or digit string) widen the audience; anything else, including
+     * a missing setting, '' or a typo, is 2. A plain (int) cast would turn '' or a typo
+     * into 0, "everyone". Shared by every check that decides who sees debug output
+     * (logger panel, Smarty console, member handler).
+     *
+     * @return int 0, 1 or 2
+     */
+    public static function debugLevel(): int
+    {
+        $config = $GLOBALS['xoopsConfig'] ?? null;
+        $raw    = is_array($config) ? ($config['debugLevel'] ?? null) : null;
+
+        return match ($raw) {
+            0, '0'  => 0,
+            1, '1'  => 1,
+            default => 2,
+        };
     }
 
     /**

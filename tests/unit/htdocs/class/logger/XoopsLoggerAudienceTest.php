@@ -134,6 +134,8 @@ final class XoopsLoggerAudienceTest extends TestCase
     {
         $this->setRequest(['debugLevel' => 2], 'guest');
         $logger = new XoopsLogger();
+        // Active, as on a debug site: an inactive logger returns before the audience check.
+        $logger->activated = true;
         $logger->addQuery('SELECT secret FROM xoops_users', null, null, 0.001);
         $page = '<html><body>Moved<!--{xo-logger-output}--></body></html>';
 
@@ -169,6 +171,29 @@ final class XoopsLoggerAudienceTest extends TestCase
         self::assertStringContainsString('MARKER-7f3a', implode("\n", $result['recorded']));
     }
 
+    /**
+     * debugLevel 0 lets anyone receive the panel, but the panel lists the stored error
+     * message: a fatal for a non-developer must not render it.
+     */
+    #[Test]
+    public function theDebugPanelDoesNotRestoreAHiddenFatalMessage(): void
+    {
+        [$page, $result] = $this->runFatal('member', 'error', 'panel');
+
+        self::assertStringContainsString('Error : Internal server error', $page);
+        self::assertStringNotContainsString('MARKER-7f3a', $page);
+        self::assertStringNotContainsString('xo-logger-errors', $page);
+        self::assertStringContainsString('MARKER-7f3a', implode("\n", $result['recorded']));
+    }
+
+    #[Test]
+    public function aDeveloperFatalStillRendersThePanel(): void
+    {
+        [$page] = $this->runFatal('developer', 'error', 'panel');
+
+        self::assertStringContainsString('xo-logger-errors', $page);
+    }
+
     #[Test]
     public function aDeveloperStillSeesTheMessageAndTheBacktrace(): void
     {
@@ -196,12 +221,13 @@ final class XoopsLoggerAudienceTest extends TestCase
     /**
      * @return array{string, array{status: int|false, recorded: list<string>}}
      */
-    private function runFatal(string $requester, string $entry): array
+    private function runFatal(string $requester, string $entry, string $panel = ''): array
     {
         $command = escapeshellarg(PHP_BINARY)
             . ' ' . escapeshellarg(__DIR__ . '/fixtures/fatal-screen-runner.php')
             . ' ' . escapeshellarg($requester)
-            . ' ' . escapeshellarg($entry);
+            . ' ' . escapeshellarg($entry)
+            . ('' === $panel ? '' : ' ' . escapeshellarg($panel));
         $output = (string) shell_exec($command);
 
         $parts = explode("\n--RESULT--\n", $output, 2);

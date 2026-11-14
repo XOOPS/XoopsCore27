@@ -476,6 +476,9 @@ class XoopsLoggerAdditionalTest extends TestCase
         self::assertStringNotContainsString('<!--{xo-logger-output}-->', $result);
         // The output should still contain the HTML structure
         self::assertStringContainsString('<html><body>', $result);
+        // ...and the panel itself, in the placeholder's place
+        self::assertStringContainsString('id="xo-logger-extra"', $result);
+        self::assertStringContainsString('TestValue', $result);
     }
 
     #[Test]
@@ -487,8 +490,9 @@ class XoopsLoggerAdditionalTest extends TestCase
         $output = '<html><body>No placeholder here</body></html>';
         $result = $this->logger->render($output);
 
-        // Original content should be preserved at the start
+        // Original content should be preserved at the start, with the panel after it
         self::assertStringStartsWith('<html><body>No placeholder here</body></html>', $result);
+        self::assertStringContainsString("id='xo-logger-tabs'", $result);
     }
 
     #[Test]

@@ -584,7 +584,10 @@ $xoopsPreload->triggerEvent('core.include.common.auth.success');
  * Note: temporary solution only. Will be re-designed in XOOPS 3.0
  */
 if ($xoopsLogger->activated && !$xoopsLogger->canReceiveDebugOutput(true)) {
-    error_reporting(0);
+    // Hide PHP's own error display from this requester, but keep error_reporting:
+    // handleError() checks it before dispatching, and the file logger must still
+    // receive this request's errors and fatals.
+    ini_set('display_errors', '0');
     $xoopsLogger->activated = false;
 }
 

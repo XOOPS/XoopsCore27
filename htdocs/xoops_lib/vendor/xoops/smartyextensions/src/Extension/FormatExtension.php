@@ -67,7 +67,8 @@ final class FormatExtension extends AbstractExtension
             return '';
         }
 
-        return $result;
+        // DateInterval::format() keeps literal format text, so encode direct output
+        return \htmlspecialchars($result, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -101,10 +102,10 @@ final class FormatExtension extends AbstractExtension
         // Already-formatted display strings (e.g. XOOPS formatTimestamp output) are
         // returned unchanged rather than re-parsed and reformatted (S3).
         if ($dateObj === null) {
-            return (string) $date;
+            return \htmlspecialchars((string) $date, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
 
-        return $dateObj->format($format);
+        return \htmlspecialchars($dateObj->format($format), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -118,7 +119,7 @@ final class FormatExtension extends AbstractExtension
 
         // A pre-formatted display string cannot be made relative — pass it through (S3).
         if ($date === null) {
-            return (string) $timestamp;
+            return \htmlspecialchars((string) $timestamp, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
 
         $now = new \DateTimeImmutable();
@@ -176,17 +177,20 @@ final class FormatExtension extends AbstractExtension
         string $symbol = '$',
     ): string {
         $amount = (float) $amount;
+        $result = false;
 
         if (\class_exists(\NumberFormatter::class)) {
             $formatter = new \NumberFormatter($locale, \NumberFormatter::CURRENCY);
             $result = $formatter->formatCurrency($amount, $currency);
-            if ($result !== false) {
-                return $result;
-            }
         }
 
         // Fallback without intl extension
-        return $symbol . \number_format($amount, 2);
+        if ($result === false) {
+            $result = $symbol . \number_format($amount, 2);
+        }
+
+        // ICU echoes an unknown currency code, and the symbol is free text
+        return \htmlspecialchars($result, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -203,7 +207,11 @@ final class FormatExtension extends AbstractExtension
         string $decPoint = '.',
         string $thousandsSep = ',',
     ): string {
-        return \number_format((float) $number, $decimals, $decPoint, $thousandsSep);
+        // Clamp: number_format() allocates one byte per requested decimal
+        $result = \number_format((float) $number, \max(0, \min(20, $decimals)), $decPoint, $thousandsSep);
+
+        // Separators are free text
+        return \htmlspecialchars($result, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -249,7 +257,8 @@ final class FormatExtension extends AbstractExtension
             return '+1 (' . \substr($digits, 1, 3) . ') ' . \substr($digits, 4, 3) . '-' . \substr($digits, 7);
         }
 
-        return $phoneNumber;
+        // Unrecognised input is shown as-is, so encode it like any display text
+        return \htmlspecialchars($phoneNumber, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**

@@ -77,7 +77,7 @@ class ProtectorModernThemeWidget implements ModernThemeWidgetInterface
 
         $result = $xoopsDB->query(
             "SELECT COUNT(*) FROM `$logTable`"
-            . " WHERE `timestamp` > NOW() - INTERVAL 3600 SECOND"
+            . ' WHERE `timestamp` > NOW() - INTERVAL 3600 SECOND'
         );
         if ($result) {
             list($lastHour) = $xoopsDB->fetchRow($result);
@@ -85,7 +85,7 @@ class ProtectorModernThemeWidget implements ModernThemeWidgetInterface
 
         $result = $xoopsDB->query(
             "SELECT COUNT(*) FROM `$logTable`"
-            . " WHERE `timestamp` > NOW() - INTERVAL 86400 SECOND"
+            . ' WHERE `timestamp` > NOW() - INTERVAL 86400 SECOND'
         );
         if ($result) {
             list($lastDay) = $xoopsDB->fetchRow($result);
@@ -93,7 +93,7 @@ class ProtectorModernThemeWidget implements ModernThemeWidgetInterface
 
         $result = $xoopsDB->query(
             "SELECT COUNT(*) FROM `$logTable`"
-            . " WHERE `timestamp` > NOW() - INTERVAL 604800 SECOND"
+            . ' WHERE `timestamp` > NOW() - INTERVAL 604800 SECOND'
         );
         if ($result) {
             list($lastWeek) = $xoopsDB->fetchRow($result);
@@ -101,7 +101,7 @@ class ProtectorModernThemeWidget implements ModernThemeWidgetInterface
 
         $result = $xoopsDB->query(
             "SELECT COUNT(*) FROM `$logTable`"
-            . " WHERE `timestamp` > NOW() - INTERVAL 2592000 SECOND"
+            . ' WHERE `timestamp` > NOW() - INTERVAL 2592000 SECOND'
         );
         if ($result) {
             list($lastMonth) = $xoopsDB->fetchRow($result);
@@ -112,7 +112,7 @@ class ProtectorModernThemeWidget implements ModernThemeWidgetInterface
         $accessTable = $xoopsDB->prefix($dirname . '_access');
         $result = $xoopsDB->query(
             "SELECT COUNT(DISTINCT ip) FROM `$accessTable`"
-            . " WHERE `expire` > UNIX_TIMESTAMP()"
+            . ' WHERE `expire` > UNIX_TIMESTAMP()'
         );
         if ($result) {
             list($bannedIPs) = $xoopsDB->fetchRow($result);
@@ -122,7 +122,7 @@ class ProtectorModernThemeWidget implements ModernThemeWidgetInterface
         $recent = [];
         $result = $xoopsDB->query(
             "SELECT `lid`, `type`, `ip`, `timestamp` FROM `$logTable`"
-            . " ORDER BY `timestamp` DESC LIMIT 5"
+            . ' ORDER BY `timestamp` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

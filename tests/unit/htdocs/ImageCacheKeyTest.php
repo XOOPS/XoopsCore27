@@ -119,7 +119,7 @@ final class ImageCacheKeyTest extends TestCase
         foreach ($readers as $parameter => $reader) {
             self::assertMatchesRegularExpression("/'" . $parameter . "'\s*=> '" . $reader . "'/", $this->sourceContent, $parameter);
             if ('url' !== $parameter) {
-                self::assertMatchesRegularExpression("/Request::" . $reader . "\('" . $parameter . "'/", $this->sourceContent, $parameter . ' is read with the same getter');
+                self::assertMatchesRegularExpression('/Request::' . $reader . "\('" . $parameter . "'/", $this->sourceContent, $parameter . ' is read with the same getter');
             }
         }
         self::assertStringContainsString("Request::getUrl('url', Request::getString('src'", $this->sourceContent);

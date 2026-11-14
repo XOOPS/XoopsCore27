@@ -404,7 +404,7 @@ class XoopsThemeFormTest extends TestCase
         $this->assertIsString($elements[0]);
 
         if ($expectClass) {
-            $this->assertStringContainsString("class=", $elements[0]);
+            $this->assertStringContainsString('class=', $elements[0]);
         }
     }
 }

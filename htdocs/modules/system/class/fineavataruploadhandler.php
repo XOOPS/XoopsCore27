@@ -98,6 +98,6 @@ class SystemFineAvatarUploadHandler extends SystemFineUploadHandler
                 'error' => sprintf(_FAILSAVEIMG, $avatar->getVar('avatar_name')),
             ];
         }
-        return ['success' => true, "uuid" => $uuid];
+        return ['success' => true, 'uuid' => $uuid];
     }
 }

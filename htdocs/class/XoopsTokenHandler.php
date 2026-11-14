@@ -131,8 +131,8 @@ final class XoopsTokenHandler
 
         $table = $this->db->prefix('tokens');
         $sql   = sprintf(
-            "INSERT INTO `%s` (`uid`, `scope`, `hash`, `issued_at`, `expires_at`, `used_at`)"
-            . " VALUES (%d, %s, %s, %d, %d, 0)",
+            'INSERT INTO `%s` (`uid`, `scope`, `hash`, `issued_at`, `expires_at`, `used_at`)'
+            . ' VALUES (%d, %s, %s, %d, %d, 0)',
             $table,
             $uid,
             $this->db->quote($scope),
@@ -165,9 +165,9 @@ final class XoopsTokenHandler
         $now   = time();
 
         $result = $this->db->exec(sprintf(
-            "UPDATE `%s` SET `used_at` = %d"
-            . " WHERE `uid` = %d AND `scope` = %s AND `hash` = %s"
-            . " AND `used_at` = 0 AND `expires_at` > %d",
+            'UPDATE `%s` SET `used_at` = %d'
+            . ' WHERE `uid` = %d AND `scope` = %s AND `hash` = %s'
+            . ' AND `used_at` = 0 AND `expires_at` > %d',
             $table,
             $now,
             $uid,
@@ -197,8 +197,8 @@ final class XoopsTokenHandler
         $now   = time();
 
         return (bool) $this->db->exec(sprintf(
-            "UPDATE `%s` SET `used_at` = %d"
-            . " WHERE `uid` = %d AND `scope` = %s AND `used_at` = 0",
+            'UPDATE `%s` SET `used_at` = %d'
+            . ' WHERE `uid` = %d AND `scope` = %s AND `used_at` = 0',
             $table,
             $now,
             $uid,
@@ -248,8 +248,8 @@ final class XoopsTokenHandler
         $since = time() - max(0, $window);
 
         $result = $this->db->query(sprintf(
-            "SELECT COUNT(*) AS `cnt` FROM `%s`"
-            . " WHERE `uid` = %d AND `scope` = %s AND `issued_at` > %d",
+            'SELECT COUNT(*) AS `cnt` FROM `%s`'
+            . ' WHERE `uid` = %d AND `scope` = %s AND `issued_at` > %d',
             $table,
             $uid,
             $this->db->quote($scope),
@@ -280,9 +280,9 @@ final class XoopsTokenHandler
         $cutoff = $now - max(0, $maxAge);
 
         $this->db->exec(sprintf(
-            "DELETE FROM `%s`"
-            . " WHERE `issued_at` < %d"
-            . " AND (`expires_at` < %d OR `used_at` > 0)",
+            'DELETE FROM `%s`'
+            . ' WHERE `issued_at` < %d'
+            . ' AND (`expires_at` < %d OR `used_at` > 0)',
             $table,
             $cutoff,
             $now

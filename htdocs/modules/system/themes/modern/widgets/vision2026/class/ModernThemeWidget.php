@@ -85,7 +85,7 @@ class Vision2026ModernThemeWidget implements ModernThemeWidgetInterface
         // Categories
         $categories = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('vision2026_categories')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('vision2026_categories')
         );
         if ($result) {
             list($categories) = $xoopsDB->fetchRow($result);
@@ -94,9 +94,9 @@ class Vision2026ModernThemeWidget implements ModernThemeWidgetInterface
         // Recent articles
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `id`, `title`, `status`, `views`, `created_at`"
+            'SELECT `id`, `title`, `status`, `views`, `created_at`'
             . " FROM `$table`"
-            . " ORDER BY `created_at` DESC LIMIT 5"
+            . ' ORDER BY `created_at` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

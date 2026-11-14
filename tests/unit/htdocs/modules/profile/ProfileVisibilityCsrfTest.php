@@ -215,14 +215,14 @@ class ProfileVisibilityCsrfTest extends TestCase
 
         // Locate the submit handler block
         $submitPos = strpos($source, "if (Request::hasVar('submit', 'POST'))");
-        $this->assertNotFalse($submitPos, "visibility.php must contain a submit handler");
+        $this->assertNotFalse($submitPos, 'visibility.php must contain a submit handler');
 
         // CSRF check must appear before insert within the submit handler
         $checkPos = strpos($source, "xoopsSecurity']->check()", $submitPos);
-        $this->assertNotFalse($checkPos, "Submit handler must perform a CSRF token check");
+        $this->assertNotFalse($checkPos, 'Submit handler must perform a CSRF token check');
 
         $insertPos = strpos($source, 'visibility_handler->insert(', $submitPos);
-        $this->assertNotFalse($insertPos, "Submit handler must perform an insert operation");
+        $this->assertNotFalse($insertPos, 'Submit handler must perform an insert operation');
 
         $this->assertLessThan($insertPos, $checkPos, 'CSRF token check must run before insert in submit handler');
     }
@@ -232,7 +232,7 @@ class ProfileVisibilityCsrfTest extends TestCase
     {
         $source = $this->readSourceFile('/modules/profile/admin/visibility.php');
         $this->assertStringContainsString(
-            "Request::getMethod()",
+            'Request::getMethod()',
             $source,
             'visibility.php must check request method for delete'
         );
@@ -261,7 +261,7 @@ class ProfileVisibilityCsrfTest extends TestCase
         $delBlock = strstr($source, "if (\$op === 'del')");
         $this->assertNotFalse($delBlock, 'Delete block must exist');
         $this->assertStringContainsString(
-            "Request::getMethod()",
+            'Request::getMethod()',
             $delBlock,
             'Delete block must check request method'
         );

@@ -110,7 +110,7 @@ class InstallerRewriteDefinesTest extends TestCase
         // into the comment would end it and start executable PHP.
         $comment  = '// Example: define("XOOPS_URL", "http://url_to_xoops_directory");';
         $template = "<?php\n{$comment}\ndefine('XOOPS_URL', 'https://');\n";
-        $url      = "https://x?><?php echo 1;";
+        $url      = 'https://x?><?php echo 1;';
 
         $out = xoInstallerRewriteDefines($template, ['URL' => $url]);
 

@@ -92,8 +92,8 @@ class XblogModernThemeWidget implements ModernThemeWidgetInterface
         // Categories (excluding soft-deleted)
         $categories = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('xblog_categories')
-            . " WHERE `deleted_at` IS NULL"
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('xblog_categories')
+            . ' WHERE `deleted_at` IS NULL'
         );
         if ($result) {
             list($categories) = $xoopsDB->fetchRow($result);
@@ -102,11 +102,11 @@ class XblogModernThemeWidget implements ModernThemeWidgetInterface
         // Recent posts with titles from translations (English fallback)
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT p.`id`, t.`title`, p.`status`, p.`created_at`"
+            'SELECT p.`id`, t.`title`, p.`status`, p.`created_at`'
             . " FROM `$postsTable` p"
             . " LEFT JOIN `$transTable` t ON p.`id` = t.`post_id` AND t.`locale` = 'en'"
-            . " WHERE p.`deleted_at` IS NULL"
-            . " ORDER BY p.`created_at` DESC LIMIT 5"
+            . ' WHERE p.`deleted_at` IS NULL'
+            . ' ORDER BY p.`created_at` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

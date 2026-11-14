@@ -31,7 +31,7 @@ class MytsUl extends MyTextSanitizerExtension
      */
     public function load(MyTextSanitizer $myts)
     {
-        $myts->patterns[]     = "/\[ul](.*)\[\/ul\]/sU";
+        $myts->patterns[]     = '/\[ul](.*)\[\/ul\]/sU';
         $myts->replacements[] = '<ul>\\1</ul>';
 
         return true;

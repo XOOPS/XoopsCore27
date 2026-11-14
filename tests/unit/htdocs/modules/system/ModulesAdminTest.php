@@ -53,7 +53,7 @@ class ModulesAdminTest extends TestCase
     public function testInstallDisablesForeignKeyChecksBeforeSqlExecution(): void
     {
         // The FK disable should appear BEFORE the foreach ($pieces as $piece) loop
-        $fkDisablePos = strpos($this->sourceCode, "SET FOREIGN_KEY_CHECKS = 0");
+        $fkDisablePos = strpos($this->sourceCode, 'SET FOREIGN_KEY_CHECKS = 0');
         $this->assertNotFalse($fkDisablePos, 'Should contain SET FOREIGN_KEY_CHECKS = 0');
 
         // Find the SQL execution loop in xoops_module_install
@@ -61,7 +61,7 @@ class ModulesAdminTest extends TestCase
         $this->assertNotEmpty($installFunc, 'xoops_module_install function should exist');
 
         // FK disable should come before the pieces loop
-        $fkDisableInInstall = strpos($installFunc, "SET FOREIGN_KEY_CHECKS = 0");
+        $fkDisableInInstall = strpos($installFunc, 'SET FOREIGN_KEY_CHECKS = 0');
         $piecesLoop = strpos($installFunc, 'foreach ($pieces as $piece)');
         $this->assertNotFalse($fkDisableInInstall, 'FK disable should be in install function');
         $this->assertNotFalse($piecesLoop, 'Pieces loop should exist in install function');
@@ -81,7 +81,7 @@ class ModulesAdminTest extends TestCase
         $installFunc = $this->extractFunction('xoops_module_install');
 
         // FK re-enable should come after the pieces loop
-        $fkEnablePos = strpos($installFunc, "SET FOREIGN_KEY_CHECKS = 1");
+        $fkEnablePos = strpos($installFunc, 'SET FOREIGN_KEY_CHECKS = 1');
         $this->assertNotFalse($fkEnablePos, 'FK re-enable should be in install function');
 
         // Should appear after the foreach loop ends
@@ -357,7 +357,7 @@ class ModulesAdminTest extends TestCase
         $installFunc = $this->extractFunction('xoops_module_install');
 
         // Find the module_read permission section
-        $readPermSection = strpos($installFunc, "module_read");
+        $readPermSection = strpos($installFunc, 'module_read');
         $this->assertNotFalse($readPermSection, 'module_read permission section should exist');
 
         // Extract the permission block (about 600 chars should cover it)

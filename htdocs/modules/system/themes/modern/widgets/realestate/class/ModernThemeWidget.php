@@ -96,10 +96,10 @@ class RealestateModernThemeWidget implements ModernThemeWidgetInterface
         // Recent listings
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `property_id`, `title`, `status`, `property_type`,"
-            . " `city`, `price`, `currency`, `created_at`"
+            'SELECT `property_id`, `title`, `status`, `property_type`,'
+            . ' `city`, `price`, `currency`, `created_at`'
             . " FROM `$table`"
-            . " ORDER BY `created_at` DESC LIMIT 5"
+            . ' ORDER BY `created_at` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

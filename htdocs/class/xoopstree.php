@@ -341,7 +341,7 @@ class XoopsTree
             [$catid, $name] = $row;
             $sel = '';
             if ($catid == $preset_id) {
-                $sel = " selected";
+                $sel = ' selected';
             }
             echo "<option value='$catid'$sel>$name</option>\n";
             $sel = '';
@@ -350,7 +350,7 @@ class XoopsTree
                 $option['prefix'] = str_replace('.', '--', $option['prefix']);
                 $catpath          = $option['prefix'] . '&nbsp;' . $myts->htmlSpecialChars($option[$title]);
                 if ($option[$this->id] == $preset_id) {
-                    $sel = " selected";
+                    $sel = ' selected';
                 }
                 echo "<option value='" . $option[$this->id] . "'$sel>$catpath</option>\n";
                 $sel = '';

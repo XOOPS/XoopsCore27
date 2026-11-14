@@ -184,8 +184,8 @@ final class XoopsMarkdownTest extends TestCase
         foreach ([['a', 'b'], ['b', 'a']] as $order) {
             $post = [
                 'a' => 'hello',
-                'b' => "hello
-",
+                'b' => 'hello
+',
                 '_xoops_markdown' => $order,
                 '_xoops_markdown_state' => [hash('sha256', 'a') => $state, hash('sha256', 'b') => $state],
             ];
@@ -194,9 +194,12 @@ final class XoopsMarkdownTest extends TestCase
             XoopsMarkdown::preparePost($post, $request);
 
             $this->assertSame('hello', XoopsMarkdown::source(XoopsMarkdown::previewSource('hello')));
-            $this->assertSame("hello
-", XoopsMarkdown::source(XoopsMarkdown::previewSource("hello
-")));
+            $this->assertSame(
+                'hello
+', XoopsMarkdown::source(XoopsMarkdown::previewSource(
+                'hello
+'
+            )));
         }
     }
 
@@ -219,8 +222,8 @@ final class XoopsMarkdownTest extends TestCase
         $state = ['initial' => XoopsMarkdown::fingerprint('original'), 'marked' => '0'];
         $post = [
             'a' => '    **hello**',
-            'b' => "**hello**
-",
+            'b' => '**hello**
+',
             '_xoops_markdown' => ['a', 'b'],
             '_xoops_markdown_state' => [hash('sha256', 'a') => $state, hash('sha256', 'b') => $state],
         ];
@@ -274,7 +277,7 @@ final class XoopsMarkdownTest extends TestCase
         $this->assertSame(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'));
         // The 17th container renders its content as text (its own marker is consumed).
         $this->assertMatchesRegularExpression('/<p>(?:&gt; ){3}deep<\/p>/', $html);
-        $this->assertSame(3, substr_count(XoopsMarkdown::render("> > > x"), '<blockquote>'));
+        $this->assertSame(3, substr_count(XoopsMarkdown::render('> > > x'), '<blockquote>'));
     }
 
     #[Test]
@@ -298,12 +301,12 @@ final class XoopsMarkdownTest extends TestCase
         $html = XoopsMarkdown::render("text\n      " . $run);
         $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), 'after a paragraph');
         // Each container strips its own prefix before the next marker is read.
-        foreach (["> > top\n>     " . $run, "- top\n- " . $run, "- a\n  - " . $run, "1. " . $run, "1) " . $run] as $source) {
+        foreach (["> > top\n>     " . $run, "- top\n- " . $run, "- a\n  - " . $run, '1. ' . $run, '1) ' . $run] as $source) {
             $html = XoopsMarkdown::render($source);
             $this->assertLessThanOrEqual(XoopsMarkdown::MAX_QUOTE_DEPTH, substr_count($html, '<blockquote>'), $source);
         }
         // Indented code keeps its markers as text.
-        $this->assertStringContainsString('<pre><code>&gt; &gt; code', XoopsMarkdown::render("    > > code"));
+        $this->assertStringContainsString('<pre><code>&gt; &gt; code', XoopsMarkdown::render('    > > code'));
     }
 
     #[Test]

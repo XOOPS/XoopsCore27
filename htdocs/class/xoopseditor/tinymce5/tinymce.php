@@ -168,7 +168,7 @@ class TinyMCE
             $css[]       = $css_url . '/' . $css_file;
             $css_content = file_get_contents($css_path . '/' . $css_file);
             // get all import css files
-            if (preg_match_all("~\@import url\((.*\.css)\);~sUi", $css_content, $matches, PREG_PATTERN_ORDER)) {
+            if (preg_match_all('~\@import url\((.*\.css)\);~sUi', $css_content, $matches, PREG_PATTERN_ORDER)) {
                 foreach ($matches[1] as $key => $css_import) {
                     $css = array_merge($css, $this->loadCss($css_import));
                 }
@@ -204,7 +204,7 @@ class TinyMCE
 				$fileBrowserCallbackJs .= file_get_contents($fbc_path);
 				$fileBrowserCallbackJs .= "\n// Callback loaded from: " . $fbc_path;
         } else {
-				$fileBrowserCallbackJs = "// FAILED to load callback from: " . $fbc_path;
+				$fileBrowserCallbackJs = '// FAILED to load callback from: ' . $fbc_path;
 			}
 			unset($this->setting['file_browser_callback']);
         }

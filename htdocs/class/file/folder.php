@@ -656,7 +656,7 @@ class XoopsFolderHandler
             $files        = array_merge($normal_files, $hidden_files);
             if (is_array($files)) {
                 foreach ($files as $file) {
-                    if (preg_match("/(\.|\.\.)$/", $file)) {
+                    if (preg_match('/(\.|\.\.)$/', $file)) {
                         continue;
                     }
                     if (is_file($file) === true) {

@@ -80,7 +80,7 @@ class ProtectorMysqlDatabaseTest extends TestCase
     #[Test]
     public function separateStringsReturnsArrayOfTwo(): void
     {
-        $result = $this->db->separateStringsInSQL("SELECT * FROM users");
+        $result = $this->db->separateStringsInSQL('SELECT * FROM users');
         $this->assertIsArray($result);
         $this->assertCount(2, $result);
     }
@@ -88,8 +88,8 @@ class ProtectorMysqlDatabaseTest extends TestCase
     #[Test]
     public function separateStringsNoQuotesReturnsSqlIntact(): void
     {
-        [$sqlWo, $strings] = $this->db->separateStringsInSQL("SELECT * FROM users WHERE id = 1");
-        $this->assertSame("SELECT * FROM users WHERE id = 1", $sqlWo);
+        [$sqlWo, $strings] = $this->db->separateStringsInSQL('SELECT * FROM users WHERE id = 1');
+        $this->assertSame('SELECT * FROM users WHERE id = 1', $sqlWo);
         $this->assertSame([], $strings);
     }
 
@@ -97,7 +97,7 @@ class ProtectorMysqlDatabaseTest extends TestCase
     public function separateStringsSingleQuotedString(): void
     {
         [$sqlWo, $strings] = $this->db->separateStringsInSQL("SELECT * FROM users WHERE name = 'John'");
-        $this->assertSame("SELECT * FROM users WHERE name = ", $sqlWo);
+        $this->assertSame('SELECT * FROM users WHERE name = ', $sqlWo);
         $this->assertCount(1, $strings);
         $this->assertSame("'John'", $strings[0]);
     }
@@ -106,7 +106,7 @@ class ProtectorMysqlDatabaseTest extends TestCase
     public function separateStringsDoubleQuotedString(): void
     {
         [$sqlWo, $strings] = $this->db->separateStringsInSQL('SELECT * FROM users WHERE name = "Jane"');
-        $this->assertSame("SELECT * FROM users WHERE name = ", $sqlWo);
+        $this->assertSame('SELECT * FROM users WHERE name = ', $sqlWo);
         $this->assertCount(1, $strings);
         $this->assertSame('"Jane"', $strings[0]);
     }
@@ -143,24 +143,24 @@ class ProtectorMysqlDatabaseTest extends TestCase
     #[Test]
     public function separateStringsEmptySQL(): void
     {
-        [$sqlWo, $strings] = $this->db->separateStringsInSQL("");
-        $this->assertSame("", $sqlWo);
+        [$sqlWo, $strings] = $this->db->separateStringsInSQL('');
+        $this->assertSame('', $sqlWo);
         $this->assertSame([], $strings);
     }
 
     #[Test]
     public function separateStringsPreservesWhitespace(): void
     {
-        $sql = "  SELECT  *  FROM  users  ";
+        $sql = '  SELECT  *  FROM  users  ';
         [$sqlWo, $strings] = $this->db->separateStringsInSQL($sql);
         // trim() is called on the input
-        $this->assertSame("SELECT  *  FROM  users", $sqlWo);
+        $this->assertSame('SELECT  *  FROM  users', $sqlWo);
     }
 
     #[Test]
     public function separateStringsSqlWithoutStringsReturnsEmptyArray(): void
     {
-        [$sqlWo, $strings] = $this->db->separateStringsInSQL("DELETE FROM logs WHERE id > 100");
+        [$sqlWo, $strings] = $this->db->separateStringsInSQL('DELETE FROM logs WHERE id > 100');
         $this->assertSame([], $strings);
     }
 
@@ -194,7 +194,7 @@ class ProtectorMysqlDatabaseTest extends TestCase
         // No doubtful requests => checkSql should not trigger injectionFound
         $this->db->doubtful_requests = [];
         // Should not throw or die
-        $this->db->checkSql("SELECT * FROM users WHERE id = 1");
+        $this->db->checkSql('SELECT * FROM users WHERE id = 1');
         $this->assertTrue(true); // If we get here, no injection was detected
     }
 
@@ -277,7 +277,7 @@ class ProtectorMysqlDatabaseTest extends TestCase
         $db->doubtful_needles = ['select', 'union', 'concat'];
 
         // SQL containing 'union' (a doubtful needle) after char 7
-        $sql = "DELETE FROM users WHERE id IN (SELECT id FROM temp UNION SELECT 1)";
+        $sql = 'DELETE FROM users WHERE id IN (SELECT id FROM temp UNION SELECT 1)';
 
         $db->expects($this->once())->method('checkSql')->with($sql);
 
@@ -306,7 +306,7 @@ class ProtectorMysqlDatabaseTest extends TestCase
         $db->doubtful_needles = ['select', 'union', 'concat'];
 
         // Simple DELETE with no doubtful needles after char 7
-        $sql = "DELETE FROM logs WHERE lid = 5";
+        $sql = 'DELETE FROM logs WHERE lid = 5';
 
         $db->expects($this->never())->method('checkSql');
 

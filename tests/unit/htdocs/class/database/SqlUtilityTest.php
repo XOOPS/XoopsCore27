@@ -454,7 +454,7 @@ SQL;
     public function testSplitMySqlFilePreservesInternalWhitespace(): void
     {
         $ret = [];
-        $sql = "SELECT   1;";
+        $sql = 'SELECT   1;';
         SqlUtility::splitMySqlFile($ret, $sql);
 
         $this->assertSame('SELECT   1', $ret[0]);
@@ -613,7 +613,7 @@ SQL;
      */
     public function testPrefixQueryInsertIntoExtraWhitespace(): void
     {
-        $query = "INSERT   INTO   tablename   VALUES (1)";
+        $query = 'INSERT   INTO   tablename   VALUES (1)';
         $result = SqlUtility::prefixQuery($query, 'xoops');
 
         $this->assertIsArray($result);
@@ -757,7 +757,7 @@ SQL;
      */
     public function testPrefixQueryUpdateExtraWhitespace(): void
     {
-        $query = "UPDATE   tablename   SET col1=1";
+        $query = 'UPDATE   tablename   SET col1=1';
         $result = SqlUtility::prefixQuery($query, 'xoops');
 
         $this->assertIsArray($result);

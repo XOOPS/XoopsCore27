@@ -415,7 +415,7 @@ class SystemMaintenance
                 closedir($dirHandle);
             }
             $guardFile = $dir . 'index.php';
-            $content   = '<?php' . PHP_EOL . "http_response_code(404);" . PHP_EOL . 'exit;' . PHP_EOL;
+            $content   = '<?php' . PHP_EOL . 'http_response_code(404);' . PHP_EOL . 'exit;' . PHP_EOL;
             $this->writeFileWithWarning($guardFile, $content);
         }
     }

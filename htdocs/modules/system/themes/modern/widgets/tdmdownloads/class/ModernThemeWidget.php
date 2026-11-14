@@ -88,7 +88,7 @@ class TdmdownloadsModernThemeWidget implements ModernThemeWidgetInterface
         // Categories
         $categories = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('tdmdownloads_cat')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('tdmdownloads_cat')
         );
         if ($result) {
             list($categories) = $xoopsDB->fetchRow($result);
@@ -98,7 +98,7 @@ class TdmdownloadsModernThemeWidget implements ModernThemeWidgetInterface
         $recent = [];
         $result = $xoopsDB->query(
             "SELECT `lid`, `title`, `date`, `status`, `hits` FROM `$table`"
-            . " ORDER BY `date` DESC LIMIT 5"
+            . ' ORDER BY `date` DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

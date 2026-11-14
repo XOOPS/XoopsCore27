@@ -61,7 +61,7 @@ class ModuleAdmin
 
         if (empty($added) && !empty($GLOBALS['xoTheme'])) {
             $added = true;
-            $GLOBALS['xoTheme']->addStylesheet("Frameworks/moduleclasses/moduleadmin/css/admin.css");
+            $GLOBALS['xoTheme']->addStylesheet('Frameworks/moduleclasses/moduleadmin/css/admin.css');
         }
     }
 
@@ -562,14 +562,14 @@ class ModuleAdmin
         // before it lands in this admin-CP page as a hardening measure.
         $esc          = static fn($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $module_info  = "<div id=\"about\"><label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_DESCRIPTION . "</label>\n"
-                      . "<text>" . $esc($this->_obj->getInfo('description')) . "</text><br>\n"
+                        . '<text>' . $esc($this->_obj->getInfo('description')) . "</text><br>\n"
                       . "<label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_UPDATEDATE . "</label>\n"
                       . "<text class=\"bold\">" . formatTimestamp($this->_obj->getVar('last_update'), 'm') . "</text><br>\n"
                       . "<label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_MODULESTATUS . "</label>\n"
-                      . "<text>" . $esc($this->_obj->getStatus()) . "</text><br>\n"
+                        . '<text>' . $esc($this->_obj->getStatus()) . "</text><br>\n"
                       . "<label class=\"label_after\">" . _AM_MODULEADMIN_ABOUT_WEBSITE . "</label>\n"
                       . "<text><a class=\"tooltip\" href=\"http://" . $esc($this->_obj->getInfo('module_website_url')) . "\" rel=\"external\" title=\""
-                      . $esc($this->_obj->getInfo('module_website_name')) . " - " . $esc($this->_obj->getInfo('module_website_url')) . "\">"
+                      . $esc($this->_obj->getInfo('module_website_name')) . ' - ' . $esc($this->_obj->getInfo('module_website_url')) . "\">"
                       . $esc($this->_obj->getInfo('module_website_name')) . "</a></text>\n"
                       . "</div>\n";
         $authorArray  = [];
@@ -674,7 +674,7 @@ class ModuleAdmin
         if (true === $logo_xoops) {
             $ret .= "<div class=\"center\">"
                   . "<a href=\"https://xoops.org\" target=\"_blank\" rel=\"external noopener noreferrer\"><img src=\"{$path}xoopsmicrobutton.gif\" alt=\"XOOPS\" title=\"XOOPS\"></a>"
-                  . "</div>";
+                    . '</div>';
         }
         $ret .= _AM_MODULEADMIN_ADMIN_FOOTER;
 

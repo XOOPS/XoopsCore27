@@ -121,7 +121,7 @@ if (
 ) {
     include_once $userFile;
 } else {
-    include_once XOOPS_ROOT_PATH . "/language/english/user.php";
+    include_once XOOPS_ROOT_PATH . '/language/english/user.php';
 }
 $upgradeControl->loadLanguage('smarty4');
 $upgradeControl->loadLanguage('smarty5');

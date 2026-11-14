@@ -136,7 +136,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
                         continue 2;
                     }
-                    if ($cleanv != '' && !preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i", $cleanv)) {
+                    if ($cleanv != '' && !preg_match('/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i', $cleanv)) {
                         $errors[] = 'Invalid Email';
                         continue 2;
                     }
@@ -150,7 +150,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
                         continue 2;
                     }
-                    if ($cleanv != '' && !preg_match("/^http[s]*:\/\//i", $cleanv)) {
+                    if ($cleanv != '' && !preg_match('/^http[s]*:\/\//i', $cleanv)) {
                         $cleanv = XOOPS_PROT . $cleanv;
                     }
                     $cleanv = str_replace('\\"', '"', $this->handler->db->quote(xoops_convert_encode($cleanv)));
@@ -161,7 +161,7 @@ class XoopsModelWrite extends XoopsModelAbstract
                         $errors[] = sprintf(_XOBJ_ERR_REQUIRED, $k);
                         continue 2;
                     }
-                    if ($cleanv != '' && !preg_match("/^http[s]*:\/\//i", $cleanv)) {
+                    if ($cleanv != '' && !preg_match('/^http[s]*:\/\//i', $cleanv)) {
                         $cleanv = XOOPS_PROT . $cleanv;
                     }
                     $cleanv = str_replace('\\"', '"', $this->handler->db->quote($cleanv));

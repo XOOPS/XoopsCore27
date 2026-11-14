@@ -80,8 +80,9 @@ final class SCEditorEmoticonsTest extends TestCase
         $existing[':smile:'] = 'smilies/mine.gif';
         $logs = [];
 
-        $this->assertTrue(SCEditorEmoticons::install($this->db($existing), $logs, $this->uploads), implode("
-", $logs));
+        $this->assertTrue(SCEditorEmoticons::install($this->db($existing), $logs, $this->uploads), implode(
+            '
+', $logs));
 
         $this->assertSame([], $this->exec, 'no row is inserted or changed');
         $this->assertFileDoesNotExist($this->uploads . '/smilies/sceditor_smile.png', 'the bundled image is not needed');

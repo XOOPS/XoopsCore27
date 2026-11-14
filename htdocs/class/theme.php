@@ -372,8 +372,8 @@ class xos_opal_Theme
             $xoops_startpage = 'system';
         }
         // call the theme_autorun.php if the theme has one
-        if (file_exists($this->path . "/theme_autorun.php")) {
-            include_once($this->path . "/theme_autorun.php");
+        if (file_exists($this->path . '/theme_autorun.php')) {
+            include_once($this->path . '/theme_autorun.php');
         }
 
         $searchConfig = $configHandler->getConfigsByCat(XOOPS_CONF_SEARCH);
@@ -526,7 +526,7 @@ class xos_opal_Theme
             $uri                            = str_replace(XOOPS_URL, '', $_SERVER['REQUEST_URI']);
 
             if (session_id() && strpos($uri, session_id())) {
-                $uri = preg_replace("/([\?&])(" . session_id() . "$|" . session_id() . '&)/', "\\1", $uri);
+                $uri = preg_replace('/([\?&])(' . session_id() . '$|' . session_id() . '&)/', "\\1", $uri);
             }
             // The full digest: 32 bits of MD5 let two URIs share one cached page.
             $this->contentCacheId = $this->generateCacheId('page_' . hash('sha256', $uri));

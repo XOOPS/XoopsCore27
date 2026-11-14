@@ -209,7 +209,7 @@ final class XoopsLegacyTreeSqlTest extends TestCase
             'quote break'           => ["x' OR '1'='1"],
             'comment tail'          => ["x' -- "],
             'backslash then quote'  => ["x\\' OR 1=1 #"],
-            'surrounding whitespace' => ["  plain title  "],
+            'surrounding whitespace' => ['  plain title  '],
         ];
     }
 

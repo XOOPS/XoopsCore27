@@ -163,7 +163,7 @@ class XoopsGuiModern extends XoopsSystemGui
         $stats = [];
 
         // Users statistics
-        $result = $xoopsDB->query("SELECT COUNT(*) FROM " . $xoopsDB->prefix('users'));
+        $result = $xoopsDB->query('SELECT COUNT(*) FROM ' . $xoopsDB->prefix('users'));
         if ($xoopsDB->isResultSet($result) && $result instanceof \mysqli_result) {
             list($stats['total_users']) = $xoopsDB->fetchRow($result);
         } else {
@@ -171,7 +171,7 @@ class XoopsGuiModern extends XoopsSystemGui
         }
 
         // Users registered in last 30 days
-        $result = $xoopsDB->query("SELECT COUNT(*) FROM " . $xoopsDB->prefix('users') . " WHERE user_regdate > " . (time() - 2592000));
+        $result = $xoopsDB->query('SELECT COUNT(*) FROM ' . $xoopsDB->prefix('users') . ' WHERE user_regdate > ' . (time() - 2592000));
         if ($xoopsDB->isResultSet($result) && $result instanceof \mysqli_result) {
             list($stats['new_users_30d']) = $xoopsDB->fetchRow($result);
         } else {
@@ -179,7 +179,7 @@ class XoopsGuiModern extends XoopsSystemGui
         }
 
         // Active users (logged in last 30 days)
-        $result = $xoopsDB->query("SELECT COUNT(*) FROM " . $xoopsDB->prefix('users') . " WHERE last_login > " . (time() - 2592000));
+        $result = $xoopsDB->query('SELECT COUNT(*) FROM ' . $xoopsDB->prefix('users') . ' WHERE last_login > ' . (time() - 2592000));
         if ($xoopsDB->isResultSet($result) && $result instanceof \mysqli_result) {
             list($stats['active_users']) = $xoopsDB->fetchRow($result);
         } else {
@@ -202,8 +202,9 @@ class XoopsGuiModern extends XoopsSystemGui
             $month_start = mktime(0, 0, 0, (int)date('n') - $i, 1, (int)date('Y'));
             $month_end = mktime(23, 59, 59, (int)date('n') - $i + 1, 0, (int)date('Y'));
 
-            $result = $xoopsDB->query("SELECT COUNT(*) FROM " . $xoopsDB->prefix('users') .
-                                     " WHERE user_regdate >= $month_start AND user_regdate < $month_end");
+            $result = $xoopsDB->query(
+                'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('users') .
+                " WHERE user_regdate >= $month_start AND user_regdate < $month_end");
             if ($xoopsDB->isResultSet($result) && $result instanceof \mysqli_result) {
                 list($count) = $xoopsDB->fetchRow($result);
             } else {
@@ -220,11 +221,13 @@ class XoopsGuiModern extends XoopsSystemGui
 
         // Get user group distribution
         $groupStats = [];
-        $result = $xoopsDB->query("SELECT g.name, COUNT(DISTINCT gm.uid) as count
-                                  FROM " . $xoopsDB->prefix('groups') . " g
-                                  LEFT JOIN " . $xoopsDB->prefix('groups_users_link') . " gm ON g.groupid = gm.groupid
+        $result = $xoopsDB->query(
+            'SELECT g.name, COUNT(DISTINCT gm.uid) as count
+                                  FROM ' . $xoopsDB->prefix('groups') . ' g
+                                  LEFT JOIN ' . $xoopsDB->prefix('groups_users_link') . ' gm ON g.groupid = gm.groupid
                                   GROUP BY g.groupid, g.name
-                                  ORDER BY count DESC");
+                                  ORDER BY count DESC'
+        );
 
         if ($xoopsDB->isResultSet($result) && $result instanceof \mysqli_result) {
             while ($row = $xoopsDB->fetchArray($result)) {
@@ -292,7 +295,7 @@ class XoopsGuiModern extends XoopsSystemGui
 
             $result = $xoopsDB->query(sprintf("SHOW TABLES LIKE '%s'", $escapedTable));
             if ($xoopsDB->isResultSet($result) && $result instanceof \mysqli_result && $xoopsDB->getRowsNum($result) > 0) {
-                $count_result = $xoopsDB->query(sprintf("SELECT COUNT(*) FROM `%s`", $escapedTable));
+                $count_result = $xoopsDB->query(sprintf('SELECT COUNT(*) FROM `%s`', $escapedTable));
                 if ($xoopsDB->isResultSet($count_result) && $count_result instanceof \mysqli_result) {
                     list($count) = $xoopsDB->fetchRow($count_result);
                     $contentStats[] = [

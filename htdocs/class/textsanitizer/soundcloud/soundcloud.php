@@ -16,7 +16,7 @@ class MytsSoundcloud extends MyTextSanitizerExtension
 
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
         $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeSoundCloud("
-            . json_encode((string) $textarea_id, $jsonFlags) . ","
+            . json_encode((string) $textarea_id, $jsonFlags) . ','
             . json_encode(_XOOPS_FORM_ENTER_SOUNDCLOUD_URL, $jsonFlags)
             . ");' onmouseover='style.cursor=\"hand\"' title='" . htmlspecialchars(_XOOPS_FORM_ALT_SOUNDCLOUD, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . "'><span class='fa-brands fa-soundcloud' aria-hidden='true'></span></button>";
@@ -59,7 +59,7 @@ EOH;
     {
         $url    = $match[1] . $match[2];
         $config = parent::loadConfig(__DIR__);
-        if (!preg_match("/^http[s]?:\/\/(www\.)?soundcloud\.com\/(.*)/i", $url, $matches)) {
+        if (!preg_match('/^http[s]?:\/\/(www\.)?soundcloud\.com\/(.*)/i', $url, $matches)) {
             trigger_error("Not matched: {$url}", E_USER_WARNING);
 
             return '';

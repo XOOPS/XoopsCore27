@@ -5,6 +5,7 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 ===================================
 Bug fixes:
 - the 2.5.11 to 2.7.0 upgrade removes the obsolete class/libraries/ folder completely: its deny-all .htaccess is deleted once it is the last file there (it stays beside files a site added), and the unused Composer and php-jwt stub files 2.7.x still shipped under class/libraries/vendor are gone from the release (upgrade/upd_2.5.11-to-2.7.0/index.php, class/libraries) (#313)
+- Profile admin: when saving a registration step fails, the step form is shown again with the errors instead of a fatal "Call to undefined method ProfileRegstep::getForm()" (modules/profile/admin/step.php) (#315)
 
 Libraries and assets:
 - update the bundled XMF library to 1.3.4 RC2: a code-style cleanup only (single-quoted strings), with no behaviour changes since 1.3.4 RC1 (xoops_lib/composer.dist.lock, xoops_lib/vendor/xoops/xmf)

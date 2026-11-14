@@ -5,6 +5,7 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 ===================================
 Bug fixes:
 - the 2.5.11 to 2.7.0 upgrade removes the obsolete class/libraries/ folder completely: its deny-all .htaccess is deleted once it is the last file there (it stays beside files a site added), and the unused Composer and php-jwt stub files 2.7.x still shipped under class/libraries/vendor are gone from the release (upgrade/upd_2.5.11-to-2.7.0/index.php, class/libraries) (#313)
+- Apache no longer lists the contents of shipped directories that had no index file, such as class/xoopseditor/sceditor/emoticons/: the 122 directories under class/xoopseditor, modules/system/themes and themes get the standard index.php, and a unit test fails when a tracked directory under htdocs (outside xoops_lib and xoops_data) has none (tests/unit/htdocs/DirectoryIndexFilesTest.php)
 
 ===================================
 2.7.5 Beta 1                  2026-11

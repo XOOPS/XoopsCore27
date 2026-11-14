@@ -4,6 +4,13 @@ LANGUAGE DIFFERENCES
 Below are language differences from one version to the next.
 
 ================================
+2.7.5 NOT RELEASED
+================================
+/upgrade/language/english/upd_2.7.4-to-2.7.5.php (new file)
+- added define('_XOOPS_UPGRADE_275_HTACCESS_UPDATED', '%s was updated so that Apache 2.4 denies access to it as Apache 2.2 does');
+- added define('_XOOPS_UPGRADE_275_HTACCESS_NOT_WRITTEN', '%s could not be written. It still uses Apache 2.2 syntax, which Apache 2.4 answers with a server error instead of denying access. Replace it with xoops_data/.htaccess from this release.');
+
+================================
 Admin theme dark mode
 ================================
 /htdocs/modules/system/themes/default/language/english/admin.php

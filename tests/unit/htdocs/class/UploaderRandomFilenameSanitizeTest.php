@@ -69,7 +69,7 @@ final class UploaderRandomFilenameSanitizeTest extends TestCase
     public function theFinalSavedNameIsSanitizedBeforeTheMove(): void
     {
         $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/uploader.php');
-        $strip  = strpos($source, "\$this->savedFileName = preg_replace(\"/[^a-zA-Z0-9\\._-]/\", '', \$this->savedFileName);");
+        $strip  = strpos($source, "\$this->savedFileName = preg_replace('/[^a-zA-Z0-9\\._-]/', '', \$this->savedFileName);");
         $again  = strpos($source, '$this->savedFileName = $this->sanitizeExtensionsIn((string) $this->savedFileName);');
         $move   = strpos($source, 'move_uploaded_file($this->mediaTmpName, $this->savedDestination)');
         self::assertNotFalse($strip);

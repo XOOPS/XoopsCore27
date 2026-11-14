@@ -1,2 +1,17 @@
-order deny,allow
-deny from all
+# xoops_data holds the site configuration, caches and logs. Nothing in it is meant to
+# be requested over the web.
+#
+# Apache only -- on nginx or IIS these directives are ignored. The safest
+# configuration by far is to place xoops_data OUTSIDE the document root,
+# which makes all of this moot.
+
+# Apache 2.4
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+# Apache 2.2
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -84,10 +84,18 @@ final class TextExtension extends AbstractExtension
             return $text;
         }
 
-        $safeClass = \htmlspecialchars($class, ENT_QUOTES, 'UTF-8');
+        // Class names only, bounded: the class is repeated once per match
+        if (!\preg_match('/^[A-Za-z0-9_ -]{1,64}\z/', $class)) {
+            $class = 'highlight';
+        }
         $pattern = '/(' . \preg_quote($highlight, '/') . ')/iu';
 
-        return \preg_replace($pattern, '<span class="' . $safeClass . '">$1</span>', $text);
+        // Callback, not a replacement string: "$1" or "\1" in the class must stay literal
+        return \preg_replace_callback(
+            $pattern,
+            static fn (array $m): string => '<span class="' . $class . '">' . $m[1] . '</span>',
+            $text,
+        ) ?? $text;
     }
 
     public function readingTime(string $text, int $wordsPerMinute = 200): string

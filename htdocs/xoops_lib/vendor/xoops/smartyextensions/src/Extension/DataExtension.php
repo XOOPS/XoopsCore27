@@ -76,12 +76,12 @@ final class DataExtension extends AbstractExtension
     {
         $filePath = $params['path'] ?? $params['filePath'] ?? '';
 
-        if ($filePath === '' || !\is_file($filePath) || !\is_readable($filePath)) {
+        if (!\is_string($filePath) || !self::isLocalPath($filePath)) {
             return '';
         }
 
         $realPath = \realpath($filePath);
-        if ($realPath === false) {
+        if ($realPath === false || !\is_file($realPath) || !\is_readable($realPath)) {
             return '';
         }
 
@@ -112,7 +112,7 @@ final class DataExtension extends AbstractExtension
         $width = $params['width'] ?? '100%';
         $height = $params['height'] ?? '600';
 
-        if ($url === '') {
+        if (!\is_string($url) || $url === '' || !self::isSafeUrl($url)) {
             return '';
         }
 
@@ -210,7 +210,11 @@ final class DataExtension extends AbstractExtension
             return '';
         }
 
-        return (string) ($result ?? '');
+        if (!\is_scalar($result) && !$result instanceof \Stringable) {
+            return '';
+        }
+
+        return \htmlspecialchars((string) $result, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     // ---------------------------------------------------------------
@@ -254,12 +258,14 @@ final class DataExtension extends AbstractExtension
 
         $result = \json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return $result !== false ? $result : '{}';
+        // Display modifier: the documented sink is <pre> text, so encode < > & (quotes
+        // stay readable; do not place the result inside an attribute)
+        return \htmlspecialchars($result !== false ? $result : '{}', ENT_NOQUOTES, 'UTF-8');
     }
 
     public function getFileSize(string $file): string
     {
-        if ($file === '' || !\file_exists($file)) {
+        if (!self::isLocalPath($file) || !\file_exists($file)) {
             return '';
         }
 
@@ -280,7 +286,7 @@ final class DataExtension extends AbstractExtension
 
     public function getMimeType(string $file): string
     {
-        if ($file === '' || !\file_exists($file)) {
+        if (!self::isLocalPath($file) || !\file_exists($file)) {
             return '';
         }
 
@@ -299,5 +305,18 @@ final class DataExtension extends AbstractExtension
     public function stripHtmlComments(string $html): string
     {
         return \preg_replace('/<!--.*?-->/s', '', $html);
+    }
+
+    /**
+     * Reject paths that a filesystem probe would resolve over the network:
+     * stream wrappers (ftp://, phar://, php://), UNC shares (\\host) and //host.
+     * Must run before any is_file()/file_exists()/realpath() call.
+     */
+    private static function isLocalPath(string $path): bool
+    {
+        return $path !== ''
+            && !\str_contains($path, "\0")
+            && !\preg_match('#^[a-z][a-z0-9+.-]*://#i', $path)
+            && !\preg_match('#^[\\\\/]{2}#', $path);
     }
 }

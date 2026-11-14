@@ -78,7 +78,8 @@ switch ($op) {
             redirect_header('step.php', 3, sprintf(_PROFILE_AM_SAVEDSUCCESS, _PROFILE_AM_STEP));
         }
         echo $obj->getHtmlErrors();
-        $form = $obj->getForm();
+        include_once dirname(__DIR__) . '/include/forms.php';
+        $form = profile_getStepForm($obj);
         $form->display();
         break;
 

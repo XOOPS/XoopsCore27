@@ -427,7 +427,7 @@ class SuperglobalMigrationTest extends TestCase
     #[Test]
     public function getIntRejectsNonNumericFieldValue(): void
     {
-        $_REQUEST['age_larger'] = "18 OR 1=1";
+        $_REQUEST['age_larger'] = '18 OR 1=1';
         $this->assertSame(18, Request::getInt('age_larger', 0));
     }
 

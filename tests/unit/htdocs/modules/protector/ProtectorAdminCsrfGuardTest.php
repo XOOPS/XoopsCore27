@@ -62,7 +62,7 @@ final class ProtectorAdminCsrfGuardTest extends TestCase
         self::assertNotFalse($guard, "{$label}: missing token check");
         self::assertSame(1, preg_match('/\$db->(query|exec)\(/', $block, $m, PREG_OFFSET_CAPTURE), "{$label}: no database call");
         self::assertLessThan($m[0][1], $guard, "{$label}: token check must precede the first database call");
-        self::assertStringContainsString("redirect_header(", substr($block, $guard, 200), "{$label}: a failed check must redirect");
+        self::assertStringContainsString('redirect_header(', substr($block, $guard, 200), "{$label}: a failed check must redirect");
     }
 
     /** @return array<string, array{string, string, string}> */
@@ -92,7 +92,7 @@ final class ProtectorAdminCsrfGuardTest extends TestCase
         self::assertGreaterThanOrEqual(3, count($forms), 'center.php renders at least two POST forms');
         foreach (array_slice($forms, 1) as $i => $after) {
             $end = strpos($after, '</form>');
-            self::assertStringContainsString(self::FIELD, substr($after, 0, false === $end ? null : $end), "POST form " . ($i + 1) . " lacks the core token field");
+            self::assertStringContainsString(self::FIELD, substr($after, 0, false === $end ? null : $end), 'POST form ' . ($i + 1) . ' lacks the core token field');
         }
     }
 

@@ -548,7 +548,7 @@ class XoopsMailer
     public function setToEmails($email)
     {
         if (!is_array($email)) {
-            if (preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i", $email)) {
+            if (preg_match('/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+([\.][a-z0-9-]+)+$/i', $email)) {
                 array_push($this->toEmails, $email);
             }
         } else {

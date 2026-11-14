@@ -195,8 +195,8 @@ final class XoopsDhtmlToolbarExtensionEscapingTest extends TestCase
                 'alert',
                 $this->codeOutsideStringLiterals($decoded),
                 "$dir: the injected payload escaped its JS string literal and became executable "
-                . "code. The payload is EXPECTED to appear inside the literal -- that is what "
-                . "correct escaping looks like -- so this fires only when it appears outside one."
+                . 'code. The payload is EXPECTED to appear inside the literal -- that is what '
+                . 'correct escaping looks like -- so this fires only when it appears outside one.'
             );
         }
     }
@@ -280,7 +280,7 @@ final class XoopsDhtmlToolbarExtensionEscapingTest extends TestCase
                 'alert',
                 $this->codeOutsideStringLiterals($decoded),
                 "{$handlerName}: the injected payload escaped its JS string literal and became "
-                . "executable code"
+                . 'executable code'
             );
         }
     }

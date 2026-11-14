@@ -144,9 +144,9 @@ class Upgrade_270 extends XoopsUpgrade
     public function check_createtokenstable(): bool
     {
         $table  = $this->db->prefix('tokens');
-        $sql    = "SELECT 1 FROM `information_schema`.`TABLES`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " LIMIT 1";
+        $sql    = 'SELECT 1 FROM `information_schema`.`TABLES`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE() AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . ' LIMIT 1';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -191,10 +191,10 @@ class Upgrade_270 extends XoopsUpgrade
     public function check_widenbannerclientpasswd(): bool
     {
         $table  = $this->db->prefix('bannerclient');
-        $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `COLUMN_NAME` = 'passwd' LIMIT 1";
+        $sql    = 'SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . " AND `COLUMN_NAME` = 'passwd' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -229,7 +229,7 @@ class Upgrade_270 extends XoopsUpgrade
     {
         // Check both core config rows exist (scoped to conf_modid=0, conf_catid=1)
         $sql = 'SELECT COUNT(DISTINCT conf_name) FROM `' . $this->db->prefix('config')
-            . "` WHERE conf_modid = 0 AND conf_catid = 1"
+               . '` WHERE conf_modid = 0 AND conf_catid = 1'
             . " AND `conf_name` IN ('session_cookie_samesite', 'session_cookie_secure')";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
@@ -241,9 +241,9 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         // Check SameSite options exist (Lax, Strict, None)
-        $sql = "SELECT COUNT(*) FROM `" . $this->db->prefix('configoption') . "` co"
-            . " INNER JOIN `" . $this->db->prefix('config') . "` c ON co.conf_id = c.conf_id"
-            . " WHERE c.conf_name = 'session_cookie_samesite' AND c.conf_modid = 0";
+        $sql = 'SELECT COUNT(*) FROM `' . $this->db->prefix('configoption') . '` co'
+               . ' INNER JOIN `' . $this->db->prefix('config') . '` c ON co.conf_id = c.conf_id'
+               . " WHERE c.conf_name = 'session_cookie_samesite' AND c.conf_modid = 0";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -336,10 +336,10 @@ class Upgrade_270 extends XoopsUpgrade
     {
         // Check config.conf_id (parent PK)
         $configTable = $this->db->prefix('config');
-        $sql = "SELECT DATA_TYPE FROM `information_schema`.`COLUMNS`"
-             . " WHERE `TABLE_SCHEMA` = DATABASE()"
-             . " AND `TABLE_NAME` = " . $this->db->quote($configTable)
-             . " AND `COLUMN_NAME` = 'conf_id' LIMIT 1";
+        $sql = 'SELECT DATA_TYPE FROM `information_schema`.`COLUMNS`'
+               . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+               . ' AND `TABLE_NAME` = ' . $this->db->quote($configTable)
+               . " AND `COLUMN_NAME` = 'conf_id' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -351,10 +351,10 @@ class Upgrade_270 extends XoopsUpgrade
 
         // Check configoption.conf_id (FK child) — must ALSO be int
         $optionTable = $this->db->prefix('configoption');
-        $sql = "SELECT DATA_TYPE FROM `information_schema`.`COLUMNS`"
-             . " WHERE `TABLE_SCHEMA` = DATABASE()"
-             . " AND `TABLE_NAME` = " . $this->db->quote($optionTable)
-             . " AND `COLUMN_NAME` = 'conf_id' LIMIT 1";
+        $sql = 'SELECT DATA_TYPE FROM `information_schema`.`COLUMNS`'
+               . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+               . ' AND `TABLE_NAME` = ' . $this->db->quote($optionTable)
+               . " AND `COLUMN_NAME` = 'conf_id' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -400,10 +400,10 @@ class Upgrade_270 extends XoopsUpgrade
     public function check_widenimagename(): bool
     {
         $table  = $this->db->prefix('image');
-        $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `COLUMN_NAME` = 'image_name' LIMIT 1";
+        $sql    = 'SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . " AND `COLUMN_NAME` = 'image_name' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -661,11 +661,11 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         // Column must be varchar(64) NOT NULL DEFAULT ''
-        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
-                . " FROM `information_schema`.`COLUMNS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
+        $sql    = 'SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`'
+                  . ' FROM `information_schema`.`COLUMNS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -703,12 +703,12 @@ class Upgrade_270 extends XoopsUpgrade
 
         // Unique index `field_name` must be the sole, single-column entry
         // with SUB_PART = 64 and NON_UNIQUE = 0.
-        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`"
-                . " FROM `information_schema`.`STATISTICS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `INDEX_NAME` = 'field_name'"
-                . " ORDER BY `SEQ_IN_INDEX`";
+        $sql    = 'SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`'
+                  . ' FROM `information_schema`.`STATISTICS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . " AND `INDEX_NAME` = 'field_name'"
+                  . ' ORDER BY `SEQ_IN_INDEX`';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -771,11 +771,11 @@ class Upgrade_270 extends XoopsUpgrade
         }
 
         // Step 1: Ensure the column is varchar(64) NOT NULL DEFAULT ''.
-        $sql    = "SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`"
-                . " FROM `information_schema`.`COLUMNS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
+        $sql    = 'SELECT `DATA_TYPE`, `CHARACTER_MAXIMUM_LENGTH`, `IS_NULLABLE`, `COLUMN_DEFAULT`'
+                  . ' FROM `information_schema`.`COLUMNS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . " AND `COLUMN_NAME` = 'field_name' LIMIT 1";
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             $this->logs[] = \sprintf(_DB_QUERY_ERROR, $sql) . $this->db->error();
@@ -943,12 +943,12 @@ class Upgrade_270 extends XoopsUpgrade
             return true;
         }
 
-        $sql    = "SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`"
-                . " FROM `information_schema`.`STATISTICS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `INDEX_NAME` = 'sort'"
-                . " ORDER BY `SEQ_IN_INDEX`";
+        $sql    = 'SELECT `COLUMN_NAME`, `SEQ_IN_INDEX`, `SUB_PART`, `NON_UNIQUE`'
+                  . ' FROM `information_schema`.`STATISTICS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . " AND `INDEX_NAME` = 'sort'"
+                  . ' ORDER BY `SEQ_IN_INDEX`';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return false;
@@ -1169,10 +1169,10 @@ class Upgrade_270 extends XoopsUpgrade
      */
     private function tableExists(string $table): ?bool
     {
-        $sql    = "SELECT 1 FROM `information_schema`.`TABLES`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " LIMIT 1";
+        $sql    = 'SELECT 1 FROM `information_schema`.`TABLES`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . ' LIMIT 1';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return null;
@@ -1196,11 +1196,11 @@ class Upgrade_270 extends XoopsUpgrade
      */
     private function indexExists(string $table, string $indexName): ?bool
     {
-        $sql    = "SELECT 1 FROM `information_schema`.`STATISTICS`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " AND `INDEX_NAME` = " . $this->db->quote($indexName)
-                . " LIMIT 1";
+        $sql    = 'SELECT 1 FROM `information_schema`.`STATISTICS`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . ' AND `INDEX_NAME` = ' . $this->db->quote($indexName)
+                  . ' LIMIT 1';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return null;

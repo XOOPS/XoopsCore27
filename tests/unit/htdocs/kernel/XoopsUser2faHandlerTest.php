@@ -1092,8 +1092,10 @@ class XoopsUser2faHandlerTest extends KernelTestCase
     public function theEscapeHatchGivesTheFileBackWhenTheResetDoesNotHappen(): void
     {
         $dir = $this->hatchDir();
-        file_put_contents($dir . '/2fa-reset-7.txt', "reset
-");
+        file_put_contents($dir . '/2fa-reset-7.txt',
+            'reset
+'
+        );
         $handler    = $this->handler();
         $this->rows = [null]; // no row to lock: disable() refuses
 

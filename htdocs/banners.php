@@ -37,10 +37,10 @@ function bannerClientPasswdColumnLength($xoopsDB)
         return $length;
     }
     $table  = $xoopsDB->prefix('bannerclient');
-    $sql    = "SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`"
-            . " WHERE `TABLE_SCHEMA` = DATABASE()"
-            . " AND `TABLE_NAME` = " . $xoopsDB->quote($table)
-            . " AND `COLUMN_NAME` = 'passwd' LIMIT 1";
+    $sql    = 'SELECT CHARACTER_MAXIMUM_LENGTH FROM `information_schema`.`COLUMNS`'
+              . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+              . ' AND `TABLE_NAME` = ' . $xoopsDB->quote($table)
+              . " AND `COLUMN_NAME` = 'passwd' LIMIT 1";
     $result = $xoopsDB->query($sql);
     if (!$xoopsDB->isResultSet($result) || !($result instanceof \mysqli_result)) {
         $length = 0;
@@ -223,7 +223,7 @@ function bannerstats()
                 $extension = strtolower(substr($imageurl, strrpos($imageurl, '.')));
                 if ($extension === '.swf') {
                     // Inform user that SWF is unsupported
-                    echo "<p>" ._BANNERS_NO_FLASH  ."</p>";
+                    echo '<p>' . _BANNERS_NO_FLASH . '</p>';
                 } elseif (in_array($extension, ['.mp4', '.webm', '.ogg'])) {
                     // Handle actual video files
                     $imageurl = htmlspecialchars($imageurl, ENT_QUOTES | ENT_HTML5, 'UTF-8');

@@ -267,7 +267,7 @@ final class LanguageConstantGuardTest extends TestCase
             '+++ $x;', // ... and an added line "++ $x;": not a header pair
             '@@ -20,0 +21 @@',
             '+echo _X;', // this hunk must still count for a.php
-            "diff --git a/htdocs/with space.php b/htdocs/with space.php",
+            'diff --git a/htdocs/with space.php b/htdocs/with space.php',
             "--- a/htdocs/with space.php\t",
             "+++ b/htdocs/with space.php\t", // git ends a path containing a space with a tab
             '@@ -1 +1 @@',

@@ -84,7 +84,7 @@ class PublisherModernThemeWidget implements ModernThemeWidgetInterface
         // Categories count
         $categories = 0;
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('publisher_categories')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('publisher_categories')
         );
         if ($result) {
             list($categories) = $xoopsDB->fetchRow($result);
@@ -94,7 +94,7 @@ class PublisherModernThemeWidget implements ModernThemeWidgetInterface
         $recent = [];
         $result = $xoopsDB->query(
             "SELECT itemid, title, datesub, status FROM $table"
-            . " ORDER BY datesub DESC LIMIT 5"
+            . ' ORDER BY datesub DESC LIMIT 5'
         );
         if ($result) {
             while ($row = $xoopsDB->fetchArray($result)) {

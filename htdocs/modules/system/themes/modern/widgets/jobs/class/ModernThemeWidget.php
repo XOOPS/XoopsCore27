@@ -78,7 +78,7 @@ class JobsModernThemeWidget implements ModernThemeWidgetInterface
 
         // Total applications
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('jobs_applications')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('jobs_applications')
         );
         if ($result) {
             list($applications) = $xoopsDB->fetchRow($result);
@@ -86,7 +86,7 @@ class JobsModernThemeWidget implements ModernThemeWidgetInterface
 
         // Total companies
         $result = $xoopsDB->query(
-            "SELECT COUNT(*) FROM " . $xoopsDB->prefix('jobs_companies')
+            'SELECT COUNT(*) FROM ' . $xoopsDB->prefix('jobs_companies')
         );
         if ($result) {
             list($companies) = $xoopsDB->fetchRow($result);
@@ -95,7 +95,7 @@ class JobsModernThemeWidget implements ModernThemeWidgetInterface
         // Recent job postings
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `job_id`, `title`, `created`, `status`, `location`"
+            'SELECT `job_id`, `title`, `created`, `status`, `location`'
             . " FROM `$table` ORDER BY `created` DESC LIMIT 5"
         );
         if ($result) {

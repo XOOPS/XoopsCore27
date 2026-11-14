@@ -91,7 +91,7 @@ class NewsModernThemeWidget implements ModernThemeWidgetInterface
         // Recent stories
         $recent = [];
         $result = $xoopsDB->query(
-            "SELECT `storyid`, `title`, `published`, `created`"
+            'SELECT `storyid`, `title`, `published`, `created`'
             . " FROM `$table` ORDER BY `created` DESC LIMIT 5"
         );
         if ($result) {

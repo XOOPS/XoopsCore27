@@ -81,7 +81,7 @@ class MytsTextfilter extends MyTextSanitizerExtension
         $tags[] = 'VBSCRIPT';
         $tags[] = 'JAVASCRIPT';
         foreach ($tags as $tag) {
-            $search[]  = '/<' . $tag . "[^>]*?>.*?<\/" . $tag . '>/si';
+            $search[]  = '/<' . $tag . '[^>]*?>.*?<\/' . $tag . '>/si';
             $replace[] = ' [!' . strtoupper($tag) . ' FILTERED!] ';
         }
         // Set meta refresh tag
@@ -93,7 +93,7 @@ class MytsTextfilter extends MyTextSanitizerExtension
         // Set iframe tag
         $search[]  = "/<IFRAME[^>\/]*SRC=(['\"])?([^>\/]*)(\\1)[^>\/]*?\/>/si";
         $replace[] = " [!IFRAME FILTERED! \\2] ";
-        $search[]  = "/<IFRAME[^>]*?>([^<]*)<\/IFRAME>/si";
+        $search[]  = '/<IFRAME[^>]*?>([^<]*)<\/IFRAME>/si';
         $replace[] = " [!IFRAME FILTERED! \\1] ";
         // action
         $text = preg_replace($search, $replace, $text);

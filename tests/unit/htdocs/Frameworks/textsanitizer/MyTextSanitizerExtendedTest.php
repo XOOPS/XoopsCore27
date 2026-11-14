@@ -97,7 +97,7 @@ class MyTextSanitizerExtendedTest extends TestCase
             $GLOBALS['xoopsLogger'] = \XoopsLogger::getInstance();
         }
         $ext = MyTextSanitizerExtended::getInstance();
-        $input = "test string";
+        $input = 'test string';
         $result = $ext->stripSlashesGPC($input);
         // stripSlashesGPC returns the string (no-op since magic_quotes removed)
         $this->assertIsString($result);

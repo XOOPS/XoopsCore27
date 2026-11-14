@@ -329,10 +329,10 @@ class Upgrade_274 extends XoopsUpgrade
      */
     private function tableExists(string $table): ?bool
     {
-        $sql    = "SELECT 1 FROM `information_schema`.`TABLES`"
-                . " WHERE `TABLE_SCHEMA` = DATABASE()"
-                . " AND `TABLE_NAME` = " . $this->db->quote($table)
-                . " LIMIT 1";
+        $sql    = 'SELECT 1 FROM `information_schema`.`TABLES`'
+                  . ' WHERE `TABLE_SCHEMA` = DATABASE()'
+                  . ' AND `TABLE_NAME` = ' . $this->db->quote($table)
+                  . ' LIMIT 1';
         $result = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
             return null;

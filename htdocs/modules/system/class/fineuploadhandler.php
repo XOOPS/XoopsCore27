@@ -257,12 +257,12 @@ abstract class SystemFineUploadHandler
         $type = $_SERVER['HTTP_CONTENT_TYPE'] ?? $_SERVER['CONTENT_TYPE'];
 
         if (!isset($type)) {
-            return ['error' => "No files were uploaded."];
+            return ['error' => 'No files were uploaded.'];
         }
 
         if (strpos(strtolower($type), 'multipart/') !== 0) {
             return [
-                'error' => "Server error. Not a multipart request. Please set forceMultipart to default value (true).",
+                'error' => 'Server error. Not a multipart request. Please set forceMultipart to default value (true).',
             ];
         }
 

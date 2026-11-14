@@ -457,7 +457,7 @@ function xoops_confirm($hiddens, $action, $msg, $submit = '', $addtoken = true)
     // label into value="" and title="" attributes.
     $submit = xoops_confirm_submit_label($submit, _SUBMIT);
     $confirmTpl->assign('submit', $submit);
-    $html = $confirmTpl->fetch("db:system_confirm.tpl");
+    $html = $confirmTpl->fetch('db:system_confirm.tpl');
     if (!empty($html)) {
         echo $html;
     } else {
@@ -657,13 +657,13 @@ function checkEmail($email, $antispam = false)
             return false;
         }
     }
-    if (!preg_match("/^\[?[0-9\.]+\]?$/", $email_array[1])) {
+    if (!preg_match('/^\[?[0-9\.]+\]?$/', $email_array[1])) {
         $domain_array = explode('.', $email_array[1]);
         if (count($domain_array) < 2) {
             return false; // Not enough parts to domain
         }
         for ($i = 0, $iMax = count($domain_array); $i < $iMax; ++$i) {
-            if (!preg_match("/^(([A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])|([A-Za-z0-9]+))$/", $domain_array[$i])) {
+            if (!preg_match('/^(([A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])|([A-Za-z0-9]+))$/', $domain_array[$i])) {
                 return false;
             }
         }
@@ -945,7 +945,7 @@ function xoops_getcss($theme = '')
     $str_css = 'styleNN.css';
     if (false !== stripos($uagent, 'mac')) {
         $str_css = 'styleMAC.css';
-    } elseif (preg_match("/MSIE (\d\.\d{1,2})/i", $uagent)) {
+    } elseif (preg_match('/MSIE (\d\.\d{1,2})/i', $uagent)) {
         $str_css = 'style.css';
     }
     if (is_dir(XOOPS_THEME_PATH . '/' . $theme)) {

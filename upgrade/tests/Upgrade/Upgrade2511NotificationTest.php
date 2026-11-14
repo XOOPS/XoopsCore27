@@ -217,7 +217,7 @@ final class Upgrade2511NotificationTest extends TestCase
         $this->insertId = 200;
         self::assertTrue($this->patch()->apply_notificationmethod());
         self::assertCount(5, $this->exec);
-        self::assertStringContainsString("conf_name, conf_title", $this->exec[0]);
+        self::assertStringContainsString('conf_name, conf_title', $this->exec[0]);
         self::assertStringContainsString("'default_notification'", $this->exec[0]);
         self::assertStringContainsString('DELETE FROM `xoops_configoption` WHERE `conf_id` = 200', $this->exec[1]);
         $inserted = implode("\n", array_slice($this->exec, 2));

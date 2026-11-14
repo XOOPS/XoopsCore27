@@ -41,7 +41,7 @@ defined('XOOPS_ROOT_PATH') or die('Bad installation: please add this folder to t
 
 if (!isset($_SESSION['preflight']) || (isset($_SESSION['preflight']) && $_SESSION['preflight'] !== 'complete')) {
     $_SESSION['preflight'] = 'active';
-    header("Location: ./preflight.php");
+    header('Location: ./preflight.php');
     exit;
 }
 

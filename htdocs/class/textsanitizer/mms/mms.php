@@ -37,9 +37,9 @@ class MytsMms extends MyTextSanitizerExtension
         }
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
         $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeMms("
-            . json_encode((string) $textarea_id, $jsonFlags) . ","
-            . json_encode(_XOOPS_FORM_ENTERMMSURL, $jsonFlags) . ","
-            . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ","
+            . json_encode((string) $textarea_id, $jsonFlags) . ','
+            . json_encode(_XOOPS_FORM_ENTERMMSURL, $jsonFlags) . ','
+            . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ','
             . json_encode(_XOOPS_FORM_ALT_ENTERWIDTH, $jsonFlags)
             . ");' onmouseover='style.cursor=\"hand\"' title='" . htmlspecialchars(_XOOPS_FORM_ALTMMS, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . "'><span class='fa-solid fa-server' aria-hidden='true'></span></button>";

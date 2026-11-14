@@ -105,7 +105,7 @@ final class Protector364RcFixesTest extends TestCase
         // "what the pattern means" against regression.
         $pattern = '#[\s\'"`/]#';
 
-        $this->assertSame(1, preg_match($pattern, "1' OR '1'='1"), "SQL injection with quote");
+        $this->assertSame(1, preg_match($pattern, "1' OR '1'='1"), 'SQL injection with quote');
         $this->assertSame(1, preg_match($pattern, '1 UNION SELECT'), 'SQL injection with whitespace');
         $this->assertSame(1, preg_match($pattern, "admin'--"), 'SQL comment injection');
         $this->assertSame(1, preg_match($pattern, '/etc/passwd'), 'Path traversal');

@@ -114,7 +114,7 @@ function b_system_main_show()
     $criteria->add(new Criteria('isactive', 1));
     // show_in_menu may not exist on pre-2.1.10 schemas; fall back to weight > 0
     $db = \XoopsDatabaseFactory::getDatabaseConnection();
-    $colCheck = $db->query("SHOW COLUMNS FROM " . $db->prefix('modules') . " LIKE 'show_in_menu'");
+    $colCheck = $db->query('SHOW COLUMNS FROM ' . $db->prefix('modules') . " LIKE 'show_in_menu'");
     if ($db->isResultSet($colCheck) && ($colCheck instanceof \mysqli_result) && false !== $db->fetchArray($colCheck)) {
         $criteria->add(new Criteria('show_in_menu', 1));
     } else {
@@ -218,7 +218,7 @@ function checkPendingContent($module, $table, $condition, $adminlink, $lang_link
     // the cached active-module list), so the getCount() that used to follow it was a
     // wasted query per module — and several callers repeat both checks before calling in.
     if (xoops_isActiveModule($module)) {
-        $sql = "SELECT COUNT(*) FROM " . $xoopsDB->prefix($table);
+        $sql = 'SELECT COUNT(*) FROM ' . $xoopsDB->prefix($table);
         if ('' !== $condition) {
             $sql .= " WHERE $condition";
         }
@@ -588,11 +588,11 @@ function b_system_topposters_edit($options)
     $form     = sprintf(_MB_SYSTEM_DISPLAY, $inputtag);
     $form .= '<br>' . _MB_SYSTEM_DISPLAYA . "&nbsp;<input type='radio' id='options[]' name='options[]' value='1'";
     if ($options[1] == 1) {
-        $form .= " checked";
+        $form .= ' checked';
     }
     $form .= ' />&nbsp;' . _YES . "<input type='radio' id='options[]' name='options[]' value='0'";
     if ($options[1] == 0) {
-        $form .= " checked";
+        $form .= ' checked';
     }
     $form .= ' />&nbsp;' . _NO . '';
     $form .= '<br>' . _MB_SYSTEM_NODISPGR . "<br><select id='options[]' name='options[]' multiple='multiple'>";
@@ -602,7 +602,7 @@ function b_system_topposters_edit($options)
         $sel = '';
         for ($i = 2; $i < $size; ++$i) {
             if ($k == $options[$i]) {
-                $sel = " selected";
+                $sel = ' selected';
             }
         }
         $form .= "<option value='$k'$sel>$v</option>";
@@ -623,11 +623,11 @@ function b_system_newmembers_edit($options)
     $form     = sprintf(_MB_SYSTEM_DISPLAY, $inputtag);
     $form .= '<br>' . _MB_SYSTEM_DISPLAYA . "&nbsp;<input type='radio' id='options[]' name='options[]' value='1'";
     if ($options[1] == 1) {
-        $form .= " checked";
+        $form .= ' checked';
     }
     $form .= ' />&nbsp;' . _YES . "<input type='radio' id='options[]' name='options[]' value='0'";
     if ($options[1] == 0) {
-        $form .= " checked";
+        $form .= ' checked';
     }
     $form .= ' />&nbsp;' . _NO . '';
 
@@ -650,12 +650,12 @@ function b_system_info_edit($options)
     $chk = '';
     $form .= '<br>' . _MB_SYSTEM_SADMIN . '&nbsp;';
     if ($options[3] == 1) {
-        $chk = " checked";
+        $chk = ' checked';
     }
     $form .= "<input type='radio' name='options[3]' value='1'" . $chk . ' />&nbsp;' . _YES . '';
     $chk = '';
     if ($options[3] == 0) {
-        $chk = " checked";
+        $chk = ' checked';
     }
     $form .= "&nbsp;<input type='radio' name='options[3]' value='0'" . $chk . ' />' . _NO . '';
 
@@ -763,7 +763,7 @@ function b_system_themes_edit($options)
         $options[2] = 6; // default visible theme rows
     }
     if ($options[0] == 1) {
-        $chk = " checked";
+        $chk = ' checked';
     }
     $form .= "<input type='radio' name='options[0]' value='1'" . $chk . ' />&nbsp;' . _YES;
     $chk = '';

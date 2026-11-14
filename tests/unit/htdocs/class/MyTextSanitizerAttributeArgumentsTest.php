@@ -90,8 +90,8 @@ final class MyTextSanitizerAttributeArgumentsTest extends TestCase
     public static function breakouts(): array
     {
         return [
-            'font inside url href' => ["[url=http://x.test/[font= a onmouseover=alert(1) b]y[/font]]t[/url]", 1],
-            'font inside siteurl'  => ["[siteurl=a[font= x onmouseover=alert(1) ]y[/font]]t[/siteurl]", 1],
+            'font inside url href' => ['[url=http://x.test/[font= a onmouseover=alert(1) b]y[/font]]t[/url]', 1],
+            'font inside siteurl'  => ['[siteurl=a[font= x onmouseover=alert(1) ]y[/font]]t[/siteurl]', 1],
             'mp3 inside img src'   => ['[img]http://x.test/a[mp3] onerror=alert(1) x=[/mp3].png[/img]', 1],
             'mp3 inside img link'  => ['[img]http://x.test/a[mp3] onmouseover=alert(1) x=[/mp3].png[/img]', 0],
             'javascript img link'  => ['[img]javascript:location=name[/img]', 0],

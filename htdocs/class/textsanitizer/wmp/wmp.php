@@ -37,9 +37,9 @@ class MytsWmp extends MyTextSanitizerExtension
 
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE;
         $code = "<button type='button' class='btn btn-default btn-sm' onclick='xoopsCodeWmp("
-            . json_encode((string) $textarea_id, $jsonFlags) . ","
-            . json_encode(_XOOPS_FORM_ENTERWMPURL, $jsonFlags) . ","
-            . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ","
+            . json_encode((string) $textarea_id, $jsonFlags) . ','
+            . json_encode(_XOOPS_FORM_ENTERWMPURL, $jsonFlags) . ','
+            . json_encode(_XOOPS_FORM_ALT_ENTERHEIGHT, $jsonFlags) . ','
             . json_encode(_XOOPS_FORM_ALT_ENTERWIDTH, $jsonFlags)
             . ");' onmouseover='style.cursor=\"hand\"' title='" . htmlspecialchars(_XOOPS_FORM_ALTWMP, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
             . "'><span class='fa-brands fa-windows' aria-hidden='true'></span></button>";

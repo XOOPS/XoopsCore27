@@ -160,7 +160,7 @@ class MainControllerTest extends TestCase
     public function testRetrievesOperationParameterSafely(): void
     {
         $this->assertStringContainsString(
-            "use Xmf\Request;",
+            'use Xmf\Request;',
             $this->sourceCode,
             'Should use Xmf Request helper'
         );
@@ -202,7 +202,7 @@ class MainControllerTest extends TestCase
         // In confirm operation, should clean module names
         $confirmSection = $this->extractOperationSection('confirm');
         $this->assertStringContainsString(
-            "XoopsFilterInput::clean",
+            'XoopsFilterInput::clean',
             $confirmSection,
             'Should use XoopsFilterInput to clean input'
         );
@@ -769,7 +769,7 @@ class MainControllerTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            "_AM_SYSTEM_MODULES_RUSUREUNINS",
+            '_AM_SYSTEM_MODULES_RUSUREUNINS',
             $uninstallSection,
             'Should use uninstall confirmation message'
         );
@@ -1211,7 +1211,7 @@ class MainControllerTest extends TestCase
             $endPos = $nextCase;
         } else {
             // Last case: find the last break; in the remaining source
-            $lastBreak = strrpos($this->sourceCode, "break;", $startPos);
+            $lastBreak = strrpos($this->sourceCode, 'break;', $startPos);
             $endPos = $lastBreak !== false ? $lastBreak + 6 : strlen($this->sourceCode);
         }
 

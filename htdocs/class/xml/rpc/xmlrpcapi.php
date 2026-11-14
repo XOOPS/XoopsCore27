@@ -190,7 +190,7 @@ class XoopsXmlRpcApi
     {
         $ret   = '';
         $match = [];
-        if (preg_match("/\<" . $tag . "\>(.*)\<\/" . $tag . "\>/is", $text, $match)) {
+        if (preg_match('/\<' . $tag . '\>(.*)\<\/' . $tag . '\>/is', $text, $match)) {
             if ($remove) {
                 $text = str_replace($match[0], '', $text);
             }

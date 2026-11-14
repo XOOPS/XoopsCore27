@@ -411,7 +411,7 @@ class MyTextSanitizer
 
                 // Add http prefix if missing
                 if (strpos($url, 'www.') === 0) {
-                    $url = "http://" . $url;
+                    $url = 'http://' . $url;
                 }
 
                 // Allow only specific protocols

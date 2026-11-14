@@ -53,7 +53,10 @@ if ($action !== '') {
         }
         if (!$protector->write_file_badips($bad_ips)) {
             $error_msg .= _AM_MSG_BADIPSCANTOPEN;
-            error_log("[File Write Error] Failed to write bad IPs to file.");
+            XoopsLogger::getInstance()->log(
+                'error',
+                '[File Write Error] Failed to write bad IPs to file.'
+            );
         }
 
         $g1IpsText = Request::getText('group1_ips', '', 'POST');

@@ -48,6 +48,11 @@ The `--prefer-dist` and `-a` flags duplicate `preferred-install` and
 anyway, so the command still produces an authoritative autoloader if that block is
 ever trimmed.
 
+`xoops/moduletools` requires PHP 8.4, while XOOPS 2.7.x runs on PHP 8.2+. It is
+bundled for modules that check for PHP 8.4 before using it, and is never loaded by
+the core. `platform-check` is therefore off, so the autoloader does not refuse PHP
+8.2/8.3. To run Composer itself on PHP 8.2/8.3, add `--ignore-platform-req=php`.
+
 #### After every build: stage new vendor files explicitly
 
 `vendor/` is committed, so an upgrade that adds a class adds an **untracked** file.

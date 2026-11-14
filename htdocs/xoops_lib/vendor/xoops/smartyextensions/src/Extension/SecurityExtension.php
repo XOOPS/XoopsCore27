@@ -184,27 +184,18 @@ final class SecurityExtension extends AbstractExtension
     /**
      * Sanitize a URL, removing illegal characters and blocking unsafe schemes.
      *
-     * Decodes HTML entities before checking the scheme so that entity-encoded
-     * bypass attempts like "javascript&#58;alert(1)" are correctly blocked.
+     * Decodes HTML entities once before checking the scheme so that entity-encoded
+     * bypass attempts like "javascript&#58;alert(1)" are correctly blocked, then
+     * HTML-escapes the result for direct use in an attribute: href="<{$url|sanitize_url}>".
+     * The browser decodes the attribute exactly once, back to the validated value,
+     * so leftover entities (javascript&amp;#58;) and quotes cannot change it.
      */
     public function sanitizeUrl(string $url): string
     {
         $sanitized = \filter_var($url, FILTER_SANITIZE_URL);
-
-        // Decode HTML entities so encoded colons/schemes cannot bypass checks
         $decoded = \html_entity_decode($sanitized, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // Only allow safe schemes (mailto: uses : not ://)
-        if (\preg_match('#^(https?|ftp)://#i', $decoded) || \preg_match('#^mailto:#i', $decoded) || \str_starts_with($decoded, '/') || \str_starts_with($decoded, '#')) {
-            return $decoded;
-        }
-
-        // Relative URLs without scheme are OK
-        if (!\str_contains($decoded, ':')) {
-            return $decoded;
-        }
-
-        return '';
+        return self::isSafeUrl($decoded) ? \htmlspecialchars($decoded, ENT_QUOTES, 'UTF-8') : '';
     }
 
     /**
@@ -241,16 +232,18 @@ final class SecurityExtension extends AbstractExtension
     {
         $parts = \explode('@', $email, 2);
         if (\count($parts) !== 2) {
-            return $email;
+            return \htmlspecialchars($email, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         }
 
         $local = $parts[0];
         $domain = $parts[1];
 
-        $visibleChars = \max(1, (int) \ceil(\strlen($local) / 3));
-        $masked = \substr($local, 0, $visibleChars) . \str_repeat('*', \max(3, \strlen($local) - $visibleChars));
+        // Count characters, not bytes: a cut multibyte character makes htmlspecialchars() return ''
+        $length = \mb_strlen($local, 'UTF-8');
+        $visibleChars = \max(1, (int) \ceil($length / 3));
+        $masked = \mb_substr($local, 0, $visibleChars, 'UTF-8') . \str_repeat('*', \max(3, $length - $visibleChars));
 
-        return $masked . '@' . $domain;
+        return \htmlspecialchars($masked . '@' . $domain, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**

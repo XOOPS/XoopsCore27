@@ -1112,23 +1112,24 @@
         },
         {
             "name": "symfony/deprecation-contracts",
-            "version": "v3.7.1",
-            "version_normalized": "3.7.1.0",
+            "version": "v3.8.1",
+            "version_normalized": "3.8.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/deprecation-contracts.git",
-                "reference": "f3202fa1b5097b0af062dc978b32ecf63404e31d"
+                "reference": "feb1edf4e546af3b85c5caebe8359a20db230ca3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/f3202fa1b5097b0af062dc978b32ecf63404e31d",
-                "reference": "f3202fa1b5097b0af062dc978b32ecf63404e31d",
+                "url": "https://api.github.com/repos/symfony/deprecation-contracts/zipball/feb1edf4e546af3b85c5caebe8359a20db230ca3",
+                "reference": "feb1edf4e546af3b85c5caebe8359a20db230ca3",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.1"
             },
-            "time": "2026-06-05T06:23:12+00:00",
+            "time": "2026-09-16T14:15:10+00:00",
+            "published-time": "2026-11-04T11:25:34+00:00",
             "type": "library",
             "extra": {
                 "thanks": {
@@ -1136,7 +1137,7 @@
                     "name": "symfony/contracts"
                 },
                 "branch-alias": {
-                    "dev-main": "3.7-dev"
+                    "dev-main": "3.8-dev"
                 }
             },
             "installation-source": "dist",
@@ -1162,7 +1163,7 @@
             "description": "A generic function and convention to trigger deprecation notices",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.7.1"
+                "source": "https://github.com/symfony/deprecation-contracts/tree/v3.8.1"
             },
             "funding": [
                 {
@@ -1678,17 +1679,17 @@
         },
         {
             "name": "xoops/helpers",
-            "version": "v1.0.0",
-            "version_normalized": "1.0.0.0",
+            "version": "v1.1.0",
+            "version_normalized": "1.1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/helpers.git",
-                "reference": "0126ae797d92ea8fef25cae6370e80280e520d54"
+                "reference": "ecf72fa548cf9561134b056324b17c3462b873cc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/0126ae797d92ea8fef25cae6370e80280e520d54",
-                "reference": "0126ae797d92ea8fef25cae6370e80280e520d54",
+                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/ecf72fa548cf9561134b056324b17c3462b873cc",
+                "reference": "ecf72fa548cf9561134b056324b17c3462b873cc",
                 "shasum": ""
             },
             "require": {
@@ -1706,7 +1707,8 @@
                 "ext-zip": "Required for zip/unzip filesystem operations",
                 "ezyang/htmlpurifier": "Required by Service\\HtmlSanitizer; without it every entry point returns null so callers can fall back"
             },
-            "time": "2026-07-22T21:56:27+00:00",
+            "time": "2026-11-02T18:39:40+00:00",
+            "published-time": "2026-11-02T19:42:48+00:00",
             "type": "library",
             "extra": {
                 "xoops-helpers": {
@@ -1738,9 +1740,73 @@
             ],
             "support": {
                 "issues": "https://github.com/XOOPS/helpers/issues",
-                "source": "https://github.com/XOOPS/helpers/tree/v1.0.0"
+                "source": "https://github.com/XOOPS/helpers/tree/v1.1.0"
             },
             "install-path": "../xoops/helpers"
+        },
+        {
+            "name": "xoops/moduletools",
+            "version": "v1.6.0",
+            "version_normalized": "1.6.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/XOOPS/moduletools.git",
+                "reference": "8e3764b841cc8757bfcecc358fbea10fec169cd3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/XOOPS/moduletools/zipball/8e3764b841cc8757bfcecc358fbea10fec169cd3",
+                "reference": "8e3764b841cc8757bfcecc358fbea10fec169cd3",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ctype": "*",
+                "ext-mbstring": "*",
+                "ext-tokenizer": "*",
+                "php": "^8.4",
+                "symfony/yaml": "^6.0 || ^7.0",
+                "xoops/helpers": "^1.0",
+                "xoops/xmf": "^1.3"
+            },
+            "require-dev": {
+                "nikic/php-parser": "^5.0",
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.5",
+                "rector/rector": "^2.4",
+                "smarty/smarty": "^5.0",
+                "squizlabs/php_codesniffer": "^3.10 || ^4.0",
+                "xoops/rector-xoops": "^1.0.0-alpha2@alpha"
+            },
+            "time": "2026-11-02T20:33:31+00:00",
+            "published-time": "2026-11-02T20:34:05+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "files": [
+                    "src/data_types.php",
+                    "src/legacy_aliases.php"
+                ],
+                "psr-4": {
+                    "Xoops\\ModuleTools\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Core-bundled reusable services and compatibility module helpers for XOOPS 2.8.0+ modules",
+            "homepage": "https://xoops.org",
+            "keywords": [
+                "framework",
+                "modules",
+                "utilities",
+                "xoops"
+            ],
+            "support": {
+                "issues": "https://github.com/XOOPS/moduletools/issues",
+                "source": "https://github.com/XOOPS/moduletools"
+            },
+            "install-path": "../xoops/moduletools"
         },
         {
             "name": "xoops/regdom",
@@ -1834,17 +1900,17 @@
         },
         {
             "name": "xoops/smartyextensions",
-            "version": "v1.3.0",
-            "version_normalized": "1.3.0.0",
+            "version": "v2.0.0-Beta1",
+            "version_normalized": "2.0.0.0-beta1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/smartyextensions.git",
-                "reference": "761fa105f3981fd45d9d743f2a1351907ad11a0e"
+                "reference": "1f28049d78935a18de5ef4a48ebbf6445f60d5de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/smartyextensions/zipball/761fa105f3981fd45d9d743f2a1351907ad11a0e",
-                "reference": "761fa105f3981fd45d9d743f2a1351907ad11a0e",
+                "url": "https://api.github.com/repos/XOOPS/smartyextensions/zipball/1f28049d78935a18de5ef4a48ebbf6445f60d5de",
+                "reference": "1f28049d78935a18de5ef4a48ebbf6445f60d5de",
                 "shasum": ""
             },
             "require": {
@@ -1855,9 +1921,10 @@
             "require-dev": {
                 "phpstan/phpstan": "^2.0",
                 "phpunit/phpunit": "^11.0",
-                "squizlabs/php_codesniffer": "^3.11"
+                "squizlabs/php_codesniffer": "^3.11 || ^4.0"
             },
-            "time": "2026-07-22T21:22:14+00:00",
+            "time": "2026-11-02T18:58:02+00:00",
+            "published-time": "2026-11-02T19:00:35+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -1880,23 +1947,23 @@
             "homepage": "https://xoops.org",
             "support": {
                 "issues": "https://github.com/XOOPS/smartyextensions/issues",
-                "source": "https://github.com/XOOPS/smartyextensions/tree/v1.3.0"
+                "source": "https://github.com/XOOPS/smartyextensions/tree/v2.0.0-Beta1"
             },
             "install-path": "../xoops/smartyextensions"
         },
         {
             "name": "xoops/xmf",
-            "version": "v1.3.4-RC1",
-            "version_normalized": "1.3.4.0-RC1",
+            "version": "v1.3.4-RC2",
+            "version_normalized": "1.3.4.0-RC2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/xmf.git",
-                "reference": "900e65cde826752b4ba87dbab66c0b30954b2468"
+                "reference": "7616740ef7a4db5893c09d30518c1f002ca357f3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/900e65cde826752b4ba87dbab66c0b30954b2468",
-                "reference": "900e65cde826752b4ba87dbab66c0b30954b2468",
+                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/7616740ef7a4db5893c09d30518c1f002ca357f3",
+                "reference": "7616740ef7a4db5893c09d30518c1f002ca357f3",
                 "shasum": ""
             },
             "require": {
@@ -1912,7 +1979,8 @@
                 "roave/security-advisories": "dev-latest",
                 "squizlabs/php_codesniffer": "^3.11 || ^4.0"
             },
-            "time": "2026-11-11T04:59:32+00:00",
+            "time": "2026-11-14T08:04:22+00:00",
+            "published-time": "2026-11-14T08:04:39+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -1962,6 +2030,6 @@
             "install-path": "../xoops/xmf"
         }
     ],
-    "dev": true,
+    "dev": false,
     "dev-package-names": []
 }

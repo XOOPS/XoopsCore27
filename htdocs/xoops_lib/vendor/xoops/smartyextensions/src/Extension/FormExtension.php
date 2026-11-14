@@ -43,7 +43,11 @@ final class FormExtension extends AbstractExtension
      */
     public function formOpen(array $params, object $template): string
     {
-        $action = \htmlspecialchars($params['action'] ?? '', ENT_QUOTES, 'UTF-8');
+        $rawAction = $params['action'] ?? '';
+        if (!\is_string($rawAction) || !self::isSafeUrl($rawAction)) {
+            $rawAction = '';
+        }
+        $action = \htmlspecialchars($rawAction, ENT_QUOTES, 'UTF-8');
         $method = \htmlspecialchars($params['method'] ?? 'post', ENT_QUOTES, 'UTF-8');
 
         $html = '<form action="' . $action . '" method="' . $method . '"';
@@ -58,8 +62,8 @@ final class FormExtension extends AbstractExtension
 
         $html .= '>';
 
-        // Inject XOOPS CSRF token for POST forms (when security is available)
-        if ($this->security !== null && \strtolower($params['method'] ?? 'post') === 'post') {
+        // Inject XOOPS CSRF token for same-origin POST forms (when security is available)
+        if ($this->security !== null && \strtolower($params['method'] ?? 'post') === 'post' && self::isSameOrigin($rawAction)) {
             $html .= "\n" . $this->security->getTokenHTML();
         }
 
@@ -90,12 +94,32 @@ final class FormExtension extends AbstractExtension
 
         $html = '<input type="' . $type . '" name="' . $name . '" value="' . $value . '"';
 
-        // Pass through optional HTML attributes
+        // Pass through optional HTML attributes. Names must be plain attribute
+        // names (no whitespace/quotes), event handlers are dropped, and URL-bearing
+        // attributes must pass the scheme check. formaction must also stay on this
+        // site: it overrides the action of a form that may carry the CSRF token.
         $reserved = ['type', 'name', 'value', 'assign'];
         foreach ($params as $attr => $attrValue) {
-            if (!\in_array($attr, $reserved, true)) {
-                $html .= ' ' . \htmlspecialchars($attr, ENT_QUOTES, 'UTF-8') . '="' . \htmlspecialchars((string) $attrValue, ENT_QUOTES, 'UTF-8') . '"';
+            if (
+                !\is_string($attr)
+                || \in_array($attr, $reserved, true)
+                || !\preg_match('/^[a-z][a-z0-9_:.-]*\z/i', $attr)
+                || \str_starts_with(\strtolower($attr), 'on')
+            ) {
+                continue;
             }
+            $lower = \strtolower($attr);
+            if (
+                ($lower === 'src' || $lower === 'formaction')
+                && (
+                    !\is_string($attrValue)
+                    || !self::isSafeUrl($attrValue)
+                    || ($lower === 'formaction' && !self::isSameOrigin($attrValue))
+                )
+            ) {
+                continue;
+            }
+            $html .= ' ' . $attr . '="' . \htmlspecialchars((string) $attrValue, ENT_QUOTES, 'UTF-8') . '"';
         }
 
         $html .= ' />';
@@ -282,5 +306,70 @@ final class FormExtension extends AbstractExtension
         }
 
         return $html;
+    }
+
+    /**
+     * True when a form action submits back to this site, so it may receive the CSRF token.
+     *
+     * Relative actions are same-origin. Absolute and protocol-relative actions must
+     * match the XOOPS_URL origin: scheme, host and effective port (a protocol-relative
+     * action takes the XOOPS_URL scheme). Mirrors browser URL parsing first: leading
+     * C0/space is stripped, tab/CR/LF are removed, and "\" counts as "/".
+     */
+    private static function isSameOrigin(string $action): bool
+    {
+        $url = \str_replace(["\t", "\r", "\n", '\\'], ['', '', '', '/'], \ltrim($action, "\x00..\x20"));
+
+        if (!\str_starts_with($url, '//') && !\preg_match('#^[a-z][a-z0-9+.-]*:#i', $url)) {
+            return true;
+        }
+
+        $siteUrl = \defined('XOOPS_URL') ? \constant('XOOPS_URL') : null;
+        $site = \is_string($siteUrl) ? self::origin($siteUrl, null) : null;
+
+        return $site !== null && self::origin($url, $site[0]) === $site;
+    }
+
+    /**
+     * Origin of an absolute or protocol-relative URL as [scheme, host, port], or null.
+     *
+     * @return array{string, string, int}|null
+     */
+    private static function origin(string $url, ?string $defaultScheme): ?array
+    {
+        $parts = \parse_url(\str_starts_with($url, '//') && $defaultScheme !== null ? $defaultScheme . ':' . $url : $url);
+        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+
+        $scheme = \strtolower($parts['scheme']);
+        $port = $parts['port'] ?? match ($scheme) {
+            'https' => 443,
+            'http' => 80,
+            default => 0,
+        };
+
+        $host = \strtolower($parts['host']);
+        if (\str_contains($host, '[') || \str_contains($host, ']')) {
+            $host = self::canonicalIpv6Host($host);
+            if ($host === null) {
+                return null;
+            }
+        }
+
+        return [$scheme, $host, $port];
+    }
+
+    /**
+     * Bracketed IPv6 literal in canonical form, so [::1] and [0:0:0:0:0:0:0:1] compare
+     * equal; null unless it is exactly one bracket pair around a valid address (no zone id).
+     */
+    private static function canonicalIpv6Host(string $host): ?string
+    {
+        $ip = \preg_match('/^\[([0-9a-f:.]+)\]\z/', $host, $m) === 1 ? $m[1] : '';
+        $packed = \filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false ? \inet_pton($ip) : false;
+        $canonical = $packed !== false ? \inet_ntop($packed) : false;
+
+        return $canonical === false ? null : '[' . $canonical . ']';
     }
 }

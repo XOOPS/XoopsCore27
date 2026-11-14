@@ -168,23 +168,11 @@ final class AssetExtension extends AbstractExtension
     {
         $decoded = \html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-        // Absolute with safe scheme
-        if (\preg_match('#^https?://#i', $decoded)) {
-            return $decoded;
+        // ftp:/mailto: pass isSafeUrl() but are not loadable assets
+        if (\preg_match('#^(?:ftp|mailto):#i', $decoded) || !self::isSafeUrl($decoded)) {
+            return '';
         }
 
-        // Protocol-relative
-        if (\str_starts_with($decoded, '//')) {
-            return $decoded;
-        }
-
-        // Relative path: only reject if a scheme-like colon appears in the
-        // path portion before any / or ? (colons in query strings are fine)
-        $schemeEnd = \strcspn($decoded, '/?');
-        if (!\str_contains(\substr($decoded, 0, $schemeEnd), ':')) {
-            return $decoded;
-        }
-
-        return '';
+        return $decoded;
     }
 }

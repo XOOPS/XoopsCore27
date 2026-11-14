@@ -52,6 +52,13 @@ final class NavigationExtension extends AbstractExtension
     /**
      * Generate a URL from a route and query parameters.
      *
+     * A route with an executable scheme (javascript:, data:, ...), also when
+     * entity-encoded (javascript&#58;), or an array/object route yields an empty
+     * string on both the direct-output and assign paths. A null route counts as
+     * an empty one. Because the assigned value may be printed unescaped, a route
+     * whose decoded form has a scheme (foo&#58;bar) is rejected too, although
+     * escaped output would render it inert.
+     *
      * @param array  $params   ['route' => string, 'params' => array, 'assign' => string]
      * @param object $template Smarty_Internal_Template|Smarty\Template
      */
@@ -60,9 +67,16 @@ final class NavigationExtension extends AbstractExtension
         $route = $params['route'] ?? '';
         $queryParams = $params['params'] ?? [];
 
-        $url = $route;
+        $url = \is_string($route) ? $route : '';
         if (!empty($queryParams) && \is_array($queryParams)) {
             $url .= '?' . \http_build_query($queryParams);
+        }
+        // Check the decoded form too: an assigned raw URL printed into href unescaped
+        // would let the browser turn javascript&#58; back into javascript:.
+        // A failed decode (null) rejects the URL rather than re-checking the raw form.
+        $decodedUrl = self::decodeAsAttribute($url);
+        if (!\is_string($route) || !self::isSafeUrl($url) || $decodedUrl === null || !self::isSafeUrl($decodedUrl)) {
+            $url = '';
         }
 
         if (!empty($params['assign'])) {
@@ -72,6 +86,44 @@ final class NavigationExtension extends AbstractExtension
         }
 
         return \htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
+     * Decode a value the way a browser decodes an attribute, then drop the tab,
+     * CR and LF that the URL parser strips.
+     *
+     * Unlike html_entity_decode(), numeric references decode with or without ';'
+     * and for every code point (&#13;); invalid ones become U+FFFD. Named
+     * references decode only with ';'. One pass, so &#38;colon; stays "&colon;".
+     * Returns null if the regex engine fails, so the caller can reject the value.
+     */
+    private static function decodeAsAttribute(string $value): ?string
+    {
+        $decoded = \preg_replace_callback(
+            '/&(?:#x([0-9a-f]+);?|#(\d+);?|([a-z][a-z0-9]*;))/i',
+            static fn (array $m): string => ($m[3] ?? '') !== ''
+                ? \html_entity_decode('&' . $m[3], ENT_QUOTES | ENT_HTML5, 'UTF-8')
+                : self::numericReferenceToChar($m[1], $m[2] ?? ''),
+            $value,
+        );
+
+        return $decoded === null ? null : \str_replace(["\t", "\r", "\n"], '', $decoded);
+    }
+
+    /**
+     * Character for a numeric reference: hex digits or decimal digits (one is '').
+     * Zero, surrogates and code points above U+10FFFF become U+FFFD, as in browsers.
+     */
+    private static function numericReferenceToChar(string $hex, string $decimal): string
+    {
+        $digits = \ltrim($hex !== '' ? $hex : $decimal, '0');
+        if ($digits === '' || \strlen($digits) > 7) {
+            return "\u{FFFD}";
+        }
+        $codePoint = $hex !== '' ? (int) \hexdec($digits) : (int) $digits;
+        $char = $codePoint <= 0x10FFFF ? \mb_chr($codePoint, 'UTF-8') : false;
+
+        return $char === false ? "\u{FFFD}" : $char;
     }
 
     /**
@@ -215,7 +267,7 @@ final class NavigationExtension extends AbstractExtension
         foreach ($crumbs as $i => $crumb) {
             $safeLabel = \htmlspecialchars($crumb['label'], ENT_QUOTES, 'UTF-8');
 
-            if ($i === $lastIndex || $crumb['url'] === '') {
+            if ($i === $lastIndex || $crumb['url'] === '' || !self::isSafeUrl($crumb['url'])) {
                 $html .= '<li class="breadcrumb-item active" aria-current="page">' . $safeLabel . '</li>';
             } else {
                 $safeUrl = \htmlspecialchars($crumb['url'], ENT_QUOTES, 'UTF-8');
@@ -306,8 +358,13 @@ final class NavigationExtension extends AbstractExtension
         }
 
         $urlPattern = (string) ($params['urlPattern'] ?? '?page={page}');
-        $window = \max(0, (int) ($params['window'] ?? 0));
         $totalPages = \max(1, $totalPages);
+        // Bound the rendered links: past 100 pages the default full list becomes
+        // a window of 2, and a caller window is capped at 20.
+        $window = \min(20, \max(0, (int) ($params['window'] ?? 0)));
+        if ($window === 0 && $totalPages > 100) {
+            $window = 2;
+        }
         $currentPage = \max(1, \min($currentPage, $totalPages));
 
         if ($totalPages <= 1) {
@@ -328,7 +385,7 @@ final class NavigationExtension extends AbstractExtension
                 $urlPattern,
             );
 
-            return \htmlspecialchars($replaced, ENT_QUOTES, 'UTF-8');
+            return self::isSafeUrl($replaced) ? \htmlspecialchars($replaced, ENT_QUOTES, 'UTF-8') : '#';
         };
 
         $html = '<nav aria-label="Page navigation"><ul class="pagination">';
@@ -594,13 +651,23 @@ final class NavigationExtension extends AbstractExtension
 
     /**
      * Convert URLs in text to clickable links.
+     *
+     * Input is plain text: it is HTML-escaped first (existing entities are kept, so
+     * already-escaped text is not double-escaped), then URLs become anchors. The
+     * result is escaped text plus generated <a> elements only; any markup in the
+     * input is shown as text. Rewriting URLs inside arbitrary HTML safely needs a
+     * full HTML5 parser, which this library does not ship.
      */
     public function linkify(string $text): string
     {
+        // NUL is dropped from text by browsers but becomes U+FFFD in an href; remove it first
+        $escaped = \htmlspecialchars(\str_replace("\0", '', $text), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', false);
+
+        // Stop the URL before an escaped quote or angle bracket that followed it in the input
         return \preg_replace(
-            '~(https?://[^\s<>"\']+)~i',
-            '<a href="$1" target="_blank" rel="noopener noreferrer nofollow">$1</a>',
-            $text
-        );
+            '~https?://(?:(?!&(?:quot|#0*39|apos|lt|gt);)[^\s<>"\'])+~i',
+            '<a href="$0" target="_blank" rel="noopener noreferrer nofollow">$0</a>',
+            $escaped
+        ) ?? $escaped;
     }
 }

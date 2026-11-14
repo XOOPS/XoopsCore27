@@ -1,0 +1,110 @@
+{
+  "name": "xoops/moduletools",
+  "description": "Core-bundled reusable services and compatibility module helpers for XOOPS 2.8.0+ modules",
+  "keywords": [
+    "xoops",
+    "modules",
+    "framework",
+    "utilities"
+  ],
+  "type": "library",
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://xoops.org",
+  "require": {
+    "php": "^8.4",
+    "ext-ctype": "*",
+    "ext-mbstring": "*",
+    "ext-tokenizer": "*",
+    "symfony/yaml": "^6.0 || ^7.0",
+    "xoops/helpers": "^1.0",
+    "xoops/xmf": "^1.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "Xoops\\ModuleTools\\": "src/"
+    },
+    "files": [
+      "src/data_types.php",
+      "src/legacy_aliases.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Xoops\\ModuleTools\\Tests\\": "tests/"
+    }
+  },
+  "require-dev": {
+    "nikic/php-parser": "^5.0",
+    "phpstan/phpstan": "^2.0",
+    "phpunit/phpunit": "^11.5",
+    "rector/rector": "^2.4",
+    "smarty/smarty": "^5.0",
+    "squizlabs/php_codesniffer": "^3.10 || ^4.0",
+    "xoops/rector-xoops": "^1.0.0-alpha2@alpha"
+  },
+  "minimum-stability": "alpha",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  },
+  "scripts": {
+    "unit": "phpunit --configuration=phpunit.xml.dist",
+    "lint": "@php scripts/lint-php.php",
+    "cs": "phpcs --standard=phpcs.xml",
+    "cs:fix": "phpcbf --standard=phpcs.xml",
+    "analyse": "phpstan analyse --configuration=phpstan.neon --memory-limit=512M",
+    "rector": "rector process --dry-run",
+    "rector:fix": "rector process",
+    "api:generate": "@php scripts/generate-api-surface.php",
+    "api:check": "@php scripts/generate-api-surface.php --check",
+    "api:compat": "@php scripts/check-api-compat.php",
+    "api:baseline": "@php scripts/check-api-compat.php --accept-baseline",
+    "matrix:generate": "@php scripts/generate-destination-matrix.php",
+    "matrix:check": [
+      "@php scripts/generate-destination-matrix.php --check",
+      "@php scripts/check-destination-matrix.php"
+    ],
+    "layers:check": "@php scripts/check-layers.php",
+    "globals:check": "@php scripts/check-global-accessors.php",
+    "test": [
+      "@lint",
+      "@api:check",
+      "@api:compat",
+      "@matrix:check",
+      "@layers:check",
+      "@globals:check",
+      "@unit"
+    ],
+    "qa": [
+      "@cs",
+      "@analyse",
+      "@rector",
+      "@test"
+    ],
+    "check": "@qa"
+  },
+  "scripts-descriptions": {
+    "unit": "Run the ModuleTools PHPUnit suite",
+    "lint": "Parse-check all package PHP sources",
+    "cs": "Check coding style (PHP_CodeSniffer, PSR-12)",
+    "cs:fix": "Auto-fix coding style",
+    "analyse": "Run PHPStan against src/",
+    "rector": "Preview Rector refactorings (PHP 8.4 + xoops/rector-xoops sets)",
+    "rector:fix": "Apply Rector refactorings",
+    "api:generate": "Regenerate the static public API snapshot",
+    "api:check": "Fail when the public API snapshot is stale",
+    "api:compat": "Reject public API changes not named in the allowlist",
+    "api:baseline": "Explicitly accept the current public API as the compatibility baseline",
+    "matrix:generate": "Regenerate destination and promotion-backlog artifacts",
+    "matrix:check": "Validate destination coverage and lifecycle fields",
+    "layers:check": "Enforce Internal classification and output boundaries",
+    "globals:check": "Require every legacy global read/write to live in a designated accessor",
+    "test": "Package-local verification gate (lint, API, matrix, layers, globals, PHPUnit)",
+    "qa": "Full gate: style, PHPStan, Rector dry-run, then @test",
+    "check": "Alias for @qa"
+  },
+  "support": {
+    "issues": "https://github.com/XOOPS/moduletools/issues",
+    "source": "https://github.com/XOOPS/moduletools"
+  }
+}

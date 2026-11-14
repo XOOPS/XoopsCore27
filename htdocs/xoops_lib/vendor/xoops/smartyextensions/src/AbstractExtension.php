@@ -76,6 +76,10 @@ abstract class AbstractExtension
     /**
      * Register all plugins with a Smarty 4 instance.
      *
+     * Functions and blocks are registered non-cacheable, matching Smarty5Adapter:
+     * their output can depend on the current user (xo_permission, CSRF tokens),
+     * so a cached page must re-run them for every request.
+     *
      * @param \Smarty|\Smarty\Smarty $smarty
      */
     public function register(object $smarty): void
@@ -84,10 +88,28 @@ abstract class AbstractExtension
             $smarty->registerPlugin('modifier', $name, $callback);
         }
         foreach ($this->getFunctions() as $name => $callback) {
-            $smarty->registerPlugin('function', $name, $callback);
+            $smarty->registerPlugin('function', $name, $callback, false);
         }
         foreach ($this->getBlockHandlers() as $name => $callback) {
-            $smarty->registerPlugin('block', $name, $callback);
+            $smarty->registerPlugin('block', $name, $callback, false);
         }
+    }
+
+    /**
+     * True when a URL is safe to place in a navigation attribute (href, src, action).
+     *
+     * Allows http(s)/ftp/mailto, protocol-relative, and scheme-less relative URLs.
+     * Any colon before the first / ? # is treated as a scheme and rejected, which
+     * also covers javascript:, data:, vbscript: and whitespace/control-padded forms.
+     * Validate the exact string the browser will see: callers escape it afterwards,
+     * so the browser decodes the attribute back to this value.
+     */
+    protected static function isSafeUrl(string $url): bool
+    {
+        if (\preg_match('#^(?:https?://|ftp://|mailto:)#i', $url)) {
+            return true;
+        }
+
+        return !\str_contains(\substr($url, 0, \strcspn($url, '/?#')), ':');
     }
 }

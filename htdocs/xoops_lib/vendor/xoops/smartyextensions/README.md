@@ -117,6 +117,8 @@ URL generation, breadcrumbs, pagination, and social sharing.
 <a href="<{$articleUrl|escape}>">Read more</a>
 ```
 
+With Smarty's `$escape_html` on, drop that `|escape`; Smarty 4 would encode the `&` in the query string twice.
+
 ---
 
 ### SecurityExtension
@@ -259,10 +261,13 @@ Wrappers around XOOPS globals and handlers.
 
 ```smarty
 <{xo_get_config name="sitename" assign="siteName"}>
-<title><{$siteName}></title>
+<title><{$siteName|escape}></title>
 
 <{"_MI_NEWS_LATEST_TITLE"|translate}>
 ```
+
+An `assign`ed value is raw, so escape it when you print it. With Smarty's `$escape_html`
+on, drop that `|escape`: auto-escaping covers it, and Smarty 4 would encode it twice.
 
 ---
 
@@ -310,10 +315,14 @@ src/
 
 All extensions follow a consistent **assign contract**:
 
-- **Direct output** (no `assign` param): HTML-escaped with `htmlspecialchars($value, ENT_QUOTES, 'UTF-8')`.
+- **Direct output** (no `assign` param): HTML-escaped with `htmlspecialchars($value, ENT_QUOTES, 'UTF-8')`. `xo_get_config` and `get_session_data` add `ENT_SUBSTITUTE`, so invalid UTF-8 in a stored value becomes U+FFFD instead of an empty string.
 - **Assign path** (`assign` param present): raw value is stored in the template variable. The caller is responsible for escaping when interpolating into HTML (e.g. `href="<{$url|escape}>"`).
 
 This prevents double-escaping while maintaining XSS safety at every output point.
+
+HTML escaping protects element text and **quoted** attributes only. Always quote attributes (`title="<{$n|number_format}>"`); a space in an unquoted value starts a new attribute. JavaScript, CSS and URL contexts need their own encoding.
+
+Several modifiers also return HTML-escaped text: `format_date`, `relative_time`, `format_currency`, `number_format`, `format_phone_number`, `mask_email`, `sanitize_url` and `pretty_print_json`. The same applies to `datetime_diff` when it prints directly. If Smarty's `$escape_html` is on, print them with `nofilter` (`<{$price|number_format:2:'.':"'" nofilter}>`), or the escaping is applied twice. Don't pipe them into `|escape:'url'` or `|escape:'javascript'`. In those contexts, format the value in PHP or with Smarty's built-in `date_format`.
 
 ---
 

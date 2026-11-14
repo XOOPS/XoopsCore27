@@ -1,6 +1,12 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
+2.7.5 NOT RELEASED
+===================================
+Bug fixes:
+- the 2.5.11 to 2.7.0 upgrade removes the obsolete class/libraries/ folder completely: its deny-all .htaccess is deleted once it is the last file there (it stays beside files a site added), and the unused Composer and php-jwt stub files 2.7.x still shipped under class/libraries/vendor are gone from the release (upgrade/upd_2.5.11-to-2.7.0/index.php, class/libraries) (#313)
+
+===================================
 2.7.5 Beta 1                  2026-11
 ===================================
 Enhancements:

@@ -63,6 +63,12 @@ class XoopsLogger
     private $loggers = [];
 
     /**
+     * Who may receive the debug output, once settled; null until then.
+     * @see canReceiveDebugOutput()
+     */
+    private ?bool $audience = null;
+
+    /**
      * XoopsLogger::__construct()
      */
     public function __construct() {}
@@ -386,6 +392,19 @@ class XoopsLogger
                 $includeTrace  = false;
                 $errstr = substr($errstr, 8);
             }
+            // The message and trace name files, classes and sometimes data. Only a
+            // developer request sees them; everyone else gets the generic page. The
+            // registered loggers above have already received the full detail.
+            if (!$this->canSeeErrorDetail()) {
+                $errstr       = 'Internal server error';
+                $includeTrace = false;
+                // The panel lists the stored message too, and exit() below flushes it
+                // through render(): debugLevel 0 or 1 would show it to this requester.
+                $this->activated = false;
+            }
+            if (!headers_sent()) {
+                http_response_code(500);
+            }
             // Guarded: an E_USER_ERROR can be raised before the language files are loaded,
             // and an "Undefined constant" here would replace the real fatal with a useless
             // one. Fall back to the constant name's plain-English intent.
@@ -431,6 +450,84 @@ class XoopsLogger
             // triggered error. Both arrive as E_USER_ERROR, and matching on the message
             // text would be guesswork.
             $this->handleError(E_USER_ERROR, $msg, $e->getFile(), $e->getLine(), $e->getTrace(), get_class($e));
+        }
+    }
+
+    /**
+     * Whether the current requester may receive the in-page debug output.
+     *
+     * The debugLevel rule from xoops_data/configs/xoopsconfig.php: 0 everyone, 1 members,
+     * 2 (the default) administrators. Any other value, including one that is not a whole
+     * number, is treated as 2. Before the site
+     * configuration or the user is known the answer is no, so output flushed early in the
+     * bootstrap never reaches a visitor the rule would have refused.
+     *
+     * common.php settles the answer once authentication is complete. From then on the
+     * settled answer is returned, because $xoopsUserIsAdmin is later narrowed to the
+     * current module's admin right, and render() runs at shutdown, when asking the
+     * database again is not safe.
+     *
+     * @param bool $settle record this answer for the rest of the request
+     *
+     * @return bool
+     */
+    public function canReceiveDebugOutput(bool $settle = false): bool
+    {
+        if (null !== $this->audience) {
+            return $this->audience;
+        }
+        $allowed = is_array($GLOBALS['xoopsConfig'] ?? null) && match (self::debugLevel()) {
+            0       => true,
+            1       => is_object($GLOBALS['xoopsUser'] ?? null),
+            default => !empty($GLOBALS['xoopsUserIsAdmin']),
+        };
+        if ($settle) {
+            $this->audience = $allowed;
+        }
+
+        return $allowed;
+    }
+
+    /**
+     * The configured debugLevel: 0 everyone, 1 members, 2 administrators.
+     *
+     * Only 0 and 1 (as int or digit string) widen the audience; anything else, including
+     * a missing setting, '' or a typo, is 2. A plain (int) cast would turn '' or a typo
+     * into 0, "everyone". Shared by every check that decides who sees debug output
+     * (logger panel, Smarty console, member handler).
+     *
+     * @return int 0, 1 or 2
+     */
+    public static function debugLevel(): int
+    {
+        $config = $GLOBALS['xoopsConfig'] ?? null;
+        $raw    = is_array($config) ? ($config['debugLevel'] ?? null) : null;
+
+        return match ($raw) {
+            0, '0'  => 0,
+            1, '1'  => 1,
+            default => 2,
+        };
+    }
+
+    /**
+     * Whether the current requester may see a fatal error's message and backtrace.
+     *
+     * Debugging must be on and the requester must be a webmaster; see
+     * xoops_isDeveloperRequest(). Anything that prevents the answer, including the helper
+     * not being loaded yet or the check itself failing, counts as no.
+     *
+     * @return bool
+     */
+    protected function canSeeErrorDetail(): bool
+    {
+        if (!function_exists('xoops_isDeveloperRequest')) {
+            return false;
+        }
+        try {
+            return xoops_isDeveloperRequest();
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 
@@ -492,8 +589,14 @@ class XoopsLogger
      */
     public function render($output)
     {
-        global $xoopsUser;
         if (!$this->activated) {
+            return $output;
+        }
+        // Decided here, not only in common.php: that gate runs after the auth.success
+        // preload event, and anything that exits before it still flushes this buffer.
+        if (!$this->canReceiveDebugOutput()) {
+            $this->renderingEnabled = $this->activated = false;
+
             return $output;
         }
 

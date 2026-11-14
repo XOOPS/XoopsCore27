@@ -583,13 +583,12 @@ $xoopsPreload->triggerEvent('core.include.common.auth.success');
  *
  * Note: temporary solution only. Will be re-designed in XOOPS 3.0
  */
-if ($xoopsLogger->activated) {
-    $level = isset($xoopsConfig['debugLevel']) ? (int) $xoopsConfig['debugLevel'] : 2;
-    if (($level == 2 && empty($xoopsUserIsAdmin)) || ($level == 1 && !$xoopsUser)) {
-        error_reporting(0);
-        $xoopsLogger->activated = false;
-    }
-    unset($level);
+if ($xoopsLogger->activated && !$xoopsLogger->canReceiveDebugOutput(true)) {
+    // Hide PHP's own error display from this requester, but keep error_reporting:
+    // handleError() checks it before dispatching, and the file logger must still
+    // receive this request's errors and fatals.
+    ini_set('display_errors', '0');
+    $xoopsLogger->activated = false;
 }
 
 /**

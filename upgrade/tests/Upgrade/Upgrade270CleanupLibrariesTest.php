@@ -90,6 +90,26 @@ final class Upgrade270CleanupLibrariesTest extends TestCase
     }
 
     #[Test]
+    public function aLoneHtaccessThatCannotBeDeletedFailsTheTask(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows' || (function_exists('posix_geteuid') && posix_geteuid() === 0)) {
+            self::markTestSkipped('needs POSIX directory permissions and a non-root user');
+        }
+        $this->removeTree($this->basePath . 'vendor');
+        chmod($this->basePath, 0500);
+
+        try {
+            $patch = $this->patch();
+
+            self::assertFalse($patch->apply_cleanuplibraries());
+            self::assertFileExists($this->basePath . '.htaccess');
+            self::assertFalse($patch->check_cleanuplibraries());
+        } finally {
+            chmod($this->basePath, 0700);
+        }
+    }
+
+    #[Test]
     public function symlinkedLibrariesAreNeverTraversed(): void
     {
         $external = sys_get_temp_dir() . '/xoops-extlib-' . bin2hex(random_bytes(4));

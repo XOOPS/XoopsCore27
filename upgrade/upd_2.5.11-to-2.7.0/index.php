@@ -553,8 +553,13 @@ class Upgrade_270 extends XoopsUpgrade
             foreach ([$vendorPath, $basePath] as $emptyDir) {
                 // The shipped deny-all .htaccess goes only once it is the last
                 // entry, so files a site added there keep its protection.
-                if ($emptyDir === $basePath && self::holdsOnlyHtaccess($basePath)) {
-                    $this->removeLeftover($basePath . '.htaccess');
+                // Failing here is a real failure (check_ stays pending), unlike a
+                // directory kept because it still holds a site's own files.
+                if ($emptyDir === $basePath && self::holdsOnlyHtaccess($basePath)
+                    && !$this->removeLeftover($basePath . '.htaccess')
+                ) {
+                    $this->logs[] = sprintf('Failed to delete file: %s', $this->relativePath($basePath . '.htaccess'));
+                    $success = false;
                 }
                 if (!$this->removeLeftover($emptyDir)) {
                     $this->logs[] = sprintf('Could not remove directory (it may still contain files): %s', $this->relativePath($emptyDir));

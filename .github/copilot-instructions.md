@@ -12,14 +12,13 @@ XoopsCore27 is the XOOPS 2.7.x CMS framework. It provides the core content manag
 htdocs/                       # Web root (public files)
 htdocs/kernel/                # Core kernel classes (ORM, handlers)
 htdocs/class/                 # Core class library
-htdocs/class/libraries/       # Composer-managed libraries (XMF, etc.)
 htdocs/include/               # Core include files
 htdocs/modules/               # Built-in and installable modules
 htdocs/themes/                # Theme files
 htdocs/language/              # Language packs
 htdocs/install/               # Installation wizard
 htdocs/xoops_data/            # Runtime data (caches, configs, logs)
-htdocs/xoops_lib/             # Additional libraries
+htdocs/xoops_lib/             # Composer-managed libraries (XMF, Smarty, etc.)
 tests/                        # PHPUnit tests
 .github/workflows/ci.yml     # GitHub Actions: tests, coverage
 ```
@@ -27,10 +26,14 @@ tests/                        # PHPUnit tests
 ## Build & Test
 
 ```bash
-# Libraries are managed via Composer in htdocs/class/libraries/
-cd htdocs/class/libraries
+# Libraries are managed via Composer in htdocs/xoops_lib/ (lock is gitignored)
+cd htdocs/xoops_lib
+cp composer.dist.json composer.json && cp composer.dist.lock composer.lock
 composer install              # Install dependencies
-vendor/bin/phpunit            # Run PHPUnit tests
+
+# PHPUnit is installed globally (composer global require phpunit/phpunit:^11.2)
+cd tests         && phpunit --configuration phpunit.xml.dist
+cd upgrade/tests && phpunit --configuration phpunit.xml.dist
 ```
 
 Starting with XOOPS 2.7.0, the external `xoops/base-requires25` metapackage has been dropped; all dependencies are listed directly in `htdocs/xoops_lib/composer.dist.json`.
@@ -54,7 +57,7 @@ Code must run on PHP 8.2 through 8.5. Features introduced in PHP 8.0, 8.1, and 8
 - **Handler pattern**: Data access via `xoops_getHandler('user')`, `xoops_getModuleHandler('item', 'modulename')`.
 - **Module system**: Modules in `htdocs/modules/` with `xoops_version.php` manifest.
 - **Template engine**: Smarty-based with templates in `htdocs/themes/` and module `templates/`.
-- **XMF integration**: Modern utilities via `Xmf\Request`, `Xmf\Module\Helper`, etc. in `htdocs/class/libraries/`.
+- **XMF integration**: Modern utilities via `Xmf\Request`, `Xmf\Module\Helper`, etc. in `htdocs/xoops_lib/vendor/xoops/xmf/`.
 
 ## Security Practices
 

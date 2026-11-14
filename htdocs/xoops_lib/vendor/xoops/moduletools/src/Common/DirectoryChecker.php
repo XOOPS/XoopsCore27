@@ -31,7 +31,10 @@ use Xoops\ModuleTools\Internal\Webmaster;
 class DirectoryChecker
 {
     // ponytail: fixed cap on new levels per call; no upload or cache tree nests this deep
-    private const int MAX_NEW_LEVELS = 32;
+    /**
+     * @var int
+     */
+    private const MAX_NEW_LEVELS = 32;
 
     /**
      * @param     $path
@@ -150,13 +153,16 @@ class DirectoryChecker
             }
             $missing[] = $dir;
         }
-        return \array_all(
-            \array_reverse($missing),
-            // Re-checked per level (its parent now exists, so this is one realpath): a level
-            // swapped for a link after the first check must not carry the next mkdir outside.
-            static fn (string $dir): bool => self::isAllowedPath($dir, $allowedBasePath)
-                && (Filesystem::mkdir($dir, self::normalizeMode($mode, 0755), false) || \is_dir($dir)),
-        );
+        foreach (\array_reverse($missing) as $dir) {
+            if (
+                !self::isAllowedPath($dir, $allowedBasePath)
+                || (!Filesystem::mkdir($dir, self::normalizeMode($mode, 0755), false) && !\is_dir($dir))
+            ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

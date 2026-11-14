@@ -45,7 +45,7 @@ class Output
 
         $pathModIcon16 = $helper->url($helper->getModule()->getInfo('modicons16'));
 
-        $model = new SortControlBuilder()->build(
+        $model = (new SortControlBuilder())->build(
             requestUri: Request::getString('REQUEST_URI', '', 'SERVER'),
             scriptName: Request::getString('SCRIPT_NAME', '', 'SERVER'),
             start: (int) ($start ?? 0), // a page that keeps $start local leaves the global null

@@ -3,7 +3,7 @@
 ModuleTools (`Xoops\ModuleTools\*`) is the set of shared services that XOOPS modules used to
 carry as copied `class/Common/*` files: install helpers, admin CRUD tables, confirmation
 dialogs, breadcrumbs, letter navigation, sample-data buttons, permission helpers, version
-checks and more. On XOOPS 2.8 it is bundled with Core, so a module simply calls it.
+checks and more. XOOPS 2.7.5+ and 2.8 bundle it with Core, so a module simply calls it.
 
 - [Installation](#installation)
 - [The `Helper` is the entry point](#the-helper-is-the-entry-point)
@@ -21,7 +21,7 @@ Migrating an existing module? Read [migrating-a-module.md](migrating-a-module.md
 
 ## Installation
 
-**XOOPS 2.8.0+** ships the library in `xoops_lib/vendor/xoops/moduletools`; it is autoloaded on
+**XOOPS 2.7.5+ and 2.8.0+** ship the library in `xoops_lib/vendor/xoops/moduletools`; it is autoloaded on
 every request. Nothing to install, nothing to activate — there is no `mtools` module row.
 
 **Standalone / development:**
@@ -30,10 +30,10 @@ every request. Nothing to install, nothing to activate — there is no `mtools` 
 composer require xoops/moduletools
 ```
 
-Requirements: PHP 8.4+, `xoops/xmf ^1.3`, `xoops/helpers ^1.0`. Smarty is Core's; the library
+Requirements: PHP 8.2+, `xoops/xmf ^1.3`, `xoops/helpers ^1.0`. Smarty is Core's; the library
 ships no templates.
 
-**XOOPS 2.7.x** sites keep using the separately distributed mTools *module*; the class names
+**XOOPS 2.7.0–2.7.4** sites keep using the separately distributed mTools *module*; the class names
 are the same (`XoopsModules\Mtools\*`), see [compatibility-policy.md](compatibility-policy.md).
 
 ## The `Helper` is the entry point

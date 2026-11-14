@@ -5,8 +5,8 @@ provides reusable services under `Xoops\ModuleTools\` without requiring an
 installed or active module.
 
 The package registers lazy aliases for the stable `XoopsModules\Mtools\*` API,
-allowing existing modules to run on XOOPS 2.8 without an mTools database row.
-The separately distributed mTools module remains the provider for XOOPS 2.7.x.
+allowing existing modules to run on XOOPS 2.7.5+ and 2.8 without an mTools database row.
+The separately distributed mTools module is only needed on XOOPS 2.7.0–2.7.4.
 
 Experimental `mTools\Lab\*`, module administration pages, theme assets, and the
 legacy `mtools_setup` table are intentionally not part of this library.
@@ -19,7 +19,7 @@ legacy `mtools_setup` table are intentionally not part of this library.
 
 ## Requirements
 
-- PHP 8.4+, XOOPS 2.8.0+ (`xoops/xmf` ^1.3, `xoops/helpers` ^1.0). Smarty is Core's; the
+- PHP 8.2+, XOOPS 2.7.5+ or 2.8.0+ (`xoops/xmf` ^1.3, `xoops/helpers` ^1.0). Smarty is Core's; the
   library ships no templates and only drives `XoopsTpl` from PHP.
 
 ## Development

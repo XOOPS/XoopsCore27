@@ -31,7 +31,7 @@ final class StandardConfig
      *
      * @var array<string, array{0:string,1:string,2:string,3:int}>
      */
-    private const array CATALOG = [
+    private const CATALOG = [
         'socialBookmarks'       => ['SOCIAL_BOOKMARKS', 'yesno', 'int', 1],
         'displaySampleButton'   => ['SHOW_SAMPLE_BUTTON', 'yesno', 'int', 1],
         'displayDeveloperTools' => ['SHOW_DEV_TOOLS', 'yesno', 'int', 0],

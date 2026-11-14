@@ -27,9 +27,15 @@ use Xoops\ModuleTools\Internal\PackageLanguage;
  */
 class TestdataButtons
 {
-    /** Button status constants */
-    private const int SHOW_BUTTONS = 1;
-    private const int HIDE_BUTTONS = 0;
+    /**
+     * Button status constants
+     * @var int
+     */
+    private const SHOW_BUTTONS = 1;
+    /**
+     * @var int
+     */
+    private const HIDE_BUTTONS = 0;
 
     /** Emit the button CSS only once per request. */
     private static bool $styleEmitted = false;

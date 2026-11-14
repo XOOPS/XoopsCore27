@@ -12,14 +12,23 @@ namespace Xoops\ModuleTools\Common;
  */
 final readonly class ResizeRequest
 {
-    /** Scale to fit INSIDE maxWidth x maxHeight, preserving aspect (no crop). */
-    public const string FIT_INSIDE = 'inside';
+    /**
+     * Scale to fit INSIDE maxWidth x maxHeight, preserving aspect (no crop).
+     * @var string
+     */
+    public const FIT_INSIDE = 'inside';
 
-    /** Scale to COVER maxWidth x maxHeight, then centre-crop to exactly those dims. */
-    public const string FIT_COVER = 'cover';
+    /**
+     * Scale to COVER maxWidth x maxHeight, then centre-crop to exactly those dims.
+     * @var string
+     */
+    public const FIT_COVER = 'cover';
 
-    /** Stretch to exactly maxWidth x maxHeight, ignoring aspect ratio. */
-    public const string FIT_STRETCH = 'stretch';
+    /**
+     * Stretch to exactly maxWidth x maxHeight, ignoring aspect ratio.
+     * @var string
+     */
+    public const FIT_STRETCH = 'stretch';
 
     /**
      * @param string $sourcePath  path of the image to read

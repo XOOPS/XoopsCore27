@@ -12,11 +12,26 @@ namespace Xoops\ModuleTools;
  */
 final class Bootstrap
 {
-    public const string VERSION = '1.6.0';
-    public const string API_VERSION = '1.2.0';
-    public const string MIN_MODULE_VERSION = '1.1.0';
-    public const string MODULE_DIRNAME = 'mtools';
-    public const string PACKAGE = 'xoops/moduletools';
+    /**
+     * @var string
+     */
+    public const VERSION = '1.7.0';
+    /**
+     * @var string
+     */
+    public const API_VERSION = '1.2.0';
+    /**
+     * @var string
+     */
+    public const MIN_MODULE_VERSION = '1.1.0';
+    /**
+     * @var string
+     */
+    public const MODULE_DIRNAME = 'mtools';
+    /**
+     * @var string
+     */
+    public const PACKAGE = 'xoops/moduletools';
 
     public static function apiVersion(): string
     {

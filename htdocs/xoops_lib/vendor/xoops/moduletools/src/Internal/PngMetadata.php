@@ -13,7 +13,10 @@ namespace Xoops\ModuleTools\Internal;
 final class PngMetadata
 {
     // ponytail: fixed 64 KiB compressed (~64 MB inflated at worst); ICC profiles and text are a few KB
-    private const int MAX_COMPRESSED_BYTES = 65_536;
+    /**
+     * @var int
+     */
+    private const MAX_COMPRESSED_BYTES = 65_536;
 
     /** Whether the PNG's compressed metadata fits the budget; false for an unreadable, malformed or truncated file. */
     public static function isWithinBudget(string $path): bool

@@ -32,14 +32,23 @@ use Xoops\ModuleTools\Internal\Webmaster;
  */
 final class Cloner
 {
-    /** Binary extensions copied verbatim instead of text-replaced. */
-    private const array BINARY_EXTENSIONS = ['jpeg', 'jpg', 'gif', 'png', 'webp', 'ico', 'zip', 'ttf', 'woff', 'woff2', 'pdf'];
+    /**
+     * Binary extensions copied verbatim instead of text-replaced.
+     * @var mixed[]
+     */
+    private const BINARY_EXTENSIONS = ['jpeg', 'jpg', 'gif', 'png', 'webp', 'ico', 'zip', 'ttf', 'woff', 'woff2', 'pdf'];
 
-    /** Top-level entries never copied into a clone. */
-    private const array SKIPPED_ENTRIES = ['node_modules', '.git', '.idea'];
+    /**
+     * Top-level entries never copied into a clone.
+     * @var mixed[]
+     */
+    private const SKIPPED_ENTRIES = ['node_modules', '.git', '.idea'];
 
-    /** Generous for a 92x52 logo; refuses decompression bombs before decoding. */
-    private const int MAX_LOGO_PIXELS = 1_000_000;
+    /**
+     * Generous for a 92x52 logo; refuses decompression bombs before decoding.
+     * @var int
+     */
+    private const MAX_LOGO_PIXELS = 1_000_000;
 
     /**
      * A dirname becomes a PHP namespace segment and a constant prefix in the clone, so it

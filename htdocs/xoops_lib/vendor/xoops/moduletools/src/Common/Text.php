@@ -28,10 +28,22 @@ use Xoops\Helpers\Utility\HtmlBuilder;
 final class Text implements TextInterface
 {
     // ponytail: past this many tags an excerpt falls back to plain text; raise it if real content needs more
-    private const int MAX_HTML_TAGS = 2000;
-    private const string ENCODING = 'UTF-8';
-    private const array BLOCK_TAGS = ['br', 'hr', 'p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'tr', 'td', 'th', 'blockquote', 'ul', 'ol', 'table', 'section', 'article', 'header', 'footer'];
-    private const array VOID_TAGS = ['img', 'br', 'input', 'hr', 'area', 'base', 'basefont', 'col', 'frame', 'isindex', 'link', 'meta', 'param', 'embed', 'source', 'track', 'wbr'];
+    /**
+     * @var int
+     */
+    private const MAX_HTML_TAGS = 2000;
+    /**
+     * @var string
+     */
+    private const ENCODING = 'UTF-8';
+    /**
+     * @var mixed[]
+     */
+    private const BLOCK_TAGS = ['br', 'hr', 'p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'tr', 'td', 'th', 'blockquote', 'ul', 'ol', 'table', 'section', 'article', 'header', 'footer'];
+    /**
+     * @var mixed[]
+     */
+    private const VOID_TAGS = ['img', 'br', 'input', 'hr', 'area', 'base', 'basefont', 'col', 'frame', 'isindex', 'link', 'meta', 'param', 'embed', 'source', 'track', 'wbr'];
 
     /**
      * truncateHtml can truncate a string up to a number of characters while preserving whole words and HTML tags

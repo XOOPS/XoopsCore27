@@ -2,7 +2,7 @@
 
 ## Scope
 
-XOOPS ModuleTools aims to stay small, dependency-light, and compatible with PHP 8.4 through 8.5. New helpers should be broadly reusable and justified by repeated XOOPS development needs.
+XOOPS ModuleTools aims to stay small, dependency-light, and compatible with PHP 8.2 through 8.5 (XOOPS 2.7 bundles it). Do not use PHP 8.3+ syntax or functions such as typed class constants, `new Foo()->bar()` without parentheses, or `array_all()`. New helpers should be broadly reusable and justified by repeated XOOPS development needs.
 
 ## Development workflow
 

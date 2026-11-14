@@ -90,7 +90,7 @@ class Confirm
      */
     public function getFormConfirm(): \XoopsThemeForm
     {
-        $model = new ConfirmationResolver()->resolve(
+        $model = (new ConfirmationResolver())->resolve(
             hiddens: $this->hiddens,
             action: $this->action,
             requestUri: Request::getString('REQUEST_URI', '', 'SERVER'),

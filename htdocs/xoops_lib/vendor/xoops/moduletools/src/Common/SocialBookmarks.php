@@ -26,8 +26,11 @@ use Xoops\Helpers\Utility\HtmlBuilder;
  */
 final class SocialBookmarks
 {
-    /** Default set of networks, in display order. */
-    public const array DEFAULT_NETWORKS = ['x', 'facebook', 'linkedin', 'whatsapp', 'email', 'copy'];
+    /**
+     * Default set of networks, in display order.
+     * @var mixed[]
+     */
+    public const DEFAULT_NETWORKS = ['x', 'facebook', 'linkedin', 'whatsapp', 'email', 'copy'];
 
     /**
      * Build the share-bar HTML.

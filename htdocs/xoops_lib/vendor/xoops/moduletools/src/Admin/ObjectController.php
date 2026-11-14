@@ -252,10 +252,13 @@ final readonly class ObjectController
      */
     private static function passesUploadChecks(\XoopsMediaUploader $uploader): bool
     {
-        return array_all(
-            ['checkMaxFileSize', 'checkMaxWidth', 'checkMaxHeight', 'checkMimeType', 'checkImageType'],
-            static fn (string $check): bool => !method_exists($uploader, $check) || $uploader->{$check}(),
-        ) && self::imageMatchesExtension($uploader);
+        foreach (['checkMaxFileSize', 'checkMaxWidth', 'checkMaxHeight', 'checkMimeType', 'checkImageType'] as $check) {
+            if (method_exists($uploader, $check) && !$uploader->{$check}()) {
+                return false;
+            }
+        }
+
+        return self::imageMatchesExtension($uploader);
     }
 
     /**

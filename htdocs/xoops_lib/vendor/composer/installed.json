@@ -1746,24 +1746,24 @@
         },
         {
             "name": "xoops/moduletools",
-            "version": "v1.6.0",
-            "version_normalized": "1.6.0.0",
+            "version": "v1.7.1",
+            "version_normalized": "1.7.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/moduletools.git",
-                "reference": "8e3764b841cc8757bfcecc358fbea10fec169cd3"
+                "reference": "0c2317fd74445c4986d7ea89d48a798cda266b5c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/moduletools/zipball/8e3764b841cc8757bfcecc358fbea10fec169cd3",
-                "reference": "8e3764b841cc8757bfcecc358fbea10fec169cd3",
+                "url": "https://api.github.com/repos/XOOPS/moduletools/zipball/0c2317fd74445c4986d7ea89d48a798cda266b5c",
+                "reference": "0c2317fd74445c4986d7ea89d48a798cda266b5c",
                 "shasum": ""
             },
             "require": {
                 "ext-ctype": "*",
                 "ext-mbstring": "*",
                 "ext-tokenizer": "*",
-                "php": "^8.4",
+                "php": "^8.2",
                 "symfony/yaml": "^6.0 || ^7.0",
                 "xoops/helpers": "^1.0",
                 "xoops/xmf": "^1.3"
@@ -1777,8 +1777,8 @@
                 "squizlabs/php_codesniffer": "^3.10 || ^4.0",
                 "xoops/rector-xoops": "^1.0.0-alpha2@alpha"
             },
-            "time": "2026-11-02T20:33:31+00:00",
-            "published-time": "2026-11-02T20:34:05+00:00",
+            "time": "2026-11-14T08:54:08+00:00",
+            "published-time": "2026-11-14T09:18:55+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {

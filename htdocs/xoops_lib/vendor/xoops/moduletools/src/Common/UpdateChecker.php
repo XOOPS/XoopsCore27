@@ -120,7 +120,7 @@ final class UpdateChecker
                     ? constant('_CO_MTOOLS_NEW_VERSION')
                     : 'New version: ';
 
-                if (new VersionUpdatePolicy()->hasStableUpdate($moduleVersion, $latestVersion, $prerelease)) {
+                if ((new VersionUpdatePolicy())->hasStableUpdate($moduleVersion, $latestVersion, $prerelease)) {
                     return [
                         $updateLabel . $latestVersion,
                         $latestVersionLink,

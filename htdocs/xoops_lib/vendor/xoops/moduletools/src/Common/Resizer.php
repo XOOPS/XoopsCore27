@@ -26,8 +26,14 @@ use Xoops\ModuleTools\Internal\PngMetadata;
 final class Resizer implements ImageResizerInterface
 {
     // ponytail: fixed ~50 MP budget (fits 48 MP phone photos); make it a ResizeRequest field if a module needs more
-    private const int MAX_PIXELS = 50_000_000;
-    private const string PNG_MIME = 'image/png';
+    /**
+     * @var int
+     */
+    private const MAX_PIXELS = 50_000_000;
+    /**
+     * @var string
+     */
+    private const PNG_MIME = 'image/png';
 
     public function resize(ResizeRequest $request): ResizeResult
     {

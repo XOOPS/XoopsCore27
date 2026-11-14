@@ -83,7 +83,13 @@ final readonly class ItemPermission
     /** @param list<int> $groupIds */
     private function addAll(string $name, int $itemId, array $groupIds): bool
     {
-        return array_all($groupIds, fn($groupId) => $this->gateway->add($name, $itemId, $groupId, $this->moduleId));
+        foreach ($groupIds as $groupId) {
+            if (!$this->gateway->add($name, $itemId, $groupId, $this->moduleId)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function delete(string $name, int $itemId): bool

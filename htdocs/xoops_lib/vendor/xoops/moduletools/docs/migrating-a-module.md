@@ -7,7 +7,7 @@ This guide is for modules that carry their own copies of the mTools-era helper c
 library, keep behaviour.
 
 Nothing here requires a rewrite. Every step is independently shippable, and a module that
-stops after step 1 already works on XOOPS 2.8.
+stops after step 1 already works on XOOPS 2.7.5+ and 2.8.
 
 - [Step 0 — Decide the floor](#step-0--decide-the-floor)
 - [Step 1 — Drop the mTools module dependency (zero code changes)](#step-1--drop-the-mtools-module-dependency-zero-code-changes)
@@ -24,19 +24,19 @@ stops after step 1 already works on XOOPS 2.8.
 
 | Your `min_xoops` | What to do |
 |---|---|
-| 2.8.0 or later | Follow this guide; ModuleTools is bundled with Core. |
-| 2.7.x and 2.8 | Follow this guide **using the `XoopsModules\Mtools\*` names**, and keep the mTools module in your 2.7 install instructions. The aliases resolve to the library on 2.8 and to the module on 2.7. |
-| 2.5.x | Keep your local copies; ModuleTools is PHP 8.4+. |
+| 2.7.5 or later | Follow this guide; ModuleTools is bundled with Core. |
+| 2.7.0–2.7.4 and later | Follow this guide **using the `XoopsModules\Mtools\*` names**, and keep the mTools module in your install instructions for 2.7.0–2.7.4. The aliases resolve to the library on 2.7.5+ and to the module on older 2.7. |
+| 2.5.x | Keep your local copies; 2.5.x does not bundle ModuleTools. |
 
-### 2.8-only recipe
+### Bundled-library recipe
 
-When the module no longer supports XOOPS 2.7, declare the bundled-library floor
+When the module requires XOOPS 2.7.5 or later, declare the bundled-library floor
 explicitly and remove the separate module dependency:
 
 ```php
 // xoops_version.php
-$modversion['min_php'] = '8.4';
-$modversion['min_xoops'] = '2.8.0';
+$modversion['min_php'] = '8.2';
+$modversion['min_xoops'] = '2.7.5';
 // Delete: $modversion['min_modules'] = ['mtools' => '...'];
 ```
 
@@ -47,7 +47,7 @@ use Xoops\ModuleTools\Common\Configurator;
 use Xoops\ModuleTools\Module\Installer;
 ```
 
-Delete any module-local `mtools` bootstrap or dependency shim. XOOPS 2.8
+Delete any module-local `mtools` bootstrap or dependency shim. XOOPS 2.7.5+
 autoloads `Xoops\ModuleTools\*`; there is no `mtools` module to install or activate.
 
 ## Step 1 — Drop the mTools module dependency (zero code changes)

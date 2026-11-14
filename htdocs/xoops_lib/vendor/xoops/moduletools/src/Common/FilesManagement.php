@@ -271,11 +271,17 @@ trait FilesManagement
     private static function copyEntries(string $source, string $dest): bool
     {
         $entries = \scandir($source);
+        if (false === $entries) {
+            return false;
+        }
 
-        return false !== $entries && \array_all(
-            \array_diff($entries, ['.', '..']),
-            static fn (string $entry): bool => self::copyEntry($source . '/' . $entry, $dest . '/' . $entry),
-        );
+        foreach (\array_diff($entries, ['.', '..']) as $entry) {
+            if (!self::copyEntry($source . '/' . $entry, $dest . '/' . $entry)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function copyEntry(string $from, string $to): bool

@@ -11,7 +11,7 @@
   "license": "GPL-2.0-or-later",
   "homepage": "https://xoops.org",
   "require": {
-    "php": "^8.4",
+    "php": "^8.2",
     "ext-ctype": "*",
     "ext-mbstring": "*",
     "ext-tokenizer": "*",
@@ -89,7 +89,7 @@
     "cs": "Check coding style (PHP_CodeSniffer, PSR-12)",
     "cs:fix": "Auto-fix coding style",
     "analyse": "Run PHPStan against src/",
-    "rector": "Preview Rector refactorings (PHP 8.4 + xoops/rector-xoops sets)",
+    "rector": "Preview Rector refactorings (PHP 8.2 + xoops/rector-xoops sets)",
     "rector:fix": "Apply Rector refactorings",
     "api:generate": "Regenerate the static public API snapshot",
     "api:check": "Fail when the public API snapshot is stale",

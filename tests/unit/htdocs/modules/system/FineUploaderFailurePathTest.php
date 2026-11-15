@@ -37,9 +37,16 @@ final class FineUploaderFailurePathTest extends TestCase
 {
     private string $root;
     private bool $registeredWrapper = false;
+    /** @var array{0: array, 1: array, 2: array, 3: array, 4: array} */
+    private array $superglobals;
 
     protected function setUp(): void
     {
+        // The handler reads these through Xmf\Request; the tests seed them and
+        // restore the previous request afterwards. The HTTP status the failure
+        // paths set needs no restore: the test bootstrap has already produced
+        // output, so PHP ignores http_response_code() in this process.
+        $this->superglobals = [$_GET, $_POST, $_REQUEST, $_FILES, $_SERVER];
         $this->root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fu_fail_' . getmypid() . '_' . bin2hex(random_bytes(4));
         mkdir($this->root . DIRECTORY_SEPARATOR . 'chunks', 0775, true);
         FailingUploadStream::reset();
@@ -55,12 +62,7 @@ final class FineUploaderFailurePathTest extends TestCase
             stream_wrapper_unregister(FailingUploadStream::SCHEME);
         }
         $this->removeTree($this->root);
-        unset(
-            $_REQUEST['qquuid'], $_REQUEST['qqtotalparts'], $_REQUEST['qqpartindex'],
-            $_GET['qquuid'], $_GET['qqtotalparts'], $_GET['qqpartindex'],
-            $_POST['qquuid'], $_POST['qqtotalparts'], $_POST['qqpartindex'],
-            $_FILES['qqfile'], $_SERVER['CONTENT_TYPE'], $_SERVER['REQUEST_METHOD']
-        );
+        [$_GET, $_POST, $_REQUEST, $_FILES, $_SERVER] = $this->superglobals;
     }
 
     private function handler(): \SystemFineUploadHandler
@@ -107,6 +109,36 @@ final class FineUploaderFailurePathTest extends TestCase
         self::assertSame('abcdef', file_get_contents($dir . DIRECTORY_SEPARATOR . 'photo.jpg'));
         self::assertSame(['.', '..', 'photo.jpg'], scandir($dir), 'no part file left behind');
         self::assertDirectoryDoesNotExist($folder);
+    }
+
+    #[Test]
+    public function combineChunksReplacesAnExistingTarget(): void
+    {
+        $this->seedChunks('rep1', ['new', 'er']);
+        $dir = $this->root . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'rep1';
+        mkdir($dir, 0775, true);
+        file_put_contents($dir . DIRECTORY_SEPARATOR . 'photo.jpg', 'old');
+
+        $result = $this->handler()->combineChunks($this->root . DIRECTORY_SEPARATOR . 'uploads', 'photo.jpg');
+
+        self::assertSame(['success' => true, 'uuid' => 'rep1'], $result);
+        self::assertSame('newer', file_get_contents($dir . DIRECTORY_SEPARATOR . 'photo.jpg'));
+    }
+
+    #[Test]
+    public function combineChunksAcceptsANameNearTheLengthLimit(): void
+    {
+        // 238 bytes: accepted by safeLeafName(); a part file named after it
+        // would pass the common 255-byte limit for one path component.
+        $name = str_repeat('a', 234) . '.jpg';
+        $this->seedChunks('long1', ['abc', 'def']);
+        $uploads = $this->root . DIRECTORY_SEPARATOR . 'uploads';
+        mkdir($uploads);
+
+        $result = $this->handler()->combineChunks($uploads, $name);
+
+        self::assertSame(['success' => true, 'uuid' => 'long1'], $result);
+        self::assertSame('abcdef', file_get_contents($uploads . DIRECTORY_SEPARATOR . 'long1' . DIRECTORY_SEPARATOR . $name));
     }
 
     #[Test]
@@ -213,7 +245,8 @@ final class FineUploaderFailurePathTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'POST';
         \Xmf\Request::setVar('qquuid', 'del2', 'REQUEST');
 
-        $result = $this->handler()->handleDelete(FailingUploadStream::SCHEME . '://root');
+        // @: the status the failure sets cannot be sent once the bootstrap has output.
+        $result = @$this->handler()->handleDelete(FailingUploadStream::SCHEME . '://root');
 
         self::assertFalse($result['success']);
         self::assertArrayHasKey('error', $result);

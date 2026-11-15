@@ -199,8 +199,10 @@ abstract class SystemFineUploadHandler
         // Assemble into a private part file and publish it only once every chunk
         // is verified, so a failed attempt never leaves a partial file at, or
         // removes an existing file from, the final path. The chunks are the only
-        // copy of the data: keep them until then, so the client can retry.
-        $partPath = $targetPath . '.' . bin2hex(random_bytes(6)) . '.part';
+        // copy of the data: keep them until then, so the client can retry. The
+        // part file name is short and independent of the upload name, so a name
+        // near the filesystem's length limit still fits.
+        $partPath = dirname($targetPath) . DIRECTORY_SEPARATOR . bin2hex(random_bytes(8)) . '.part';
         if (!$this->assembleChunks($targetFolder, $totalParts, $partPath) || !rename($partPath, $targetPath)) {
             if (file_exists($partPath)) {
                 unlink($partPath);
@@ -493,6 +495,8 @@ abstract class SystemFineUploadHandler
             $this->removeDir($target);
             clearstatcache(true, $target);
             if (is_dir($target)) {
+                // FineUploader judges the delete response by its HTTP status only.
+                http_response_code(500);
                 return ['success' => false, 'uuid' => $uuid, 'error' => 'Unable to delete the file.'];
             }
             return ['success' => true, 'uuid' => $uuid];

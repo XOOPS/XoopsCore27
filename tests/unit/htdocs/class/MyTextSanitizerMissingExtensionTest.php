@@ -166,9 +166,24 @@ final class MyTextSanitizerMissingExtensionTest extends TestCase
         self::assertStringNotContainsString('<b>', $out);
         self::assertStringContainsString('&lt;b&gt;x&lt;/b&gt;', $out);
         self::assertStringContainsString('&quot;q&quot;', $out);
-        self::assertStringContainsString('&lt;<br />line2</pre></div>', $out);
+        self::assertStringContainsString("&lt;\nline2</pre></div>", $out);
         self::assertStringNotContainsString('&amp;lt;', $out);
         self::assertStringNotContainsString('&amp;amp;', $out);
+    }
+
+    #[Test]
+    public function aLiteralCodeBlockKeepsItsIndentationAndIsNotLinked(): void
+    {
+        $myts = $this->sanitizer();
+        $src  = "[code]if ready:\n    open https://example.com/x\n\tmail dev@example.com[/code] see https://example.org";
+
+        $out = $this->capture(fn() => $myts->displayTarea($src, 0, 0));
+
+        self::assertStringContainsString("if ready:\n    open https://example.com/x\n\tmail dev@example.com</pre>", $out);
+        self::assertStringNotContainsString('href="https://example.com/x"', $out);
+        self::assertStringNotContainsString('mailto:', $out);
+        // Text outside the code block is still linked.
+        self::assertStringContainsString('href="https://example.org"', $out);
     }
 
     #[Test]

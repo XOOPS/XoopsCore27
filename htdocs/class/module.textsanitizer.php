@@ -327,8 +327,13 @@ class MyTextSanitizer
         // email token and then re-encodes it, so links render correctly while the
         // surrounding text keeps the encoding displayTarea() applied.
 
-        // Convert line breaks and multiple spaces to a single space
-        $text = preg_replace('/[\n\s]+/', ' ', $text);
+        // Convert line breaks and multiple spaces to a single space, except inside
+        // <pre>: there whitespace is content (code indentation, alignment).
+        $text = preg_replace_callback(
+            '#<pre(?=[\s/>]).*?(?:</pre\s*>|\z)|\s+#is',
+            static fn(array $m): string => $m[0][0] === '<' ? $m[0] : ' ',
+            $text
+        ) ?? $text;
 
         // Link only text between tags. A URL inside an attribute that BBCode
         // generated (href, src, title) must never get an anchor written into it,
@@ -358,7 +363,8 @@ class MyTextSanitizer
                     if (preg_match('#^</' . $rawText . '(?=[\s/>])#i', $part)) {
                         $rawText = '';
                     }
-                } elseif (preg_match('#^<(script|style|textarea|title|xmp|iframe|noembed|noframes|noscript|plaintext)(?=[\s/>])#i', $part, $m)) {
+                } elseif (preg_match('#^<(script|style|textarea|title|xmp|iframe|noembed|noframes|noscript|plaintext|pre)(?=[\s/>])#i', $part, $m)) {
+                    // <pre> holds code: shown literally, never linked.
                     $rawText = strtolower($m[1]);
                     $broken  = $broken || 'plaintext' === $rawText; // never closes
                 } elseif (preg_match('#^<(/?)a(?=[\s/>])#i', $part, $m)) {
@@ -844,10 +850,9 @@ class MyTextSanitizer
         $code   = $this->executeExtension('syntaxhighlight', $source, $match[1]);
         if ($code === false) {
             // Show the code as literal text. With HTML on $source is raw, so it must never pass through as markup.
-            // Line breaks become <br />: makeClickable() later folds raw newlines into spaces.
+            // makeClickable() keeps whitespace inside <pre> and links nothing there.
             $charset = defined('_CHARSET') ? _CHARSET : 'UTF-8';
-            $literal = htmlspecialchars($this->undoHtmlSpecialChars($source), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, $charset, false);
-            $code    = '<pre>' . str_replace(["\r\n", "\r", "\n"], '<br />', $literal) . '</pre>';
+            $code    = '<pre>' . htmlspecialchars($this->undoHtmlSpecialChars($source), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, $charset, false) . '</pre>';
         }
 
         return '<div class="xoopsCode">' . $code . '</div>';

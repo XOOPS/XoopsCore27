@@ -107,6 +107,8 @@ $assert = [
 $claims = TokenReader::fromRequest('fineuploader', 'Authorization', $assert);
 
 if ($claims === false) {
+    // An error status, or FineUploader would take a combine or delete as done.
+    http_response_code(403);
     echo json_encode(['error' => 'Invalid request token']);
     exit;
 }

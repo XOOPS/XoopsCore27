@@ -1679,17 +1679,17 @@
         },
         {
             "name": "xoops/helpers",
-            "version": "v1.1.0",
-            "version_normalized": "1.1.0.0",
+            "version": "v1.1.2",
+            "version_normalized": "1.1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/helpers.git",
-                "reference": "ecf72fa548cf9561134b056324b17c3462b873cc"
+                "reference": "e58e53ff29314e4e07c248d518267124ec32b0da"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/ecf72fa548cf9561134b056324b17c3462b873cc",
-                "reference": "ecf72fa548cf9561134b056324b17c3462b873cc",
+                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/e58e53ff29314e4e07c248d518267124ec32b0da",
+                "reference": "e58e53ff29314e4e07c248d518267124ec32b0da",
                 "shasum": ""
             },
             "require": {
@@ -1707,8 +1707,8 @@
                 "ext-zip": "Required for zip/unzip filesystem operations",
                 "ezyang/htmlpurifier": "Required by Service\\HtmlSanitizer; without it every entry point returns null so callers can fall back"
             },
-            "time": "2026-11-02T18:39:40+00:00",
-            "published-time": "2026-11-02T19:42:48+00:00",
+            "time": "2026-11-15T06:06:55+00:00",
+            "published-time": "2026-11-15T06:10:49+00:00",
             "type": "library",
             "extra": {
                 "xoops-helpers": {
@@ -1740,7 +1740,7 @@
             ],
             "support": {
                 "issues": "https://github.com/XOOPS/helpers/issues",
-                "source": "https://github.com/XOOPS/helpers/tree/v1.1.0"
+                "source": "https://github.com/XOOPS/helpers/tree/v1.1.2"
             },
             "install-path": "../xoops/helpers"
         },
@@ -2030,6 +2030,6 @@
             "install-path": "../xoops/xmf"
         }
     ],
-    "dev": false,
+    "dev": true,
     "dev-package-names": []
 }

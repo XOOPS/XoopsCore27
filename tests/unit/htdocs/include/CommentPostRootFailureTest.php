@@ -161,7 +161,9 @@ final class CommentPostRootFailureTest extends TestCase
     #[Test]
     public function theMessageConstantIsDefinedInTheEnglishLanguageFile(): void
     {
-        $this->loadSourceFile('htdocs/language/english/comment.php');
-        self::assertStringContainsString("define('_CM_COMPOSTNG', 'Could not save the comment.');", $this->sourceContent);
+        // Each test runs in its own process, so loading the file defines nothing twice.
+        require XOOPS_ROOT_PATH . '/language/english/comment.php';
+        self::assertTrue(defined('_CM_COMPOSTNG'));
+        self::assertSame('Could not save the comment.', constant('_CM_COMPOSTNG'));
     }
 }

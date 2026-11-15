@@ -173,6 +173,11 @@ if ($method === 'POST') {
         http_response_code(400);
         $result = ['success' => false, 'error' => 'Delete rejected.'];
     }
+    // FineUploader reads the outcome of a delete from the HTTP status alone, so
+    // every refused or failed delete must leave the 2xx range.
+    if (true !== ($result['success'] ?? false) && http_response_code() < 400) {
+        http_response_code(500);
+    }
     echo json_encode($result);
 } else {
     header('HTTP/1.0 405 Method Not Allowed');

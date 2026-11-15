@@ -245,13 +245,34 @@ final class FineUploaderFailurePathTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'POST';
         \Xmf\Request::setVar('qquuid', 'del2', 'REQUEST');
 
-        // @: the status the failure sets cannot be sent once the bootstrap has output.
-        $result = @$this->handler()->handleDelete(FailingUploadStream::SCHEME . '://root');
+        $result = $this->handler()->handleDelete(FailingUploadStream::SCHEME . '://root');
 
         self::assertFalse($result['success']);
         self::assertArrayHasKey('error', $result);
         self::assertStringNotContainsString('://', (string) json_encode($result), 'no server path in the response');
         self::assertContains('root/del2', FailingUploadStream::$dirs);
+    }
+
+    #[Test]
+    public function endpointAnswersEveryFailedDeleteOutsideThe2xxRange(): void
+    {
+        // FineUploader treats any 2xx delete response as success, whatever the
+        // body says, so the endpoint must turn each handleDelete() error array
+        // (unwritable root, missing id, wrong method, not found, not removed)
+        // into an error status. The script runs only over HTTP, so this pins
+        // the DELETE branch in its source.
+        $source = file_get_contents(XOOPS_ROOT_PATH . '/ajaxfineupload.php');
+        self::assertIsString($source);
+        $start = strpos($source, "} elseif (\$method == 'DELETE') {");
+        $end = strpos($source, '} else {', (int) $start);
+        self::assertNotFalse($start);
+        self::assertNotFalse($end);
+        $branch = substr($source, $start, $end - $start);
+
+        $normalise = strpos($branch, "if (true !== (\$result['success'] ?? false) && http_response_code() < 400) {\n        http_response_code(500);");
+        self::assertNotFalse($normalise, 'a delete result without success:true must set an error status');
+        self::assertGreaterThan(strpos($branch, 'handleDelete('), $normalise);
+        self::assertLessThan(strpos($branch, 'echo json_encode($result);'), $normalise);
     }
 
     #[Test]

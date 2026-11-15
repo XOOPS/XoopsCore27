@@ -522,9 +522,10 @@ class PathController
             ],
             'data' => $this->dataPath,
         ];
+        // Only root and data have write targets; lib is exempt through the isset() check below.
         $errors = [
-            'root' => null,
-            'data' => null,
+            'root' => [],
+            'data' => [],
         ];
 
         if (!isset($this->xoopsPath[$path])) {
@@ -542,41 +543,43 @@ class PathController
     }
 
     /**
-     * Write-enable the specified folder
+     * Check that a write target is writable, creating a missing directory.
+     *
+     * A missing file (mainfile.php) is not created: the wizard writes it later from
+     * mainfile.dist.php, so a writable parent directory is enough. Permissions are
+     * never widened; an unwritable target is reported for the administrator to fix.
      *
      * @param string $path
-     * @param bool   $create
+     * @param bool   $create create a missing directory
      *
-     * @return false on failure, method (u-ser,g-roup,w-orld) on success
-     * @internal param bool $recurse
+     * @return string|false false when not writable, else who may write: u(ser), g(roup) or w(orld)
      */
     public function makeWritable($path, $create = true)
     {
-        $mode = intval('0777', 8);
-        if (!is_dir($path)) {
-            if (!$create) {
+        clearstatcache();
+        if (!file_exists($path)) {
+            $parent = dirname($path);
+            if (!$create || !is_dir($parent) || !is_writable($parent)) {
                 return false;
-            } else {
-                if (!mkdir($path, $mode) && !is_dir($path)) {
-                    throw new \RuntimeException(sprintf('Directory "%s" was not created', $path));
-                }
+            }
+            $isFile = '' !== pathinfo($path, PATHINFO_EXTENSION);
+            if ($isFile) {
+                $path = $parent;
+            } elseif (!mkdir($path, 0777) && !is_dir($path)) {
+                return false;
             }
         }
         if (!is_writable($path)) {
-            chmod($path, $mode);
+            return false;
         }
-        clearstatcache();
-        if (is_writable($path)) {
-            $info = stat($path);
-            if ($info['mode'] & 0002) {
-                return 'w';
-            } elseif ($info['mode'] & 0020) {
-                return 'g';
-            }
-
-            return 'u';
+        $mode = fileperms($path);
+        if ($mode & 0002) {
+            return 'w';
+        }
+        if ($mode & 0020) {
+            return 'g';
         }
 
-        return false;
+        return 'u';
     }
 }

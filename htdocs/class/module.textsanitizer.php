@@ -981,7 +981,8 @@ class MyTextSanitizer
     {
         $extension = $this->loadExtension($name);
         // A site upgraded from 2.5.x can still enable an extension that is gone (flash, removed in 2.7.0).
-        if (!is_object($extension) || !is_callable([$extension, 'load'])) {
+        // is_callable() is false for both a false return and an object without load().
+        if (!is_callable([$extension, 'load'])) {
             trigger_error("Text sanitizer extension '{$name}' is not available", E_USER_WARNING);
 
             return false;

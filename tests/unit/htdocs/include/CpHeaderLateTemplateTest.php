@@ -32,6 +32,13 @@ use PHPUnit\Framework\TestCase;
  *
  * Runs in a separate process: cp_functions.php defines XOOPS_CPFUNC_LOADED and
  * Manage2faControllerTest declares its own xoops_cp_header() stub.
+ *
+ * @category  XoopsTest
+ * @package   XoopsCore27
+ * @author    XOOPS Development Team
+ * @copyright 2000-2026 XOOPS Project (https://xoops.org)
+ * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
+ * @link      https://xoops.org
  */
 final class CpHeaderLateTemplateTest extends TestCase
 {
@@ -103,14 +110,26 @@ final class CpHeaderLateTemplateTest extends TestCase
     }
 
     #[Test]
-    public function aRepeatedHeaderCallSwitchesTheTemplate(): void
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aRepeatedHeaderCallSwitchesTheTemplateWithoutRenderingAgain(): void
     {
-        // The static once-guard cannot be primed without a full control panel,
-        // so the routing is pinned on the source text.
-        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/include/cp_functions.php');
-        $this->assertMatchesRegularExpression(
-            '/if \(\$rendered\) \{\s*xoops_cp_switch_template\(\);\s*return;/',
-            $source,
-        );
+        require_once dirname(__DIR__, 3) . '/fixtures/cp-header-fake-gui.php';
+        require_once XOOPS_ROOT_PATH . '/include/cp_functions.php';
+        $GLOBALS['xoopsOption'] = ['template_main' => 'system_modules.tpl'];
+
+        xoops_cp_header();
+        $theme = $GLOBALS['xoTheme'];
+        $this->assertSame(1, XoopsGuiCpheaderfake::$headers);
+        $this->assertSame('db:system_modules.tpl', $theme->contentTemplate);
+
+        // A confirmation branch picks its own template and calls the header again.
+        $GLOBALS['xoopsOption']['template_main'] = 'system_modules_confirm.tpl';
+        xoops_cp_header();
+
+        $this->assertSame(1, XoopsGuiCpheaderfake::$headers, 'the header renders once');
+        $this->assertSame($theme, $GLOBALS['xoTheme'], 'the theme is not rebuilt');
+        $this->assertSame('db:system_modules_confirm.tpl', $theme->contentTemplate);
+        $this->assertSame('db:system_modules_confirm.tpl', $GLOBALS['xoopsOption']['template_main']);
     }
 }

@@ -724,10 +724,12 @@ switch ($op) {
         $image_handler = xoops_getHandler('image');
         $images        = $image_handler->getObjects(new Criteria('imgcat_id', $imgcat_id), true, false);
         $errors        = [];
+        $imageDeleteFailed = false;
         require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         foreach (array_keys($images) as $i) {
             if (!$image_handler->delete($images[$i])) {
                 $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $i);
+                $imageDeleteFailed = true;
             } else {
                 // As for a single image: only a file strictly inside the upload
                 // directory is removed, and one that stays is reported.
@@ -741,7 +743,9 @@ switch ($op) {
                 }
             }
         }
-        if (!$imgcat_handler->delete($imagecategory)) {
+        // Keep the category while one of its images is still in the database:
+        // deleting it would orphan that image, out of reach of the manager.
+        if ($imageDeleteFailed || !$imgcat_handler->delete($imagecategory)) {
             $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDELCAT, $imagecategory->getVar('imgcat_name'));
         }
         if (count($errors) > 0) {

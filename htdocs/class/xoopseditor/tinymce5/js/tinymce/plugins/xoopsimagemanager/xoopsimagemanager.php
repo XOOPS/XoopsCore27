@@ -310,7 +310,7 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
 
         xoops_header();
         echo "<link href='css/xoopsimagebrowser.css' rel='stylesheet' type='text/css' />";
-        xoops_confirm(['op' => 'delcatok', 'imgcat_id' => $imgcat_id, 'target' => $target], $current_file, _MD_RUDELIMGCAT);
+        xoops_confirm(['op' => 'delcatok', 'imgcat_id' => $imgcat_id, 'target' => $target], $current_file, _AM_SYSTEM_IMAGES_RUDELIMGCAT);
         xoops_footer();
         exit();
     }
@@ -335,22 +335,26 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
             redirect_header($current_file . '?target=' . $targetQuery, 3);
         }
         if ($imagecategory->getVar('imgcat_type') !== 'C') {
-            redirect_header($current_file . '?target=' . $targetQuery, 3, _MD_SCATDELNG);
+            redirect_header($current_file . '?target=' . $targetQuery, 3, _AM_SYSTEM_IMAGES_SCATDELNG);
         }
         $image_handler = xoops_getHandler('image');
         $images        = $image_handler->getObjects(new Criteria('imgcat_id', $imgcat_id), true, false);
         $errors        = [];
+        $imageDeleteFailed = false;
         foreach (array_keys($images) as $i) {
             if (!$image_handler->delete($images[$i])) {
-                $errors[] = sprintf(_MD_FAILDEL, $i);
+                $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $i);
+                $imageDeleteFailed = true;
             } else {
                 if (file_exists(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name')) && !unlink(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name'))) {
-                    $errors[] = sprintf(_MD_FAILUNLINK, $i);
+                    $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILUNLINK, $i);
                 }
             }
         }
-        if (!$imgcat_handler->delete($imagecategory)) {
-            $errors[] = sprintf(_MD_FAILDELCAT, $imagecategory->getVar('imgcat_name'));
+        // Keep the category while one of its images is still in the database:
+        // deleting it would orphan that image, out of reach of the manager.
+        if ($imageDeleteFailed || !$imgcat_handler->delete($imagecategory)) {
+            $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDELCAT, $imagecategory->getVar('imgcat_name'));
         }
         if (count($errors) > 0) {
             $safeErrors = array_map(static fn($msg) => htmlspecialchars((string) $msg, ENT_QUOTES, 'UTF-8'), $errors);
@@ -365,7 +369,7 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
     if ($op === 'delfile' && \Xmf\Request::hasVar('op', 'GET')) {
         xoops_header();
         echo "<link href='css/xoopsimagebrowser.css' rel='stylesheet' type='text/css' />";
-        xoops_confirm(['op' => 'delfileok', 'image_id' => $image_id, 'target' => $target], $current_file, _MD_RUDELIMG);
+        xoops_confirm(['op' => 'delfileok', 'image_id' => $image_id, 'target' => $target], $current_file, _AM_SYSTEM_IMAGES_RUDELIMG);
         xoops_footer();
         exit();
     }
@@ -391,7 +395,7 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
             redirect_header($current_file . '?target=' . $targetQuery, 3, _NOPERM);
         }
         if (!$image_handler->delete($image)) {
-            redirect_header($current_file . '?target=' . $targetQuery, 3, sprintf(_MD_FAILDEL, $image->getVar('image_id')));
+            redirect_header($current_file . '?target=' . $targetQuery, 3, sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $image->getVar('image_id')));
         }
         $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
         if (file_exists($imagePath)) {

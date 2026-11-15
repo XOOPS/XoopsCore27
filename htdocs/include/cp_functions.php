@@ -30,18 +30,44 @@ require_once __DIR__ . '/file_safety.php';
  *
  * Renders once per request. Several system admin pages call it at the top and
  * again in an error branch; a second run would open a nested output buffer and
- * rebuild $xoTheme / $xoopsTpl, so later calls are ignored.
+ * rebuild $xoTheme / $xoopsTpl, so a later call only switches the content
+ * template when the page has chosen another one.
+ *
+ * @return void
  */
 function xoops_cp_header()
 {
     static $rendered = false;
     if ($rendered) {
+        xoops_cp_switch_template();
         return;
     }
     $rendered = true;
     xoops_load('cpanel', 'system');
     $cpanel = XoopsSystemCpanel::getInstance();
     $cpanel->gui->header();
+}
+
+/**
+ * Point the rendered theme at $xoopsOption['template_main'].
+ *
+ * A confirmation or error branch sets a new template_main after the header has
+ * rendered and calls xoops_cp_header() again. Without this the footer would
+ * fall back to the late template with an E_USER_WARNING.
+ *
+ * @return void
+ */
+function xoops_cp_switch_template()
+{
+    $template = $GLOBALS['xoopsOption']['template_main'] ?? '';
+    if (!is_string($template) || '' === $template || !isset($GLOBALS['xoTheme']) || !is_object($GLOBALS['xoTheme'])) {
+        return;
+    }
+    if (!str_contains($template, ':')) {
+        $template = 'db:' . $template;
+    }
+    $GLOBALS['xoopsOption']['template_main'] = $template;
+    $GLOBALS['xoTheme']->contentTemplate     = $template;
 }
 
 /**

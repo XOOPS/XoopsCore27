@@ -50,7 +50,12 @@ final class PathControllerPermissionsTest extends TestCase
 
     private function remove(string $path): void
     {
-        if (is_link($path) || is_file($path)) {
+        if (is_link($path)) {
+            unlink($path);
+
+            return;
+        }
+        if (is_file($path)) {
             chmod($path, 0666);
             unlink($path);
 
@@ -86,13 +91,21 @@ final class PathControllerPermissionsTest extends TestCase
         return $controller;
     }
 
+    /**
+     * Probe instead of guessing the platform: Windows ignores a read-only directory,
+     * and root (with or without ext-posix to detect it) writes through one.
+     */
     private function requireEnforcedPermissions(): void
     {
-        if (DIRECTORY_SEPARATOR === '\\') {
-            self::markTestSkipped('Windows does not model an unwritable directory through chmod().');
-        }
-        if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
-            self::markTestSkipped('root can write to any directory.');
+        $probe = $this->base . '/probe';
+        mkdir($probe);
+        chmod($probe, 0555);
+        clearstatcache();
+        $enforced = !is_writable($probe);
+        chmod($probe, 0777);
+        rmdir($probe);
+        if (!$enforced) {
+            self::markTestSkipped('this user can write to a read-only directory (Windows or root).');
         }
     }
 
@@ -129,12 +142,41 @@ final class PathControllerPermissionsTest extends TestCase
         self::assertNotFalse($controller->makeWritable($mainfile));
         self::assertFileExists($mainfile);
 
-        if (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
-            self::markTestSkipped('root can write a read-only file.');
-        }
         chmod($mainfile, 0444);
+        clearstatcache();
+        if (is_writable($mainfile)) {
+            self::markTestSkipped('this user can write a read-only file (root).');
+        }
         self::assertFalse($controller->makeWritable($mainfile), 'a read-only mainfile.php is reported');
         self::assertSame(0444, fileperms($mainfile) & 0777, 'permissions are never widened');
+    }
+
+    #[Test]
+    public function aDanglingMainfileSymlinkIsReportedInsteadOfFollowed(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('symlink() needs extra privileges on Windows.');
+        }
+        mkdir($this->base . '/elsewhere');
+        symlink($this->base . '/elsewhere/mainfile.php', $this->base . '/root/mainfile.php');
+
+        self::assertFalse($this->controller()->makeWritable($this->base . '/root/mainfile.php'));
+        self::assertFileDoesNotExist($this->base . '/elsewhere/mainfile.php');
+    }
+
+    #[Test]
+    public function aTargetOfTheWrongTypeIsReported(): void
+    {
+        mkdir($this->base . '/root/mainfile.php');
+        rmdir($this->base . '/root/uploads');
+        touch($this->base . '/root/uploads');
+        $controller = $this->controller();
+
+        self::assertTrue($controller->checkPermissions('root'));
+        self::assertSame(
+            [$this->base . '/root/mainfile.php' => false, $this->base . '/root/uploads' => false],
+            $controller->permErrors['root']
+        );
     }
 
     #[Test]

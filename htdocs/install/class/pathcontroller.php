@@ -545,9 +545,13 @@ class PathController
     /**
      * Check that a write target is writable, creating a missing directory.
      *
-     * A missing file (mainfile.php) is not created: the wizard writes it later from
-     * mainfile.dist.php, so a writable parent directory is enough. Permissions are
-     * never widened; an unwritable target is reported for the administrator to fix.
+     * mainfile.php is the only file target; every other target is a directory, and
+     * an existing path of the wrong type is reported. A missing mainfile.php is not
+     * created: the wizard writes it later from mainfile.dist.php, so a writable parent
+     * directory is enough. A dangling symlink is reported rather than treated as
+     * missing, because writing through it would land on an unchecked target.
+     * Permissions are never widened; an unwritable target is reported for the
+     * administrator to fix.
      *
      * @param string $path
      * @param bool   $create create a missing directory
@@ -557,17 +561,19 @@ class PathController
     public function makeWritable($path, $create = true)
     {
         clearstatcache();
+        $isFile = 'mainfile.php' === basename($path);
         if (!file_exists($path)) {
             $parent = dirname($path);
-            if (!$create || !is_dir($parent) || !is_writable($parent)) {
+            if (is_link($path) || !$create || !is_dir($parent) || !is_writable($parent)) {
                 return false;
             }
-            $isFile = '' !== pathinfo($path, PATHINFO_EXTENSION);
             if ($isFile) {
                 $path = $parent;
             } elseif (!mkdir($path, 0777) && !is_dir($path)) {
                 return false;
             }
+        } elseif ($isFile ? !is_file($path) : !is_dir($path)) {
+            return false;
         }
         if (!is_writable($path)) {
             return false;

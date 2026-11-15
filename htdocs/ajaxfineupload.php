@@ -155,6 +155,9 @@ if ($method === 'POST') {
     } catch (\Throwable $e) {
         // Return JSON only — never emit the exception (it can carry absolute
         // paths, and on a display_errors host it would corrupt the response).
+        // FineUploader judges a combine response by its HTTP status only, and
+        // still reads this body (preventRetry) from an upload response.
+        http_response_code(400);
         $result = ['success' => false, 'error' => 'Upload rejected.', 'preventRetry' => true];
     }
 
@@ -167,6 +170,7 @@ if ($method === 'POST') {
     try {
         $result = $uploader->handleDelete('files');
     } catch (\Throwable $e) {
+        http_response_code(400);
         $result = ['success' => false, 'error' => 'Delete rejected.'];
     }
     echo json_encode($result);

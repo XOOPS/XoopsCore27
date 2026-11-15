@@ -495,8 +495,6 @@ abstract class SystemFineUploadHandler
             $this->removeDir($target);
             clearstatcache(true, $target);
             if (is_dir($target)) {
-                // FineUploader judges the delete response by its HTTP status only.
-                http_response_code(500);
                 return ['success' => false, 'uuid' => $uuid, 'error' => 'Unable to delete the file.'];
             }
             return ['success' => true, 'uuid' => $uuid];

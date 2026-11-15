@@ -245,14 +245,73 @@ final class FineUploaderFailurePathTest extends TestCase
         $_SERVER['REQUEST_METHOD'] = 'POST';
         \Xmf\Request::setVar('qquuid', 'del2', 'REQUEST');
 
-        // @: the status the failure sets cannot be sent once the bootstrap has output.
-        $result = @$this->handler()->handleDelete(FailingUploadStream::SCHEME . '://root');
+        $result = $this->handler()->handleDelete(FailingUploadStream::SCHEME . '://root');
 
         self::assertFalse($result['success']);
         self::assertArrayHasKey('error', $result);
         self::assertStringNotContainsString('://', (string) json_encode($result), 'no server path in the response');
         self::assertContains('root/del2', FailingUploadStream::$dirs);
     }
+
+    /**
+     * The endpoint script, without comments and with whitespace collapsed, so
+     * a commented-out statement cannot satisfy a source check.
+     *
+     * @return string
+     */
+    private static function endpointCode(): string
+    {
+        $source = file_get_contents(XOOPS_ROOT_PATH . '/ajaxfineupload.php');
+        self::assertIsString($source);
+        $code = '';
+        foreach (token_get_all($source) as $token) {
+            if (is_array($token) && in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+            $code .= is_array($token) ? $token[1] : $token;
+        }
+        return (string) preg_replace('/\s+/', ' ', $code);
+    }
+
+    /**
+     * FineUploader treats any 2xx delete response as success, whatever the
+     * body says, so the endpoint must turn each handleDelete() error array
+     * into an error status. The script runs only over HTTP, so this pins the
+     * DELETE branch in its executable code.
+     *
+     * @return void
+     */
+    #[Test]
+    public function endpointAnswersEveryFailedDeleteOutsideThe2xxRange(): void
+    {
+        $code = self::endpointCode();
+        $start = strpos($code, "} elseif (\$method == 'DELETE') {");
+        self::assertNotFalse($start);
+        $end = strpos($code, '} else {', $start);
+        self::assertNotFalse($end);
+        $branch = substr($code, $start, $end - $start);
+
+        $normalise = strpos($branch, "if (true !== (\$result['success'] ?? false) && http_response_code() < 400) { http_response_code(500); }");
+        self::assertNotFalse($normalise, 'a delete result without success:true must set an error status');
+        self::assertGreaterThan(strpos($branch, 'handleDelete('), $normalise);
+        self::assertLessThan(strpos($branch, 'echo json_encode($result);'), $normalise);
+    }
+
+    /**
+     * A refused token must not answer 200, or a combine or delete request
+     * that never ran would read as done.
+     *
+     * @return void
+     */
+    #[Test]
+    public function endpointRefusesAnInvalidTokenWithAnErrorStatus(): void
+    {
+        self::assertStringContainsString(
+            "if (\$claims === false) { http_response_code(403); echo json_encode(['error' => 'Invalid request token']); exit; }",
+            self::endpointCode()
+        );
+    }
+
 
     #[Test]
     public function handleDeleteJudgesAVoidRemoveDirOverrideByTheResultOnDisk(): void

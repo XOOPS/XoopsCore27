@@ -429,10 +429,17 @@ switch ($op) {
             if ($com_rootid == 0) {
                 $com_rootid = $newcid;
                 if (!$comment_handler->updateByField($comment, 'com_rootid', $com_rootid)) {
+                    // The comment is gone: stop before approval, notification and the "thanks" redirect.
                     $comment_handler->delete($comment);
-                    include $GLOBALS['xoops']->path('header.php');
-                    xoops_error();
-                    include $GLOBALS['xoops']->path('footer.php');
+                    $error_message = defined('_CM_COMPOSTNG') ? _CM_COMPOSTNG : 'Could not save the comment.';
+                    if (!isset($purge_comment_post_results)) {
+                        include_once $GLOBALS['xoops']->path('header.php');
+                        xoops_error($error_message);
+                        include_once $GLOBALS['xoops']->path('footer.php');
+                    } else {
+                        $comment_post_results = [$error_message];
+                    }
+                    break;
                 }
             }
             // call custom approve function if any

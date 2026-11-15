@@ -796,12 +796,14 @@ class MyTextSanitizer
      *
      * @param  string $text
      * @return string
+     * @throws \RuntimeException when the censor extension cannot be loaded
      */
     public function &censorString(&$text)
     {
         $ret = $this->executeExtension('censor', $text);
         if ($ret === false) {
-            return $text;
+            // MytsCensor::load() never returns false: the extension did not load (damaged install).
+            throw new \RuntimeException("Text sanitizer extension 'censor' is not available");
         }
 
         return $ret;
@@ -838,7 +840,17 @@ class MyTextSanitizer
      */
     public function codeConvCallback($match)
     {
-        return '<div class="xoopsCode">' . $this->executeExtension('syntaxhighlight', str_replace('\\\"', '\"', base64_decode($match[2])), $match[1]) . '</div>';
+        $source = str_replace('\\\"', '\"', base64_decode($match[2]));
+        $code   = $this->executeExtension('syntaxhighlight', $source, $match[1]);
+        if ($code === false) {
+            // Show the code as literal text. With HTML on $source is raw, so it must never pass through as markup.
+            // Line breaks become <br />: makeClickable() later folds raw newlines into spaces.
+            $charset = defined('_CHARSET') ? _CHARSET : 'UTF-8';
+            $literal = htmlspecialchars($this->undoHtmlSpecialChars($source), ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, $charset, false);
+            $code    = '<pre>' . str_replace(["\r\n", "\r", "\n"], '<br />', $literal) . '</pre>';
+        }
+
+        return '<div class="xoopsCode">' . $code . '</div>';
     }
 
     /**
@@ -958,11 +970,17 @@ class MyTextSanitizer
      * MyTextSanitizer::executeExtension()
      *
      * @param  mixed $name
-     * @return mixed
+     * @return mixed the extension's load() result, or false (with an E_USER_WARNING) when it cannot be loaded
      */
     public function executeExtension($name)
     {
         $extension = $this->loadExtension($name);
+        // A site upgraded from 2.5.x can still enable an extension that is gone (flash, removed in 2.7.0).
+        if (!is_object($extension) || !is_callable([$extension, 'load'])) {
+            trigger_error("Text sanitizer extension '{$name}' is not available", E_USER_WARNING);
+
+            return false;
+        }
         $args      = array_slice(func_get_args(), 1);
         array_unshift($args, $this);
 
@@ -976,12 +994,14 @@ class MyTextSanitizer
      * @param  string $text  text to filter
      * @param  bool   $force force filtering
      * @return string filtered text
+     * @throws \RuntimeException when the textfilter extension cannot be loaded
      */
     public function textFilter($text, $force = false)
     {
         $ret = $this->executeExtension('textfilter', $text, $force);
         if ($ret === false) {
-            return $text;
+            // MytsTextfilter::load() never returns false: the extension did not load (damaged install).
+            throw new \RuntimeException("Text sanitizer extension 'textfilter' is not available");
         }
 
         return $ret;

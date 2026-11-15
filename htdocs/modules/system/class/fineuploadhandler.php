@@ -196,16 +196,19 @@ abstract class SystemFineUploadHandler
                 throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
             }
         }
-        $target = fopen($targetPath, 'wb');
-
-        for ($i = 0; $i < $totalParts; $i++) {
-            $chunk = fopen($targetFolder . DIRECTORY_SEPARATOR . $i, 'rb');
-            stream_copy_to_stream($chunk, $target);
-            fclose($chunk);
+        // Assemble into a private part file and publish it only once every chunk
+        // is verified, so a failed attempt never leaves a partial file at, or
+        // removes an existing file from, the final path. The chunks are the only
+        // copy of the data: keep them until then, so the client can retry.
+        $partPath = $targetPath . '.' . bin2hex(random_bytes(6)) . '.part';
+        if (!$this->assembleChunks($targetFolder, $totalParts, $partPath) || !rename($partPath, $targetPath)) {
+            if (file_exists($partPath)) {
+                unlink($partPath);
+            }
+            // FineUploader judges the combine response by its HTTP status only.
+            http_response_code(500);
+            return ['success' => false, 'uuid' => $uuid, 'error' => 'Could not combine the uploaded chunks.'];
         }
-
-        // Success
-        fclose($target);
 
         for ($i = 0; $i < $totalParts; $i++) {
             unlink($targetFolder . DIRECTORY_SEPARATOR . $i);
@@ -221,6 +224,41 @@ abstract class SystemFineUploadHandler
         }
 
         return ['success' => true, 'uuid' => $uuid];
+    }
+
+    /**
+     * Copy chunk files 0..$totalParts-1 into $targetPath, in order. Every open,
+     * the byte count of every copy, and the final close are checked.
+     *
+     * @param string $chunkFolder folder holding the numbered chunk files
+     * @param int    $totalParts  number of chunks
+     * @param string $targetPath  file to write
+     * @return bool true only when every chunk was copied in full
+     */
+    protected function assembleChunks(string $chunkFolder, int $totalParts, string $targetPath): bool
+    {
+        $target = fopen($targetPath, 'wb');
+        if (false === $target) {
+            return false;
+        }
+
+        for ($i = 0; $i < $totalParts; $i++) {
+            $chunkPath = $chunkFolder . DIRECTORY_SEPARATOR . $i;
+            $expected = filesize($chunkPath);
+            $chunk = fopen($chunkPath, 'rb');
+            if (false === $expected || false === $chunk) {
+                fclose($target);
+                return false;
+            }
+            $copied = stream_copy_to_stream($chunk, $target);
+            fclose($chunk);
+            if ($copied !== $expected) {
+                fclose($target);
+                return false;
+            }
+        }
+
+        return fclose($target);
     }
 
     /**
@@ -383,11 +421,11 @@ abstract class SystemFineUploadHandler
                     return $storeResult;
                 }
             }
-
-            return ['error' => 'Could not save uploaded file.' .
-                               'The upload was cancelled, or server error encountered',
-            ];
         }
+
+        return ['error' => 'Could not save uploaded file. ' .
+                           'The upload was cancelled, or server error encountered',
+        ];
     }
 
     protected function storeUploadedFile($target, $mimeType, $uuid)
@@ -450,7 +488,13 @@ abstract class SystemFineUploadHandler
         );
 
         if (is_dir($target)) {
+            // Judge by the result on disk, not the return value: a module
+            // subclass may override removeDir() with the old void signature.
             $this->removeDir($target);
+            clearstatcache(true, $target);
+            if (is_dir($target)) {
+                return ['success' => false, 'uuid' => $uuid, 'error' => 'Unable to delete the file.'];
+            }
             return ['success' => true, 'uuid' => $uuid];
         } else {
             return [
@@ -538,11 +582,16 @@ abstract class SystemFineUploadHandler
     /**
      * Removes a directory and all files contained inside
      * @param string $dir
-     * @return void
+     * @return bool true when the directory and everything in it were removed
      */
     protected function removeDir($dir)
     {
-        foreach (scandir($dir) as $item) {
+        $items = scandir($dir);
+        if (false === $items) {
+            return false;
+        }
+
+        foreach ($items as $item) {
             if ('.' == $item || '..' == $item) {
                 continue;
             }
@@ -556,7 +605,10 @@ abstract class SystemFineUploadHandler
                 unlink($child);
             }
         }
-        rmdir($dir);
+
+        // rmdir() only succeeds on an empty directory, so its result covers
+        // every entry, including ones a void-returning override left behind.
+        return rmdir($dir);
     }
 
     /**

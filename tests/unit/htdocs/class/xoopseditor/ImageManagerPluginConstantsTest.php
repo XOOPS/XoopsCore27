@@ -41,6 +41,8 @@ final class ImageManagerPluginConstantsTest extends TestCase
     ];
 
     /**
+     * The two copies of the plugin, one per TinyMCE version.
+     *
      * @return array<string, array{string}>
      */
     public static function pluginCopies(): array
@@ -58,6 +60,12 @@ final class ImageManagerPluginConstantsTest extends TestCase
         return $source;
     }
 
+    /**
+     * Every _MD_ / _AM_ constant the plugin uses is defined in a loaded file.
+     *
+     * @param string $plugin path below XOOPS_ROOT_PATH
+     * @return void
+     */
     #[Test]
     #[DataProvider('pluginCopies')]
     public function everyLanguageConstantUsedIsDefined(string $plugin): void

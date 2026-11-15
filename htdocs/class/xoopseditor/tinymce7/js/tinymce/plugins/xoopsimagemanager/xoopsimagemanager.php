@@ -343,16 +343,20 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         $image_handler = xoops_getHandler('image');
         $images        = $image_handler->getObjects(new Criteria('imgcat_id', $imgcat_id), true, false);
         $errors        = [];
+        $imageDeleteFailed = false;
         foreach (array_keys($images) as $i) {
             if (!$image_handler->delete($images[$i])) {
                 $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $i);
+                $imageDeleteFailed = true;
             } else {
                 if (file_exists(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name')) && !unlink(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name'))) {
                     $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILUNLINK, $i);
                 }
             }
         }
-        if (!$imgcat_handler->delete($imagecategory)) {
+        // Keep the category while one of its images is still in the database:
+        // deleting it would orphan that image, out of reach of the manager.
+        if ($imageDeleteFailed || !$imgcat_handler->delete($imagecategory)) {
             $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDELCAT, $imagecategory->getVar('imgcat_name'));
         }
         if (count($errors) > 0) {

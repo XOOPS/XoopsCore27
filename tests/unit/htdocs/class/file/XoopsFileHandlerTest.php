@@ -234,6 +234,21 @@ class XoopsFileHandlerTest extends TestCase
     }
 
     /**
+     * With lock set, read() opens the file itself before taking the lock,
+     * and a forced read opens it once and reads from the start.
+     */
+    public function testReadWithLockOpensTheFileFirst(): void
+    {
+        $handler       = new XoopsFileHandler($this->tempFile);
+        $handler->lock = true;
+
+        $this->assertSame('Hello', $handler->read(5));
+        $this->assertSame('Hello World', $handler->read(true, 'rb', true));
+        $this->assertSame('Hello World', $handler->read());
+        $handler->close();
+    }
+
+    /**
      * read() on an empty file returns an empty string.
      */
     public function testReadEmptyFileReturnsEmptyString(): void

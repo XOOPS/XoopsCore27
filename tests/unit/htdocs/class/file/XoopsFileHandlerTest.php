@@ -234,6 +234,50 @@ class XoopsFileHandlerTest extends TestCase
     }
 
     /**
+     * With lock set, read() opens the file itself before taking the lock,
+     * and a forced read opens it once and reads from the start.
+     */
+    public function testReadWithLockOpensTheFileFirst(): void
+    {
+        $handler       = new XoopsFileHandler($this->tempFile);
+        $handler->lock = true;
+
+        $this->assertSame('Hello', $handler->read(5));
+        $this->assertSame('Hello World', $handler->read(true, 'rb', true));
+        $this->assertSame('Hello World', $handler->read());
+        $handler->close();
+    }
+
+    /**
+     * The file cache reads the expiry line, then the rest from the same handle.
+     */
+    public function testLockedReadContinuesOnTheOpenHandle(): void
+    {
+        file_put_contents($this->tempFile, "1763424000\npayload\n");
+        $handler       = new XoopsFileHandler($this->tempFile);
+        $handler->lock = true;
+
+        $this->assertSame("1763424000\n", $handler->read(11));
+        $this->assertSame('payload', $handler->read(true));
+        $handler->close();
+    }
+
+    /**
+     * read() of a missing file fails, with or without a lock, and does not create the file.
+     */
+    public function testReadOfAMissingFileReturnsFalseAndCreatesNothing(): void
+    {
+        $missing = $this->tempDir . '/absent.txt';
+        $handler = new XoopsFileHandler($missing);
+
+        $this->assertFalse($handler->read(5));
+        $this->assertFalse($handler->read(true));
+        $handler->lock = true;
+        $this->assertFalse($handler->read());
+        $this->assertFileDoesNotExist($missing);
+    }
+
+    /**
      * read() on an empty file returns an empty string.
      */
     public function testReadEmptyFileReturnsEmptyString(): void

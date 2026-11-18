@@ -230,7 +230,7 @@ fi
 
 # --- New test files -------------------------------------------------
 # 16. A new test must open with the standard XOOPS file header, in the
-#     form tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php
+#     form tests/unit/htdocs/class/cache/XoopsCacheFileGcTest.php
 #     uses: `<?php` on line 1, a `/*` or `/**` comment opening on line 2,
 #     and the header's first sentence inside that comment, within the
 #     first 12 lines. On each line the sentence must come before any `*/`,
@@ -256,7 +256,7 @@ if [ -n "$new_tests" ]; then
     done <<EOF
 $new_tests
 EOF
-    [ -n "$missing" ] && report "new test file without the standard XOOPS file header (copy it from tests/unit/htdocs/modules/system/SystemMenuInstallationTest.php)" "$missing"
+    [ -n "$missing" ] && report "new test file without the standard XOOPS file header (copy the file-level docblock from tests/unit/htdocs/class/cache/XoopsCacheFileGcTest.php)" "$missing"
 fi
 
 # --- New-file pass --------------------------------------------------

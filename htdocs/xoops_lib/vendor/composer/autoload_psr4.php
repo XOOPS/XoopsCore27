@@ -25,4 +25,5 @@ return array(
     'Kint\\' => array($vendorDir . '/kint-php/kint/src'),
     'Firebase\\JWT\\' => array($vendorDir . '/firebase/php-jwt/src'),
     'DebugBar\\' => array($vendorDir . '/php-debugbar/php-debugbar/src'),
+    'Composer\\Semver\\' => array($vendorDir . '/composer/semver/src'),
 );

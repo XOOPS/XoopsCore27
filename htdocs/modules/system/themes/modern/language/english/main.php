@@ -41,6 +41,8 @@ define('_MODERN_NEW_USERS', 'New Users');
 // -- Dashboard: System Information --
 define('_MODERN_SYSTEM_INFORMATION', 'System Information');
 define('_MODERN_COMPOSER_PACKAGES', 'Composer Packages');
+define('_MODERN_COMPOSER_ADVISORIES_NONE', 'No published security advisory covers an installed version (checked with Packagist).');
+define('_MODERN_COMPOSER_ADVISORIES_UNAVAILABLE', 'Advisory check unavailable.');
 define('_MODERN_COMPONENT', 'Component');
 define('_MODERN_VALUE', 'Value');
 define('_MODERN_STATUS', 'Status');

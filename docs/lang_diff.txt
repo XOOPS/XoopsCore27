@@ -11,6 +11,13 @@ Below are language differences from one version to the next.
 - added define('_XOOPS_UPGRADE_275_HTACCESS_NOT_WRITTEN', '%s could not be written. It still uses Apache 2.2 syntax, which Apache 2.4 answers with a server error instead of denying access. Replace it with xoops_data/.htaccess from this release.');
 /htdocs/language/english/comment.php
 - added define('_CM_COMPOSTNG', 'Could not save the comment.');
+/htdocs/modules/system/themes/default/language/english/admin.php
+/htdocs/modules/system/themes/transition/language/english/admin.php
+- added define('_OXYGEN_COMPOSER_ADVISORIES_NONE', 'No published security advisory covers an installed version (checked with Packagist).');
+- added define('_OXYGEN_COMPOSER_ADVISORIES_UNAVAILABLE', 'Advisory check unavailable.');
+/htdocs/modules/system/themes/modern/language/english/main.php
+- added define('_MODERN_COMPOSER_ADVISORIES_NONE', 'No published security advisory covers an installed version (checked with Packagist).');
+- added define('_MODERN_COMPOSER_ADVISORIES_UNAVAILABLE', 'Advisory check unavailable.');
 
 ================================
 Admin theme dark mode

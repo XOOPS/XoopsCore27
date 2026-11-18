@@ -12,8 +12,9 @@ php tests/integration/twofactor/run.php
 ```
 
 Optional `XOOPS_2FA_TEST_PORT` defaults to 3306. The database must already
-exist; use a disposable database and a user allowed to CREATE, DROP, SELECT,
-INSERT, UPDATE and DELETE its tables. No `mainfile.php` or installed site's
+exist; use a disposable database and a user allowed to CREATE, ALTER, DROP,
+SELECT, INSERT, UPDATE and DELETE its tables (ALTER for the upgrade re-run
+check, which changes an index). No `mainfile.php` or installed site's
 credentials are read. With no database configured the runner prints SKIP and
 exits successfully. A configured database that cannot connect fails the run.
 

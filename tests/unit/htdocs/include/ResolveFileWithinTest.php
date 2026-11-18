@@ -105,6 +105,21 @@ final class ResolveFileWithinTest extends TestCase
     }
 
     #[Test]
+    public function anAbsoluteOrNetworkNameIsNeverFollowedOutOfTheRoot(): void
+    {
+        // The stored name is always read below the root: leading separators are dropped,
+        // so none of these reaches the file, drive or host it names.
+        $outside = $this->base . DIRECTORY_SEPARATOR . 'outside.php';
+        self::assertFileExists($outside);
+
+        self::assertSame('', xoops_resolveFileWithin($this->root, $outside), 'absolute path of an existing file');
+        self::assertSame('', xoops_resolveFileWithin($this->root, '/etc/passwd'), 'absolute POSIX path');
+        self::assertSame('', xoops_resolveFileWithin($this->root, 'C:\\Windows\\win.ini'), 'Windows drive path');
+        self::assertSame('', xoops_resolveFileWithin($this->root, '\\\\127.0.0.1\\share\\file.png'), 'UNC path');
+        self::assertSame('', xoops_resolveFileWithin($this->root, '//127.0.0.1/share/file.png'), 'UNC path with forward slashes');
+    }
+
+    #[Test]
     public function aMissingRootResolvesToEmpty(): void
     {
         self::assertSame('', xoops_resolveFileWithin($this->base . '/no-such-root', 'top.png'));

@@ -123,6 +123,24 @@ final class Upgrade275Test extends TestCase
     }
 
     #[Test]
+    public function aSecondRunLeavesTheRewrittenFileAlone(): void
+    {
+        file_put_contents($this->file, self::LEGACY);
+        self::assertTrue($this->patch()->apply(), 'first run rewrites the legacy file');
+        touch($this->file, 1000000000);
+        clearstatcache(true, $this->file);
+
+        $second = $this->patch();
+
+        self::assertTrue($second->check_datahtaccess(), 'the second run finds nothing to do');
+        self::assertTrue($second->apply());
+        self::assertSame('', $second->message());
+        clearstatcache(true, $this->file);
+        self::assertSame(Upgrade_275::DATA_HTACCESS, file_get_contents($this->file));
+        self::assertSame(1000000000, filemtime($this->file), 'the file was not written again');
+    }
+
+    #[Test]
     public function aMissingFileIsNotCreated(): void
     {
         $patch = $this->patch();

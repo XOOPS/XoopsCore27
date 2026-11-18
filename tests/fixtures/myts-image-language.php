@@ -33,6 +33,10 @@ define('XOOPS_ROOT_PATH', dirname(__DIR__, 2) . '/htdocs');
  */
 function xoops_loadLanguage($name)
 {
+    if ('misc' !== $name) {
+        // The extension must ask for the file that holds its texts: no JSON, so the test fails.
+        exit('unexpected language file: ' . $name);
+    }
     if ('partial' === ($GLOBALS['argv'][1] ?? '')) {
         define('_MSC_RESIZED_IMAGE', 'Verkleinertes Bild');
 

@@ -17,6 +17,8 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -24,7 +26,12 @@ use PHPUnit\Framework\TestCase;
  * The search form submits by GET, so every field it holds ends up in the URL.
  * search.php checks no security token; one in the form would only put a live
  * token into browser history, server logs and Referer headers.
+ *
+ * Runs in its own process: the form needs the _SR_ texts of the search language
+ * file, and a defined constant cannot be removed again for the tests that follow.
  */
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState(false)]
 final class SearchFormTokenTest extends TestCase
 {
     /**

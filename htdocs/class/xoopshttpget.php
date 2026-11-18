@@ -68,7 +68,7 @@ class XoopsHttpGet
     /**
      * Return the response from a GET to the specified URL.
      *
-     * @return string|bool response or false on error
+     * @return string|false response or false on error
      */
     public function fetch()
     {
@@ -157,7 +157,7 @@ class XoopsHttpGet
      * attacker URL cannot 30x-redirect to 127.0.0.1 / 169.254.169.254 / RFC1918, and
      * the pin closes the DNS-rebinding window (SECURITY.md M-5).
      *
-     * @return string|bool response or false on error
+     * @return string|false response or false on error
      */
     protected function fetchCurl()
     {
@@ -191,7 +191,7 @@ class XoopsHttpGet
             $redirectUrl = (string) curl_getinfo($curlHandle, CURLINFO_REDIRECT_URL);
             $curlError   = curl_error($curlHandle);
 
-            if (false === $response) {
+            if (!is_string($response)) { // RETURNTRANSFER is on: a string, or false on failure
                 $this->error = $curlError;
                 return false;
             }

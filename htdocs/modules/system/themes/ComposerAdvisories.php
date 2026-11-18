@@ -43,7 +43,7 @@ class ComposerAdvisories
      * @param array<int, array{name: string, version: string}> $packages installed packages
      * @param callable|null                                   $fetch    receives the request URL, returns the body or false
      *
-     * @return array{available: bool, advisories: array<string, list<array{title: string, link: string, cve: string, severity: string}>>}
+     * @return array{available: bool, advisories: array<string, array<int, array{title: string, link: string, cve: string, severity: string}>>}
      */
     public static function forPackages(array $packages, ?callable $fetch = null): array
     {
@@ -99,7 +99,7 @@ class ComposerAdvisories
      *
      * @param string $installed fingerprint of the installed packages and versions
      *
-     * @return array<string, list<array{title: string, link: string, cve: string, severity: string}>>|null
+     * @return array<string, array<int, array{title: string, link: string, cve: string, severity: string}>>|null
      */
     private static function cached(string $installed): ?array
     {
@@ -125,7 +125,7 @@ class ComposerAdvisories
      * @param array<string, string> $versions installed version per package name
      * @param callable              $fetch    receives the request URL, returns the body or false
      *
-     * @return array{available: bool, advisories: array<string, list<array{title: string, link: string, cve: string, severity: string}>>}
+     * @return array{available: bool, advisories: array<string, array<int, array{title: string, link: string, cve: string, severity: string}>>}
      */
     private static function ask(array $versions, callable $fetch): array
     {
@@ -166,7 +166,7 @@ class ComposerAdvisories
      * @param array<string, string> $versions   installed version per package name
      * @param array<mixed>          $advisories advisories per package name, as Packagist returns them
      *
-     * @return array<string, list<array{title: string, link: string, cve: string, severity: string}>>
+     * @return array<string, array<int, array{title: string, link: string, cve: string, severity: string}>>
      */
     public static function match(array $versions, array $advisories): array
     {

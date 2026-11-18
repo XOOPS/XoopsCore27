@@ -145,6 +145,10 @@ try {
     $cookies = [];
     $page = siteRequest($siteUrl . '/user.php', $cookies);
     siteCheck(str_contains($page['body'], 'uname'), 'Installed login page did not render: ' . substr(strip_tags($page['body']), 0, 1500));
+    siteCheck(str_contains(strtolower($page['headers']), 'x-content-type-options: nosniff'), 'A page was sent without X-Content-Type-Options: nosniff');
+    $search = siteRequest($siteUrl . '/search.php', $cookies);
+    siteCheck(preg_match('/name=["\']query["\']/', $search['body']) === 1, 'Search form did not render: ' . substr(strip_tags($search['body']), 0, 1500));
+    siteCheck(!str_contains($search['body'], 'XOOPS_TOKEN'), 'The GET search form carries a security token');
     $page = siteRequest($siteUrl . '/user.php', $cookies, ['op' => 'login', 'uname' => 'smokeadmin', 'pass' => 'test-password-only']);
     $page = siteRequest($siteUrl . '/user.php?op=2fa_manage', $cookies);
     siteCheck(str_contains($page['body'], 'Your current password'), 'Management labels did not render');

@@ -128,3 +128,7 @@ define('_MODERN_MOD_LINKS', 'Links');
 
 // -- Charts: Dataset Labels --
 define('_MODERN_ITEMS', 'Items');
+
+// 2.7.5
+define('_MODERN_COMPOSER_ADVISORIES_NONE', 'No published security advisory covers an installed version (checked with Packagist).');
+define('_MODERN_COMPOSER_ADVISORIES_UNAVAILABLE', 'Advisory check unavailable.');

@@ -86,11 +86,20 @@
         <table>
             <{foreach from=$composerPackages item=package}>
                 <tr>
-                    <td><{$package.name}></td>
-                    <td><{$package.version}></td>
+                    <td><{$package.name|escape:'html'}></td>
+                    <td><{$package.version|escape:'html'}>
+                        <{foreach from=$package.advisories item=advisory}>
+                            <br><strong>&#9888; <{if $advisory.link}><a rel="external noopener noreferrer" target="_blank" href="<{$advisory.link|escape:'html'}>" title="<{$advisory.title|escape:'html'}>"><{$advisory.cve|default:$advisory.title|escape:'html'}></a><{else}><span title="<{$advisory.title|escape:'html'}>"><{$advisory.cve|default:$advisory.title|escape:'html'}></span><{/if}></strong>
+                        <{/foreach}>
+                    </td>
                 </tr>
             <{/foreach}>
         </table>
+        <{if !$composerAdvisoriesAvailable}>
+            <p><{$smarty.const._OXYGEN_COMPOSER_ADVISORIES_UNAVAILABLE}></p>
+        <{elseif $composerAdvisoriesAffected == 0}>
+            <p><{$smarty.const._OXYGEN_COMPOSER_ADVISORIES_NONE}></p>
+        <{/if}>
     </div>
 
     <h5><{$smarty.const._OXYGEN_XOOPS_LICENSE}></h5>

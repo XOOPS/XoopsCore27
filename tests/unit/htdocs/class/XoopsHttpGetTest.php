@@ -333,6 +333,35 @@ class XoopsHttpGetTest extends TestCase
     }
 
     /**
+     * The limits keep their old values until a caller shortens them, and never drop below a usable one.
+     */
+    public function testSetTimeoutsReplacesTheDefaultLimits(): void
+    {
+        $httpGet = new XoopsHttpGet('https://example.com');
+        $read    = static fn(string $name): int => (new ReflectionProperty(XoopsHttpGet::class, $name))->getValue($httpGet);
+
+        $this->assertSame([10, 0], [$read('connectTimeout'), $read('timeout')]);
+
+        $httpGet->setTimeouts(3, 5);
+        $this->assertSame([3, 5], [$read('connectTimeout'), $read('timeout')]);
+
+        $httpGet->setTimeouts(0, -4);
+        $this->assertSame([1, 0], [$read('connectTimeout'), $read('timeout')]);
+    }
+
+    /**
+     * Both transports take their limits from the properties setTimeouts() writes.
+     */
+    public function testBothTransportsUseTheConfiguredLimits(): void
+    {
+        $source = (string) file_get_contents(XOOPS_ROOT_PATH . '/class/xoopshttpget.php');
+
+        $this->assertStringContainsString('CURLOPT_CONNECTTIMEOUT => $this->connectTimeout', $source);
+        $this->assertStringContainsString('CURLOPT_TIMEOUT        => $this->timeout', $source);
+        $this->assertStringContainsString("'timeout'         => \$this->timeout > 0 ? \$this->timeout : 10", $source);
+    }
+
+    /**
      * Switching useCurl between calls changes the dispatch target.
      */
     public function testFetchSwitchesDispatchWhenUseCurlChanges(): void

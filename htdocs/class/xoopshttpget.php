@@ -23,6 +23,28 @@ class XoopsHttpGet
     protected $useCurl = true;
     protected $url;
     protected $error;
+    /** @var int seconds allowed for connecting */
+    protected $connectTimeout = 10;
+    /** @var int seconds allowed for the whole request; 0 keeps each transport's own limit */
+    protected $timeout = 0;
+
+    /**
+     * Shorten the wait for a caller that fetches while a page is being built.
+     *
+     * With curl both limits apply to each redirect hop. Without curl the request goes
+     * through a stream, which knows one limit only: $total then bounds connecting and
+     * every single wait for data, not the request as a whole, and $connect is not used.
+     *
+     * @param int $connect seconds allowed for connecting, at least 1
+     * @param int $total   seconds allowed for the whole request; 0 keeps the transport's own limit
+     *
+     * @return void
+     */
+    public function setTimeouts(int $connect, int $total): void
+    {
+        $this->connectTimeout = max(1, $connect);
+        $this->timeout        = max(0, $total);
+    }
 
     /**
      * XoopsHttpGet constructor.
@@ -46,7 +68,7 @@ class XoopsHttpGet
     /**
      * Return the response from a GET to the specified URL.
      *
-     * @return string|bool response or false on error
+     * @return string|false response or false on error
      */
     public function fetch()
     {
@@ -135,7 +157,7 @@ class XoopsHttpGet
      * attacker URL cannot 30x-redirect to 127.0.0.1 / 169.254.169.254 / RFC1918, and
      * the pin closes the DNS-rebinding window (SECURITY.md M-5).
      *
-     * @return string|bool response or false on error
+     * @return string|false response or false on error
      */
     protected function fetchCurl()
     {
@@ -156,7 +178,8 @@ class XoopsHttpGet
             curl_setopt_array($curlHandle, [
                 CURLOPT_RETURNTRANSFER => 1,
                 CURLOPT_HEADER         => 0,
-                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
+                CURLOPT_TIMEOUT        => $this->timeout, // 0: no limit, as before
                 CURLOPT_FOLLOWLOCATION => 0, // follow manually so each hop is re-validated
                 CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 // Pin the connection to the address we just validated (no DNS rebinding).
@@ -168,7 +191,7 @@ class XoopsHttpGet
             $redirectUrl = (string) curl_getinfo($curlHandle, CURLINFO_REDIRECT_URL);
             $curlError   = curl_error($curlHandle);
 
-            if (false === $response) {
+            if (!is_string($response)) { // RETURNTRANSFER is on: a string, or false on failure
                 $this->error = $curlError;
                 return false;
             }
@@ -220,7 +243,7 @@ class XoopsHttpGet
             'http' => [
                 'follow_location' => 0,
                 'max_redirects'   => 0,
-                'timeout'         => 10,
+                'timeout'         => $this->timeout > 0 ? $this->timeout : 10,
                 'header'          => 'Host: ' . $hostHeader,
             ],
             'ssl' => [

@@ -284,6 +284,9 @@ class XoopsCacheFile extends XoopsCacheEngine
         if (!$this->init) {
             return false;
         }
+        if ($check && $this->settings['lock']) {
+            $this->file->lock = true;
+        }
         $dir = dir($this->settings['path']);
         $now       = time();
         $prefix    = (string) $this->settings['prefix'];
@@ -307,7 +310,9 @@ class XoopsCacheFile extends XoopsCacheEngine
                 $expires = $this->file->read(11);
                 $this->file->close();
 
-                if ($expires === false || (int) $expires > $now) {
+                // Collect only on a complete expiry line that read() would also
+                // call expired. An empty or cut-off header is a write in progress.
+                if (!preg_match('/^(-?\d+)[\r\n]/', (string) $expires, $match) || (int) $match[1] >= $now) {
                     continue;
                 }
             }

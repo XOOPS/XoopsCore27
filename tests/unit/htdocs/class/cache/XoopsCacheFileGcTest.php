@@ -85,4 +85,37 @@ final class XoopsCacheFileGcTest extends TestCase
         $this->assertFileExists($this->dir . '/xoops_fresh.php');
         $this->assertFileDoesNotExist($this->dir . '/xoops_stale.php');
     }
+
+    #[Test]
+    public function gcKeepsAnEntryWithoutACompleteExpiryLine(): void
+    {
+        // An empty or cut-off header is what a write in progress looks like.
+        $engine = $this->engine();
+        file_put_contents($this->dir . '/xoops_empty.php', '');
+        file_put_contents($this->dir . '/xoops_partial.php', '12345');
+        file_put_contents($this->dir . '/xoops_stale.php', "12345\nx\n");
+        // write() with a large negative duration stores a negative expiry.
+        file_put_contents($this->dir . '/xoops_negative.php', "-60\nx\n");
+
+        $this->assertTrue($engine->gc());
+
+        $this->assertFileExists($this->dir . '/xoops_empty.php');
+        $this->assertFileExists($this->dir . '/xoops_partial.php');
+        $this->assertFileDoesNotExist($this->dir . '/xoops_stale.php');
+        $this->assertFileDoesNotExist($this->dir . '/xoops_negative.php');
+    }
+
+    #[Test]
+    public function gcTakesTheLockSettingWithoutAnEarlierReadOrWrite(): void
+    {
+        // gc() can be the first call on a fresh engine: XoopsCache::engine() rolls for it at init.
+        $engine = $this->engine(['lock' => true]);
+        file_put_contents($this->dir . '/xoops_stale.php', "12345\nx\n");
+
+        $this->assertTrue($engine->gc());
+
+        $this->assertFileDoesNotExist($this->dir . '/xoops_stale.php');
+        $file = (new \ReflectionProperty(XoopsCacheFile::class, 'file'))->getValue($engine);
+        $this->assertTrue($file->lock);
+    }
 }

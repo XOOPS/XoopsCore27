@@ -194,6 +194,44 @@ final class ComposerAdvisoriesCacheTest extends TestCase
     }
 
     #[Test]
+    public function aDamagedCacheEntryIsAMissAndItsWarningStaysInside(): void
+    {
+        ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(self::fixture()));
+        $files = array_values(array_filter(
+            (array) glob($this->cachePath . '/*' . ComposerAdvisories::CACHE_KEY_OK . '*'),
+            static fn($file): bool => !str_contains((string) $file, ComposerAdvisories::CACHE_KEY_FAILED)
+        ));
+        $this->assertCount(1, $files, 'the good answer is stored in one file');
+
+        // keep the expiry line, cut the stored answer short
+        $stored = (string) file_get_contents((string) $files[0]);
+        file_put_contents((string) $files[0], substr($stored, 0, (int) strpos($stored, "\n") + 1) . 'a:2:{s:9:"installed";');
+
+        $seen = [];
+        set_error_handler(static function (int $number, string $text) use (&$seen): bool {
+            $seen[] = $text;
+
+            return true;
+        });
+        try {
+            // read on its own, the entry is no answer and the cache says so with a warning
+            $this->assertIsNotArray(XoopsCache::read(ComposerAdvisories::CACHE_KEY_OK));
+            $this->assertNotSame([], $seen, 'the damaged entry is one the cache reports');
+
+            $seen           = [];
+            $this->requests = [];
+            $result         = ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(self::fixture()));
+
+            $this->assertSame([], $seen);
+            $this->assertCount(1, $this->requests, 'a damaged entry is a miss: the check asks again');
+            $this->assertTrue($result['available']);
+            $this->assertSame(['acme/in-range'], array_keys($result['advisories']));
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    #[Test]
     public function aStoredAnswerIsCheckedAgainBeforeItIsPrinted(): void
     {
         ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(self::fixture()));

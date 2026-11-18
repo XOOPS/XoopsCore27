@@ -365,6 +365,9 @@ try {
     require $upgradeRoot . '/class/Xoops/Upgrade/XoopsUpgrade.php';
     require $upgradeRoot . '/class/Xoops/Upgrade/UpgradeControl.php';
     require $upgradeRoot . '/upd_2.7.3-to-2.7.4/index.php';
+    // Set before the first patch object exists: the 2.7.4 emoticon task copies images
+    // into the upload folder, and that must never be the one in the tree.
+    defined('XOOPS_UPLOAD_PATH') || define('XOOPS_UPLOAD_PATH', $directory . '/uploads');
     $upgrade = new Upgrade_274($db, new Xoops\Upgrade\UpgradeControl($db));
     check(!$upgrade->check_user2fatable() && !$upgrade->check_twofactormode(), 'Old schema needs both upgrade tasks');
     check($upgrade->apply_user2fatable() && $upgrade->check_user2fatable(), 'Actual upgrade creates factor table');
@@ -386,8 +389,6 @@ try {
     // site whose administrator changed what the first run installed.
     require $upgradeRoot . '/class/Xoops/Upgrade/PatchStatus.php';
     require $upgradeRoot . '/upd_2.7.1-to-2.7.3/index.php';
-    // The emoticon task copies images into the upload folder: keep that out of the tree.
-    defined('XOOPS_UPLOAD_PATH') || define('XOOPS_UPLOAD_PATH', $directory . '/uploads');
     check(str_starts_with(XOOPS_UPLOAD_PATH, $directory) && mkdir(XOOPS_UPLOAD_PATH . '/smilies', 0700, true), 'Disposable upload folder');
     $comments = '`' . $db->prefix('xoopscomments') . '`';
     check($db->exec("ALTER TABLE $comments DROP INDEX idx_status_created, ADD INDEX com_status (com_status)"), 'Give the comments table its pre-2.7.3 index');

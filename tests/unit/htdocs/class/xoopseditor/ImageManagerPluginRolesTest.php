@@ -74,9 +74,13 @@ final class ImageManagerPluginRolesTest extends TestCase
             'post'     => $_POST,
             'get'      => $_GET,
             'files'    => $_FILES,
-            'user'     => $GLOBALS['xoopsUser'] ?? null,
-            'security' => $GLOBALS['xoopsSecurity'] ?? null,
         ];
+        // Only globals that exist are remembered, so tearDown() can tell "was null" from "was not set".
+        foreach (['xoopsUser', 'xoopsSecurity'] as $name) {
+            if (array_key_exists($name, $GLOBALS)) {
+                $this->saved[$name] = $GLOBALS[$name];
+            }
+        }
         $this->workDir = sys_get_temp_dir() . '/xoimgroles_' . bin2hex(random_bytes(6));
         mkdir($this->workDir . '/uploads', 0777, true);
     }
@@ -86,8 +90,13 @@ final class ImageManagerPluginRolesTest extends TestCase
         $_POST                    = $this->saved['post'];
         $_GET                     = $this->saved['get'];
         $_FILES                   = $this->saved['files'];
-        $GLOBALS['xoopsUser']     = $this->saved['user'];
-        $GLOBALS['xoopsSecurity'] = $this->saved['security'];
+        foreach (['xoopsUser', 'xoopsSecurity'] as $name) {
+            if (array_key_exists($name, $this->saved)) {
+                $GLOBALS[$name] = $this->saved[$name];
+            } else {
+                unset($GLOBALS[$name]);
+            }
+        }
         unset($GLOBALS['imageManagerRoleHandlers']);
         foreach ((array) glob($this->workDir . '/uploads/*') as $file) {
             unlink((string) $file);

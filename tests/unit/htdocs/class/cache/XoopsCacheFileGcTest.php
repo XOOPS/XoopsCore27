@@ -96,6 +96,7 @@ final class XoopsCacheFileGcTest extends TestCase
         file_put_contents($this->dir . '/xoops_stale.php', "12345\nx\n");
         // write() with a large negative duration stores a negative expiry.
         file_put_contents($this->dir . '/xoops_negative.php', "-60\nx\n");
+        file_put_contents($this->dir . '/xoops_longnegative.php', "-1000000000\nx\n");
 
         $this->assertTrue($engine->gc());
 
@@ -103,6 +104,7 @@ final class XoopsCacheFileGcTest extends TestCase
         $this->assertFileExists($this->dir . '/xoops_partial.php');
         $this->assertFileDoesNotExist($this->dir . '/xoops_stale.php');
         $this->assertFileDoesNotExist($this->dir . '/xoops_negative.php');
+        $this->assertFileDoesNotExist($this->dir . '/xoops_longnegative.php');
     }
 
     #[Test]

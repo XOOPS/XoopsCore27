@@ -62,26 +62,17 @@ if (!defined('_NONE')) {
 if (!defined('_DB_QUERY_ERROR')) {
     define('_DB_QUERY_ERROR', 'DB Query Error: %s');
 }
-// `class/textsanitizer/image/image.php` includes its language file at FILE scope, keyed on
-// $xoopsConfig['language'], and then uses _MSC_ORIGINAL_IMAGE inside load() -- a fatal in PHP 8 if
-// the include failed. Two separate problems follow from that, and both are fixed here:
+// `class/textsanitizer/image/image.php` uses three _MSC_ constants inside load(). Since 2.7.5 it
+// loads them through xoops_loadLanguage('misc') and defines English defaults for any that are
+// missing; before that it included the file keyed on $xoopsConfig['language'] and stopped with an
+// undefined constant when the include failed.
 //
-//  1. Nothing set $xoopsConfig, so the path resolved to `language//misc.php` and the include
-//     always failed. The previous bootstrap papered over it by stubbing _MSC_ORIGINAL_IMAGE --
-//     the one constant the reachable branch happens to use. The other _MSC_* constants in that
-//     file were still undefined, so a config change (allowimage + a theme) turns a passing test
-//     into a fatal.
-//
-//  2. Setting $xoopsConfig['language'] alone does NOT fix it. Roughly thirty tests under
-//     class/auth/ assign `$GLOBALS['xoopsConfig'] = ['debug_mode' => n]` -- replacing the whole
-//     array -- and unset() it in tearDown. Whether the include succeeds then depends on which
-//     test happens to load image.php first, which is not a property a bootstrap may have.
-//
-// So load the real language file HERE, unconditionally. The require_once is the load-bearing
-// part: the constants exist before any test can touch $xoopsConfig. The assignment below is only
-// so image.php's own include_once resolves to the same realpath and is a no-op rather than a
-// warning. misc.php defines its 21 constants unguarded, which is also why stubbing any of them
-// here would collide.
+// The real language file is still loaded HERE, unconditionally: the xoops_loadLanguage() below
+// is a stub that loads nothing, and the constants must exist before any test can touch
+// $xoopsConfig. Roughly thirty tests under class/auth/ assign
+// `$GLOBALS['xoopsConfig'] = ['debug_mode' => n]` -- replacing the whole array -- and unset() it
+// in tearDown, so nothing keyed on $xoopsConfig['language'] at load time is reliable. misc.php
+// defines its 21 constants unguarded, which is also why stubbing any of them here would collide.
 if (!isset($GLOBALS['xoopsConfig']['language'])) {
     $GLOBALS['xoopsConfig']['language'] = 'english';
 }

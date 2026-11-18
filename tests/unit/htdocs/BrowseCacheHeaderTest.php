@@ -63,6 +63,20 @@ final class BrowseCacheHeaderTest extends TestCase
     }
 
     #[Test]
+    public function browseTellsBrowsersNotToGuessTheContentType(): void
+    {
+        // browse.php sets nocommon, so the header include/common.php sends for
+        // every other page has to be sent here, after the declared type.
+        $src  = $this->browseSource();
+        $type = strpos($src, "header('Content-type: ' . \$types[\$ext]);");
+        $sniff = strpos($src, "header('X-Content-Type-Options: nosniff');");
+
+        self::assertNotFalse($type);
+        self::assertNotFalse($sniff, 'browse.php must send X-Content-Type-Options: nosniff');
+        self::assertGreaterThan($type, $sniff);
+    }
+
+    #[Test]
     public function browseDoesNotMarkAssetsImmutable(): void
     {
         // browse.php URLs are plain paths, not content-fingerprinted, so an

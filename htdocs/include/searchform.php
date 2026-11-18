@@ -19,7 +19,9 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
 include_once $GLOBALS['xoops']->path('class/xoopsformloader.php');
 
 // create form
-$search_form = new XoopsThemeForm(_SR_SEARCH, 'search', 'search.php', 'get');
+// no security token: the form submits by GET, so a token would end up in every search URL
+// (browser history, server logs, Referer), and search.php only reads, it checks none
+$search_form = new XoopsThemeForm(_SR_SEARCH, 'search', 'search.php', 'get', false);
 
 // create form elements
 $search_form->addElement(new XoopsFormText(_SR_KEYWORDS, 'query', 30, 255, htmlspecialchars(stripslashes(implode(' ', $queries)), ENT_QUOTES | ENT_HTML5)), true);
@@ -63,5 +65,4 @@ if ($xoopsConfigSearch['keyword_min'] > 0) {
     $search_form->addElement(new XoopsFormLabel(_SR_SEARCHRULE, sprintf(_SR_KEYIGNORE, $xoopsConfigSearch['keyword_min'])));
 }
 $search_form->addElement(new XoopsFormHidden('action', 'results'));
-$search_form->addElement(new XoopsFormHiddenToken('id'));
 $search_form->addElement(new XoopsFormButton('', 'submit', _SR_SEARCH, 'submit'));

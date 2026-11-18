@@ -96,6 +96,8 @@ $expires = 60 * 60 * 24 * 15;
 header('Cache-Control: public, max-age=' . $expires);
 header('Expires: ' . gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT');
 header('Content-type: ' . $types[$ext]);
+// browse.php skips include/common.php, which sends this header for every other page.
+header('X-Content-Type-Options: nosniff');
 
 // Emit SourceMap header for JS/CSS files when a companion .map file exists.
 // Browsers cannot resolve relative sourceMappingURL references inside files

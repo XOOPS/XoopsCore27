@@ -17,8 +17,12 @@
  * @author              Taiwen Jiang <phppp@users.sourceforge.net>
  */
 defined('XOOPS_ROOT_PATH') || exit('Restricted access');
-global $xoopsConfig;
-include_once $GLOBALS['xoops']->path('language/' . $xoopsConfig['language'] . '/misc.php');
+// xoops_loadLanguage() falls back to English when the language pack has no misc.php; the
+// defaults cover a pack whose misc.php lacks a constant, which would stop every [img] tag
+xoops_loadLanguage('misc');
+defined('_MSC_RESIZED_IMAGE') || define('_MSC_RESIZED_IMAGE', 'Resized Image');
+defined('_MSC_CLICK_TO_OPEN_IMAGE') || define('_MSC_CLICK_TO_OPEN_IMAGE', 'Click to see original Image in a new window');
+defined('_MSC_ORIGINAL_IMAGE') || define('_MSC_ORIGINAL_IMAGE', 'Original Image');
 
 /**
  * Class MytsImage

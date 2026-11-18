@@ -36,6 +36,14 @@ include_once XOOPS_ROOT_PATH . '/include/license.php';
 require_once XOOPS_ROOT_PATH . '/class/xoopsload.php';
 
 /**
+ * Tell browsers to use the declared Content-Type instead of guessing one from the content.
+ * Sent before the first preload event, so a page a preload ends early (a Protector ban) has it too.
+ */
+if (!headers_sent()) {
+    header('X-Content-Type-Options: nosniff');
+}
+
+/**
  * YOU SHOULD BE CAREFUL WITH THE PRELOAD METHODS IN 2.4*, THEY WILL BE DEPRECATED AND IMPLEMENTED IN A DIFFERENT WAY
  */
 /**

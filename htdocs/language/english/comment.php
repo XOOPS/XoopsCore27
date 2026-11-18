@@ -29,7 +29,6 @@ define('_CM_POSTS', 'Comments');
 define('_CM_FROM', 'From');
 define('_CM_COMDELETED', 'Comment(s) deleted.');
 define('_CM_COMDELETENG', 'Could not delete comment.');
-define('_CM_COMPOSTNG', 'Could not save the comment.');
 define('_CM_DELETESELECT', 'Delete all its child comments?');
 define('_CM_DELETEONE', 'No, delete only this comment');
 define('_CM_DELETEALL', 'Yes, delete all');
@@ -44,3 +43,6 @@ define('_CM_COMNOCOM', 'Disable comments');
 define('_CM_USER', 'Name');
 define('_CM_EMAIL', 'Email');
 define('_CM_URL', 'Website');
+
+// 2.7.5
+define('_CM_COMPOSTNG', 'Could not save the comment.');

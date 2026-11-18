@@ -247,6 +247,52 @@ final class XoopsUpgradeApplyTest extends TestCase
     }
 
     #[Test]
+    public function aSecondRunOfAnAppliedPatchRunsNoTask(): void
+    {
+        $patch = new class () extends XoopsUpgrade {
+            /** @var list<string> every apply_ call, in order */
+            public array $applied = [];
+
+            public function __construct()
+            {
+                $this->tasks = ['a', 'b'];
+            }
+
+            public function check_a(): bool
+            {
+                return in_array('a', $this->applied, true);
+            }
+
+            public function apply_a(): bool
+            {
+                $this->applied[] = 'a';
+
+                return true;
+            }
+
+            public function check_b(): bool
+            {
+                return in_array('b', $this->applied, true);
+            }
+
+            public function apply_b(): bool
+            {
+                $this->applied[] = 'b';
+
+                return true;
+            }
+        };
+
+        self::assertTrue($patch->apply());
+        self::assertSame(['a', 'b'], $patch->applied);
+
+        // Running the upgrade again must change nothing: no task is applied twice.
+        self::assertTrue($patch->apply());
+        self::assertSame(['a', 'b'], $patch->applied);
+        self::assertSame('', $patch->message());
+    }
+
+    #[Test]
     public function taskListedInNoRecheckIsTrusted(): void
     {
         $patch = new class () extends XoopsUpgrade {

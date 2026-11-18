@@ -107,7 +107,7 @@ try {
     echo 'Server: ' . $db->getServerVersion() . "\n";
     // Exercise the shipped install DDL, not a test-specific schema facsimile.
     $schema = file_get_contents(XOOPS_ROOT_PATH . '/install/sql/mysql.structure.sql');
-    foreach (['user_2fa', 'tokens', 'config', 'configoption', 'users'] as $table) {
+    foreach (['user_2fa', 'tokens', 'config', 'configoption', 'users', 'configcategory', 'smiles', 'xoopscomments'] as $table) {
         check(preg_match('/CREATE TABLE ' . $table . ' \(.*?\) ENGINE=[^;]+;/s', $schema, $match) === 1, 'Missing install DDL');
         $name = $db->prefix($table);
         $ddl = str_replace('CREATE TABLE ' . $table, 'CREATE TABLE `' . $name . '`', $match[0]);
@@ -382,6 +382,73 @@ try {
     $enrol(50);
     echo "PASS: absent-table file-first session, real 2.7.4 upgrade tasks, idempotency and upgraded enrolment\n";
 
+    // Running the 2.7.3 and 2.7.4 patches a second time must change nothing, also on a
+    // site whose administrator changed what the first run installed.
+    require $upgradeRoot . '/class/Xoops/Upgrade/PatchStatus.php';
+    require $upgradeRoot . '/upd_2.7.1-to-2.7.3/index.php';
+    // The emoticon task copies images into the upload folder: keep that out of the tree.
+    defined('XOOPS_UPLOAD_PATH') || define('XOOPS_UPLOAD_PATH', $directory . '/uploads');
+    check(str_starts_with(XOOPS_UPLOAD_PATH, $directory) && mkdir(XOOPS_UPLOAD_PATH . '/smilies', 0700, true), 'Disposable upload folder');
+    $comments = '`' . $db->prefix('xoopscomments') . '`';
+    check($db->exec("ALTER TABLE $comments DROP INDEX idx_status_created, ADD INDEX com_status (com_status)"), 'Give the comments table its pre-2.7.3 index');
+    $patches = static fn(): array => [
+        new Upgrade_273($db, new Xoops\Upgrade\UpgradeControl($db)),
+        new Upgrade_274($db, new Xoops\Upgrade\UpgradeControl($db)),
+    ];
+    $snapshot = static function () use ($db, $comments): array {
+        $rows = [];
+        foreach (['config', 'configoption', 'configcategory', 'smiles'] as $table) {
+            $result = $db->query('SELECT * FROM `' . $db->prefix($table) . '` ORDER BY 1');
+            check($db->isResultSet($result), "Read $table for the snapshot");
+            $rows[$table] = [];
+            while ($row = $db->fetchArray($result)) {
+                $rows[$table][] = $row;
+            }
+        }
+        $result = $db->query("SHOW INDEX FROM $comments");
+        check($db->isResultSet($result), 'Read the comments indexes for the snapshot');
+        while ($row = $db->fetchArray($result)) {
+            $rows['indexes'][] = $row['Key_name'] . '.' . $row['Seq_in_index'] . '.' . $row['Column_name'] . '.' . $row['Non_unique'] . '.' . ($row['Sub_part'] ?? '');
+        }
+        sort($rows['indexes']);
+
+        return $rows;
+    };
+    foreach ($patches() as $patch) {
+        check([] !== $patch->isApplied()->tasks, $patch::class . ' has work to do on the old schema');
+        check($patch->apply(), 'First full run of ' . $patch::class . ': ' . strip_tags($patch->message()));
+    }
+    $config = '`' . $db->prefix('config') . '`';
+    check($db->exec("UPDATE $config SET conf_value = 'optional' WHERE conf_name = 'twofactor_mode'"), 'Administrator changes the sign-in mode');
+    check($db->exec("UPDATE $config SET conf_value = '0' WHERE conf_name = 'enable_online_tracking'"), 'Administrator turns online tracking off');
+    check($db->exec("UPDATE $config SET conf_value = '' WHERE conf_catid = " . SCEditorConfig::CATEGORY), 'Administrator empties every editor preference');
+    $before = $snapshot();
+    check(count($before['config']) > 2 && [] !== $before['configoption'] && [] !== $before['configcategory'] && [] !== $before['smiles'], 'First run installed preferences, options, the category and emoticons');
+    check(in_array('idx_status_created.2.com_created.1.', $before['indexes'], true) && !in_array('com_status.1.com_status.1.', $before['indexes'], true), 'First run replaced the comments index');
+    // Content hash and modification time per file: a second run that copies an image again
+    // would keep the name. The files are back-dated so a rewrite in the same second shows.
+    $emoticons = static function (bool $backdate = false): array {
+        $files = glob(XOOPS_UPLOAD_PATH . '/smilies/*');
+        check(is_array($files), 'List the emoticon folder');
+        $state = [];
+        foreach ($files as $file) {
+            check(!$backdate || touch($file, 1000000000), 'Back-date an emoticon image');
+            clearstatcache(true, $file);
+            $state[basename($file)] = [md5_file($file), filemtime($file)];
+        }
+
+        return $state;
+    };
+    $files = $emoticons(true);
+    check([] !== $files, 'First run copied the emoticon images');
+    foreach ($patches() as $patch) {
+        check([] === $patch->isApplied()->tasks, $patch::class . ' has nothing left to do');
+        check($patch->apply() && '' === $patch->message(), 'Second run of ' . $patch::class . ' succeeds silently');
+    }
+    check($snapshot() === $before, 'Second run changed a preference, option, category, emoticon or index');
+    check($emoticons() === $files, 'Second run added, removed or rewrote an emoticon image');
+    echo "PASS: 2.7.3 and 2.7.4 patches run twice leave customised preferences, emoticons and indexes unchanged\n";
+
     // A sign-in that rehashes the password must never undo a reset that commits
     // between its read and its write: every interleaving keeps the reset.
     $users = '`' . $db->prefix('users') . '`';
@@ -428,6 +495,13 @@ try {
             unlink($file);
         }
         rmdir($directory . '/' . $subdirectory);
+    }
+    if (is_dir($directory . '/uploads/smilies')) {
+        foreach (glob($directory . '/uploads/smilies/*') as $file) {
+            unlink($file);
+        }
+        rmdir($directory . '/uploads/smilies');
+        rmdir($directory . '/uploads');
     }
     if (is_file($directory . '/common-auth.php')) {
         unlink($directory . '/common-auth.php');

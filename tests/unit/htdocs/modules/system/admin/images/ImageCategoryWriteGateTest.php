@@ -47,7 +47,7 @@ final class ImageCategoryWriteGateTest extends TestCase
     private function gate(): string
     {
         $this->loadSourceFile('htdocs/modules/system/admin/images/main.php');
-        $from  = '// check WRITE right by category before continue';
+        $from  = '// check READ right by category before continue';
         $to    = '// Only website administator';
         $start = strpos($this->sourceContent, $from);
         self::assertNotFalse($start, 'start marker missing');
@@ -82,6 +82,16 @@ final class ImageCategoryWriteGateTest extends TestCase
             'save moves image to missing cat'   => ['save', self::WRITABLE, self::MISSING, false],
             'toggle writable category'          => ['display_cat', 0, self::WRITABLE, true],
             'toggle foreign category'           => ['display_cat', 0, self::FOREIGN, false],
+            'list writable category'            => ['listimg', null, self::WRITABLE, true],
+            'list foreign category'             => ['listimg', null, self::FOREIGN, false],
+            'upload to writable category'       => ['addfile', null, self::WRITABLE, true],
+            'upload to foreign category'        => ['addfile', null, self::FOREIGN, false],
+            'multi-upload to foreign category'  => ['multiupload', null, self::FOREIGN, false],
+            'edit form for foreign category'    => ['editcat', null, self::FOREIGN, false],
+            'update writable category'          => ['updatecat', null, self::WRITABLE, true],
+            'update foreign category'           => ['updatecat', null, self::FOREIGN, false],
+            'delete confirm for foreign category' => ['delcat', null, self::FOREIGN, false],
+            'delete foreign category'           => ['delcatok', null, self::FOREIGN, false],
         ];
     }
 

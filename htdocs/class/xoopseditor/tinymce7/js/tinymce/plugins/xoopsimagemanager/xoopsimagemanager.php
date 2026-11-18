@@ -344,13 +344,21 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         $images        = $image_handler->getObjects(new Criteria('imgcat_id', $imgcat_id), true, false);
         $errors        = [];
         $imageDeleteFailed = false;
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
         foreach (array_keys($images) as $i) {
             if (!$image_handler->delete($images[$i])) {
                 $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $i);
                 $imageDeleteFailed = true;
             } else {
-                if (file_exists(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name')) && !unlink(XOOPS_UPLOAD_PATH . '/' . $images[$i]->getVar('image_name'))) {
-                    $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILUNLINK, $i);
+                // As for a single image: only a file strictly inside the upload
+                // directory is removed, and one that stays is reported.
+                $imageFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, (string) $images[$i]->getVar('image_name', 'n'));
+                if ('' !== $imageFile) {
+                    xoops_remove_file_quietly($imageFile, 'image');
+                    clearstatcache(true, $imageFile);
+                    if (is_file($imageFile)) {
+                        $errors[] = sprintf(_AM_SYSTEM_IMAGES_FAILUNLINK, $i);
+                    }
                 }
             }
         }
@@ -400,9 +408,12 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         if (!$image_handler->delete($image)) {
             redirect_header($current_file . '?target=' . $targetQuery, 3, sprintf(_AM_SYSTEM_IMAGES_FAILDEL, $image->getVar('image_id')));
         }
-        $imagePath = XOOPS_UPLOAD_PATH . '/' . $image->getVar('image_name');
-        if (file_exists($imagePath)) {
-            unlink($imagePath);
+        // Only a file strictly inside the upload directory is removed: the
+        // stored name must not drive a delete anywhere else.
+        require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
+        $imageFile = xoops_resolveFileWithin(XOOPS_UPLOAD_PATH, (string) $image->getVar('image_name', 'n'));
+        if ('' !== $imageFile) {
+            xoops_remove_file_quietly($imageFile, 'image');
         }
         redirect_header($current_file . '?target=' . $targetQuery, 3, _AM_SYSTEM_DBUPDATED);
     }

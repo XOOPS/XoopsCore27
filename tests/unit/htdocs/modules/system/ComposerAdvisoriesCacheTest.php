@@ -138,7 +138,7 @@ final class ComposerAdvisoriesCacheTest extends TestCase
             '{"advisories": {"acme/in-range": ["text"], "acme/clean": []}}',
         ];
         foreach ($bodies as $body) {
-            XoopsCache::delete(ComposerAdvisories::CACHE_KEY);
+            XoopsCache::delete(ComposerAdvisories::CACHE_KEY_FAILED);
 
             $this->assertSame(
                 ['available' => false, 'advisories' => []],
@@ -148,34 +148,62 @@ final class ComposerAdvisoriesCacheTest extends TestCase
     }
 
     #[Test]
-    public function aFailedRequestNeverReplacesAGoodAnswerStoredMeanwhile(): void
+    public function aFailedAttemptStoredAfterAGoodAnswerDoesNotHideIt(): void
     {
-        // While this request is under way, another one finishes and stores a good answer.
+        // Two requests miss the cache together. The other one stores a good answer while
+        // this one is still under way; this one then fails and stores its failed attempt last.
         $failing = function (string $url) {
             ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(self::fixture()));
 
             return false;
         };
 
-        $result = ComposerAdvisories::forPackages(self::PACKAGES, $failing);
+        $failed = ComposerAdvisories::forPackages(self::PACKAGES, $failing);
         $later  = ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(false));
 
-        $this->assertTrue($result['available']);
-        $this->assertSame(['acme/in-range'], array_keys($result['advisories']));
-        $this->assertSame($result, $later);
+        $this->assertFalse($failed['available']);
+        $this->assertIsArray(XoopsCache::read(ComposerAdvisories::CACHE_KEY_FAILED), 'the failed attempt was stored last');
+        $this->assertTrue($later['available']);
+        $this->assertSame(['acme/in-range'], array_keys($later['advisories']));
         $this->assertCount(1, $this->requests);
+    }
+
+    #[Test]
+    public function aWarningFromTheCacheOrTheRequestStaysInside(): void
+    {
+        $seen = [];
+        set_error_handler(static function (int $number, string $text) use (&$seen): bool {
+            $seen[] = $text;
+
+            return true;
+        });
+        try {
+            $result = ComposerAdvisories::forPackages(self::PACKAGES, static function (string $url) {
+                // what a stream that cannot connect does: a warning, then false
+                return file_get_contents(__DIR__ . '/no-such-file-for-the-advisory-test');
+            });
+            $this->assertSame([], $seen);
+            $this->assertSame(['available' => false, 'advisories' => []], $result);
+
+            // the handler that was active before the check is active again after it
+            trigger_error('after the check', E_USER_WARNING);
+            $this->assertSame(['after the check'], $seen);
+        } finally {
+            restore_error_handler();
+        }
     }
 
     #[Test]
     public function aStoredAnswerIsCheckedAgainBeforeItIsPrinted(): void
     {
         ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(self::fixture()));
-        $entry                                               = XoopsCache::read(ComposerAdvisories::CACHE_KEY);
-        $entry['result']['advisories']['acme/in-range'][0]['link']  = 'javascript:alert(1)';
-        $entry['result']['advisories']['acme/in-range'][0]['title'] = ['not', 'text'];
-        $entry['result']['advisories']['acme/in-range'][]           = 'not an advisory';
-        $entry['result']['advisories']['acme/clean']                = 'not a list';
-        XoopsCache::write(ComposerAdvisories::CACHE_KEY, $entry, 60);
+        $entry                                           = XoopsCache::read(ComposerAdvisories::CACHE_KEY_OK);
+        $entry['available']                              = 'no';
+        $entry['advisories']['acme/in-range'][0]['link']  = 'javascript:alert(1)';
+        $entry['advisories']['acme/in-range'][0]['title'] = ['not', 'text'];
+        $entry['advisories']['acme/in-range'][]           = 'not an advisory';
+        $entry['advisories']['acme/clean']                = 'not a list';
+        XoopsCache::write(ComposerAdvisories::CACHE_KEY_OK, $entry, 60);
 
         $result = ComposerAdvisories::forPackages(self::PACKAGES, $this->answering(false));
 

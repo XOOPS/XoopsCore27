@@ -27,10 +27,13 @@ defined('XOOPS_ROOT_PATH') || exit('Restricted access');
  */
 class ComposerAdvisories
 {
-    public const API_URL    = 'https://packagist.org/api/security-advisories/';
-    public const CACHE_KEY  = 'system_composer_advisories';
-    public const TTL_OK     = 86400;
-    public const TTL_FAILED = 3600;
+    public const API_URL = 'https://packagist.org/api/security-advisories/';
+    // A good answer and a failed attempt are stored apart, and the good one is read
+    // first: a failed attempt can then never replace or hide a good answer.
+    public const CACHE_KEY_OK     = 'system_composer_advisories';
+    public const CACHE_KEY_FAILED = 'system_composer_advisories_failed';
+    public const TTL_OK           = 86400;
+    public const TTL_FAILED       = 3600;
 
     /**
      * Advisories that cover the installed version of each package.
@@ -46,6 +49,9 @@ class ComposerAdvisories
     {
         $unavailable = ['available' => false, 'advisories' => []];
 
+        // A cache file that cannot be read and a stream that cannot connect report with a PHP
+        // warning. The answer for all of them is "not available", so they stay off the page and the log.
+        set_error_handler(static fn(): bool => true, E_WARNING | E_NOTICE | E_USER_WARNING | E_USER_NOTICE);
         try {
             $versions = [];
             foreach ($packages as $package) {
@@ -63,47 +69,46 @@ class ComposerAdvisories
             $installed = md5((string) json_encode($versions));
             $cached    = self::cached($installed);
             if (null !== $cached) {
-                return $cached;
+                return ['available' => true, 'advisories' => $cached];
+            }
+            $failed = XoopsCache::read(self::CACHE_KEY_FAILED);
+            if (is_array($failed) && ($failed['installed'] ?? '') === $installed) {
+                return $unavailable;
             }
 
             $result = self::ask($versions, $fetch ?? [self::class, 'fetch']);
-            if (!$result['available']) {
-                // Another request may have stored a good answer meanwhile: a failure never replaces it.
-                $cached = self::cached($installed);
-                if (null !== $cached && $cached['available']) {
-                    return $cached;
-                }
+            if ($result['available']) {
+                XoopsCache::write(self::CACHE_KEY_OK, ['installed' => $installed, 'advisories' => $result['advisories']], self::TTL_OK);
+            } else {
+                XoopsCache::write(self::CACHE_KEY_FAILED, ['installed' => $installed], self::TTL_FAILED);
             }
-            XoopsCache::write(
-                self::CACHE_KEY,
-                ['installed' => $installed, 'result' => $result],
-                $result['available'] ? self::TTL_OK : self::TTL_FAILED
-            );
 
             return $result;
         } catch (\Throwable $e) {
             return $unavailable;
+        } finally {
+            restore_error_handler();
         }
     }
 
     /**
-     * The stored answer for this set of installed packages, or null when there is none.
+     * The stored good answer for this set of installed packages, or null when there is none.
      *
      * What comes out of the cache is built again field by field, like a fresh answer,
      * so a damaged or altered entry cannot put anything else on the page.
      *
      * @param string $installed fingerprint of the installed packages and versions
      *
-     * @return array{available: bool, advisories: array<string, list<array{title: string, link: string, cve: string, severity: string}>>}|null
+     * @return array<string, list<array{title: string, link: string, cve: string, severity: string}>>|null
      */
     private static function cached(string $installed): ?array
     {
-        $cached = XoopsCache::read(self::CACHE_KEY);
-        if (!is_array($cached) || ($cached['installed'] ?? '') !== $installed || !is_array($cached['result']['advisories'] ?? null)) {
+        $cached = XoopsCache::read(self::CACHE_KEY_OK);
+        if (!is_array($cached) || ($cached['installed'] ?? '') !== $installed || !is_array($cached['advisories'] ?? null)) {
             return null;
         }
         $advisories = [];
-        foreach ($cached['result']['advisories'] as $name => $list) {
+        foreach ($cached['advisories'] as $name => $list) {
             foreach (is_array($list) ? $list : [] as $advisory) {
                 if (is_array($advisory)) {
                     $advisories[(string) $name][] = self::advisory($advisory);
@@ -111,8 +116,7 @@ class ComposerAdvisories
             }
         }
 
-        // the file cache hands a boolean back as text
-        return ['available' => (bool) ($cached['result']['available'] ?? false), 'advisories' => $advisories];
+        return $advisories;
     }
 
     /**
@@ -228,10 +232,6 @@ class ComposerAdvisories
     /**
      * Send the request: public https target only, short timeouts.
      *
-     * Without curl the request goes through a stream, which reports a failed connection
-     * as a PHP warning. The caller shows "unavailable" for a false result, so the warning
-     * is kept off the page and out of the log for the length of the request.
-     *
      * @param string $url
      *
      * @return string|false
@@ -241,11 +241,7 @@ class ComposerAdvisories
         XoopsLoad::load('xoopshttpget');
         $http = new XoopsHttpGet($url);
         $http->setTimeouts(3, 5);
-        set_error_handler(static fn(): bool => true, E_WARNING | E_NOTICE);
-        try {
-            return $http->fetch();
-        } finally {
-            restore_error_handler();
-        }
+
+        return $http->fetch();
     }
 }

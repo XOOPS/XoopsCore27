@@ -126,7 +126,9 @@ abstract class ScannerProcess
      * XOOPS_ROOT_PATH. Both sides are normalised to forward slashes first, so the
      * root prefix is trimmed regardless of the separator each side uses — without
      * this, a Windows "\" pathname against a "/" root leaves the full absolute
-     * path in reports and scan tokens.
+     * path in reports and scan tokens. The resolved root is tried as well: the
+     * preflight scan walks realpath(XOOPS_ROOT_PATH), so on a symlinked document
+     * root its pathnames would otherwise never match the configured root.
      *
      * @param string $pathname
      *
@@ -134,11 +136,14 @@ abstract class ScannerProcess
      */
     protected static function relativeToRoot(string $pathname): string
     {
-        $root = rtrim(str_replace('\\', '/', XOOPS_ROOT_PATH), '/');
         $path = str_replace('\\', '/', $pathname);
+        foreach ([XOOPS_ROOT_PATH, (string) realpath(XOOPS_ROOT_PATH)] as $root) {
+            $root = rtrim(str_replace('\\', '/', $root), '/');
+            if ('' !== $root && str_starts_with($path, $root . '/')) {
+                return substr($path, strlen($root));
+            }
+        }
 
-        return ('' !== $root && str_starts_with($path, $root . '/'))
-            ? substr($path, strlen($root))
-            : $path;
+        return $path;
     }
 }

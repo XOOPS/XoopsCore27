@@ -23,17 +23,18 @@ xoops_2fa_loadLanguage('user2fa');
 // from $_POST we use keys: uname, pass, rememberme, xoops_redirect
 XoopsLoad::load('XoopsRequest');
 $uname = XoopsRequest::getString('uname', '', 'POST');
-$pass = XoopsRequest::getString('pass', '', 'POST');
 $rememberme = XoopsRequest::getString('rememberme', '', 'POST');
 $redirect = XoopsRequest::getUrl('xoops_redirect', '', 'POST');
 
-if ($uname == '' || $pass == '') {
+require_once $GLOBALS['xoops']->path('include/loginsession.php');
+// The password as typed (as registration stores it), then the legacy filtered form.
+$passwords = xoops_login_posted_passwords('pass');
+
+if ($uname == '' || [] === $passwords) {
     redirect_header(XOOPS_URL . '/user.php', 1, _US_INCORRECTLOGIN);
 }
 
-require_once $GLOBALS['xoops']->path('include/loginsession.php');
-
-$user = xoops_login_authenticate($uname, $pass);
+$user = xoops_login_authenticate($uname, ...$passwords);
 
 if (false !== $user) {
     // The gate: a failed factor lookup is "unavailable" and challenges, so a

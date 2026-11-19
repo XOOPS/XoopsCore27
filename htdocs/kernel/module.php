@@ -305,6 +305,17 @@ class XoopsModule extends XoopsObject
     public function loadInfo($dirname, $verbose = true)
     {
         static $modVersions;
+        $dirname = (string) $dirname;
+        // No folder has a NUL byte in its name, and PHP 8.6 file checks throw
+        // on one. Checked before basename(), which would drop a NUL in a
+        // leading path segment.
+        if (str_contains($dirname, "\0")) {
+            if (false !== (bool) $verbose) {
+                echo 'Module File Not Found!';
+            }
+
+            return false;
+        }
         $dirname = basename($dirname);
         if (isset($modVersions[$dirname])) {
             $this->modinfo = $modVersions[$dirname];

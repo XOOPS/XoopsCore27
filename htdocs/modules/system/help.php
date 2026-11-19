@@ -20,6 +20,11 @@ use Xmf\Request;
 include __DIR__ . '/header.php';
 
 $page = Request::getString('page', '');
+// A help page or System section is a file name: anything else (a path, a NUL
+// byte, which PHP 8.6 file checks throw on) falls back to the index.
+if (!preg_match('/^[A-Za-z0-9_.-]+\z/', $page) || str_contains($page, '..')) {
+    $page = '';
+}
 $mid  = Request::getInt('mid', 0);
 
 // Define main template

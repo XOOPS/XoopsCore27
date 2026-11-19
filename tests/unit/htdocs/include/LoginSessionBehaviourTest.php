@@ -202,6 +202,108 @@ final class LoginSessionBehaviourTest extends TestCase
         self::assertSame(['xoopsUserId' => 'stale', 'other' => 'stale'], $_SESSION);
     }
 
+    /**
+     * Registration stores the password as typed; login used to read it
+     * trimmed and markup-stripped, and PHP 8.6 also trims a form feed.
+     *
+     * @return array<string, array{string, list<string>}>
+     */
+    public static function postedPasswords(): array
+    {
+        $formFeed = PHP_VERSION_ID >= 80600 ? ["\fpw-example\f", 'pw-example'] : ["\fpw-example\f"];
+
+        return [
+            'plain'                 => ['pw-example', ['pw-example']],
+            'surrounding spaces'    => [' pw-example ', [' pw-example ', 'pw-example']],
+            'markup'                => ['a<b>c-example', ['a<b>c-example', 'ac-example']],
+            'boundary form feed'    => ["\fpw-example\f", $formFeed],
+            'spaces only'           => ['   ', ['   ']],
+            // A NUL byte: bcrypt cannot hash one and stops verifying at one,
+            // and a directory bind throws on one. No candidate at all, not
+            // even the filtered form (which trims a boundary NUL): the first
+            // candidate is the one a directory provider is asked with, and it
+            // must be the password as typed.
+            'boundary NUL'          => ["pw-example\0", []],
+            'interior NUL'          => ["pw\0example", []],
+        ];
+    }
+
+    /**
+     * @param list<string> $expected
+     */
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    #[\PHPUnit\Framework\Attributes\DataProvider('postedPasswords')]
+    public function thePostedPasswordComesAsTypedFirstThenInItsLegacyForm(string $posted, array $expected): void
+    {
+        $_POST = ['pass' => $posted];
+        $fn    = self::NS . '\\xoops_login_posted_passwords';
+
+        $candidates = $fn('pass');
+        self::assertSame($expected, $candidates);
+        if ([] === $expected) {
+            return;
+        }
+        // The first candidate is exactly what register.php hashes, and what a
+        // directory provider is asked with: never a transformed password.
+        self::assertSame(
+            \Xmf\Request::getVar('pass', '', 'POST', 'string', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM),
+            $candidates[0]
+        );
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aMissingEmptyOrArrayPasswordGivesNoCandidates(): void
+    {
+        $fn = self::NS . '\\xoops_login_posted_passwords';
+
+        $_POST = [];
+        self::assertSame([], $fn('pass'));
+        $_POST = ['pass' => ''];
+        self::assertSame([], $fn('pass'));
+        $_POST = ['pass' => ['pw-example']];
+        self::assertSame([], $fn('pass'));
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function theLocalProviderTriesTheLegacyFormAfterThePasswordAsTyped(): void
+    {
+        $user                             = $this->user();
+        $GLOBALS['sandboxAuthResult']     = $user;
+        $GLOBALS['sandboxAcceptPassword'] = 'pw-example';
+        $fn = self::NS . '\\xoops_login_authenticate';
+
+        self::assertSame($user, $fn('alice', ' pw-example ', 'pw-example'));
+        self::assertSame([' pw-example ', 'pw-example'], $GLOBALS['sandboxPasswords']);
+
+        // A match on the password as typed stops there.
+        $GLOBALS['sandboxPasswords']      = [];
+        $GLOBALS['sandboxAcceptPassword'] = ' pw-example ';
+        self::assertSame($user, $fn('alice', ' pw-example ', 'pw-example'));
+        self::assertSame([' pw-example '], $GLOBALS['sandboxPasswords']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function aDirectoryProviderIsAskedOnlyWithThePasswordAsTyped(): void
+    {
+        // A second failed bind would count against the directory's lockout,
+        // and the legacy form exists only for hashes XOOPS stored itself.
+        $GLOBALS['sandboxProvider']       = 'ldap';
+        $GLOBALS['sandboxAuthResult']     = $this->user();
+        $GLOBALS['sandboxAcceptPassword'] = 'pw-example';
+        $fn = self::NS . '\\xoops_login_authenticate';
+
+        self::assertFalse($fn('alice', ' pw-example ', 'pw-example'));
+        self::assertSame([' pw-example '], $GLOBALS['sandboxPasswords']);
+    }
+
     #[Test]
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
@@ -539,9 +641,20 @@ final class LoginSessionBehaviourTest extends TestCase
         class XoopsDatabaseFactory {
             public static function getDatabaseConnection(): object { return new class { public function escape(string $s): string { return $s; } }; }
         }
+        function sandbox_authenticate(string $u, string $p): mixed {
+            $GLOBALS['sandboxLog'][]       = 'authenticate:' . $u;
+            $GLOBALS['sandboxPasswords'][] = $p;
+            if (isset($GLOBALS['sandboxAcceptPassword']) && $p !== $GLOBALS['sandboxAcceptPassword']) {
+                return false;
+            }
+            return $GLOBALS['sandboxAuthResult'];
+        }
+        // The local provider, and a directory provider (LDAP/ADS) beside it.
+        class XoopsAuthXoops { public function authenticate(string $u, string $p): mixed { return sandbox_authenticate($u, $p); } }
+        class XoopsAuthLdap { public function authenticate(string $u, string $p): mixed { return sandbox_authenticate($u, $p); } }
         class XoopsAuthFactory {
             public static function getAuthConnection(string $uname): object {
-                return new class { public function authenticate(string $u, string $p): mixed { $GLOBALS['sandboxLog'][] = 'authenticate:' . $u; return $GLOBALS['sandboxAuthResult']; } };
+                return 'ldap' === ($GLOBALS['sandboxProvider'] ?? 'xoops') ? new XoopsAuthLdap() : new XoopsAuthXoops();
             }
         }
         class XoopsPreload {

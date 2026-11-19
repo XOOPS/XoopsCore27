@@ -187,7 +187,14 @@ switch ($op) {
         $obj->setVar('contact', Request::getString('contact', ''));
         $obj->setVar('email', Request::getEmail('email', ''));
         $obj->setVar('login', Request::getString('login', ''));
-        $newPasswd = trim(Request::getString('passwd', ''));
+        // Stored as typed, like account passwords; banners.php also tries the
+        // trimmed, markup-stripped form older saves stored.
+        $newPasswd = Request::getVar('passwd', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
+        $newPasswd = is_string($newPasswd) ? $newPasswd : '';
+        if (str_contains($newPasswd, "\0")) {
+            // password_hash() refuses a NUL byte.
+            redirect_header('admin.php?fct=banners', 3, 'The password contains a character that cannot be used.');
+        }
         if ($newPasswd !== '') {
             $hashedPasswd = password_hash($newPasswd, PASSWORD_DEFAULT);
             // Check column width before storing hash to avoid truncation

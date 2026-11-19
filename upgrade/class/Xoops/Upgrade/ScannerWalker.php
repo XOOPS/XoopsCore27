@@ -11,6 +11,8 @@
 
 namespace Xoops\Upgrade;
 
+defined('XOOPS_ROOT_PATH') || exit('Restricted access');
+
 use Xmf\Assert;
 use InvalidArgumentException;
 use RecursiveIteratorIterator;

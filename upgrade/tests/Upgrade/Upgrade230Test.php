@@ -79,8 +79,18 @@ final class Upgrade230Test extends TestCase
     {
         $GLOBALS['xoopsConfig'] = [];
 
-        self::assertFalse($this->patch([[1]], false)->apply_config());
+        self::assertFalse($this->patch([[1]], [false])->apply_config());
         self::assertCount(1, $this->executed);
+    }
+
+    #[Test]
+    public function aFailedCpanelInsertIsNotHiddenByTheWelcomeTypeInsertsThatFollow(): void
+    {
+        $GLOBALS['xoopsConfig'] = [];
+
+        // no welcome_type yet: the cpanel insert fails, the two welcome_type inserts succeed
+        self::assertFalse($this->patch([[0]], [false, true, true])->apply_config());
+        self::assertCount(3, $this->executed);
     }
 
     #[Test]
@@ -111,19 +121,20 @@ final class Upgrade230Test extends TestCase
 
     /**
      * @param list<list<int|string>> $rows       rows every SELECT returns
-     * @param bool                   $execResult what every write returns
+     * @param list<bool>             $execResults what each write returns in turn; true once the list is used up
      */
-    private function patch(array $rows, bool $execResult = true): Upgrade_230
+    private function patch(array $rows, array $execResults = []): Upgrade_230
     {
-        $db = new class ($rows, $execResult, $this->executed) extends XoopsMySQLDatabase {
+        $db = new class ($rows, $execResults, $this->executed) extends XoopsMySQLDatabase {
             /** @var array<int, list<list<int|string>>> */
             private array $pending = [];
 
             /**
              * @param list<list<int|string>> $rows
+             * @param list<bool>             $execResults
              * @param list<string>           $executed
              */
-            public function __construct(private array $rows, private bool $execResult, private array &$executed)
+            public function __construct(private array $rows, private array $execResults, private array &$executed)
             {
             }
 
@@ -149,7 +160,7 @@ final class Upgrade230Test extends TestCase
             {
                 $this->executed[] = (string) $sql;
 
-                return $this->execResult;
+                return array_shift($this->execResults) ?? true;
             }
         };
 

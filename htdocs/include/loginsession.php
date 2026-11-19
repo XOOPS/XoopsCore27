@@ -47,6 +47,30 @@ function xoops_login_is_cross_site(): bool
 }
 
 /**
+ * The password posted in a field, in the forms an account may have stored.
+ *
+ * Registration, lost password, profile and install store the password exactly
+ * as typed. Login used to read it with getString(), which trims it and strips
+ * markup, so an account whose hash came from that form keeps working: it is
+ * the second candidate whenever it differs. PHP 8.6 also trims a form feed,
+ * which made the filtered form differ from a stored password that has one.
+ *
+ * @param string $field POST field holding the password
+ * @return list<string> the password as typed, then the legacy filtered form;
+ *                      empty when the field is missing, empty or not a string
+ */
+function xoops_login_posted_passwords(string $field): array
+{
+    $typed = \Xmf\Request::getVar($field, '', 'POST', 'string', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM);
+    if (!is_string($typed) || '' === $typed) {
+        return [];
+    }
+    $legacy = \Xmf\Request::getString($field, '', 'POST');
+
+    return ('' === $legacy || $legacy === $typed) ? [$typed] : [$typed, $legacy];
+}
+
+/**
  * Check the credentials and the account's right to log in.
  *
  * Redirects and exits when the account is inactive or the site is closed to
@@ -56,11 +80,16 @@ function xoops_login_is_cross_site(): bool
  * always has: the native adapter persists a rehashed password on a
  * successful check, and LDAP provisioning may create or update the account.
  *
- * @param string $uname posted user name
- * @param string $pass  posted password
+ * Several passwords are the candidates from xoops_login_posted_passwords(),
+ * tried in order. Only the first goes to a directory provider (LDAP/ADS): the
+ * legacy form exists for hashes stored by XOOPS itself, and a second failed
+ * bind would count against the directory's lockout.
+ *
+ * @param string $uname        posted user name
+ * @param string ...$passwords posted password, or its candidate forms
  * @return XoopsUser|false the authenticated account, or false
  */
-function xoops_login_authenticate(string $uname, string $pass)
+function xoops_login_authenticate(string $uname, string ...$passwords)
 {
     global $xoopsConfig;
 
@@ -73,7 +102,16 @@ function xoops_login_authenticate(string $uname, string $pass)
     // The bypass list is matched against the same name authenticate() uses; the
     // factory compares it as a string and never puts it into SQL.
     $xoopsAuth = XoopsAuthFactory::getAuthConnection($uname);
-    $user      = $xoopsAuth->authenticate($uname, $pass);
+    $user      = false;
+    foreach (array_values($passwords) as $index => $pass) {
+        if ($index > 0 && !($xoopsAuth instanceof XoopsAuthXoops)) {
+            break;
+        }
+        $user = $xoopsAuth->authenticate($uname, $pass);
+        if (false !== $user) {
+            break;
+        }
+    }
     if (false === $user) {
         return false;
     }

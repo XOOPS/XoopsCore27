@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace xoopsclass;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionMethod;
@@ -23,12 +25,12 @@ require_once XOOPS_ROOT_PATH . '/include/file_safety.php';
  *
  *  - "%00" input parses without error everywhere, and the decoded NUL in the
  *    output round-trips through rawurlencode()/http_build_query() re-encoding;
- *  - a literal "\0" input silently TRUNCATES parsing at the NUL before 8.6
- *    (observed: everything from the NUL onward is dropped), and is expected
- *    to throw ValueError from 8.6 on. The version-conditional assertions are
- *    behavior pins, not endorsements: if the final 8.6 UPGRADING changes the
- *    contract, or a guard lands in these methods, the failing pin is the
- *    signal to update this file.
+ *  - a literal "\0" input silently TRUNCATED parsing at the NUL before 8.6
+ *    (everything from the NUL onward was dropped) and throws ValueError from
+ *    8.6 on. The call sites now guard it, so the result is the same on every
+ *    version: buildUrl() and redactSessionId() re-escape it to "%00" and
+ *    parse on (redaction no longer stops short of a session id after it), and
+ *    xoops_rebuildQueryString() treats it as unparseable and returns ''.
  *
  * The stat-family half of the 8.6 NUL story is already pinned by
  * FileSafetyTest; testDecodedNulValueIsRejectedAtTheFileSafetyBoundary()
@@ -63,22 +65,50 @@ final class Php86NulByteBoundaryTest extends TestCase
         );
     }
 
-    public function testBuildUrlWithLiteralNulByteInQuery(): void
+    public function testBuildUrlReescapesALiteralNulByteInQuery(): void
     {
         $kernel = new \xos_kernel_Xoops2();
 
-        if (PHP_VERSION_ID >= 80600) {
-            // PHP 8.6: parse_str() rejects a literal NUL in its input string.
-            $this->expectException(\ValueError::class);
-        }
+        // Same result as "%00" on every version: no ValueError on 8.6, no
+        // truncation (which dropped 'c=d') before it.
+        $this->assertSame('/index.php?a=%00b&c=d', $kernel->buildUrl("/index.php?a=\0b&c=d"));
+    }
 
-        $result = $kernel->buildUrl("/index.php?a=\0b&c=d");
+    // =========================================================================
+    // xos_kernel_Xoops2::pathExists() - class/xoopskernel.php
+    // =========================================================================
 
-        if (PHP_VERSION_ID < 80600) {
-            // Pre-8.6: parse_str() silently truncates at the NUL - 'a' survives
-            // with an empty value and 'c=d' is lost entirely.
-            $this->assertSame('/index.php?a=', $result);
-        }
+    /**
+     * Its own process: the failure path reads the language constant
+     * _XO_ER_FILENOTFOUND, which the bootstrap does not define.
+     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testPathExistsReportsANulBytePathAsMissing(): void
+    {
+        define('_XO_ER_FILENOTFOUND', 'File not found');
+        $GLOBALS['xoopsLogger'] = new class {
+            public array $errors = [];
+
+            public function triggerError(...$args): void
+            {
+                $this->errors[] = $args;
+            }
+        };
+
+        $this->assertFalse((new \xos_kernel_Xoops2())->pathExists(__FILE__ . "\0.php", E_USER_WARNING));
+        $this->assertCount(1, $GLOBALS['xoopsLogger']->errors);
+        $this->assertSame(__FILE__, (new \xos_kernel_Xoops2())->pathExists(__FILE__, E_USER_WARNING));
+    }
+
+    // =========================================================================
+    // xoops_rebuildQueryString() - include/file_safety.php
+    // =========================================================================
+
+    public function testRebuildQueryStringTreatsALiteralNulByteAsUnparseable(): void
+    {
+        $this->assertSame('', \xoops_rebuildQueryString("a=1\0&b=2"));
+        $this->assertSame('?a=%00&b=2', \xoops_rebuildQueryString('a=%00&b=2'));
     }
 
     // =========================================================================
@@ -110,22 +140,23 @@ final class Php86NulByteBoundaryTest extends TestCase
 
     public function testRedactSessionIdWithLiteralNulByte(): void
     {
-        $name = $this->sessionName();
+        $result = $this->redact('/x.php?' . $this->sessionName() . "=abc\0def&q=1");
 
-        if (PHP_VERSION_ID >= 80600) {
-            $this->expectException(\ValueError::class);
-        }
+        // Re-escaped before parsing: no ValueError on 8.6, nothing dropped.
+        $this->assertStringContainsString('sid%23redacted', $result);
+        $this->assertStringContainsString('q=1', $result);
+        $this->assertStringNotContainsString('abc', $result);
+        $this->assertStringNotContainsString("\0", $result);
+    }
 
-        $result = $this->redact('/x.php?' . $name . "=abc\0def&q=1");
+    public function testRedactSessionIdReachesASessionIdAfterALiteralNulByte(): void
+    {
+        // Before the guard, parse_str() stopped at the NUL on PHP < 8.6, so a
+        // session id after it reached the log unredacted.
+        $result = $this->redact("/x.php?a=\0&" . $this->sessionName() . '=secret');
 
-        if (PHP_VERSION_ID < 80600) {
-            // Truncation pin: parse_str() stops at the NUL, so only the session
-            // parameter survives (redacted); 'q=1' is lost with the tail.
-            $this->assertSame(
-                '/x.php?' . http_build_query([$name => 'sid#redacted']),
-                $result
-            );
-        }
+        $this->assertStringContainsString('sid%23redacted', $result);
+        $this->assertStringNotContainsString('secret', $result);
     }
 
     // =========================================================================

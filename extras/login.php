@@ -32,9 +32,11 @@ require_once XOOPS_ROOT_PATH . '/include/twofactor.php';
 xoops_2fa_loadLanguage('user2fa');
 $op = Request::getString('op', 'login', 'POST') === 'dologin' ? 'dologin' : 'login';
 
+require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
 $username = trim(Request::getString('username', '', 'POST'));
-$password = trim(Request::getString('userpass', '', 'POST'));
-if ($username == '' || $password == '') {
+// The password as typed (as registration stores it), then the legacy filtered form.
+$passwords = xoops_login_posted_passwords('userpass');
+if ($username == '' || [] === $passwords) {
     $op = 'login';
 }
 
@@ -64,8 +66,7 @@ if ($op === 'dologin') {
     $myts           = \MyTextSanitizer::getInstance();
     // The site's own sign-in check: the configured provider (LDAP/ADS with
     // its bypass list), the inactive-account and closed-site refusals.
-    require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
-    $user           = xoops_login_authenticate($username, $password);
+    $user           = xoops_login_authenticate($username, ...$passwords);
     if (is_object($user)) {
         // This popup has no challenge page: an account whose factor must be
         // presented signs in through the site's own login form instead. A

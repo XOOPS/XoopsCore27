@@ -96,7 +96,8 @@ class xos_kernel_Xoops2
         $split = explode('?', $url);
         if (count($split) > 1) {
             [$url, $query] = $split;
-            parse_str($query, $query);
+            // A literal NUL is re-escaped: parse_str() throws on one from PHP 8.6.
+            parse_str(str_replace("\0", '%00', $query), $query);
             $params = array_merge($query, $params);
         }
         if (!empty($params)) {
@@ -119,7 +120,8 @@ class xos_kernel_Xoops2
      */
     public function pathExists($path, $error_type)
     {
-        if (file_exists($path)) {
+        // A NUL byte names no file; PHP 8.6 file checks throw on one.
+        if (is_string($path) && !str_contains($path, "\0") && file_exists($path)) {
             return $path;
         } else {
             $GLOBALS['xoopsLogger']->triggerError($path, _XO_ER_FILENOTFOUND, __FILE__, __LINE__, $error_type);

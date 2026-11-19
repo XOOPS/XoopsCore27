@@ -615,7 +615,9 @@ if (!function_exists('xoops_rebuildQueryString')) {
     function xoops_rebuildQueryString($queryString)
     {
         $queryString = (string) $queryString;
-        if ('' === $queryString || strlen($queryString) > 2000) {
+        // A literal NUL is unparseable: parse_str() truncated at it before
+        // PHP 8.6 and throws on it from 8.6. ("%00" is three ordinary bytes.)
+        if ('' === $queryString || strlen($queryString) > 2000 || str_contains($queryString, "\0")) {
             return '';
         }
         parse_str($queryString, $params);

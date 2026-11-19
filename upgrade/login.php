@@ -20,10 +20,12 @@
 
 defined('XOOPS_ROOT_PATH') or exit();
 
+require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
 $uname = \Xmf\Request::getString('uname', '', 'POST');
-$pass  = \Xmf\Request::getString('pass', '', 'POST');
+// The password as typed (as registration stores it), then the legacy filtered form.
+$passwords = xoops_login_posted_passwords('pass');
 
-if ('' === $uname || '' === $pass) {
+if ('' === $uname || [] === $passwords) {
     ?>
     <h2><?php echo _USER_LOGIN; ?></h2>
 
@@ -63,18 +65,29 @@ if ('' === $uname || '' === $pass) {
         include_once XOOPS_ROOT_PATH . '/language/english/auth.php';
     }
     $xoopsAuth = XoopsAuthFactory::getAuthConnection($uname);
-    $user      = $xoopsAuth->authenticate($uname, $pass);
+    $user      = false;
+    foreach ($passwords as $index => $pass) {
+        // Only the password as typed goes to a directory provider; the legacy
+        // filtered form exists for hashes stored by XOOPS itself.
+        if ($index > 0 && !($xoopsAuth instanceof XoopsAuthXoops)) {
+            break;
+        }
+        $user = $xoopsAuth->authenticate($uname, $pass);
 
-    // For XOOPS 2.2*: the legacy local hash stands in only for the local
-    // provider. A directory provider's refusal is final; a local fallback
-    // would accept a password the directory rejected.
-    if (!is_object($user) && $xoopsAuth instanceof XoopsAuthXoops) {
-        try {
-            $criteria = new CriteriaCompo(new Criteria('loginname', $uname));
-            $criteria->add(new Criteria('pass', md5($pass)));
-            [$user] = $member_handler->getUsers($criteria);
-        } catch (\Throwable $e) {
-            $user = false;
+        // For XOOPS 2.2*: the legacy local hash stands in only for the local
+        // provider. A directory provider's refusal is final; a local fallback
+        // would accept a password the directory rejected.
+        if (!is_object($user) && $xoopsAuth instanceof XoopsAuthXoops) {
+            try {
+                $criteria = new CriteriaCompo(new Criteria('loginname', $uname));
+                $criteria->add(new Criteria('pass', md5($pass)));
+                [$user] = $member_handler->getUsers($criteria);
+            } catch (\Throwable $e) {
+                $user = false;
+            }
+        }
+        if (is_object($user)) {
+            break;
         }
     }
 

@@ -180,6 +180,33 @@ final class Smarty4TemplateRepairTest extends TestCase
     }
 
     #[Test]
+    public function aTemplateThatCannotBeReadIsReportedByItsShortNameOnly(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR || (function_exists('posix_geteuid') && 0 === posix_geteuid())) {
+            self::markTestSkipped('needs a file that is writable but not readable');
+        }
+        $input = '<{xoAppUrl /}><{$item.file}>';
+        $path  = $this->tmpFile($input);
+        chmod($path, 0222);
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+
+            return true;
+        });
+        try {
+            (new Smarty4TemplateRepair(new Smarty4RepairOutput()))->inspectFile(new SplFileInfo($path));
+        } finally {
+            restore_error_handler();
+            chmod($path, 0644);
+        }
+
+        self::assertSame($input, file_get_contents($path));
+        self::assertCount(1, $warnings, 'only the repair\'s own message, no native warning');
+        self::assertStringStartsWith('Error reading file: ', $warnings[0]);
+    }
+
+    #[Test]
     public function anEntryAlreadyAtAStagingNameIsNeitherUsedNorRemoved(): void
     {
         $path    = $this->tmpFile('<{xoAppUrl /}><{$item.file}>');

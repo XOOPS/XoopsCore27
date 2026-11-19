@@ -63,21 +63,9 @@ class Smarty4TemplateChecks extends ScannerProcess
         $output = $this->output;
         $writable = $fileInfo->isWritable();
         $file = self::relativeToRoot($fileInfo->getPathname());
-        // Read under a scoped handler: the native warning of a failed read
-        // would carry the full path.
-        set_error_handler(static fn (): bool => true);
-        try {
-            $contents = file_get_contents($fileInfo->getPathname());
-        } finally {
-            restore_error_handler();
-        }
-        if (false === $contents) {
-            trigger_error(sprintf('Error reading file: %s', $file), E_USER_WARNING);
-
-            return;
-        }
-        if ('' === $contents) {
-            return; // an empty template has nothing to report
+        $contents = self::readContents($fileInfo->getPathname(), $file);
+        if (false === $contents || '' === $contents) {
+            return; // unreadable (already reported), or empty: nothing to report
         }
 
         // variable names in Smarty 3 foreach item and from must be unique

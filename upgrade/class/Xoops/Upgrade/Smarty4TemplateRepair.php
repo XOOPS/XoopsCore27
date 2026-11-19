@@ -30,11 +30,6 @@ use SplFileInfo;
 class Smarty4TemplateRepair extends ScannerProcess
 {
     /**
-     * @var int count of changes made
-     */
-    protected $count = 0;
-
-    /**
      * @var array regex patterns
      */
     protected $patterns = [];
@@ -296,23 +291,11 @@ class Smarty4TemplateRepair extends ScannerProcess
         $filename = self::relativeToRoot($fileInfo->getPathname());
 
         // Resolve a link once, so the read and the replacement below work on the
-        // same file. Read without keeping a handle open (the replacement renames
-        // over the file) and under a scoped handler: the native warning of a
-        // failed read would carry the full path.
-        $pathname = realpath($fileInfo->getPathname());
-        set_error_handler(static fn (): bool => true);
-        try {
-            $lines = false === $pathname ? false : file_get_contents($pathname);
-        } finally {
-            restore_error_handler();
-        }
-        if (false === $lines) {
-            trigger_error(sprintf('Error reading file: %s', $filename), E_USER_WARNING);
-
-            return;
-        }
-        if ('' === $lines) {
-            return; // an empty template has nothing to repair
+        // same file. A path that does not resolve is read as given and fails there.
+        $pathname = realpath($fileInfo->getPathname()) ?: $fileInfo->getPathname();
+        $lines    = self::readContents($pathname, $filename);
+        if (false === $lines || '' === $lines) {
+            return; // unreadable (already reported), or empty: nothing to repair
         }
 
         $count = 0;

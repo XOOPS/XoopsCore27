@@ -104,11 +104,13 @@ $available_languages = [
  * @global        array    the list of available translations
  * @global        string   the retained translation keyword
  * @access   private
- * @return int|string
+ * @return string the matching language key, '' when none matches
  */
 function xoops_analyzeLanguage($str = '', $envType = '')
 {
     global $available_languages;
+
+    $lang = '';
 
     foreach ($available_languages as $key => $value) {
         // $envType =  1 for the 'HTTP_ACCEPT_LANGUAGE' environment variable,

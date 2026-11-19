@@ -35,6 +35,32 @@ abstract class ScannerProcess
     abstract public function inspectFile(SplFileInfo $fileInfo);
 
     /**
+     * Read a whole file without keeping a handle open (a repair renames over the
+     * file afterwards). The read runs under a scoped handler, not @: the native
+     * warning of a failed read would carry the full path, so a failure is
+     * reported by the short name instead.
+     *
+     * @param string $pathname absolute path of the file to read
+     * @param string $filename the name used in messages (relative to the site root)
+     *
+     * @return string|false the contents, or false after reporting a failed read
+     */
+    protected static function readContents(string $pathname, string $filename): string|false
+    {
+        set_error_handler(static fn (): bool => true);
+        try {
+            $contents = file_get_contents($pathname);
+        } finally {
+            restore_error_handler();
+        }
+        if (false === $contents) {
+            trigger_error(sprintf('Error reading file: %s', $filename), E_USER_WARNING);
+        }
+
+        return $contents;
+    }
+
+    /**
      * Replace a file's contents without ever leaving it damaged: the new contents
      * are staged in a file beside it, and only a complete write is renamed over
      * the original. A failed or short write leaves the original as it was.

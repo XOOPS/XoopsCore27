@@ -9,6 +9,9 @@ Below are language differences from one version to the next.
 /upgrade/language/english/upd_2.7.4-to-2.7.5.php (new file)
 - added define('_XOOPS_UPGRADE_275_HTACCESS_UPDATED', '%s was updated so that Apache 2.4 denies access to it as Apache 2.2 does');
 - added define('_XOOPS_UPGRADE_275_HTACCESS_NOT_WRITTEN', '%s could not be written. It still uses Apache 2.2 syntax, which Apache 2.4 answers with a server error instead of denying access. Replace it with xoops_data/.htaccess from this release.');
+/upgrade/language/english/welcome.php
+- added define('_XOOPS_UPGRADE_BACKUP_CONFIRM', 'I have a current backup of the database, mainfile.php and the xoops_data folder, and I know how to restore it.');
+- added define('_XOOPS_UPGRADE_BACKUP_REQUIRED', 'The patches change the database and files in place and cannot be undone from here. Make a backup first, then tick the box below to continue.');
 /htdocs/language/english/comment.php
 - added define('_CM_COMPOSTNG', 'Could not save the comment.');
 /htdocs/modules/system/themes/default/language/english/admin.php

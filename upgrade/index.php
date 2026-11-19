@@ -112,9 +112,27 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
     if (!$upgradeControl->needUpgrade) {
         $op = '';
     }
+    // Patches change the database and files in place and cannot be rolled back
+    // from here. The first apply of a session needs the webmaster to confirm,
+    // on the welcome form, that a current backup exists.
+    $backupMissing = false;
+    if ('' !== $op && empty($_SESSION['upgrade_backup_confirmed'])) {
+        if (1 === Xmf\Request::getInt('confirmed', 0, 'POST')) {
+            $_SESSION['upgrade_backup_confirmed'] = true;
+        } else {
+            $op            = '';
+            $backupMissing = true;
+        }
+    }
     if (empty($op)) {
         $upgradeControl->loadLanguage('welcome');
+        // A translated welcome.php older than 2.7.5 lacks the backup texts.
+        defined('_XOOPS_UPGRADE_BACKUP_CONFIRM') || define('_XOOPS_UPGRADE_BACKUP_CONFIRM', 'I have a current backup of the database, mainfile.php and the xoops_data folder, and I know how to restore it.');
+        defined('_XOOPS_UPGRADE_BACKUP_REQUIRED') || define('_XOOPS_UPGRADE_BACKUP_REQUIRED', 'The patches change the database and files in place and cannot be undone from here. Make a backup first, then tick the box below to continue.');
         echo _XOOPS_UPGRADE_WELCOME;
+        if ($backupMissing) {
+            echo '<div class="alert alert-danger">' . _XOOPS_UPGRADE_BACKUP_REQUIRED . '</div>';
+        }
     } else {
         if (!empty($upgradeControl->needWriteFiles)) {
             echo '<div class="panel panel-danger">'
@@ -125,8 +143,9 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
                 $error = true;
             }
             echo '</ul></div></div>';
-        } else {
-            $next = $upgradeControl->getNextPatch();
+        } elseif (false !== ($next = $upgradeControl->getNextPatch())) {
+            // getNextPatch() is false once every patch is applied; the empty queue
+            // then falls through to the continue form below.
             /** @var XoopsUpgrade $upgrader */
             $upgrader = $upgradeControl->upgradeQueue[$next]->getPatch();
             $res = $upgrader->apply();
@@ -138,7 +157,7 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
             }
 
             if ($res) {
-                $upgradeControl->upgradeQueue[$next]->applied = true;
+                $upgradeControl->markApplied($next);
             } else {
                 $error = true;
             }
@@ -150,7 +169,11 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
             [],
         );
     } else {
-        echo $upgradeControl->oneButtonContinueForm('index.php', ['action' => 'next', 'upgrade_token' => (string) ($_SESSION['preflight_csrf'] ?? '')]);
+        echo $upgradeControl->oneButtonContinueForm(
+            'index.php',
+            ['action' => 'next', 'upgrade_token' => (string) ($_SESSION['preflight_csrf'] ?? '')],
+            empty($_SESSION['upgrade_backup_confirmed']) ? _XOOPS_UPGRADE_BACKUP_CONFIRM : '',
+        );
     }
 }
 $content = ob_get_contents();

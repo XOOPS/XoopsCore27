@@ -628,4 +628,35 @@ class SystemMaintenanceTest extends KernelTestCase
             'CleanAvatar() must return false when any DELETE in the sweep fails'
         );
     }
+
+    // ---------------------------------------------------------------
+    // clearDirectory(): cache files go, server access rules stay
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function clearDirectoryKeepsServerAccessFilesAndRefreshesTheIndexGuard(): void
+    {
+        $dir = sys_get_temp_dir() . '/xoops_clear_' . bin2hex(random_bytes(6)) . '/';
+        mkdir($dir);
+        $kept = ['.htaccess', 'php.ini', '.user.ini', 'web.config'];
+        foreach (array_merge($kept, ['compiled.tpl.php', 'xoops_cache_entry.php']) as $name) {
+            file_put_contents($dir . $name, 'site file ' . $name);
+        }
+        file_put_contents($dir . 'index.php', 'stale');
+
+        try {
+            $method = new \ReflectionMethod(\SystemMaintenance::class, 'clearDirectory');
+            $method->invoke($this->createMaintenance($this->createMockDatabase()), $dir);
+
+            $this->assertFileDoesNotExist($dir . 'compiled.tpl.php');
+            $this->assertFileDoesNotExist($dir . 'xoops_cache_entry.php');
+            foreach ($kept as $name) {
+                $this->assertSame('site file ' . $name, file_get_contents($dir . $name), $name . ' must survive a cache clear');
+            }
+            $this->assertStringContainsString('http_response_code(404)', (string) file_get_contents($dir . 'index.php'));
+        } finally {
+            array_map('unlink', glob($dir . '{,.}[!.]*', GLOB_BRACE) ?: []);
+            rmdir($dir);
+        }
+    }
 }

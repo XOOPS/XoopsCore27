@@ -424,6 +424,13 @@ final class FailingUploadStream
         return self::$failWrites ? 0 : strlen($data);
     }
 
+    // PHP 8.6 fclose() returns false for a wrapper without stream_flush(), and
+    // the handler treats a false fclose() as a failed write.
+    public function stream_flush(): bool
+    {
+        return true;
+    }
+
     public function stream_close(): void
     {
     }

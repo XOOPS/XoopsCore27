@@ -21,6 +21,38 @@ use Xmf\Request;
 
 include_once dirname(__DIR__) . '/mainfile.php';
 
+/**
+ * Re-post the submitted search as hidden inputs for the paging form.
+ *
+ * An array is written key by key as name[key], so PHP parses it back to the
+ * same array: a multi-select such as the group filter keeps every choice on the
+ * next page. Only a scalar becomes an input. The stale CSRF token is replaced
+ * with a fresh one.
+ *
+ * @param array<int|string, mixed> $fields submitted fields
+ * @param string                   $prefix field name of the enclosing array, '' at the top level
+ *
+ * @return string hidden inputs, HTML-escaped
+ */
+function xoops_findusers_hidden_fields(array $fields, string $prefix = ''): string
+{
+    $html = '';
+    foreach ($fields as $key => $value) {
+        if ('' === $prefix && 'XOOPS_TOKEN_REQUEST' === $key) {
+            $html .= $GLOBALS['xoopsSecurity']->getTokenHTML() . "\n";
+            continue;
+        }
+        $name = '' === $prefix ? (string) $key : $prefix . '[' . $key . ']';
+        if (\is_array($value)) {
+            $html .= xoops_findusers_hidden_fields($value, $name);
+        } elseif (\is_scalar($value)) {
+            $html .= "<input type='hidden' name='" . htmlspecialchars($name, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5) . "' />\n";
+        }
+    }
+
+    return $html;
+}
+
 xoops_header(false);
 
 $denied = true;
@@ -714,18 +746,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
     if (empty($start) && empty($foundusers)) {
         echo '<h4>' . _MA_USER_NOFOUND, '</h4>';
         $hiddenform = "<form name='findnext' action='findusers.php' method='post'>";
-        foreach ($_POST as $k => $v) {
-            if ($k === 'XOOPS_TOKEN_REQUEST') {
-                // regenerate token value
-                $hiddenform .= $GLOBALS['xoopsSecurity']->getTokenHTML() . "\n";
-            } elseif (is_array($v)) {
-                foreach ($v as $temp) {
-                    $hiddenform .= "<input type='hidden' name='" . htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars($temp, ENT_QUOTES | ENT_HTML5) . "' />\n";
-                }
-            } else {
-                $hiddenform .= "<input type='hidden' name='" . htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars($v, ENT_QUOTES | ENT_HTML5) . "' />\n";
-            }
-        }
+        $hiddenform .= xoops_findusers_hidden_fields($_POST);
         if (!Request::hasVar('limit', 'POST')) {
             $hiddenform .= "<input type='hidden' name='limit' value='{$limit}' />\n";
         }
@@ -799,18 +820,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
         }
 
         $hiddenform = "<form name='findnext' action='findusers.php' method='post'>";
-        foreach ($_POST as $k => $v) {
-            if ($k === 'XOOPS_TOKEN_REQUEST') {
-                // regenerate token value
-                $hiddenform .= $GLOBALS['xoopsSecurity']->getTokenHTML() . "\n";
-            } elseif (is_array($v)) {
-                foreach ($v as $temp) {
-                    $hiddenform .= "<input type='hidden' name='" . htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars($temp, ENT_QUOTES | ENT_HTML5) . "' />\n";
-                }
-            } else {
-                $hiddenform .= "<input type='hidden' name='" . htmlspecialchars($k, ENT_QUOTES | ENT_HTML5) . "' value='" . htmlspecialchars($v, ENT_QUOTES | ENT_HTML5) . "' />\n";
-            }
-        }
+        $hiddenform .= xoops_findusers_hidden_fields($_POST);
         if (!Request::hasVar('limit', 'POST')) {
             $hiddenform .= "<input type='hidden' name='limit' value='" . $limit . "' />\n";
         }

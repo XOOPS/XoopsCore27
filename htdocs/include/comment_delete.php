@@ -38,6 +38,9 @@ if (!empty($_POST)) {
     $result = filter_input_array(INPUT_GET, $filters);
 }
 $com_mode  = $result['com_mode'] ?: 'flat';
+if (!in_array($com_mode, ['flat', 'thread', 'nest'], true)) {
+    $com_mode = 'flat';
+}
 $com_order = $result['com_order'] ?: XOOPS_COMMENT_OLD1ST;
 $com_id    = $result['com_id'] ?: 0;
 // Available for the early redirect targets below; reassigned from the comment
@@ -67,19 +70,26 @@ if ('system' === $xoopsModule->getVar('dirname')) {
     $redirect_page         = $comment_config['pageName'] . '?';
     $comment_confirm_extra = [];
     if (isset($comment_config['extraParams']) && \is_array($comment_config['extraParams'])) {
+        // The variables of the scope this file is included in, which the
+        // including module page may have set.
+        $includingScope = get_defined_vars();
         foreach ($comment_config['extraParams'] as $extra_param) {
-            if (isset(${$extra_param})) {
-                $redirect_page .= $extra_param . '=' . ${$extra_param} . '&amp;';
-
-                // for the confirmation page
-                $comment_confirm_extra[$extra_param] = ${$extra_param};
+            // A value the including module page set wins. Otherwise the request
+            // supplies it: GET on the first visit, POST once the confirmation
+            // form below, which carries these fields, is submitted.
+            if (isset($includingScope[$extra_param]) && \is_scalar($includingScope[$extra_param])) {
+                $comment_confirm_extra[$extra_param] = (string) $includingScope[$extra_param];
             } elseif (\Xmf\Request::hasVar($extra_param, 'GET')) {
-                $redirect_page .= $extra_param . '=' . \Xmf\Request::getString($extra_param, '', 'GET') . '&amp;';
-
-                // for the confirmation page
                 $comment_confirm_extra[$extra_param] = \Xmf\Request::getString($extra_param, '', 'GET');
+            } elseif (\Xmf\Request::hasVar($extra_param, 'POST')) {
+                $comment_confirm_extra[$extra_param] = \Xmf\Request::getString($extra_param, '', 'POST');
             }
         }
+    }
+    // A raw URL, encoded per value: redirect_header() and the back link escape
+    // it for HTML themselves.
+    if ([] !== $comment_confirm_extra) {
+        $redirect_page .= http_build_query($comment_confirm_extra, '', '&') . '&';
     }
     $redirect_page .= $comment_config['itemName'];
     $moddir = $xoopsModule->getVar('dirname');
@@ -211,7 +221,7 @@ switch ($op) {
             include_once $GLOBALS['xoops']->path('footer.php');
             exit();
         }
-        redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode, 1, _CM_COMDELETED);
+        redirect_header($redirect_page . '=' . $com_itemid . '&com_order=' . $com_order . '&com_mode=' . $com_mode, 1, _CM_COMDELETED);
         break;
 
     case 'delete_all':
@@ -283,7 +293,7 @@ switch ($op) {
         }
         include_once $GLOBALS['xoops']->path('header.php');
         xoops_result($msgs);
-        echo '<br><a href="' . $redirect_page . '=' . $com_itemid . '&amp;com_order=' . $com_order . '&amp;com_mode=' . $com_mode . '">' . _BACK . '</a>';
+        echo '<br><a href="' . htmlspecialchars($redirect_page . '=' . $com_itemid . '&com_order=' . $com_order . '&com_mode=' . $com_mode, ENT_QUOTES | ENT_HTML5) . '">' . _BACK . '</a>';
         include_once $GLOBALS['xoops']->path('footer.php');
         break;
 

@@ -49,14 +49,13 @@ if ('system' === $xoopsModule->getVar('dirname')) {
     $com_modid      = $xoopsModule->getVar('mid');
     $redirect_page  = $comment_config['pageName'] . '?';
     if (isset($comment_config['extraParams']) && \is_array($comment_config['extraParams'])) {
-        $extra_params = '';
+        // A raw query, encoded per value: it is stored as com_exparams and
+        // used in redirects, and every HTML output escapes it itself.
+        $extraArgs = [];
         foreach ($comment_config['extraParams'] as $extra_param) {
-            $extraVar = Request::getString($extra_param, '', 'POST');
-            $extra_params .=
-                ($extraVar !== '')
-                    ? $extra_param . '=' . htmlspecialchars($extraVar, ENT_QUOTES | ENT_HTML5) . '&amp;'
-                    : $extra_param . '=&amp;';
+            $extraArgs[$extra_param] = Request::getString($extra_param, '', 'POST');
         }
+        $extra_params   = [] === $extraArgs ? '' : http_build_query($extraArgs, '', '&') . '&';
         $redirect_page .= $extra_params;
     }
     $redirect_page .= $comment_config['itemName'];
@@ -258,7 +257,7 @@ switch ($op) {
             // request: the id alone selects any module's comment, and the
             // rights below are checked against this module.
             if (!is_object($comment) || (int) $comment->getVar('com_modid') !== (int) $com_modid) {
-                redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
+                redirect_header($redirect_page . '=' . $com_itemid . '&com_id=' . $com_id . '&com_mode=' . $com_mode . '&com_order=' . $com_order, 1, _NOPERM);
             }
             // An edit keeps the comment's place in its thread and item; the
             // posted root and item ids would otherwise drive the counts,
@@ -302,7 +301,7 @@ switch ($op) {
                 $accesserror = true;
             }
             if (false !== $accesserror) {
-                redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
+                redirect_header($redirect_page . '=' . $com_itemid . '&com_id=' . $com_id . '&com_mode=' . $com_mode . '&com_order=' . $com_order, 1, _NOPERM);
             }
         } else {
             // A reply joins its parent's thread: the parent must be a comment of
@@ -326,7 +325,7 @@ switch ($op) {
                     }
                 }
                 if (!$parent_valid) {
-                    redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
+                    redirect_header($redirect_page . '=' . $com_itemid . '&com_mode=' . $com_mode . '&com_order=' . $com_order, 1, _NOPERM);
                 }
                 $com_rootid = (int) $parent->getVar('com_rootid');
                 if ($com_rootid === 0) {
@@ -381,7 +380,7 @@ switch ($op) {
                 $dohtml = 0;
                 $uid    = 0;
                 if ($xoopsModuleConfig['com_anonpost'] != 1) {
-                    redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $com_id . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order, 1, _NOPERM);
+                    redirect_header($redirect_page . '=' . $com_itemid . '&com_id=' . $com_id . '&com_mode=' . $com_mode . '&com_order=' . $com_order, 1, _NOPERM);
                 }
             }
             if ($uid == 0) {
@@ -420,7 +419,11 @@ switch ($op) {
         $comment->setVar('com_email', $com_email);
         $comment->setVar('com_url', $com_url);
         // End added by voltan
-        if (isset($extra_params)) {
+        // com_exparams is VARCHAR(255) and the object does not enforce it:
+        // strict MySQL would reject the comment, non-strict would cut the
+        // query mid-value. A query that does not fit is not stored; it only
+        // feeds the links of the comments admin and the recent comments block.
+        if (isset($extra_params) && \strlen($extra_params) <= 255) {
             $comment->setVar('com_exparams', $extra_params);
         }
         if (false !== $comment_handler->insert($comment)) {
@@ -531,15 +534,17 @@ switch ($op) {
                     $com_config  = & $not_module->getInfo('comments');
                     $comment_url = $com_config['pageName'] . '?';
                     if (isset($com_config['extraParams']) && \is_array($com_config['extraParams'])) {
-                        $extra_params = '';
+                        $extraArgs = [];
                         foreach ($com_config['extraParams'] as $extra_param) {
-                            $extra_params .= Request::hasVar($extra_param, 'POST') ? $extra_param . '=' . htmlspecialchars(Request::getString($extra_param, '', 'POST'), ENT_QUOTES | ENT_HTML5) . '&amp;' : $extra_param . '=&amp;';
+                            $extraArgs[$extra_param] = Request::getString($extra_param, '', 'POST');
                         }
-                        $comment_url .= $extra_params;
+                        if ([] !== $extraArgs) {
+                            $comment_url .= http_build_query($extraArgs, '', '&') . '&';
+                        }
                     }
                     $comment_url .= $com_config['itemName'];
                 }
-                $comment_tags['X_COMMENT_URL'] = XOOPS_URL . '/modules/' . $not_module->getVar('dirname') . '/' . $comment_url . '=' . $com_itemid . '&amp;com_id=' . $newcid . '&amp;com_rootid=' . $com_rootid . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order . '#comment' . $newcid;
+                $comment_tags['X_COMMENT_URL'] = XOOPS_URL . '/modules/' . $not_module->getVar('dirname') . '/' . $comment_url . '=' . $com_itemid . '&com_id=' . $newcid . '&com_rootid=' . $com_rootid . '&com_mode=' . $com_mode . '&com_order=' . $com_order . '#comment' . $newcid;
                 /** @var  XoopsNotificationHandler $notification_handler */
                 $notification_handler          = xoops_getHandler('notification');
                 $notification_handler->triggerEvent($not_category, $not_itemid, $not_event, $comment_tags, false, $not_modid);
@@ -547,10 +552,10 @@ switch ($op) {
             if (!isset($comment_post_results)) {
                 // if the comment is active, redirect to posted comment
                 if ($comment->getVar('com_status') == XOOPS_COMMENT_ACTIVE) {
-                    redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_id=' . $newcid . '&amp;com_rootid=' . $com_rootid . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order . '#comment' . $newcid, 1, _CM_THANKSPOST);
+                    redirect_header($redirect_page . '=' . $com_itemid . '&com_id=' . $newcid . '&com_rootid=' . $com_rootid . '&com_mode=' . $com_mode . '&com_order=' . $com_order . '#comment' . $newcid, 1, _CM_THANKSPOST);
                 } else {
                     // not active, so redirect to top comment page
-                    redirect_header($redirect_page . '=' . $com_itemid . '&amp;com_mode=' . $com_mode . '&amp;com_order=' . $com_order . '#comment' . $newcid, 1, _CM_THANKSPOST);
+                    redirect_header($redirect_page . '=' . $com_itemid . '&com_mode=' . $com_mode . '&com_order=' . $com_order . '#comment' . $newcid, 1, _CM_THANKSPOST);
                 }
             }
         } else {

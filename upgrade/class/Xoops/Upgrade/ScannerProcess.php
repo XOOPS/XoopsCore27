@@ -35,6 +35,32 @@ abstract class ScannerProcess
     abstract public function inspectFile(SplFileInfo $fileInfo);
 
     /**
+     * Read a whole file without keeping a handle open (a repair renames over the
+     * file afterwards). The read runs under a scoped handler, not @: the native
+     * warning of a failed read would carry the full path, so a failure is
+     * reported by the short name instead.
+     *
+     * @param string $pathname absolute path of the file to read
+     * @param string $filename the name used in messages (relative to the site root)
+     *
+     * @return string|false the contents, or false after reporting a failed read
+     */
+    protected static function readContents(string $pathname, string $filename): string|false
+    {
+        set_error_handler(static fn (): bool => true);
+        try {
+            $contents = file_get_contents($pathname);
+        } finally {
+            restore_error_handler();
+        }
+        if (false === $contents) {
+            trigger_error(sprintf('Error reading file: %s', $filename), E_USER_WARNING);
+        }
+
+        return $contents;
+    }
+
+    /**
      * Replace a file's contents without ever leaving it damaged: the new contents
      * are staged in a file beside it, and only a complete write is renamed over
      * the original. A failed or short write leaves the original as it was.
@@ -100,7 +126,9 @@ abstract class ScannerProcess
      * XOOPS_ROOT_PATH. Both sides are normalised to forward slashes first, so the
      * root prefix is trimmed regardless of the separator each side uses — without
      * this, a Windows "\" pathname against a "/" root leaves the full absolute
-     * path in reports and scan tokens.
+     * path in reports and scan tokens. The resolved root is tried as well: the
+     * preflight scan walks realpath(XOOPS_ROOT_PATH), so on a symlinked document
+     * root its pathnames would otherwise never match the configured root.
      *
      * @param string $pathname
      *
@@ -108,11 +136,14 @@ abstract class ScannerProcess
      */
     protected static function relativeToRoot(string $pathname): string
     {
-        $root = rtrim(str_replace('\\', '/', XOOPS_ROOT_PATH), '/');
         $path = str_replace('\\', '/', $pathname);
+        foreach ([XOOPS_ROOT_PATH, (string) realpath(XOOPS_ROOT_PATH)] as $root) {
+            $root = rtrim(str_replace('\\', '/', $root), '/');
+            if ('' !== $root && str_starts_with($path, $root . '/')) {
+                return substr($path, strlen($root));
+            }
+        }
 
-        return ('' !== $root && str_starts_with($path, $root . '/'))
-            ? substr($path, strlen($root))
-            : $path;
+        return $path;
     }
 }

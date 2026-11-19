@@ -487,7 +487,7 @@ function b_system_comments_show($options)
         }
         $com['module'] = '<a href="' . XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname') . '/">' . $modules[$mid]->getVar('name') . '</a>';
         $com['id']    = $i;
-        $com['title'] = '<a href="' . XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname') . '/' . $comment_config[$mid]['pageName'] . '?' . $comment_config[$mid]['itemName'] . '=' . $comments[$i]->getVar('com_itemid') . '&amp;com_id=' . $i . '&amp;com_rootid=' . $comments[$i]->getVar('com_rootid') . '&amp;' . htmlspecialchars((string) $comments[$i]->getVar('com_exparams'), ENT_QUOTES | ENT_HTML5) . '#comment' . $i . '">' . $comments[$i]->getVar('com_title') . '</a>';
+        $com['title'] = '<a href="' . XOOPS_URL . '/modules/' . $modules[$mid]->getVar('dirname') . '/' . $comment_config[$mid]['pageName'] . '?' . $comment_config[$mid]['itemName'] . '=' . $comments[$i]->getVar('com_itemid') . '&amp;com_id=' . $i . '&amp;com_rootid=' . $comments[$i]->getVar('com_rootid') . '&amp;' . htmlspecialchars(str_replace('&amp;', '&', (string) $comments[$i]->getVar('com_exparams')), ENT_QUOTES | ENT_HTML5) . '#comment' . $i . '">' . $comments[$i]->getVar('com_title') . '</a>';
         $com['icon']  = htmlspecialchars((string) $comments[$i]->getVar('com_icon'), ENT_QUOTES | ENT_HTML5);
         $com['icon']  = ($com['icon'] != '') ? $com['icon'] : 'icon1.gif';
         $com['time']  = formatTimestamp($comments[$i]->getVar('com_created'), 'm');

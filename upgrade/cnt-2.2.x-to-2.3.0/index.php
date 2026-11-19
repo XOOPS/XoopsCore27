@@ -533,7 +533,8 @@ class Upgrade_220 extends XoopsUpgrade
 
             return false;
         }
-        while (false !== (list($bid, $options) = $this->db->fetchRow($result))) {
+        while (false !== ($row = $this->db->fetchRow($result))) {
+            [$bid, $options] = $row;
             $_options = unserialize((string) $options, ['allowed_classes' => false]);
             if (!is_array($_options) || !array_key_exists(0, $_options) || !array_key_exists(1, $_options)) {
                 $this->logs[] = sprintf('Skipping custom block bid=%d: malformed options payload', (int) $bid);
@@ -558,7 +559,8 @@ class Upgrade_220 extends XoopsUpgrade
 
             return false;
         }
-        while (false !== (list($bid, $_options) = $this->db->fetchRow($result))) {
+        while (false !== ($row = $this->db->fetchRow($result))) {
+            [$bid, $_options] = $row;
             $options = unserialize($_options, ['allowed_classes' => false]);
             if (empty($options) || !is_array($options)) {
                 $options = [];

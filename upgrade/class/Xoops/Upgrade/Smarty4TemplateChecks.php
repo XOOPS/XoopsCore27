@@ -62,9 +62,23 @@ class Smarty4TemplateChecks extends ScannerProcess
     {
         $output = $this->output;
         $writable = $fileInfo->isWritable();
-        $length = $fileInfo->getSize();
-        $file = $fileInfo->openFile();
-        $contents = $file->fread($length);
+        $file = self::relativeToRoot($fileInfo->getPathname());
+        // Read under a scoped handler: the native warning of a failed read
+        // would carry the full path.
+        set_error_handler(static fn (): bool => true);
+        try {
+            $contents = file_get_contents($fileInfo->getPathname());
+        } finally {
+            restore_error_handler();
+        }
+        if (false === $contents) {
+            trigger_error(sprintf('Error reading file: %s', $file), E_USER_WARNING);
+
+            return;
+        }
+        if ('' === $contents) {
+            return; // an empty template has nothing to report
+        }
 
         // variable names in Smarty 3 foreach item and from must be unique
         $rule = 'varname';
@@ -73,7 +87,6 @@ class Smarty4TemplateChecks extends ScannerProcess
         if ((0 < (int)$results) && isset($matches[0][0]) && is_string($matches[0][0])) {
             for ($i = 0; $i < (int)$results; $i++) {
                 if ($matches[1][$i] == $matches[2][$i]) {
-                    $file = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
                     $match = $matches[0][$i];
                     $output->outputIssue($output->makeOutputIssue($rule, $file, $match, $writable));
                 }
@@ -89,7 +102,6 @@ class Smarty4TemplateChecks extends ScannerProcess
             for ($i = 0; $i < (int)$results; $i++) {
                 $match = $matches[0][$i] ?? null;
                 if (null !== $match && '<{if false}>' !== $match) { // oddball case
-                    $file = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
                     $output->outputIssue($output->makeOutputIssue($rule, $file, $match, $writable));
                 }
             }
@@ -100,7 +112,6 @@ class Smarty4TemplateChecks extends ScannerProcess
         $rule = 'brokenquotes';
         $results = preg_match_all($this->patterns[$rule], $contents, $matches, PREG_PATTERN_ORDER, 0);
         for ($i = 0; $i < (int)$results; $i++) {
-            $file = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
             $output->outputIssue($output->makeOutputIssue($rule, $file, $matches[0][$i], $writable));
         }
         unset($matches);
@@ -112,7 +123,6 @@ class Smarty4TemplateChecks extends ScannerProcess
         if (0 < (int)$results) {
             $match = $matches[0][0] ?? null;
             if (null !== $match) {
-                $file = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
                 $output->outputIssue($output->makeOutputIssue($rule, $file, $match, $writable));
             }
         }
@@ -125,7 +135,6 @@ class Smarty4TemplateChecks extends ScannerProcess
         if (0 < (int)$results) {
             $match = $matches[0][0] ?? null;
             if (null !== $match) {
-                $file = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
                 $output->outputIssue($output->makeOutputIssue($rule, $file, $match, $writable));
             }
         }

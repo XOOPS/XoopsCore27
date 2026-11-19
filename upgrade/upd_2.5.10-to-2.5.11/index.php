@@ -304,8 +304,8 @@ class Upgrade_2511 extends XoopsUpgrade
         $sourcePath = XOOPS_ROOT_PATH . '/class/captcha/';
         $destinationPath = XOOPS_VAR_PATH . '/configs/captcha/';
 
-        if (!file_exists($destinationPath)) {
-            $this->makeDirectory($destinationPath);
+        if (!file_exists($destinationPath) && !$this->makeDirectory($destinationPath)) {
+            return false;
         }
         $directory = dir($sourcePath);
         if (false === $directory) {

@@ -206,7 +206,7 @@ class PathController
             ],
         ];
         $errors = [
-            'data' => null,
+            'data' => [],
         ];
         if (!isset($this->xoopsPath[$path])) {
             return false;

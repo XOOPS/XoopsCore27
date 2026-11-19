@@ -158,11 +158,11 @@ class Upgrade_230 extends XoopsUpgrade
      */
     public function apply_config(): bool
     {
-        $result = true;
+        $cpanelAdded = true;
         if (!isset($GLOBALS['xoopsConfig']['cpanel'])) {
             $sql = 'INSERT INTO ' . $this->db->prefix('config') . ' (conf_id, conf_modid, conf_catid, conf_name, conf_title, conf_value, conf_desc, conf_formtype, conf_valuetype, conf_order) ' . ' VALUES ' . " (NULL, 0, 1, 'cpanel', '_MD_AM_CPANEL', 'default', '_MD_AM_CPANELDSC', 'cpanel', 'other', 11)";
 
-            $result *= $this->db->exec($sql);
+            $cpanelAdded = (bool) $this->db->exec($sql);
         }
 
         $welcometype_installed = false;
@@ -183,12 +183,12 @@ class Upgrade_230 extends XoopsUpgrade
             $config_id = $this->db->getInsertId();
 
             $sql = 'INSERT INTO ' . $this->db->prefix('configoption') . ' (confop_id, confop_name, confop_value, conf_id)' . ' VALUES' . " (NULL, '_NO', '0', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_EMAIL', '1', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_PM', '2', {$config_id})," . " (NULL, '_MD_AM_WELCOMETYPE_BOTH', '3', {$config_id})";
-            if (!$result = $this->db->exec($sql)) {
+            if (!$this->db->exec($sql)) {
                 return false;
             }
         }
 
-        return $result;
+        return $cpanelAdded;
     }
 
     public function apply_cache(): bool
@@ -302,8 +302,8 @@ class Upgrade_230 extends XoopsUpgrade
             return false;
         }
         $tables = [];
-        while (false !== (list($table) = $this->db->fetchRow($result))) {
-            $tables[] = $table;
+        while (false !== ($row = $this->db->fetchRow($result))) {
+            $tables[] = $row[0];
             //$this->db->exec( "ALTER TABLE `{$table}` DEFAULT CHARACTER SET " . $this->db->quote($charset) . " COLLATE " . $this->db->quote($collation) );
             //$this->db->exec( "ALTER TABLE `{$table}` CONVERT TO CHARACTER SET " . $this->db->quote($charset) . " COLLATE " . $this->db->quote($collation) );
         }

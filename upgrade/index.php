@@ -143,8 +143,9 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
                 $error = true;
             }
             echo '</ul></div></div>';
-        } else {
-            $next = $upgradeControl->getNextPatch();
+        } elseif (false !== ($next = $upgradeControl->getNextPatch())) {
+            // getNextPatch() is false once every patch is applied; the empty queue
+            // then falls through to the continue form below.
             /** @var XoopsUpgrade $upgrader */
             $upgrader = $upgradeControl->upgradeQueue[$next]->getPatch();
             $res = $upgrader->apply();

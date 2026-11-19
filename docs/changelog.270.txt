@@ -43,6 +43,9 @@ Libraries and assets:
 - bundle composer/semver 3.6.0 (constraint ^3.4, MIT, no dependencies) to compare installed versions with the version ranges of security advisories (xoops_lib/composer.dist.json, xoops_lib/vendor/composer/semver) (#330)
 - bundle xoops/moduletools 1.7.1 (constraint ^1.7.1) for module install, admin and test tooling. It runs on PHP 8.2+, so modules on any 2.7.5 site can use it without a PHP version check; the core never loads it, and the separate mTools module is only needed on 2.7.0 to 2.7.4 (xoops_lib/composer.dist.json, xoops_lib/vendor/xoops/moduletools)
 
+Tooling and CI:
+- CI runs the unit suites and the two-factor integration tests on PHP 8.6 as well. ezyang/htmlpurifier 4.19.1, the latest release, allows PHP up to 8.5 only, so on the 8.6 jobs Composer installs with --ignore-platform-req=php+ and the platform check is skipped, until a release allows 8.6 (.github/workflows/ci.yml) (#339)
+
 ===================================
 2.7.5 Beta 1                  2026-11
 ===================================

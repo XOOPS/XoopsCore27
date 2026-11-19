@@ -746,7 +746,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
     if (empty($start) && empty($foundusers)) {
         echo '<h4>' . _MA_USER_NOFOUND, '</h4>';
         $hiddenform = "<form name='findnext' action='findusers.php' method='post'>";
-        $hiddenform .= xoops_findusers_hidden_fields($_POST);
+        $hiddenform .= xoops_findusers_hidden_fields(Request::get('POST'));
         if (!Request::hasVar('limit', 'POST')) {
             $hiddenform .= "<input type='hidden' name='limit' value='{$limit}' />\n";
         }
@@ -820,7 +820,7 @@ if (!Request::hasVar('user_submit', 'POST')) {
         }
 
         $hiddenform = "<form name='findnext' action='findusers.php' method='post'>";
-        $hiddenform .= xoops_findusers_hidden_fields($_POST);
+        $hiddenform .= xoops_findusers_hidden_fields(Request::get('POST'));
         if (!Request::hasVar('limit', 'POST')) {
             $hiddenform .= "<input type='hidden' name='limit' value='" . $limit . "' />\n";
         }

@@ -49,11 +49,33 @@ final class RepostQueryEncodingTest extends TestCase
 
     private static int $sequence = 0;
 
+    /** @var array<string, mixed> */
+    private array $savedGet = [];
+
+    /** @var array<string, mixed> */
+    private array $savedPost = [];
+
+    private bool $hadSecurity = false;
+
+    private mixed $savedSecurity = null;
+
+    protected function setUp(): void
+    {
+        $this->savedGet      = $_GET;
+        $this->savedPost     = $_POST;
+        $this->hadSecurity   = \array_key_exists('xoopsSecurity', $GLOBALS);
+        $this->savedSecurity = $GLOBALS['xoopsSecurity'] ?? null;
+    }
+
     protected function tearDown(): void
     {
-        $_GET  = [];
-        $_POST = [];
-        unset($GLOBALS['xoopsSecurity']);
+        $_GET  = $this->savedGet;
+        $_POST = $this->savedPost;
+        if ($this->hadSecurity) {
+            $GLOBALS['xoopsSecurity'] = $this->savedSecurity;
+        } else {
+            unset($GLOBALS['xoopsSecurity']);
+        }
     }
 
     #[Test]
@@ -86,8 +108,8 @@ final class RepostQueryEncodingTest extends TestCase
     public function findusersBuildsBothPagingFormsWithTheHelper(): void
     {
         $this->loadSourceFile(self::FINDUSERS);
-        self::assertStringNotContainsString('foreach ($_POST as', $this->sourceContent);
-        self::assertSame(2, substr_count($this->sourceContent, '$hiddenform .= xoops_findusers_hidden_fields($_POST);'));
+        self::assertStringNotContainsString('$_POST', $this->sourceContent);
+        self::assertSame(2, substr_count($this->sourceContent, "\$hiddenform .= xoops_findusers_hidden_fields(Request::get('POST'));"));
     }
 
     #[Test]
@@ -99,6 +121,20 @@ final class RepostQueryEncodingTest extends TestCase
 
         self::assertSame('viewtopic.php?forum=a%26b%3Dc&topic=7+8&post=x%23y&topic_id', $vars['redirect_page']);
         self::assertSame(['forum' => 'a&b=c', 'topic' => '7 8', 'post' => 'x#y'], $vars['comment_confirm_extra']);
+    }
+
+    #[Test]
+    public function commentDeleteTakesTheIncludingScopeThenGetThenPostAndSkipsArrays(): void
+    {
+        $_GET  = ['forum' => 'from-get', 'topic' => 'from-get', 'listed' => ['x']];
+        $_POST = ['forum' => 'from-post', 'topic' => 'from-post', 'post' => 'from-post', 'listed' => 'from-post', 'arr' => ['y']];
+        $vars  = $this->runDeleteBlock(['forum', 'topic', 'post', 'listed', 'arr'], ['forum' => 'from-page']);
+
+        // forum: the page wins over both requests; topic: GET over POST; post:
+        // POST alone. An array is skipped where it is found - GET's listed[]
+        // does not fall through to POST's listed - and never becomes "Array".
+        self::assertSame(['forum' => 'from-page', 'topic' => 'from-get', 'post' => 'from-post'], $vars['comment_confirm_extra']);
+        self::assertSame('viewtopic.php?forum=from-page&topic=from-get&post=from-post&topic_id', $vars['redirect_page']);
     }
 
     #[Test]
@@ -114,22 +150,23 @@ final class RepostQueryEncodingTest extends TestCase
     #[Test]
     public function commentPostEncodesExtraParamsAndKeepsEmptyOnes(): void
     {
-        $_POST = ['forum' => 'a&b', 'topic' => '"q"'];
+        $_POST = ['forum' => 'a&b', 'topic' => '"q"', 'listed' => ['x']];
         $this->loadSourceFile(self::POST);
         $block = self::slice($this->sourceContent, '    $redirect_page  = $comment_config[\'pageName\'] . \'?\';', '$redirect_page .= $comment_config[\'itemName\'];');
 
-        $comment_config = ['pageName' => 'viewtopic.php', 'itemName' => 'topic_id', 'extraParams' => ['forum', 'topic', 'post']];
+        $comment_config = ['pageName' => 'viewtopic.php', 'itemName' => 'topic_id', 'extraParams' => ['forum', 'topic', 'post', 'listed']];
         eval(self::scope() . $block);
 
-        self::assertSame('forum=a%26b&topic=%22q%22&post=&', $extra_params);
-        self::assertSame('viewtopic.php?forum=a%26b&topic=%22q%22&post=&topic_id', $redirect_page);
+        // A missing value and an array (listed[]) both stay empty.
+        self::assertSame('forum=a%26b&topic=%22q%22&post=&listed=&', $extra_params);
+        self::assertSame('viewtopic.php?forum=a%26b&topic=%22q%22&post=&listed=&topic_id', $redirect_page);
     }
 
     #[Test]
-    public function commentPostStoresExtraParamsOnlyWhenTheyFitTheColumn(): void
+    public function commentPostStoresExtraParamsEmptyWhenTheyDoNotFitTheColumn(): void
     {
         $this->loadSourceFile(self::POST);
-        $block = self::slice($this->sourceContent, 'if (isset($extra_params) && \strlen($extra_params) <= 255) {', '}');
+        $block = self::slice($this->sourceContent, 'if (isset($extra_params)) {', '}');
 
         foreach ([255 => true, 256 => false] as $length => $stored) {
             $comment = new class {
@@ -141,9 +178,11 @@ final class RepostQueryEncodingTest extends TestCase
                     $this->vars[$key] = $value;
                 }
             };
-            $extra_params = 'f=' . str_repeat('x', $length - 2);
+            // An edited comment arrives holding its old value: it must not survive.
+            $comment->vars = ['com_exparams' => 'old=1&'];
+            $extra_params  = 'f=' . str_repeat('x', $length - 2);
             eval(self::scope() . $block);
-            self::assertSame($stored ? ['com_exparams' => $extra_params] : [], $comment->vars, "$length characters");
+            self::assertSame(['com_exparams' => $stored ? $extra_params : ''], $comment->vars, "$length characters");
         }
     }
 
@@ -169,13 +208,16 @@ final class RepostQueryEncodingTest extends TestCase
         $modules        = [$mid => $stub(['dirname' => 'newbb'])];
         $comment_config = [$mid => ['pageName' => 'viewtopic.php', 'itemName' => 'topic_id']];
         foreach (['forum=1&amp;post=2&amp;', 'forum=1&post=2&'] as $stored) {
-            $comments = [$i => $stub(['com_itemid' => 3, 'com_rootid' => 9, 'com_title' => 'T', 'com_exparams' => $stored])];
+            // Distinct comment key (9) and root id (4), so neither can stand in for the other.
+            $comments = [$i => $stub(['com_itemid' => 3, 'com_rootid' => 4, 'com_title' => 'T', 'com_exparams' => $stored])];
             $com      = [];
             eval(self::scope() . $line);
             self::assertMatchesRegularExpression('/href="([^"]*)"/', $com['title']);
             preg_match('/href="([^"]*)"/', $com['title'], $m);
             parse_str((string) parse_url(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5), PHP_URL_QUERY), $query);
-            self::assertSame(['topic_id' => '3', 'com_id' => '9', 'com_rootid' => '9', 'forum' => '1', 'post' => '2'], $query, $stored);
+            self::assertSame('9', $query['com_id'] ?? null, $stored);
+            self::assertSame('4', $query['com_rootid'] ?? null, $stored);
+            self::assertSame(['topic_id' => '3', 'com_id' => '9', 'com_rootid' => '4', 'forum' => '1', 'post' => '2'], $query, $stored);
         }
     }
 
@@ -183,13 +225,24 @@ final class RepostQueryEncodingTest extends TestCase
     public function commentPostNotificationLinkUsesTheSameEncoding(): void
     {
         $this->loadSourceFile(self::POST);
-        $start = strpos($this->sourceContent, 'if (!isset($comment_url)) {');
-        self::assertNotFalse($start);
-        $end = strpos($this->sourceContent, "\$comment_tags['X_COMMENT_URL']", $start);
-        self::assertNotFalse($end);
-        $loop = substr($this->sourceContent, $start, $end - $start);
-        self::assertStringContainsString("http_build_query(\$extraArgs, '', '&')", $loop);
-        self::assertStringNotContainsString('&amp;', $loop);
+        // The builder runs, and its result is what the notification link uses.
+        $block = self::slice($this->sourceContent, 'if (!isset($comment_url)) {', "\$comment_url .= \$com_config['itemName'];") . "\n}";
+        self::assertStringContainsString("\$comment_tags['X_COMMENT_URL'] = XOOPS_URL . '/modules/' . \$not_module->getVar('dirname') . '/' . \$comment_url . '=' . \$com_itemid", $this->sourceContent);
+
+        $_POST      = ['forum' => 'a&b', 'topic' => '"q"', 'listed' => ['x']];
+        $not_module = new class {
+            /** @var array<string, mixed> */
+            public array $comments = ['pageName' => 'viewtopic.php', 'itemName' => 'topic_id', 'extraParams' => ['forum', 'topic', 'post', 'listed']];
+
+            /** @return array<string, mixed> */
+            public function &getInfo(string $name): array
+            {
+                return $this->comments;
+            }
+        };
+        eval(self::scope() . $block);
+
+        self::assertSame('viewtopic.php?forum=a%26b&topic=%22q%22&post=&listed=&topic_id', $comment_url);
     }
 
     #[Test]

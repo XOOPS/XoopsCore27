@@ -76,13 +76,18 @@ if ('system' === $xoopsModule->getVar('dirname')) {
         foreach ($comment_config['extraParams'] as $extra_param) {
             // A value the including module page set wins. Otherwise the request
             // supplies it: GET on the first visit, POST once the confirmation
-            // form below, which carries these fields, is submitted.
+            // form below, which carries these fields, is submitted. An array
+            // (name[]=1) is no filter value: it is skipped, not sent as "Array".
             if (isset($includingScope[$extra_param]) && \is_scalar($includingScope[$extra_param])) {
                 $comment_confirm_extra[$extra_param] = (string) $includingScope[$extra_param];
             } elseif (\Xmf\Request::hasVar($extra_param, 'GET')) {
-                $comment_confirm_extra[$extra_param] = \Xmf\Request::getString($extra_param, '', 'GET');
+                if (\is_scalar(\Xmf\Request::get('GET')[$extra_param] ?? null)) {
+                    $comment_confirm_extra[$extra_param] = \Xmf\Request::getString($extra_param, '', 'GET');
+                }
             } elseif (\Xmf\Request::hasVar($extra_param, 'POST')) {
-                $comment_confirm_extra[$extra_param] = \Xmf\Request::getString($extra_param, '', 'POST');
+                if (\is_scalar(\Xmf\Request::get('POST')[$extra_param] ?? null)) {
+                    $comment_confirm_extra[$extra_param] = \Xmf\Request::getString($extra_param, '', 'POST');
+                }
             }
         }
     }

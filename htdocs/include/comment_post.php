@@ -50,10 +50,12 @@ if ('system' === $xoopsModule->getVar('dirname')) {
     $redirect_page  = $comment_config['pageName'] . '?';
     if (isset($comment_config['extraParams']) && \is_array($comment_config['extraParams'])) {
         // A raw query, encoded per value: it is stored as com_exparams and
-        // used in redirects, and every HTML output escapes it itself.
+        // used in redirects, and every HTML output escapes it itself. An array
+        // (name[]=1) is no filter value: it stays empty, not "Array".
         $extraArgs = [];
+        $posted    = Request::get('POST');
         foreach ($comment_config['extraParams'] as $extra_param) {
-            $extraArgs[$extra_param] = Request::getString($extra_param, '', 'POST');
+            $extraArgs[$extra_param] = \is_scalar($posted[$extra_param] ?? '') ? Request::getString($extra_param, '', 'POST') : '';
         }
         $extra_params   = [] === $extraArgs ? '' : http_build_query($extraArgs, '', '&') . '&';
         $redirect_page .= $extra_params;
@@ -421,10 +423,11 @@ switch ($op) {
         // End added by voltan
         // com_exparams is VARCHAR(255) and the object does not enforce it:
         // strict MySQL would reject the comment, non-strict would cut the
-        // query mid-value. A query that does not fit is not stored; it only
-        // feeds the links of the comments admin and the recent comments block.
-        if (isset($extra_params) && \strlen($extra_params) <= 255) {
-            $comment->setVar('com_exparams', $extra_params);
+        // query mid-value. A query that does not fit is stored empty, so an
+        // edited comment does not keep its old one; it only feeds the links of
+        // the comments admin and the recent comments block.
+        if (isset($extra_params)) {
+            $comment->setVar('com_exparams', \strlen($extra_params) <= 255 ? $extra_params : '');
         }
         if (false !== $comment_handler->insert($comment)) {
             $newcid = $comment->getVar('com_id');
@@ -535,8 +538,9 @@ switch ($op) {
                     $comment_url = $com_config['pageName'] . '?';
                     if (isset($com_config['extraParams']) && \is_array($com_config['extraParams'])) {
                         $extraArgs = [];
+                        $posted    = Request::get('POST');
                         foreach ($com_config['extraParams'] as $extra_param) {
-                            $extraArgs[$extra_param] = Request::getString($extra_param, '', 'POST');
+                            $extraArgs[$extra_param] = \is_scalar($posted[$extra_param] ?? '') ? Request::getString($extra_param, '', 'POST') : '';
                         }
                         if ([] !== $extraArgs) {
                             $comment_url .= http_build_query($extraArgs, '', '&') . '&';

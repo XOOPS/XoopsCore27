@@ -84,6 +84,8 @@ final class Php86InputBoundaryTest extends TestCase
 
         // On PHP 8.6 the file checks inside would throw ValueError.
         self::assertFalse($module->loadInfo("system\0", false));
+        // Checked before basename(), which would reduce this to "system".
+        self::assertFalse($module->loadInfo("bad\0/system", false));
         $this->expectOutputString('Module File Not Found!');
         self::assertFalse($module->loadInfo("system\0.php", true));
     }
@@ -163,33 +165,111 @@ final class Php86InputBoundaryTest extends TestCase
         // The login now authenticates the password as typed, so a password
         // that filters to '' (markup or whitespace only) reaches the check;
         // Protector must count it too, not skip it as an empty POST.
+        // The function's own password read and its count gate are run here.
         $this->loadSourceFile('htdocs/xoops_lib/modules/protector/include/postcheck_functions.php');
-        $read  = strpos($this->sourceContent, "\$pass = Request::getVar('pass', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);");
-        $count = strpos($this->sourceContent, '$protector->check_brute_force();');
-        self::assertNotFalse($read);
-        self::assertNotFalse($count);
-        self::assertLessThan($count, $read);
-        self::assertStringNotContainsString("Request::getString('pass'", $this->sourceContent);
+        $read = self::slice($this->sourceContent, "\$pass = Request::getVar('pass',", "\$pass = is_string(\$pass) ? \$pass : '';");
+        $gate = self::slice($this->sourceContent, "if (('' !== \$uname && '' !== \$pass)", "\n        }");
+        self::assertLessThan(strpos($this->sourceContent, $gate), strpos($this->sourceContent, $read));
 
+        $cases = [
+            'plain'           => [['pass' => 'pw-example'], 1],
+            'markup only'     => [['pass' => '<x>'], 1],
+            'whitespace only' => [['pass' => '   '], 1],
+            'form feed only'  => [['pass' => "\f"], 1],
+            'empty'           => [['pass' => ''], 0],
+            'missing'         => [[], 0],
+            'array'           => [['pass' => ['pw-example']], 0],
+        ];
         $savedPost = $_POST;
-        $_POST     = ['pass' => '<x>'];
         try {
-            $pass = \Xmf\Request::getVar('pass', '', 'POST', 'string', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM);
-            self::assertSame('<x>', $pass);
-            self::assertSame('', \Xmf\Request::getString('pass', '', 'POST'), 'the filtered read would have skipped the count');
+            foreach ($cases as $name => [$post, $expected]) {
+                $_POST     = $post;
+                $protector = new class {
+                    public int $counted = 0;
+
+                    public function check_brute_force(): void
+                    {
+                        ++$this->counted;
+                    }
+                };
+                $uname           = 'alice';
+                $autologin_uname = '';
+                $autologin_pass  = '';
+                eval("use Xmf\\Request;\n" . $read . "\n" . $gate);
+                self::assertSame($expected, $protector->counted, $name);
+            }
         } finally {
             $_POST = $savedPost;
         }
     }
 
+    /**
+     * @return array<string, array{mixed, ?string}> posted value, the password stored (null: none)
+     */
+    public static function bannerClientPasswords(): array
+    {
+        return [
+            'boundary spaces' => [' pw-example ', ' pw-example '],
+            'markup'          => ['a<b>c-example', 'a<b>c-example'],
+            'spaces only'     => ['   ', '   '],
+            'empty'           => ['', null],
+            'array'           => [['pw-example'], null],
+        ];
+    }
+
     #[Test]
-    public function theBannerClientFormStoresThePasswordAsTyped(): void
+    #[DataProvider('bannerClientPasswords')]
+    public function theBannerClientFormStoresThePasswordAsTyped(mixed $posted, ?string $stored): void
+    {
+        $hashedPasswd = $this->runBannerClientPasswordSave($posted);
+
+        if (null === $stored) {
+            self::assertNull($hashedPasswd);
+
+            return;
+        }
+        self::assertIsString($hashedPasswd);
+        self::assertTrue(password_verify($stored, $hashedPasswd));
+        if (trim($stored) !== $stored && '' !== trim($stored)) {
+            self::assertFalse(password_verify(trim($stored), $hashedPasswd), 'the trimmed form must not be what was stored');
+        }
+    }
+
+    #[Test]
+    public function theBannerClientFormRefusesAPasswordWithANulByte(): void
+    {
+        // password_hash() throws on one; the form reports it instead.
+        $this->expectException(\RedirectHeaderException::class);
+        $this->runBannerClientPasswordSave("pw-example\0");
+    }
+
+    /**
+     * Run the client form's password read, up to and including the hash.
+     */
+    private function runBannerClientPasswordSave(mixed $posted): ?string
     {
         $this->loadSourceFile('htdocs/modules/system/admin/banners/main.php');
-        self::assertStringContainsString(
-            "Request::getVar('passwd', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM)",
-            $this->sourceContent
-        );
-        self::assertStringNotContainsString("trim(Request::getString('passwd'", $this->sourceContent);
+        $block = self::slice($this->sourceContent, "\$newPasswd = Request::getVar('passwd',", '$hashedPasswd = password_hash($newPasswd, PASSWORD_DEFAULT);') . "\n}";
+
+        $savedPost    = $_POST;
+        $_POST        = ['passwd' => $posted];
+        $hashedPasswd = null;
+        try {
+            eval("use Xmf\\Request;\n" . $block);
+        } finally {
+            $_POST = $savedPost;
+        }
+
+        return $hashedPasswd;
+    }
+
+    private static function slice(string $source, string $from, string $through): string
+    {
+        $start = strpos($source, $from);
+        self::assertNotFalse($start, "marker not found: $from");
+        $end = strpos($source, $through, $start);
+        self::assertNotFalse($end, "end marker not found: $through");
+
+        return substr($source, $start, $end - $start + \strlen($through));
     }
 }

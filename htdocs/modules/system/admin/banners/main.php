@@ -190,7 +190,11 @@ switch ($op) {
         // Stored as typed, like account passwords; banners.php also tries the
         // trimmed, markup-stripped form older saves stored.
         $newPasswd = Request::getVar('passwd', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
-        $newPasswd = is_string($newPasswd) && '' !== trim($newPasswd) ? $newPasswd : '';
+        $newPasswd = is_string($newPasswd) ? $newPasswd : '';
+        if (str_contains($newPasswd, "\0")) {
+            // password_hash() refuses a NUL byte.
+            redirect_header('admin.php?fct=banners', 3, 'The password contains a character that cannot be used.');
+        }
         if ($newPasswd !== '') {
             $hashedPasswd = password_hash($newPasswd, PASSWORD_DEFAULT);
             // Check column width before storing hash to avoid truncation

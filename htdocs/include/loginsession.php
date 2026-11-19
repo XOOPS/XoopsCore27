@@ -55,6 +55,10 @@ function xoops_login_is_cross_site(): bool
  * the second candidate whenever it differs. PHP 8.6 also trims a form feed,
  * which made the filtered form differ from a stored password that has one.
  *
+ * A candidate holding a NUL byte is left out. No stored password has one
+ * (password_hash() refuses it), bcrypt verification stops reading at one, and
+ * a directory bind throws on one.
+ *
  * @param string $field POST field holding the password
  * @return list<string> the password as typed, then the legacy filtered form;
  *                      empty when the field is missing, empty or not a string
@@ -65,9 +69,10 @@ function xoops_login_posted_passwords(string $field): array
     if (!is_string($typed) || '' === $typed) {
         return [];
     }
-    $legacy = \Xmf\Request::getString($field, '', 'POST');
+    $legacy     = \Xmf\Request::getString($field, '', 'POST');
+    $candidates = ('' === $legacy || $legacy === $typed) ? [$typed] : [$typed, $legacy];
 
-    return ('' === $legacy || $legacy === $typed) ? [$typed] : [$typed, $legacy];
+    return array_values(array_filter($candidates, static fn(string $password): bool => !str_contains($password, "\0")));
 }
 
 /**

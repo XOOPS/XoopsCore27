@@ -6,6 +6,7 @@ namespace xoopsclass;
 
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionMethod;
@@ -65,6 +66,7 @@ final class Php86NulByteBoundaryTest extends TestCase
         );
     }
 
+    #[Test]
     public function testBuildUrlReescapesALiteralNulByteInQuery(): void
     {
         $kernel = new \xos_kernel_Xoops2();
@@ -82,6 +84,7 @@ final class Php86NulByteBoundaryTest extends TestCase
      * Its own process: the failure path reads the language constant
      * _XO_ER_FILENOTFOUND, which the bootstrap does not define.
      */
+    #[Test]
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testPathExistsReportsANulBytePathAsMissing(): void
@@ -105,6 +108,7 @@ final class Php86NulByteBoundaryTest extends TestCase
     // xoops_rebuildQueryString() - include/file_safety.php
     // =========================================================================
 
+    #[Test]
     public function testRebuildQueryStringTreatsALiteralNulByteAsUnparseable(): void
     {
         $this->assertSame('', \xoops_rebuildQueryString("a=1\0&b=2"));
@@ -138,6 +142,7 @@ final class Php86NulByteBoundaryTest extends TestCase
         $this->assertStringNotContainsString("\0", $result);
     }
 
+    #[Test]
     public function testRedactSessionIdWithLiteralNulByte(): void
     {
         $result = $this->redact('/x.php?' . $this->sessionName() . "=abc\0def&q=1");
@@ -149,6 +154,7 @@ final class Php86NulByteBoundaryTest extends TestCase
         $this->assertStringNotContainsString("\0", $result);
     }
 
+    #[Test]
     public function testRedactSessionIdReachesASessionIdAfterALiteralNulByte(): void
     {
         // Before the guard, parse_str() stopped at the NUL on PHP < 8.6, so a

@@ -15,7 +15,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ["8.2", "8.3", "8.4", "8.5"]
+        php: ["8.2", "8.3", "8.4", "8.5", "8.6"]
+    env:
+      # ezyang/htmlpurifier 4.19.1, the latest release, allows PHP up to 8.5 only, and it is the
+      # one locked package that refuses 8.6. There Composer lifts the upper PHP bound and nothing
+      # else. Remove this, and the same line in the tests job, once a release allows 8.6.
+      COMPOSER_PHP_BOUND: ${{ matrix.php == '8.6' && '--ignore-platform-req=php+' || '' }}
     services:
       mysql:
         image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
@@ -44,7 +49,7 @@ jobs:
         run: |
           cp composer.dist.json composer.json
           cp composer.dist.lock composer.lock
-          composer install --no-interaction --prefer-dist --no-progress
+          composer install --no-interaction --prefer-dist --no-progress $COMPOSER_PHP_BOUND
       - name: Run isolated MySQL concurrency and request integration tests
         env:
           XOOPS_2FA_TEST_DATABASE: xoops_twofactor_test
@@ -66,6 +71,9 @@ jobs:
       contents: read
     runs-on: ubuntu-22.04
     timeout-minutes: 15
+    env:
+      # See the note in the twofactor-mysql job.
+      COMPOSER_PHP_BOUND: ${{ matrix.php == '8.6' && '--ignore-platform-req=php+' || '' }}
 
     strategy:
       fail-fast: false
@@ -79,6 +87,7 @@ jobs:
           - php: "8.3"
           - php: "8.4"
           - php: "8.5"
+          - php: "8.6"
           # Coverage run
           - php: "8.4"
             coverage: true
@@ -119,7 +128,7 @@ jobs:
           if [ "${{ matrix.deps }}" = "lowest" ]; then
             composer update --prefer-lowest --prefer-stable --no-interaction --prefer-dist --no-progress
           else
-            composer install --no-interaction --prefer-dist --no-progress
+            composer install --no-interaction --prefer-dist --no-progress $COMPOSER_PHP_BOUND
           fi
 
       - name: Install PHPUnit
@@ -128,6 +137,8 @@ jobs:
           echo "$(composer global config bin-dir --absolute)" >> $GITHUB_PATH
 
       - name: Check platform requirements
+        # Not on 8.6: the check would report the htmlpurifier bound lifted above.
+        if: ${{ matrix.php != '8.6' }}
         working-directory: htdocs/xoops_lib
         run: composer check-platform-reqs
 

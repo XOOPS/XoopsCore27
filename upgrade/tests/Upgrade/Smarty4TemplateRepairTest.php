@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SplFileInfo;
+use Xoops\Upgrade\ScannerProcess;
 use Xoops\Upgrade\Smarty4RepairOutput;
 use Xoops\Upgrade\Smarty4ScannerOutput;
 use Xoops\Upgrade\Smarty4TemplateChecks;
@@ -48,7 +49,7 @@ final class Smarty4TemplateRepairTest extends TestCase
     protected function tearDown(): void
     {
         foreach ($this->tmpFiles as $file) {
-            if (is_file($file)) {
+            if (is_file($file) || is_link($file)) { // a link whose target is already gone is still removed
                 unlink($file);
             }
         }
@@ -71,6 +72,7 @@ final class Smarty4TemplateRepairTest extends TestCase
     {
         $path = $this->tmpFile($contents);
         (new Smarty4TemplateRepair(new Smarty4RepairOutput()))->inspectFile(new SplFileInfo($path));
+        self::assertSame([], glob($path . '.*' . ScannerProcess::STAGING_SUFFIX), 'no staging file is left behind');
 
         return (string) file_get_contents($path);
     }
@@ -131,6 +133,81 @@ final class Smarty4TemplateRepairTest extends TestCase
         $once = $this->repair($input);
         self::assertSame($expected, $once);
         self::assertSame($expected, $this->repair($once), 'a second run must not change the result');
+    }
+
+    #[Test]
+    public function anEmptyTemplateIsLeftAlone(): void
+    {
+        self::assertSame('', $this->repair(''));
+    }
+
+    #[Test]
+    public function aFailedReplacementLeavesTheOriginalUntouchedAndUnreported(): void
+    {
+        $input = '<{xoAppUrl /}><{$item.file}>';
+        $path  = $this->tmpFile($input);
+        $dir   = dirname($path);
+        $mode  = fileperms($dir) & 0777;
+        $lock  = null;
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            $lock     = fopen($path, 'rb'); // Windows refuses to rename over an open file
+            $expected = 'Error replacing file: ';
+        } elseif (function_exists('posix_geteuid') && 0 === posix_geteuid()) {
+            self::markTestSkipped('root can write to a read-only directory');
+        } else {
+            chmod($dir, 0555); // no staging file can be created beside the template
+            $expected = 'Error writing file: ';
+        }
+        $output   = new Smarty4RepairOutput();
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+
+            return true;
+        });
+        try {
+            (new Smarty4TemplateRepair($output))->inspectFile(new SplFileInfo($path));
+        } finally {
+            restore_error_handler();
+            null === $lock ? chmod($dir, $mode) : fclose($lock);
+        }
+
+        self::assertSame($input, file_get_contents($path));
+        self::assertStringNotContainsString(basename($path), $output->outputFetch());
+        self::assertCount(1, $warnings, 'only the repair\'s own message, no native warning');
+        self::assertStringStartsWith($expected, $warnings[0]);
+        self::assertSame([], glob($path . '.*' . ScannerProcess::STAGING_SUFFIX), 'no staging file is left behind');
+    }
+
+    #[Test]
+    public function anEntryAlreadyAtAStagingNameIsNeitherUsedNorRemoved(): void
+    {
+        $path    = $this->tmpFile('<{xoAppUrl /}><{$item.file}>');
+        $planted = $path . ScannerProcess::STAGING_SUFFIX;
+        file_put_contents($planted, 'not ours');
+        $this->tmpFiles[] = $planted;
+
+        (new Smarty4TemplateRepair(new Smarty4RepairOutput()))->inspectFile(new SplFileInfo($path));
+
+        self::assertSame("<{xoAppUrl '/'}><{\$item.file}>", file_get_contents($path));
+        self::assertSame('not ours', file_get_contents($planted));
+    }
+
+    #[Test]
+    public function aSymlinkedTemplateIsRepairedAtItsTargetAndStaysALink(): void
+    {
+        if ('\\' === DIRECTORY_SEPARATOR) {
+            self::markTestSkipped('creating a symlink needs a privilege on Windows');
+        }
+        $target = $this->tmpFile('<{xoAppUrl /}><{$item.file}>');
+        $link   = $target . '.link.tpl';
+        symlink($target, $link);
+        $this->tmpFiles[] = $link;
+
+        (new Smarty4TemplateRepair(new Smarty4RepairOutput()))->inspectFile(new SplFileInfo($link));
+
+        self::assertTrue(is_link($link));
+        self::assertSame("<{xoAppUrl '/'}><{\$item.file}>", file_get_contents($target));
     }
 
     #[Test]

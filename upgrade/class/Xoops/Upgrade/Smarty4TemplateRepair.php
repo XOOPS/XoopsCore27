@@ -295,9 +295,13 @@ class Smarty4TemplateRepair extends ScannerProcess
         /** get and sanitize $filename used for error messages */
         $filename = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
 
-        $length = $fileInfo->getSize();
-        $file = $fileInfo->openFile('r+');
-        $lines = $file->fread($length);
+        // Read without keeping a handle open: the replacement below renames over
+        // this file. An empty or unreadable template has nothing to repair.
+        $pathname = $fileInfo->getPathname();
+        $lines    = file_get_contents($pathname);
+        if (false === $lines || '' === $lines) {
+            return;
+        }
 
         $count = 0;
         $updatedLines = preg_replace(
@@ -317,14 +321,9 @@ class Smarty4TemplateRepair extends ScannerProcess
         $updatedLines = $this->fixForeachVarnames($updatedLines, $varnameCount);
         $count += $varnameCount;
 
-        /* rewrite if changes were made */
-        if ($count !== 0) {
-            $file->fseek(0);
-            $file->ftruncate(0);
-            $result = $file->fwrite($updatedLines);
-            if ($result === false) {
-                trigger_error(sprintf('Error writing file: %s', $filename), E_USER_WARNING);
-            }
+        // Rewrite if changes were made. A write that fails leaves the original
+        // template as it was, and the file is not reported as repaired.
+        if ($count !== 0 && self::replaceContents($pathname, $filename, $updatedLines)) {
             $output->outputIssue($output->makeOutputIssue($filename, $count));
         }
     }

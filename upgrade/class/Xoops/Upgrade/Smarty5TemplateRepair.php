@@ -206,67 +206,14 @@ class Smarty5TemplateRepair extends ScannerProcess
             return;
         }
 
-        // Write atomically: stage to a temp file, verify the full byte count was
-        // written, then rename over the original. A failed or short write leaves
-        // the original template untouched.
-        $tmpPath  = $pathname . '.s5tmp';
-        $expected = strlen($updated);
-        $written  = file_put_contents($tmpPath, $updated, LOCK_EX);
-        if (false === $written || $written !== $expected) {
-            $this->removeStagingFile($tmpPath, 'short write');
-            trigger_error(sprintf('Error writing file: %s', $filename), E_USER_WARNING);
-
-            return;
-        }
-        // The temp file was created with the process umask; copy the original's
-        // permission bits so rename() does not silently change the template's mode.
-        // Best-effort: a failure only leaves umask permissions, not a damaged file.
-        $perms = fileperms($pathname);
-        if (false !== $perms) {
-            // Wrap chmod() in a scoped error handler: no @ (keeps static analysis
-            // happy) yet the native warning — which would carry the full temp path —
-            // is swallowed; a sanitized notice is logged instead.
-            set_error_handler(static fn (): bool => true);
-            try {
-                $chmodOk = chmod($tmpPath, $perms & 0777);
-            } finally {
-                restore_error_handler();
-            }
-            if (!$chmodOk) {
-                trigger_error(sprintf('Could not restore permissions on: %s', basename($filename)), E_USER_NOTICE);
-            }
-        }
+        // Staged write, then rename: a failed or short write leaves the original
+        // template untouched (see ScannerProcess::replaceContents()).
         unset($file); // release the read handle so rename can replace the original (Windows)
-        if (false === @rename($tmpPath, $pathname)) {
-            $this->removeStagingFile($tmpPath, 'rename failed');
-            trigger_error(sprintf('Error replacing file: %s', $filename), E_USER_WARNING);
-
+        if (!self::replaceContents($pathname, $filename, $updated)) {
             return;
         }
 
         $output->outputIssue($output->makeOutputIssue($filename, $count, $backupName));
-    }
-
-    /**
-     * Best-effort removal of the staging temp file. The repair has already aborted
-     * with the original preserved, so a leftover .s5tmp is operational noise — log
-     * a notice (not a warning) rather than ignoring the unlink result.
-     *
-     * @param string $tmpPath
-     * @param string $context
-     *
-     * @return void
-     */
-    private function removeStagingFile(string $tmpPath, string $context): void
-    {
-        // @ suppresses the native warning (it would carry the full temp path); the
-        // return is checked and a basename-only notice is logged instead.
-        if (is_file($tmpPath) && !@unlink($tmpPath)) {
-            trigger_error(
-                sprintf('Could not remove staging file (%s): %s', $context, basename($tmpPath)),
-                E_USER_NOTICE
-            );
-        }
     }
 
     /**

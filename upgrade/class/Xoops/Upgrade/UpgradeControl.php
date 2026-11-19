@@ -47,7 +47,7 @@ class UpgradeControl
     /** @var bool $needMainfileRewrite true if mainfile.php must be rewritten */
     public bool $needMainfileRewrite = false;
 
-    /** @var string[] $mainfileKeys configuration keys to rewrite into mainfile.php */
+    /** @var array<string, mixed> $mainfileKeys constant name => current value (null when undefined) to rewrite into mainfile.php */
     public array $mainfileKeys = [];
 
     /** @var string $upgradeLanguage language being used in the upgrade process */
@@ -344,7 +344,7 @@ class UpgradeControl
      * Store the result of a mainfile check.
      *
      * @param bool     $needMainfileRewrite true if mainfile.php needs to be rewritten
-     * @param string[] $mainfileKeys        configuration keys to update in mainfile.php
+     * @param array<string, mixed> $mainfileKeys constant name => current value (null when undefined)
      *
      * @return void
      */

@@ -123,7 +123,7 @@ class Db_manager
                             $this->s_tables['alter'][$table] = 1;
                         }
                     } else {
-                        if (!isset($this->s_tables['alter'][$table])) {
+                        if (!isset($this->f_tables['alter'][$table])) {
                             $this->f_tables['alter'][$table] = 1;
                         }
                     }
@@ -133,7 +133,7 @@ class Db_manager
                             $this->s_tables['drop'][$table] = 1;
                         }
                     } else {
-                        if (!isset($this->s_tables['drop'][$table])) {
+                        if (!isset($this->f_tables['drop'][$table])) {
                             $this->f_tables['drop'][$table] = 1;
                         }
                     }

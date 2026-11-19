@@ -65,6 +65,9 @@ final class RepostQueryEncodingTest extends TestCase
         $this->savedPost     = $_POST;
         $this->hadSecurity   = \array_key_exists('xoopsSecurity', $GLOBALS);
         $this->savedSecurity = $GLOBALS['xoopsSecurity'] ?? null;
+        // Every test starts from an empty request, whatever ran before it.
+        $_GET  = [];
+        $_POST = [];
     }
 
     protected function tearDown(): void

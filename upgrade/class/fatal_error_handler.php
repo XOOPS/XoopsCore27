@@ -2,6 +2,13 @@
 /**
  * Fatal error and exception handler for XOOPS upgrade process.
  *
+ * index.php and preflight.php load this file before mainfile.php, so it must
+ * not carry the XOOPS_ROOT_PATH guard: the constant is not defined yet and the
+ * guard would stop the wizard. Requested on its own, the file only declares
+ * the handler and outputs nothing.
+ *
+ * @noinspection XoopsRootPathGuard
+ *
  * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @license   GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  */

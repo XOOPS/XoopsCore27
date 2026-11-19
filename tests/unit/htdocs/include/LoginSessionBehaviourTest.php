@@ -219,9 +219,11 @@ final class LoginSessionBehaviourTest extends TestCase
             'boundary form feed'    => ["\fpw-example\f", $formFeed],
             'spaces only'           => ['   ', ['   ']],
             // A NUL byte: bcrypt cannot hash one and stops verifying at one,
-            // and a directory bind throws on one. The filtered read trimmed a
-            // boundary NUL, so that form is still tried.
-            'boundary NUL'          => ["pw-example\0", ['pw-example']],
+            // and a directory bind throws on one. No candidate at all, not
+            // even the filtered form (which trims a boundary NUL): the first
+            // candidate is the one a directory provider is asked with, and it
+            // must be the password as typed.
+            'boundary NUL'          => ["pw-example\0", []],
             'interior NUL'          => ["pw\0example", []],
         ];
     }
@@ -240,10 +242,11 @@ final class LoginSessionBehaviourTest extends TestCase
 
         $candidates = $fn('pass');
         self::assertSame($expected, $candidates);
-        if (str_contains($posted, "\0")) {
+        if ([] === $expected) {
             return;
         }
-        // The first candidate is exactly what register.php hashes.
+        // The first candidate is exactly what register.php hashes, and what a
+        // directory provider is asked with: never a transformed password.
         self::assertSame(
             \Xmf\Request::getVar('pass', '', 'POST', 'string', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM),
             $candidates[0]

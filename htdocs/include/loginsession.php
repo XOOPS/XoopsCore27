@@ -55,24 +55,26 @@ function xoops_login_is_cross_site(): bool
  * the second candidate whenever it differs. PHP 8.6 also trims a form feed,
  * which made the filtered form differ from a stored password that has one.
  *
- * A candidate holding a NUL byte is left out. No stored password has one
- * (password_hash() refuses it), bcrypt verification stops reading at one, and
- * a directory bind throws on one.
+ * A password holding a NUL byte gives no candidate at all. No stored password
+ * has one (password_hash() refuses it), bcrypt verification stops reading at
+ * one, and a directory bind throws on one. Its filtered form is not tried
+ * either: the first candidate must always be the password as typed, because
+ * that is the one a directory provider is asked with.
  *
  * @param string $field POST field holding the password
- * @return list<string> the password as typed, then the legacy filtered form;
- *                      empty when the field is missing, empty or not a string
+ * @return string[] the password as typed, then the legacy filtered form;
+ *                  empty when the field is missing, empty, not a string
+ *                  or holds a NUL byte
  */
 function xoops_login_posted_passwords(string $field): array
 {
     $typed = \Xmf\Request::getVar($field, '', 'POST', 'string', \Xmf\Request::MASK_ALLOW_RAW | \Xmf\Request::MASK_NO_TRIM);
-    if (!is_string($typed) || '' === $typed) {
+    if (!is_string($typed) || '' === $typed || str_contains($typed, "\0")) {
         return [];
     }
-    $legacy     = \Xmf\Request::getString($field, '', 'POST');
-    $candidates = ('' === $legacy || $legacy === $typed) ? [$typed] : [$typed, $legacy];
+    $legacy = \Xmf\Request::getString($field, '', 'POST');
 
-    return array_values(array_filter($candidates, static fn(string $password): bool => !str_contains($password, "\0")));
+    return ('' === $legacy || $legacy === $typed) ? [$typed] : [$typed, $legacy];
 }
 
 /**

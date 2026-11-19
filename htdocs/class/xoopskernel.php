@@ -113,10 +113,10 @@ class xos_kernel_Xoops2
     /**
      * xos_kernel_Xoops2::pathExists()
      *
-     * @param $path
-     * @param $error_type
+     * @param string $path       path to check
+     * @param int    $error_type error level reported when the path is missing
      *
-     * @return bool
+     * @return string|false the path when it exists, false otherwise
      */
     public function pathExists($path, $error_type)
     {

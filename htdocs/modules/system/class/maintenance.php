@@ -397,9 +397,17 @@ class SystemMaintenance
     }
 
     /**
-     * Delete all files in a directory
+     * Server configuration files a site may add to a cache directory to deny
+     * web access or tune PHP there; a cache clear must not remove them.
+     */
+    private const KEEP_ON_CLEAR = ['.htaccess', '.user.ini', 'php.ini', 'web.config'];
+
+    /**
+     * Delete the cached files in a directory and refresh its index.php guard.
      *
-     * @param string $dir directory to clear
+     * Server configuration files (KEEP_ON_CLEAR) are left in place.
+     *
+     * @param string $dir directory to clear, with a trailing separator
      *
      * @return void
      */
@@ -408,6 +416,9 @@ class SystemMaintenance
         if (is_dir($dir)) {
             if ($dirHandle = opendir($dir)) {
                 while (($file = readdir($dirHandle)) !== false) {
+                    if (in_array(strtolower($file), self::KEEP_ON_CLEAR, true)) {
+                        continue;
+                    }
                     if (filetype($dir . $file) === 'file') {
                         unlink($dir . $file);
                     }

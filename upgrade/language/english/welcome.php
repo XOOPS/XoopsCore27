@@ -26,3 +26,7 @@ Once the upgrade is complete, don't forget to:
 
 EOT,
 );
+
+// 2.7.5
+define('_XOOPS_UPGRADE_BACKUP_CONFIRM', 'I have a current backup of the database, mainfile.php and the xoops_data folder, and I know how to restore it.');
+define('_XOOPS_UPGRADE_BACKUP_REQUIRED', 'The patches change the database and files in place and cannot be undone from here. Make a backup first, then tick the box below to continue.');

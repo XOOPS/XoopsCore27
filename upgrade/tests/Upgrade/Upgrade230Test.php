@@ -119,29 +119,80 @@ final class Upgrade230Test extends TestCase
         self::assertSame(['xoops_config', 'xoops_users'], $patch->converted);
     }
 
+    #[Test]
+    public function convertTableKeepsEveryColumnDefaultIncludingAnEmptyString(): void
+    {
+        $describe = [
+            ['Field' => 'uname', 'Type' => 'varchar(25)', 'Null' => 'NO', 'Default' => ''],
+            ['Field' => 'level', 'Type' => "enum('0','1')", 'Null' => 'NO', 'Default' => '0'],
+            ['Field' => 'title', 'Type' => 'varchar(60)', 'Null' => 'NO', 'Default' => "it's"],
+            ['Field' => 'bio', 'Type' => 'text', 'Null' => 'YES', 'Default' => null],
+        ];
+        $patch = new Upgrade_230(
+            $this->database([], [], ['DESCRIBE' => $describe]),
+            $this->createMock(UpgradeControl::class),
+        );
+
+        $queries = $patch->convert_table(['xoops_users'], 'utf8mb4', 'utf8mb4_unicode_ci');
+
+        $charset = ' CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ';
+        self::assertContains("ALTER TABLE `xoops_users` MODIFY `uname` varchar(25){$charset}DEFAULT '' NOT NULL", $queries);
+        self::assertContains("ALTER TABLE `xoops_users` MODIFY `level` enum('0','1'){$charset}DEFAULT '0' NOT NULL", $queries);
+        self::assertContains("ALTER TABLE `xoops_users` MODIFY `title` varchar(60){$charset}DEFAULT 'it\\'s' NOT NULL", $queries);
+        self::assertContains("ALTER TABLE `xoops_users` MODIFY `bio` text{$charset}NULL", $queries);
+        // The binary pass keeps the default too, or NOT NULL columns lose it there.
+        self::assertContains("ALTER TABLE `xoops_users` MODIFY `uname` varbinary(25) DEFAULT '' NOT NULL", $queries);
+        self::assertSame($queries, $this->executed);
+    }
+
     /**
      * @param list<list<int|string>> $rows       rows every SELECT returns
      * @param list<bool>             $execResults what each write returns in turn; true once the list is used up
      */
     private function patch(array $rows, array $execResults = []): Upgrade_230
     {
-        $db = new class ($rows, $execResults, $this->executed) extends XoopsMySQLDatabase {
-            /** @var array<int, list<list<int|string>>> */
+        return new class ($this->database($rows, $execResults), $this->createMock(UpgradeControl::class)) extends Upgrade_230 {
+            /** @var list<string> */
+            public array $converted = [];
+
+            public function convert_table($tables, $charset, $collation)
+            {
+                $this->converted = $tables;
+
+                return [];
+            }
+        };
+    }
+
+    /**
+     * @param list<array<int|string, int|string|null>>               $rows       rows a query returns by default
+     * @param list<bool>                                             $execResults what each write returns in turn; true once the list is used up
+     * @param array<string, list<array<int|string, int|string|null>>> $rowsByVerb rows for queries starting with that word (DESCRIBE, SHOW, ...)
+     */
+    private function database(array $rows, array $execResults = [], array $rowsByVerb = []): XoopsMySQLDatabase
+    {
+        return new class ($rows, $execResults, $rowsByVerb, $this->executed) extends XoopsMySQLDatabase {
+            /** @var array<int, list<array<int|string, int|string|null>>> */
             private array $pending = [];
 
             /**
-             * @param list<list<int|string>> $rows
-             * @param list<bool>             $execResults
-             * @param list<string>           $executed
+             * @param list<array<int|string, int|string|null>>               $rows
+             * @param list<bool>                                             $execResults
+             * @param array<string, list<array<int|string, int|string|null>>> $rowsByVerb
+             * @param list<string>                                           $executed
              */
-            public function __construct(private array $rows, private array $execResults, private array &$executed)
-            {
+            public function __construct(
+                private array $rows,
+                private array $execResults,
+                private array $rowsByVerb,
+                private array &$executed,
+            ) {
             }
 
             public function query($sql, $limit = 0, $start = 0)
             {
                 $result = (new \ReflectionClass(mysqli_result::class))->newInstanceWithoutConstructor();
-                $this->pending[spl_object_id($result)] = $this->rows;
+                $this->pending[spl_object_id($result)] = $this->rowsByVerb[strtok((string) $sql, ' ')] ?? $this->rows;
 
                 return $result;
             }
@@ -156,23 +207,21 @@ final class Upgrade230Test extends TestCase
                 return array_shift($this->pending[spl_object_id($result)]) ?? false;
             }
 
+            public function fetchArray($result)
+            {
+                return array_shift($this->pending[spl_object_id($result)]) ?? false;
+            }
+
+            public function quote($value): string
+            {
+                return "'" . addslashes((string) $value) . "'";
+            }
+
             public function exec($sql): bool
             {
                 $this->executed[] = (string) $sql;
 
                 return array_shift($this->execResults) ?? true;
-            }
-        };
-
-        return new class ($db, $this->createMock(UpgradeControl::class)) extends Upgrade_230 {
-            /** @var list<string> */
-            public array $converted = [];
-
-            public function convert_table($tables, $charset, $collation)
-            {
-                $this->converted = $tables;
-
-                return [];
             }
         };
     }

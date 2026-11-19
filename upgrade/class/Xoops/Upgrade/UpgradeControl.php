@@ -294,6 +294,25 @@ class UpgradeControl
     }
 
     /**
+     * Record a patch as applied.
+     *
+     * When it was the last one in the queue, clear the caches again: compiled
+     * templates and cache entries written while the patches ran describe the
+     * old schema and must not reach the System module update that follows.
+     *
+     * @param string $patch directory name of the applied patch
+     *
+     * @return void
+     */
+    public function markApplied(string $patch): void
+    {
+        $this->upgradeQueue[$patch]->applied = true;
+        if (0 === $this->countUpgradeQueue()) {
+            $this->cleanCaches();
+        }
+    }
+
+    /**
      * Return the directory name of the next unapplied patch.
      *
      * Calls buildUpgradeQueue() if the queue has not yet been populated.
@@ -319,15 +338,27 @@ class UpgradeControl
     /**
      * Return a form consisting of a single continue button.
      *
-     * @param string               $action     URL for the form action attribute
-     * @param array<string, string> $parameters hidden input name/value pairs
+     * With a confirmation label, the button sits below a required checkbox
+     * named "confirmed" (value 1). The browser enforces it; the page that
+     * receives the form must check it again.
+     *
+     * @param string               $action       URL for the form action attribute
+     * @param array<string, string> $parameters   hidden input name/value pairs
+     * @param string               $confirmLabel plain-text checkbox label, '' for none
      *
      * @return string HTML form markup
      */
-    public function oneButtonContinueForm(string $action = 'index.php', array $parameters = ['action' => 'next']): string
-    {
+    public function oneButtonContinueForm(
+        string $action = 'index.php',
+        array $parameters = ['action' => 'next'],
+        string $confirmLabel = '',
+    ): string {
         $actionAttr = htmlspecialchars($action, ENT_QUOTES, 'UTF-8');
         $form  = '<form action="' . $actionAttr . '" method="post">';
+        if ('' !== $confirmLabel) {
+            $form .= '<div class="checkbox"><label><input type="checkbox" name="confirmed" value="1" required> '
+                . htmlspecialchars($confirmLabel, ENT_QUOTES, 'UTF-8') . '</label></div>';
+        }
         $form .= '<button class="btn btn-lg btn-success" type="submit">' . _CONTINUE;
         $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
         foreach ($parameters as $name => $value) {
@@ -360,7 +391,8 @@ class UpgradeControl
      * Cache cleaning is not a patch task. A session flag cannot tell whether a
      * previous upgrade already did it, so every new wizard session used to
      * re-queue the oldest patch that checked that flag (2.5.10 to 2.5.11).
-     * The wizard calls this once per session at start instead.
+     * The wizard calls this once per session at start instead, and
+     * markApplied() calls it again after the last patch.
      *
      * Uses SystemMaintenance::CleanCache() with folder IDs:
      *   1 = Smarty cache, 2 = compiled templates, 3 = xoops_cache

@@ -344,16 +344,17 @@ class Upgrade_230 extends XoopsUpgrade
                 }
                 while (false !== ($myrow = $this->db->fetchArray($result))) {
                     if (preg_match('/(char)|(text)|(enum)|(set)/', $myrow['Type'])) {
+                        $attributes = $this->columnAttributes($myrow);
                         // String Type SQL Sentence.
-                        $string_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . " CHARACTER SET $charset COLLATE $collation " . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
+                        $string_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . " CHARACTER SET $charset COLLATE $collation " . $attributes;
 
                         // Binary String Type SQL Sentence.
                         if (preg_match('/(enum)|(set)/', $myrow['Type'])) {
-                            $binary_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . ' CHARACTER SET binary ' . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
+                            $binary_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . ' CHARACTER SET binary ' . $attributes;
                         } else {
                             $myrow['Type']  = str_replace('char', 'binary', $myrow['Type']);
                             $myrow['Type']  = str_replace('text', 'blob', $myrow['Type']);
-                            $binary_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . ' ' . (((!empty($myrow['Default'])) || ($myrow['Default'] === '0') || ($myrow['Default'] === 0)) ? "DEFAULT '" . $myrow['Default'] . "' " : '') . ('YES' === $myrow['Null'] ? '' : 'NOT ') . 'NULL';
+                            $binary_querys[] = "ALTER TABLE `$table` MODIFY `" . $myrow['Field'] . '` ' . $myrow['Type'] . ' ' . $attributes;
                         }
                     }
                 }
@@ -405,6 +406,24 @@ class Upgrade_230 extends XoopsUpgrade
 
         // Time to return.
         return $final_querys;
+    }
+
+    /**
+     * Default and nullability of a column, as the MODIFY clause must restate them.
+     *
+     * DESCRIBE reports "no default" as NULL, so any other value is a real
+     * default and is kept, the empty string included: without it a NOT NULL
+     * column loses its default and strict-mode inserts that omit it fail.
+     *
+     * @param array<string, mixed> $column one DESCRIBE row
+     *
+     * @return string e.g. "DEFAULT '' NOT NULL"
+     */
+    private function columnAttributes(array $column): string
+    {
+        $default = null === $column['Default'] ? '' : 'DEFAULT ' . $this->db->quote((string) $column['Default']) . ' ';
+
+        return $default . ('YES' === $column['Null'] ? '' : 'NOT ') . 'NULL';
     }
 
     /**

@@ -293,11 +293,27 @@ class Smarty4TemplateRepair extends ScannerProcess
         }
 
         /** get and sanitize $filename used for error messages */
-        $filename = str_replace(XOOPS_ROOT_PATH, '', $fileInfo->getPathname());
+        $filename = self::relativeToRoot($fileInfo->getPathname());
 
-        $length = $fileInfo->getSize();
-        $file = $fileInfo->openFile('r+');
-        $lines = $file->fread($length);
+        // Resolve a link once, so the read and the replacement below work on the
+        // same file. Read without keeping a handle open (the replacement renames
+        // over the file) and under a scoped handler: the native warning of a
+        // failed read would carry the full path.
+        $pathname = realpath($fileInfo->getPathname());
+        set_error_handler(static fn (): bool => true);
+        try {
+            $lines = false === $pathname ? false : file_get_contents($pathname);
+        } finally {
+            restore_error_handler();
+        }
+        if (false === $lines) {
+            trigger_error(sprintf('Error reading file: %s', $filename), E_USER_WARNING);
+
+            return;
+        }
+        if ('' === $lines) {
+            return; // an empty template has nothing to repair
+        }
 
         $count = 0;
         $updatedLines = preg_replace(
@@ -317,14 +333,9 @@ class Smarty4TemplateRepair extends ScannerProcess
         $updatedLines = $this->fixForeachVarnames($updatedLines, $varnameCount);
         $count += $varnameCount;
 
-        /* rewrite if changes were made */
-        if ($count !== 0) {
-            $file->fseek(0);
-            $file->ftruncate(0);
-            $result = $file->fwrite($updatedLines);
-            if ($result === false) {
-                trigger_error(sprintf('Error writing file: %s', $filename), E_USER_WARNING);
-            }
+        // Rewrite if changes were made. A write that fails leaves the original
+        // template as it was, and the file is not reported as repaired.
+        if ($count !== 0 && self::replaceContents($pathname, $filename, $updatedLines)) {
             $output->outputIssue($output->makeOutputIssue($filename, $count));
         }
     }

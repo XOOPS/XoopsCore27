@@ -29,7 +29,71 @@ use SplFileInfo;
  */
 abstract class ScannerProcess
 {
+    /** Suffix of the staging file a repair writes beside the file it replaces */
+    public const STAGING_SUFFIX = '.xotmp';
+
     abstract public function inspectFile(SplFileInfo $fileInfo);
+
+    /**
+     * Replace a file's contents without ever leaving it damaged: the new contents
+     * are staged in a file beside it, and only a complete write is renamed over
+     * the original. A failed or short write leaves the original as it was.
+     *
+     * A symlinked file is replaced at its target, so the link itself stays.
+     * The caller must not hold an open handle on the file (Windows cannot rename
+     * over an open file).
+     *
+     * @param string $pathname absolute path of the file to replace
+     * @param string $filename the name used in messages (relative to the site root)
+     * @param string $contents the new contents
+     *
+     * @return bool true when the file now holds $contents
+     * @throws \Random\RandomException when the system has no source of randomness
+     */
+    protected static function replaceContents(string $pathname, string $filename, string $contents): bool
+    {
+        $tmpPath = '';
+        $staged  = $replaced = $leftover = false;
+        $chmodOk = true;
+        // A scoped handler, not @: the native warnings of these calls would carry
+        // the full path. Each failure is reported below by a short name instead.
+        set_error_handler(static fn (): bool => true);
+        try {
+            $target = realpath($pathname);
+            // A name of its own, created exclusively ('x'): an entry already at
+            // that path, a symlink included, is never opened, and two repairs of
+            // one file never share a staging file.
+            $tmpPath = $target . '.' . bin2hex(random_bytes(6)) . self::STAGING_SUFFIX;
+            $handle  = false === $target ? false : fopen($tmpPath, 'xb');
+            if (false !== $handle) {
+                $written = fwrite($handle, $contents);
+                $staged  = fclose($handle) && strlen($contents) === $written;
+                // The staging file has the process umask: give it the original's mode,
+                // so the rename does not silently change the template's permissions.
+                $perms    = $staged ? fileperms($target) : false;
+                $chmodOk  = false === $perms || chmod($tmpPath, $perms & 0777);
+                $replaced = $staged && rename($tmpPath, $target);
+                $leftover = !$replaced && !unlink($tmpPath);
+            }
+        } finally {
+            restore_error_handler();
+        }
+
+        if (!$chmodOk) {
+            trigger_error(sprintf('Could not restore permissions on: %s', basename($filename)), E_USER_NOTICE);
+        }
+        if ($leftover) {
+            trigger_error(
+                sprintf('Could not remove staging file (%s): %s', $staged ? 'rename failed' : 'short write', basename($tmpPath)),
+                E_USER_NOTICE
+            );
+        }
+        if (!$replaced) {
+            trigger_error(sprintf($staged ? 'Error replacing file: %s' : 'Error writing file: %s', $filename), E_USER_WARNING);
+        }
+
+        return $replaced;
+    }
 
     /**
      * Convert an absolute pathname to a leading-slash path relative to

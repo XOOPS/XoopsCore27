@@ -10,7 +10,10 @@ function protector_postcommon()
     global $xoopsUser, $xoopsModule;
 
     $uname = Request::getString('uname', '', 'POST');
-    $pass = Request::getString('pass', '', 'POST');
+    // Raw, as the login checks it: a password that filters to '' (markup only,
+    // whitespace only) still reaches authentication and must be counted.
+    $pass = Request::getVar('pass', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
+    $pass = is_string($pass) ? $pass : '';
     $autologin_uname = Request::getString('autologin_uname', '', 'COOKIE');
     $autologin_pass = Request::getString('autologin_pass', '', 'COOKIE');
 

@@ -176,7 +176,8 @@ try {
                 }
             } elseif (in_array($action, $adminReset ? ['reset'] : ['begin', 'begin_email', 'disable', 'regenerate'], true)) {
                 // Reauthentication happens after CSRF, before key provisioning or any mutation.
-                $authenticated = xoops_2fa_reauthenticate($actor, \Xmf\Request::getString('password', '', 'POST'));
+                require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
+                $authenticated = xoops_2fa_reauthenticate($actor, ...xoops_login_posted_passwords('password'));
                 if (false === $authenticated) {
                     $error = _US_2FAM_BADPASSWORD;
                 } elseif ($adminReset && !$enrolled) {

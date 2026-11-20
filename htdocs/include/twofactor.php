@@ -276,14 +276,19 @@ function xoops_2fa_setup_valid(mixed $pending, int $uid, string $passwordHash, s
         && is_string($pending['blob'] ?? null);
 }
 
-/** Reauthenticate through the configured backend, requiring the same account. */
-function xoops_2fa_reauthenticate(XoopsUser $user, string $password): XoopsUser|false
+/**
+ * Reauthenticate through the configured backend, requiring the same account.
+ *
+ * Several passwords are the candidates from xoops_login_posted_passwords().
+ */
+function xoops_2fa_reauthenticate(XoopsUser $user, string ...$passwords): XoopsUser|false
 {
-    if ('' === $password) {
+    $passwords = array_values(array_filter($passwords, static fn(string $password): bool => '' !== $password));
+    if ([] === $passwords) {
         return false;
     }
     require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
-    $authenticated = xoops_login_authenticate((string) $user->getVar('uname', 'n'), $password);
+    $authenticated = xoops_login_authenticate((string) $user->getVar('uname', 'n'), ...$passwords);
 
     return $authenticated instanceof XoopsUser && (int) $authenticated->getVar('uid') === (int) $user->getVar('uid')
         ? $authenticated : false;

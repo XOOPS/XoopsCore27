@@ -27,7 +27,8 @@ final class PopupSessionRotationTest extends TestCase
         // The popup signs in through the site's own check; this stub stands in for it.
         file_put_contents(
             $directory . '/include/loginsession.php',
-            '<?php function xoops_login_authenticate(string $u, string $p) { return xoops_getHandler(\'member\')->loginUser($u, $p); }'
+            '<?php function xoops_login_authenticate(string $u, string ...$p) { return xoops_getHandler(\'member\')->loginUser($u, $p[0]); }'
+            . ' function xoops_login_posted_passwords(string $f): array { $p = \Xmf\Request::getString($f, \'\', \'POST\'); return \'\' === $p ? [] : [$p]; }'
         );
         $source = file_get_contents(dirname(__DIR__, 4) . '/extras/login.php');
         $source = str_replace("'/path/to/xoops/directory'", var_export($directory, true), $source);

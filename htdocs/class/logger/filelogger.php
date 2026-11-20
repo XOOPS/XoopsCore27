@@ -665,7 +665,10 @@ class XoopsFileLogger
         $name  = function_exists('session_name') ? (string) session_name() : 'PHPSESSID';
         $split = explode('?', $uri, 2);
         if ('' !== $name && isset($split[1]) && '' !== $split[1]) {
-            parse_str($split[1], $params);
+            // A literal NUL is re-escaped first: parse_str() throws on one from
+            // PHP 8.6, and before 8.6 it stopped there, leaving a session id
+            // after it unredacted. Escaped, it parses like any "%00".
+            parse_str(str_replace("\0", '%00', $split[1]), $params);
             $touched = false;
             foreach (array_keys($params) as $key) {
                 if (0 === strcasecmp((string) $key, $name)) {

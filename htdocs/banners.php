@@ -419,7 +419,7 @@ $op = '';
 $clean_bid = 0;
 $clean_cid = 0;
 $clean_login = '';
-$clean_pass = '';
+$clean_passwords = [];
 $clean_url = '';
 if (Request::hasVar('op', 'POST')) {
     // from $_POST we use keys: op, login, pass, url, pass, bid, cid
@@ -430,7 +430,10 @@ if (Request::hasVar('op', 'POST')) {
     }
 
     if (Request::hasVar('pass', 'POST')) {
-        $clean_pass = Request::getText('pass', '', 'POST');
+        // The password as typed (as the client form now stores it), then the
+        // legacy filtered form older saves stored.
+        require_once XOOPS_ROOT_PATH . '/include/loginsession.php';
+        $clean_passwords = xoops_login_posted_passwords('pass');
     }
 
     if (Request::hasVar('url', 'POST')) {
@@ -486,12 +489,18 @@ switch ($op) {
 
             // Verify password: support both bcrypt hashes and legacy plaintext
             $authenticated = false;
-            $algo = password_get_info($storedHash)['algo'];
-            if ($algo !== null && $algo !== 0) {
-                // Modern hashed password
-                $authenticated = password_verify($clean_pass, $storedHash);
-                // Rehash if algorithm or cost has changed
-                if ($authenticated && password_needs_rehash($storedHash, PASSWORD_DEFAULT)) {
+            $algo   = password_get_info($storedHash)['algo'];
+            $modern = $algo !== null && $algo !== 0;
+            foreach ($clean_passwords as $clean_pass) {
+                $authenticated = $modern
+                    ? password_verify($clean_pass, $storedHash)
+                    : hash_equals((string) $storedHash, $clean_pass);
+                if (!$authenticated) {
+                    continue;
+                }
+                // Upgrade a legacy plaintext password, or rehash when the
+                // algorithm or cost has changed.
+                if (!$modern || password_needs_rehash($storedHash, PASSWORD_DEFAULT)) {
                     $newHash = password_hash($clean_pass, PASSWORD_DEFAULT);
                     // Only store if column is wide enough for the hash
                     if (bannerClientPasswdColumnLength($xoopsDB) >= strlen($newHash)) {
@@ -503,21 +512,7 @@ switch ($op) {
                         ));
                     }
                 }
-            } else {
-                // Legacy plaintext password — verify and upgrade
-                if (hash_equals((string) $storedHash, $clean_pass)) {
-                    $authenticated = true;
-                    $newHash = password_hash($clean_pass, PASSWORD_DEFAULT);
-                    // Only store if column is wide enough for the hash
-                    if (bannerClientPasswdColumnLength($xoopsDB) >= strlen($newHash)) {
-                        $xoopsDB->exec(sprintf(
-                            'UPDATE %s SET passwd=%s WHERE cid=%u',
-                            $xoopsDB->prefix('bannerclient'),
-                            $xoopsDB->quote($newHash),
-                            (int) $clientId
-                        ));
-                    }
-                }
+                break;
             }
 
             if (!$authenticated) {

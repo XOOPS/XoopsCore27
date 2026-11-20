@@ -1277,4 +1277,48 @@ class SaxParserTest extends TestCase
         $this->assertSame('test', $capturedAttrs['name']);
         @xml_parser_free($parser->parser);
     }
+
+    /**
+     * Constructing, parsing and freeing raise no deprecation notice: PHP 8.4 deprecates
+     * xml_set_object() and bare method names as handlers, PHP 8.5 xml_parser_free(),
+     * and PHP 8.2 the undeclared $input property.
+     */
+    #[Test]
+    public function parsingRaisesNoDeprecationAndStillReachesTheHandlers(): void
+    {
+        $parser = null;
+        set_error_handler(
+            static function (int $severity, string $message): never {
+                throw new \ErrorException($message, 0, $severity);
+            },
+            E_DEPRECATED | E_USER_DEPRECATED
+        );
+        try {
+            $parser = new class('<?xml version="1.0"?><root><item id="1">text</item></root>') extends SaxParser {
+                /** @var list<string> */
+                public array $seen = [];
+
+                public function handleBeginElementDefault($parser, $tagName, $attributesArray)
+                {
+                    $this->seen[] = 'begin:' . $tagName;
+                }
+
+                public function handleEndElementDefault($parser, $tagName)
+                {
+                    $this->seen[] = 'end:' . $tagName;
+                }
+
+                public function handleCharacterDataDefault($parser, $data)
+                {
+                    $this->seen[] = 'data:' . $data;
+                }
+            };
+            $this->assertTrue($parser->parse());
+            $parser->free();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame(['begin:root', 'begin:item', 'data:text', 'end:item', 'end:root'], $parser->seen);
+    }
 }

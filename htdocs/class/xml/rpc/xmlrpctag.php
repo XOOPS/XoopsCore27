@@ -325,7 +325,7 @@ class XoopsXmlRpcDatetime extends XoopsXmlRpcTag
      */
     public function render()
     {
-        return '<value><dateTime.iso8601>' . gmstrftime('%Y%m%dT%H:%M:%S', $this->_value) . '</dateTime.iso8601></value>';
+        return '<value><dateTime.iso8601>' . gmdate('Ymd\TH:i:s', $this->_value) . '</dateTime.iso8601></value>';
     }
 }
 

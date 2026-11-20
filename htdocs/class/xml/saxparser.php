@@ -30,6 +30,9 @@ class SaxParser
     /* Xml Source Input */
     public $xmlInput;
 
+    /** @var string|resource the XML text, or an open stream to read it from */
+    public $input;
+
     public $errors = [];
 
     /****************************************************************************
@@ -44,17 +47,17 @@ class SaxParser
     {
         $this->level  = 0;
         $this->parser = xml_parser_create('UTF-8');
-        xml_set_object($this->parser, $this);
         $this->input = $input;
         $this->setCaseFolding(false);
         $this->useUtfEncoding();
-        xml_set_element_handler($this->parser, 'handleBeginElement', 'handleEndElement');
-        xml_set_character_data_handler($this->parser, 'handleCharacterData');
-        xml_set_processing_instruction_handler($this->parser, 'handleProcessingInstruction');
-        xml_set_default_handler($this->parser, 'handleDefault');
-        xml_set_unparsed_entity_decl_handler($this->parser, 'handleUnparsedEntityDecl');
-        xml_set_notation_decl_handler($this->parser, 'handleNotationDecl');
-        xml_set_external_entity_ref_handler($this->parser, 'handleExternalEntityRef');
+        // Method callables: xml_set_object() with bare method names is deprecated as of PHP 8.4
+        xml_set_element_handler($this->parser, [$this, 'handleBeginElement'], [$this, 'handleEndElement']);
+        xml_set_character_data_handler($this->parser, [$this, 'handleCharacterData']);
+        xml_set_processing_instruction_handler($this->parser, [$this, 'handleProcessingInstruction']);
+        xml_set_default_handler($this->parser, [$this, 'handleDefault']);
+        xml_set_unparsed_entity_decl_handler($this->parser, [$this, 'handleUnparsedEntityDecl']);
+        xml_set_notation_decl_handler($this->parser, [$this, 'handleNotationDecl']);
+        xml_set_external_entity_ref_handler($this->parser, [$this, 'handleExternalEntityRef']);
     }
 
     /*---------------------------------------------------------------------------
@@ -159,12 +162,11 @@ class SaxParser
     }
 
     /****************************************************************************
+     * Kept for callers: PHP releases the parser with the last reference to it.
+     * xml_parser_free() has had no effect since PHP 8.0 and is deprecated as of 8.5.
      * @returns void
      ****************************************************************************/
-    public function free()
-    {
-        xml_parser_free($this->parser);
-    }
+    public function free() {}
 
     /****************************************************************************
      * @private

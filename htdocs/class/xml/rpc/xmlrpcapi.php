@@ -75,9 +75,15 @@ class XoopsXmlRpcApi
         if (isset($this->user)) {
             return true;
         }
+        // The name and password are checked as sent: loginUser() quotes the name for its
+        // query and verifies the password against the stored hash. A structured value is
+        // no credential, and a password with a NUL byte cannot be a stored one.
+        if (!is_scalar($username) || !is_scalar($password) || str_contains((string) $password, "\0")) {
+            return false;
+        }
         /** @var XoopsMemberHandler $member_handler */
         $member_handler = xoops_getHandler('member');
-        $this->user     = $member_handler->loginUser(addslashes($username), addslashes($password));
+        $this->user     = $member_handler->loginUser((string) $username, (string) $password);
         // Same rule as the browser login: an account that is not active may not sign in.
         if (!is_object($this->user) || !$this->user->isActive()) {
             unset($this->user);

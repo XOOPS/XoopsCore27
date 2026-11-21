@@ -24,6 +24,7 @@ require_once XOOPS_ROOT_PATH . '/class/xml/rpc/xmlrpcapi.php';
 
 /**
  * Class BloggerApi
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class BloggerApi extends XoopsXmlRpcApi
 {

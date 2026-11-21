@@ -37,6 +37,8 @@ return [
      * functionality to Blogger, MetaWeblog, MovableType, and XOOPS API clients
      * via the news module.
      *
+     * Deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0.
+     *
      * To enable, uncomment this line in XOOPS_VAR_PATH . '/configs/xoopsconfig.php':
      */
     //'xmlrpc_enabled' => true,

@@ -24,6 +24,7 @@ require_once XOOPS_ROOT_PATH . '/class/xml/rpc/xmlrpcapi.php';
 
 /**
  * Class MetaWeblogApi
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class MetaWeblogApi extends XoopsXmlRpcApi
 {

@@ -19,6 +19,7 @@
 
 /**
  * Class XoopsXmlRpcDocument
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcDocument
 {
@@ -42,6 +43,7 @@ class XoopsXmlRpcDocument
 
 /**
  * Class XoopsXmlRpcResponse
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcResponse extends XoopsXmlRpcDocument
 {
@@ -66,6 +68,7 @@ class XoopsXmlRpcResponse extends XoopsXmlRpcDocument
 
 /**
  * Class XoopsXmlRpcRequest
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcRequest extends XoopsXmlRpcDocument
 {
@@ -96,6 +99,7 @@ class XoopsXmlRpcRequest extends XoopsXmlRpcDocument
 
 /**
  * Class XoopsXmlRpcTag
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcTag
 {
@@ -139,6 +143,7 @@ class XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcFault
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcFault extends XoopsXmlRpcTag
 {
@@ -207,6 +212,7 @@ class XoopsXmlRpcFault extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcInt
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcInt extends XoopsXmlRpcTag
 {
@@ -231,6 +237,7 @@ class XoopsXmlRpcInt extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcDouble
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcDouble extends XoopsXmlRpcTag
 {
@@ -255,6 +262,7 @@ class XoopsXmlRpcDouble extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcBoolean
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcBoolean extends XoopsXmlRpcTag
 {
@@ -279,6 +287,7 @@ class XoopsXmlRpcBoolean extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcString
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcString extends XoopsXmlRpcTag
 {
@@ -303,6 +312,7 @@ class XoopsXmlRpcString extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcDatetime
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcDatetime extends XoopsXmlRpcTag
 {
@@ -332,6 +342,7 @@ class XoopsXmlRpcDatetime extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcBase64
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcBase64 extends XoopsXmlRpcTag
 {
@@ -356,6 +367,7 @@ class XoopsXmlRpcBase64 extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcArray
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcArray extends XoopsXmlRpcTag
 {
@@ -392,6 +404,7 @@ class XoopsXmlRpcArray extends XoopsXmlRpcTag
 
 /**
  * Class XoopsXmlRpcStruct
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcStruct extends XoopsXmlRpcTag
 {

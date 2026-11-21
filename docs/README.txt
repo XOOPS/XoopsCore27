@@ -106,6 +106,14 @@ Changes in Beta 1 (since 2.7.4)
   filtering, safe serialization, search highlighting and database identifier
   quoting, and symfony/yaml 7.4.23.
 
+Deprecated in 2.7.5
+-----------------------------------
+XML-RPC is deprecated and will be removed in XOOPS 2.8.0: the /xmlrpc.php
+endpoint, its xmlrpc_enabled setting, and the Blogger, MetaWeblog, MovableType
+and XOOPS API classes in class/xml/rpc. The endpoint is off by default. A site
+that has enabled it keeps a working endpoint throughout 2.7.x and should plan
+for another way to publish before upgrading to 2.8.0.
+
 Upgrading from 2.7.4 or 2.7.5 Beta 1
 -----------------------------------
 Copy the new files over the web root and run the upgrade wizard. There are no

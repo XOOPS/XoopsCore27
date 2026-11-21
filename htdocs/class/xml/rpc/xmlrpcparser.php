@@ -33,6 +33,7 @@ require_once XOOPS_ROOT_PATH . '/class/xml/xmltaghandler.php';
  * @copyright (c) 2000-2026 XOOPS Project (https://xoops.org)
  * @author        Kazumi Ono <onokazu@xoops.org>
  * @access        public
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class XoopsXmlRpcParser extends SaxParser
 {
@@ -334,6 +335,7 @@ class XoopsXmlRpcParser extends SaxParser
 
 /**
  * Class RpcMethodNameHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcMethodNameHandler extends XmlTagHandler
 {
@@ -357,6 +359,7 @@ class RpcMethodNameHandler extends XmlTagHandler
 
 /**
  * Class RpcIntHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcIntHandler extends XmlTagHandler
 {
@@ -380,6 +383,7 @@ class RpcIntHandler extends XmlTagHandler
 
 /**
  * Class RpcDoubleHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcDoubleHandler extends XmlTagHandler
 {
@@ -404,6 +408,7 @@ class RpcDoubleHandler extends XmlTagHandler
 
 /**
  * Class RpcBooleanHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcBooleanHandler extends XmlTagHandler
 {
@@ -428,6 +433,7 @@ class RpcBooleanHandler extends XmlTagHandler
 
 /**
  * Class RpcStringHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcStringHandler extends XmlTagHandler
 {
@@ -451,6 +457,7 @@ class RpcStringHandler extends XmlTagHandler
 
 /**
  * Class RpcDateTimeHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcDateTimeHandler extends XmlTagHandler
 {
@@ -479,6 +486,7 @@ class RpcDateTimeHandler extends XmlTagHandler
 
 /**
  * Class RpcBase64Handler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcBase64Handler extends XmlTagHandler
 {
@@ -502,6 +510,7 @@ class RpcBase64Handler extends XmlTagHandler
 
 /**
  * Class RpcNameHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcNameHandler extends XmlTagHandler
 {
@@ -532,6 +541,7 @@ class RpcNameHandler extends XmlTagHandler
 
 /**
  * Class RpcValueHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcValueHandler extends XmlTagHandler
 {
@@ -598,6 +608,7 @@ class RpcValueHandler extends XmlTagHandler
 
 /**
  * Class RpcMemberHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcMemberHandler extends XmlTagHandler
 {
@@ -634,6 +645,7 @@ class RpcMemberHandler extends XmlTagHandler
 
 /**
  * Class RpcArrayHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcArrayHandler extends XmlTagHandler
 {
@@ -667,6 +679,7 @@ class RpcArrayHandler extends XmlTagHandler
 
 /**
  * Class RpcStructHandler
+ * @deprecated since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 class RpcStructHandler extends XmlTagHandler
 {

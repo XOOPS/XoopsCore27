@@ -1931,16 +1931,16 @@
         },
         {
             "name": "xoops/smartyextensions",
-            "version": "v2.0.0-Beta1",
+            "version": "v2.0.0-Beta3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/smartyextensions.git",
-                "reference": "1f28049d78935a18de5ef4a48ebbf6445f60d5de"
+                "reference": "31f12b0dfc5a70fb4d6f9ad1f53b49be9bac208b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/smartyextensions/zipball/1f28049d78935a18de5ef4a48ebbf6445f60d5de",
-                "reference": "1f28049d78935a18de5ef4a48ebbf6445f60d5de",
+                "url": "https://api.github.com/repos/XOOPS/smartyextensions/zipball/31f12b0dfc5a70fb4d6f9ad1f53b49be9bac208b",
+                "reference": "31f12b0dfc5a70fb4d6f9ad1f53b49be9bac208b",
                 "shasum": ""
             },
             "require": {
@@ -1974,10 +1974,10 @@
             "homepage": "https://xoops.org",
             "support": {
                 "issues": "https://github.com/XOOPS/smartyextensions/issues",
-                "source": "https://github.com/XOOPS/smartyextensions/tree/v2.0.0-Beta1"
+                "source": "https://github.com/XOOPS/smartyextensions/tree/v2.0.0-Beta3"
             },
-            "time": "2026-11-02T18:58:02+00:00",
-            "published-time": "2026-11-02T19:00:35+00:00"
+            "time": "2026-11-21T08:21:14+00:00",
+            "published-time": "2026-11-21T08:25:24+00:00"
         },
         {
             "name": "xoops/xmf",

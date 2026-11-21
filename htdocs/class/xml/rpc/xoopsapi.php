@@ -208,11 +208,33 @@ class XoopsApi extends XoopsXmlRpcApi
         }
     }
 
+    /**
+     * Whether the signed-in account may read a story.
+     *
+     * A story that is not public (it awaits approval, is scheduled for later, has expired
+     * or does not exist) goes to an administrator of the module only.
+     *
+     * @param object $story a story with published() and expired(), both timestamps or 0
+     *
+     * @return bool
+     */
+    public function _mayReadStory($story)
+    {
+        $now       = time();
+        $published = (int) $story->published();
+        $expired   = (int) $story->expired();
+        if ($published > 0 && $published <= $now && (0 === $expired || $expired > $now)) {
+            return true;
+        }
+
+        return $this->_checkAdmin();
+    }
+
     // currently returns the same struct as in metaWeblogApi
     /**
      * @param bool $respond
      *
-     * @return array
+     * @return array|null null when the account may not read the story; fault 111 is added
      */
     public function &getPost($respond = true)
     {
@@ -223,6 +245,13 @@ class XoopsApi extends XoopsXmlRpcApi
             // will be removed... don't worry if this looks bad
             include_once XOOPS_ROOT_PATH . '/modules/news/class/class.newsstory.php';
             $story = new NewsStory($this->params[0]);
+            if (!$this->_mayReadStory($story)) {
+                // The first fault of a response is the one sent, so the callers' own fault does not replace it
+                $this->response->add(new XoopsXmlRpcFault(111));
+                $ret = null;
+
+                return $ret;
+            }
             $ret   = [
                 'uid'       => $story->uid(),
                 'published' => $story->published(),

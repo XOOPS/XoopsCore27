@@ -158,13 +158,30 @@ class XoopsXmlRpcParserTest extends TestCase
     }
 
     #[Test]
-    public function anEmptyValueIsNullAndRaisesNoNotice(): void
+    public function aValueWithoutATypeIsAString(): void
     {
-        $body = '<methodCall><methodName>xoops.getPost</methodName><params>'
-            . '<param><value><struct><member><name>empty</name><value></value></member></struct></value></param>'
+        // XML-RPC: "If no type is indicated, the type is string", for a parameter as for a member
+        $body = "<methodCall><methodName>xoops.getPost</methodName><params>\n"
+            . "  <param><value>alice</value></param>\n"
+            . "  <param>\n    <value>p&amp;ss word</value>\n  </param>\n"
+            . '  <param><value><struct><member><name>plain</name><value>text</value></member></struct></value></param>'
             . '</params></methodCall>';
 
-        $this->assertSame([true, 'xoops.getPost', [['empty' => null]]], $this->parse($body));
+        $this->assertSame([true, 'xoops.getPost', ['alice', 'p&ss word', ['plain' => 'text']]], $this->parse($body));
+    }
+
+    #[Test]
+    public function anEmptyValueIsAnEmptyStringAndRaisesNoNotice(): void
+    {
+        $body = '<methodCall><methodName>xoops.getPost</methodName><params>'
+            . '<param><value></value></param>'
+            . '<param><value><string></string></value></param>'
+            . '<param><value><string/></value></param>'
+            . '<param><value><struct><member><name>empty</name><value></value></member></struct></value></param>'
+            . '<param><value><array><data></data></array></value></param>'
+            . '</params></methodCall>';
+
+        $this->assertSame([true, 'xoops.getPost', ['', '', '', ['empty' => ''], []]], $this->parse($body));
     }
 
     #[Test]

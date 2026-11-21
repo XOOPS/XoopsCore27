@@ -232,6 +232,14 @@ try {
     $sessions = $db->query("SELECT COUNT(*) AS n FROM `{$prefix}_session`")->fetch_assoc();
     siteCheck((int) $sessions['n'] > 0, 'Real XOOPS database sessions were not persisted');
     echo "PASS: real users-admin permissions/password/CSRF/reset and MySQL session persistence\n";
+    // This site cannot create xoops_data/configs/textsanitizer/config.php: a page with the DHTML editor still renders, on the shipped defaults.
+    // Profile goes off again first: active, it takes /edituser.php over, and its tables are not installed here.
+    $db->query("UPDATE `{$prefix}_modules` SET isactive=0 WHERE dirname='profile'");
+    foreach (glob($temp . '/data/caches/xoops_cache/*') as $file) { if (is_file($file)) { unlink($file); } }
+    $page = siteRequest($siteUrl . '/edituser.php', $cookies);
+    // xoopsCodeYoutube is the button of an extension the shipped defaults enable: an empty configuration would not show it.
+    siteCheck(!is_dir($temp . '/data/configs/textsanitizer') && str_contains($page['body'], 'xoopsCodeUrl') && str_contains($page['body'], 'xoopsCodeYoutube'), 'Edit Profile did not render its editor toolbar with the default extensions: ' . substr(strip_tags($page['body']), 0, 400));
+    echo "PASS: DHTML editor without a writable textsanitizer config\n";
     // XML-RPC, enabled in this site's xoopsconfig.php: the body is parsed and the call reaches its API class.
     $rpcCall = static fn (string $method): string => '<?xml version="1.0"?><methodCall><methodName>' . $method . '</methodName><params>' . str_repeat('<param><value><string>wrong</string></value></param>', 4) . '</params></methodCall>';
     $rpcFault = static fn (array $page): string => preg_match('~<name>faultCode</name><value>(\d+)</value>~', $page['body'], $match) === 1 ? $match[1] : 'none: ' . substr($page['body'], 0, 300);

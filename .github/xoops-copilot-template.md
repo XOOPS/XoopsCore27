@@ -96,7 +96,7 @@ XOOPS has two major generations with different APIs. Code must support both:
 
 1. Code follows PSR-12 and passes linting.
 2. Static analysis passes with no new errors.
-3. Tests pass on all supported PHP versions (8.2-8.5).
+3. Tests pass on all supported PHP versions (8.2-8.6).
 4. New public methods have PHPDoc with `@param`, `@return`, and `@throws` tags.
 5. New functionality has corresponding unit tests.
 6. Changes are documented in the changelog.

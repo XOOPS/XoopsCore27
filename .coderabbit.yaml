@@ -2,7 +2,7 @@
 language: "en-US"
 early_access: false
 tone_instructions: >-
-  Expert PHP code reviewer. Focus on type safety, PSR-12, PHP 8.2-8.5
+  Expert PHP code reviewer. Focus on type safety, PSR-12, PHP 8.2-8.6
   compatibility, and security. PHP 8.0+ features (named arguments, match,
   constructor promotion, nullsafe operator) are allowed.
 
@@ -27,7 +27,7 @@ reviews:
   path_instructions:
     - path: "htdocs/**/*.php"
       instructions: >-
-        Review for PHP 8.2-8.5 compatibility. PHP 8.0 features (union types,
+        Review for PHP 8.2-8.6 compatibility. PHP 8.0 features (union types,
         named arguments, match expressions, constructor promotion, nullsafe
         operator) are allowed. PHP 8.1 features (enums, readonly properties,
         intersection types, fibers, first-class callable syntax) are allowed.

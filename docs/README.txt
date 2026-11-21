@@ -69,9 +69,10 @@ Changes since Beta 1
   PHP 8.6, and the XML parsers raise no deprecation notices on PHP 8.4 and
   later. PHP 8.6 is tested but not yet supported: the bundled HTMLPurifier
   allows PHP up to 8.5.
-- Bundled libraries: XMF 1.3.4 RC3, xoops/helpers 1.1.3 and
-  xoops/smartyextensions 2.0.0 Beta1 are updated; composer/semver 3.6.0 and
-  xoops/moduletools 1.7.1 are new. See docs/changelog.270.txt for the full
+- Bundled libraries: XMF 1.3.4 RC3, xoops/helpers 1.1.3,
+  xoops/smartyextensions 2.0.0 Beta1, Smarty 4.6.0 (PHP 8.5 and 8.6 support),
+  Monolog 3.13.0 and php-debugbar 3.8.1 are updated; composer/semver 3.6.0 and
+  xoops/moduletools 1.7.2 are new. See docs/changelog.270.txt for the full
   list.
 
 Changes in Beta 1 (since 2.7.4)
@@ -124,7 +125,7 @@ holds the two lines XOOPS shipped, and reports a file it cannot write.
   X-Content-Type-Options: nosniff. Static files are served by the web server:
   add the header there too (Apache: Header always set X-Content-Type-Options
   "nosniff").
-- xoops/moduletools 1.7.1 is bundled, so a module can use it on any 2.7.5
+- xoops/moduletools 1.7.2 is bundled, so a module can use it on any 2.7.5
   site; the separate mTools module is only needed on 2.7.0 to 2.7.4.
 - If xoopsconfig.php sets 'xmlrpc_enabled' => true, /xmlrpc.php now answers
   calls; until this release it rejected every request. Leave the setting off

@@ -39,8 +39,8 @@ include_once $GLOBALS['xoops']->path('class/xml/rpc/xmlrpcparser.php');
 $GLOBALS['xoopsLogger']->activated = false;
 
 $response = new XoopsXmlRpcResponse();
-$http_raw_post_data = file_get_contents('php://input');
-$parser   = new XoopsXmlRpcParser(rawurlencode($http_raw_post_data));
+// The body is the XML document: URL-encoding it, as was done here until 2.7.5, left nothing to parse
+$parser   = new XoopsXmlRpcParser((string) file_get_contents('php://input'));
 if (!$parser->parse()) {
     $response->add(new XoopsXmlRpcFault(102));
 } else {
@@ -50,10 +50,11 @@ if (!$parser->parse()) {
     if (!is_object($module)) {
         $response->add(new XoopsXmlRpcFault(110));
     } else {
-        $methods = explode('.', $parser->getMethodName());
+        $methods = explode('.', (string) $parser->getMethodName());
         switch ($methods[0]) {
             case 'blogger':
                 include_once $GLOBALS['xoops']->path('class/xml/rpc/bloggerapi.php');
+                $rpc_api = new BloggerApi($parser->getParam(), $response, $module);
                 break;
             case 'metaWeblog':
                 include_once $GLOBALS['xoops']->path('class/xml/rpc/metaweblogapi.php');
@@ -69,8 +70,9 @@ if (!$parser->parse()) {
                 $rpc_api = new XoopsApi($parser->getParam(), $response, $module);
                 break;
         }
-        $method = $methods[1];
-        if (!method_exists($rpc_api, $method)) {
+        $method = $methods[1] ?? '';
+        // Only the API methods are callable: the helpers of the API classes start with an underscore
+        if ('' === $method || '_' === $method[0] || !method_exists($rpc_api, $method)) {
             $response->add(new XoopsXmlRpcFault(107));
         } else {
             $rpc_api->$method();

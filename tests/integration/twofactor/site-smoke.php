@@ -55,12 +55,13 @@ function siteRemove(string $path, string $root): void
     }
     rmdir($path);
 }
-function siteRequest(string $url, array &$cookies, ?array $post = null): array
+function siteRequest(string $url, array &$cookies, array|string|null $post = null): array
 {
     $headers = ['Connection: close', 'Referer: ' . $GLOBALS['siteUrl'] . '/user.php'];
     if ($cookies !== []) { $headers[] = 'Cookie: ' . implode('; ', array_map(static fn ($k, $v) => $k . '=' . $v, array_keys($cookies), $cookies)); }
-    if ($post !== null) { $headers[] = 'Content-Type: application/x-www-form-urlencoded'; }
-    $context = stream_context_create(['http' => ['method' => $post === null ? 'GET' : 'POST', 'header' => implode("\r\n", $headers), 'content' => $post === null ? '' : http_build_query($post), 'ignore_errors' => true, 'follow_location' => 0, 'timeout' => 20]]);
+    // An array is a form post, a string a raw XML body.
+    if ($post !== null) { $headers[] = 'Content-Type: ' . (is_string($post) ? 'text/xml' : 'application/x-www-form-urlencoded'); }
+    $context = stream_context_create(['http' => ['method' => $post === null ? 'GET' : 'POST', 'header' => implode("\r\n", $headers), 'content' => $post === null ? '' : (is_string($post) ? $post : http_build_query($post)), 'ignore_errors' => true, 'follow_location' => 0, 'timeout' => 20]]);
     $body = file_get_contents($url, false, $context);
     siteCheck(is_string($body), 'HTTP request failed');
     foreach ($http_response_header as $header) {
@@ -106,7 +107,7 @@ try {
     $docroot = $temp . '/htdocs';
     siteCopy($source, $docroot);
     foreach (['data', 'data/data', 'data/configs', 'data/caches', 'data/caches/smarty_compile', 'data/caches/smarty_cache', 'data/caches/xoops_cache', 'data/logs'] as $dir) { mkdir($temp . '/' . $dir, 0700); }
-    file_put_contents($temp . '/data/configs/xoopsconfig.php', '<?php return [];');
+    file_put_contents($temp . '/data/configs/xoopsconfig.php', "<?php return ['xmlrpc_enabled' => true];");
     copy($source . '/install/include/license.dist.php', $temp . '/data/data/license.php');
     $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
     siteCheck(is_resource($socket), 'Cannot reserve HTTP port');
@@ -212,6 +213,22 @@ try {
     $sessions = $db->query("SELECT COUNT(*) AS n FROM `{$prefix}_session`")->fetch_assoc();
     siteCheck((int) $sessions['n'] > 0, 'Real XOOPS database sessions were not persisted');
     echo "PASS: real users-admin permissions/password/CSRF/reset and MySQL session persistence\n";
+    // XML-RPC, enabled in this site's xoopsconfig.php: the body is parsed and the call reaches its API class.
+    $rpcCall = static fn (string $method): string => '<?xml version="1.0"?><methodCall><methodName>' . $method . '</methodName><params>' . str_repeat('<param><value><string>wrong</string></value></param>', 4) . '</params></methodCall>';
+    $rpcFault = static fn (array $page): string => preg_match('~<name>faultCode</name><value>(\d+)</value>~', $page['body'], $match) === 1 ? $match[1] : 'none: ' . substr($page['body'], 0, 300);
+    $rpcCookies = [];
+    $page = siteRequest($siteUrl . '/xmlrpc.php', $rpcCookies, $rpcCall('blogger.getUsersBlogs'));
+    siteCheck($rpcFault($page) === '110', 'XML-RPC did not parse the request (expected fault 110, no news module): ' . $rpcFault($page));
+    $db->query("INSERT INTO `{$prefix}_modules` (name, dirname, isactive) VALUES ('News', 'news', 1)");
+    foreach (['blogger.getUsersBlogs', 'metaWeblog.getRecentPosts', 'xoops.getCategories'] as $method) {
+        $page = siteRequest($siteUrl . '/xmlrpc.php', $rpcCookies, $rpcCall($method));
+        siteCheck($rpcFault($page) === '104', "XML-RPC $method did not reach its credential check (expected fault 104): " . $rpcFault($page));
+    }
+    foreach (['xoops._checkAdmin', 'blogger.__construct', 'xoops.noSuchMethod', 'getPost'] as $method) {
+        $page = siteRequest($siteUrl . '/xmlrpc.php', $rpcCookies, $rpcCall($method));
+        siteCheck($rpcFault($page) === '107', "XML-RPC $method was not refused (expected fault 107): " . $rpcFault($page));
+    }
+    echo "PASS: XML-RPC request parsing, dispatch to each API class, refusal of non-API methods\n";
 } catch (Throwable $e) {
     $status = 1;
     fwrite(STDERR, $e->getMessage() . "\n");

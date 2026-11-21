@@ -85,6 +85,11 @@ class XoopsXmlRpcParser extends SaxParser
     public $_workingLevel = [];
 
     /**
+     * @var bool true from the end of a value's type element to the next tag
+     */
+    private bool $valueTyped = false;
+
+    /**
      * Constructor of the class
      * @access
      * @author
@@ -106,6 +111,52 @@ class XoopsXmlRpcParser extends SaxParser
         $this->addTagHandler(new RpcMemberHandler());
         $this->addTagHandler(new RpcStructHandler());
         $this->addTagHandler(new RpcArrayHandler());
+    }
+
+    /**
+     * A type element (<string>, <struct>, ...) opening inside a <value> means the text
+     * read in that value so far was line breaks and indentation, not the value.
+     *
+     * @param \XMLParser $parser
+     * @param string     $tagName
+     * @param array      $attributesArray
+     *
+     * @return void
+     */
+    public function handleBeginElement($parser, $tagName, $attributesArray)
+    {
+        if ('value' !== $tagName && 'value' === end($this->tags)) {
+            $this->resetTempValue();
+        }
+        $this->valueTyped = false;
+        parent::handleBeginElement($parser, $tagName, $attributesArray);
+    }
+
+    /**
+     * @param \XMLParser $parser
+     * @param string     $tagName
+     *
+     * @return void
+     */
+    public function handleEndElement($parser, $tagName)
+    {
+        parent::handleEndElement($parser, $tagName);
+        $this->valueTyped = 'value' !== $tagName && 'value' === end($this->tags);
+    }
+
+    /**
+     * Text after a value's type element is layout as well: the value is already read.
+     *
+     * @param \XMLParser $parser
+     * @param string     $data
+     *
+     * @return void
+     */
+    public function handleCharacterData($parser, $data)
+    {
+        if (!$this->valueTyped) {
+            parent::handleCharacterData($parser, $data);
+        }
     }
 
     /**
@@ -161,7 +212,8 @@ class XoopsXmlRpcParser extends SaxParser
 
     public function resetTempValue()
     {
-        unset($this->_tempValue);
+        // null, not unset(): the next read of an unset property raises a warning
+        $this->_tempValue = null;
     }
 
     /**
@@ -567,7 +619,7 @@ class RpcMemberHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
-        $member = & $parser->getTempMember();
+        $member = $parser->getTempMember();
         $parser->releaseWorkingLevel();
         $parser->setTempStruct($member);
     }

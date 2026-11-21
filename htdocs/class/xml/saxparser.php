@@ -53,7 +53,11 @@ class SaxParser
         // Method callables: xml_set_object() with bare method names is deprecated as of PHP 8.4
         xml_set_element_handler($this->parser, [$this, 'handleBeginElement'], [$this, 'handleEndElement']);
         xml_set_character_data_handler($this->parser, [$this, 'handleCharacterData']);
-        xml_set_processing_instruction_handler($this->parser, [$this, 'handleProcessingInstruction']);
+        // The parser hands over the target and data by value; the method takes them by reference,
+        // a signature kept for the classes that override it
+        xml_set_processing_instruction_handler($this->parser, function ($parser, $target, $data): void {
+            $this->handleProcessingInstruction($parser, $target, $data);
+        });
         xml_set_default_handler($this->parser, [$this, 'handleDefault']);
         xml_set_unparsed_entity_decl_handler($this->parser, [$this, 'handleUnparsedEntityDecl']);
         xml_set_notation_decl_handler($this->parser, [$this, 'handleNotationDecl']);

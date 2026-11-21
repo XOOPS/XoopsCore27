@@ -125,8 +125,12 @@ holds the two lines XOOPS shipped, and reports a file it cannot write.
   X-Content-Type-Options: nosniff. Static files are served by the web server:
   add the header there too (Apache: Header always set X-Content-Type-Options
   "nosniff").
-- xoops/moduletools 1.7.2 is bundled, so a module can use it on any 2.7.5
-  site; the separate mTools module is only needed on 2.7.0 to 2.7.4.
+- xoops/moduletools 1.7.2 is bundled from Beta 2 on, so a module can use it on
+  any site running 2.7.5 Beta 2 or later. For the stable XoopsModules\Mtools
+  API the separate mTools module is only needed on 2.7.0 to 2.7.4 and on
+  2.7.5 Beta 1. The library leaves out that module's experimental mTools\Lab
+  classes, admin pages and theme assets: a module that uses those still needs
+  the mTools module on 2.7.5.
 - If xoopsconfig.php sets 'xmlrpc_enabled' => true, /xmlrpc.php now answers
   calls; until this release it rejected every request. Leave the setting off
   if you do not use XML-RPC.

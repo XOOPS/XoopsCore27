@@ -85,6 +85,11 @@ class XoopsXmlRpcParser extends SaxParser
     public $_workingLevel = [];
 
     /**
+     * @var bool true from the end of a value's type element to the next tag
+     */
+    private bool $valueTyped = false;
+
+    /**
      * Constructor of the class
      * @access
      * @author
@@ -106,6 +111,52 @@ class XoopsXmlRpcParser extends SaxParser
         $this->addTagHandler(new RpcMemberHandler());
         $this->addTagHandler(new RpcStructHandler());
         $this->addTagHandler(new RpcArrayHandler());
+    }
+
+    /**
+     * A type element (<string>, <struct>, ...) opening inside a <value> means the text
+     * read in that value so far was line breaks and indentation, not the value.
+     *
+     * @param \XMLParser $parser
+     * @param string     $tagName
+     * @param array      $attributesArray
+     *
+     * @return void
+     */
+    public function handleBeginElement($parser, $tagName, $attributesArray)
+    {
+        if ('value' !== $tagName && 'value' === end($this->tags)) {
+            $this->resetTempValue();
+        }
+        $this->valueTyped = false;
+        parent::handleBeginElement($parser, $tagName, $attributesArray);
+    }
+
+    /**
+     * @param \XMLParser $parser
+     * @param string     $tagName
+     *
+     * @return void
+     */
+    public function handleEndElement($parser, $tagName)
+    {
+        parent::handleEndElement($parser, $tagName);
+        $this->valueTyped = 'value' !== $tagName && 'value' === end($this->tags);
+    }
+
+    /**
+     * Text after a value's type element is layout as well: the value is already read.
+     *
+     * @param \XMLParser $parser
+     * @param string     $data
+     *
+     * @return void
+     */
+    public function handleCharacterData($parser, $data)
+    {
+        if (!$this->valueTyped) {
+            parent::handleCharacterData($parser, $data);
+        }
     }
 
     /**
@@ -161,7 +212,8 @@ class XoopsXmlRpcParser extends SaxParser
 
     public function resetTempValue()
     {
-        unset($this->_tempValue);
+        // null, not unset(): the next read of an unset property raises a warning
+        $this->_tempValue = null;
     }
 
     /**
@@ -469,7 +521,8 @@ class RpcNameHandler extends XmlTagHandler
     {
         switch ($parser->getParentTag()) {
             case 'member':
-                $parser->setTempName($data);
+                // The text of a name arrives in several pieces around an entity such as &amp;
+                $parser->setTempName($parser->getTempName() . $data);
                 break;
             default:
                 break;
@@ -496,7 +549,9 @@ class RpcValueHandler extends XmlTagHandler
      */
     public function handleCharacterData($parser, &$data)
     {
+        // Text straight inside <value> is a value without a type element: a string
         switch ($parser->getParentTag()) {
+            case 'param':
             case 'member':
                 $parser->setTempValue($data);
                 break;
@@ -523,16 +578,18 @@ class RpcValueHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
+        // An empty value (<value></value>, <string/>) is the empty string
+        $value = $parser->getTempValue() ?? '';
         switch ($parser->getCurrentTag()) {
             case 'member':
-                $parser->setTempMember($parser->getTempName(), $parser->getTempValue());
+                $parser->setTempMember($parser->getTempName(), $value);
                 break;
             case 'array':
             case 'data':
-                $parser->setTempArray($parser->getTempValue());
+                $parser->setTempArray($value);
                 break;
             default:
-                $parser->setParam($parser->getTempValue());
+                $parser->setParam($value);
                 break;
         }
         $parser->resetTempValue();
@@ -560,6 +617,8 @@ class RpcMemberHandler extends XmlTagHandler
     {
         $parser->setWorkingLevel();
         $parser->resetTempMember();
+        // Each member starts without a name: the previous member's name is not carried over
+        $parser->setTempName('');
     }
 
     /**
@@ -567,7 +626,7 @@ class RpcMemberHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
-        $member = & $parser->getTempMember();
+        $member = $parser->getTempMember();
         $parser->releaseWorkingLevel();
         $parser->setTempStruct($member);
     }

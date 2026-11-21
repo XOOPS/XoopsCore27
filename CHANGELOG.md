@@ -5,6 +5,100 @@ history by git-cliff — **do not edit it by hand**. For curated, narrative
 release notes see [`docs/changelog.270.txt`](docs/changelog.270.txt) and
 [`docs/lang_diff.txt`](docs/lang_diff.txt).
 
+## [v2.7.5-Beta2] - 2026-11-21
+
+### Bug Fixes
+- **xmlrpc**: Return a story that is not public to a News administrator only
+- **xmlrpc**: Read a value without a type element as a string
+- **xmlrpc**: Keep a struct member name whole
+- **xmlrpc**: Parse the request body as sent
+- **login**: Give no password candidate when the posted password holds a NUL byte
+- **login**: Check the password as it was set, and handle NUL bytes in input on PHP 8.6
+- **xml**: Accept XML-RPC credentials as sent, drop deprecated parser calls
+- **comments**: Clear overlong extra parameters, skip array values, read the re-posted search through Xmf\Request
+- **comments**: Encode extra parameters and keep paged user search filters
+- **upgrade**: Name templates by their site path under a symlinked root
+- **upgrade**: Skip the apply step when no patch is pending
+- **upgrade**: Correct result handling in the older patches and the Smarty 4 scan
+- **upgrade**: Resolve the Smarty 4 template once and report a failed read by its site name
+- **upgrade**: Keep the template until the Smarty 4 repair has a complete replacement
+- **upgrade**: Add the XOOPS_ROOT_PATH guard to the template-scanner classes
+- **core**: Document string|false for XoopsHttpGet::fetch() and plain array types for advisories
+- **system**: Keep a failed advisory check from hiding a good answer
+- **editor**: Keep image manager deletes inside uploads and cover roles and upgrade re-runs
+- **core**: Send nosniff from browse.php and isolate the search form test
+- **core**: Send nosniff on every page and keep tokens out of search URLs
+- **cache**: Read the whole expiry line in gc
+- **cache**: Leave half-written entries to gc and stop read() creating files
+- **cache**: Collect expired file-cache entries and allow the lock setting
+- **system**: Switch the admin content template on a repeated header call
+- **install**: Reject dangling symlinks and wrong-type write targets on the path page
+- **comments**: Report and stop when a new comment's root id cannot be saved
+- **install**: Check the root and data write targets on the path page
+- **textsanitizer**: Keep whitespace and skip linking inside <pre>
+- **textsanitizer**: Skip an extension that cannot be loaded instead of a TypeError
+- **uploader**: Refuse an invalid request token with HTTP 403
+- **uploader**: Answer every failed delete with an error status
+- **images**: Keep a category whose image cannot be deleted
+- **editor**: Use defined language constants in the TinyMCE image manager
+- **uploader**: Send error statuses and keep the part file name short
+- **uploader**: Report I/O failures instead of success in the FineUploader endpoint
+- Add index files so Apache does not list shipped directories
+- **upgrade**: Make xoops_data/.htaccess work on Apache 2.4
+- **profile**: Show the step form again when saving a registration step fails
+- **logger**: Keep fatal detail out of the debug panel and read debugLevel in one place
+- **logger**: Show fatal-error detail only to developers; gate the debug panel by recipient
+- **upgrade**: Fail cleanuplibraries when the lone .htaccess cannot be deleted
+- Raise a warning when protector cannot write bad IPs; update source-text test needles
+- **upgrade**: Re-queue a lone class/libraries/.htaccess and never traverse a symlinked tree; fix build docs and ignore rules
+- **upgrade**: Remove leftover class/libraries/.htaccess so the empty directory is deleted
+
+### Documentation
+- **release**: Describe ModuleTools without the mTools module
+- **release**: Say when the mTools module is still needed
+- **release**: Name the updated libraries in the Beta 2 README
+- **xml**: Document the SAX parser argument as XMLParser
+- **tests**: List ALTER among the database privileges of the integration run
+- Point copilot instructions at xoops_lib instead of class/libraries
+
+### Features
+- **upgrade**: Confirm a backup before patching and clear caches after the last patch
+- **system**: Mark bundled libraries that have a published advisory
+
+### Miscellaneous
+- **xmlrpc**: Deprecate XML-RPC for removal in 2.8.0
+- **xoops_lib**: Update Smarty to 4.6.0, Monolog to 3.13.0 and six more libraries
+- **xoops_lib**: Update helpers to 1.1.3 and XMF to 1.3.4 RC3
+- Run both test jobs on PHP 8.6
+- **language**: Move 2.7.5 constants to the end of their files
+- **hooks**: Point the test header check at a file-level docblock example
+- **xoops_lib**: Update helpers to 1.1.2
+- **xoops_lib**: Update moduletools to 1.7.1 and re-enable the Composer platform check
+- **xoops_lib**: Update XMF to 1.3.4 RC2, helpers to 1.1.0, smartyextensions to 2.0.0 Beta1; bundle moduletools 1.6.0
+- Remove leftover class/libraries vendor stub (moved to xoops_lib)
+
+### Other
+- Update htdocs/modules/system/admin/preferences/main.php
+- Suggestion AI
+- Show description for preferences
+- Unnecessary double quotes
+
+### Refactor
+- **upgrade**: Share one template read helper in the Smarty 4 scanner and repair
+- **textsanitizer**: Drop redundant is_object() guard in executeExtension()
+
+### Testing
+- **xmlrpc**: Pass other diagnostics on to PHPUnit in the story access test
+- **xmlrpc**: Cover getPost() itself, not only its access rule
+- **comments**: Start every repost encoding test from an empty request
+- **fineuploader**: Give the fake stream wrapper a stream_flush() for PHP 8.6
+- **upgrade**: Cover a failed cpanel insert followed by successful welcome_type inserts
+- **system**: Cover a damaged advisory cache entry
+- **editor**: Restore absent globals after the role tests and set the upload folder earlier
+- **cache**: Use a file-level header block in the gc test
+- **system**: Exercise the repeated control panel header call
+- **comments**: Load the language file to check _CM_COMPOSTNG
+
 ## [v2.7.5-Beta1] - 2026-11-12
 
 ### Bug Fixes

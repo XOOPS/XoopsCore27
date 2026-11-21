@@ -15,6 +15,8 @@ namespace Xoops\ModuleTools\Internal\Tools;
  */
 final class ConsumerBridgeGenerator
 {
+    private const XMF2_NOTE = "// Requires xoops/xmf ^2.0 (Xmf\\Bridge); not available in XMF 1.x.\n";
+
     /**
      * @return array<string, array{
      *     name:string,
@@ -344,7 +346,7 @@ final class ConsumerBridgeGenerator
             $fields[] = "                '" . $column . "' => \\" . $metadata['dtype'] . ',';
         }
         $key = $table['primaryKey'][0];
-        return "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$namespace};\n\nuse Xmf\\Bridge\\EntitySchema;\n\n"
+        return "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$namespace};\n\n" . self::XMF2_NOTE . "use Xmf\\Bridge\\EntitySchema;\n\n"
             . "final class {$class}Schema\n{\n    public static function create(): EntitySchema\n    {\n"
             . "        return new EntitySchema(\n            keyName: '{$key}',\n            fields: [\n"
             . implode("\n", $fields)
@@ -358,7 +360,7 @@ final class ConsumerBridgeGenerator
     {
         $columns = "['" . implode("', '", array_keys($table['columns'])) . "']";
         $key = $table['primaryKey'][0];
-        return "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$namespace};\n\n"
+        return "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$namespace};\n\n" . self::XMF2_NOTE . "\n"
             . "final class {$class}Repository extends SqlBridgeRepository\n{\n"
             . "    public function __construct(\\XoopsMySQLDatabase \$db)\n    {\n        parent::__construct(\n"
             . "            \$db,\n            '{$table['name']}',\n            '{$key}',\n            {$columns},\n"
@@ -370,6 +372,7 @@ final class ConsumerBridgeGenerator
     private function renderHandler(string $namespace, string $dirname, string $class, string $table, string $key): string
     {
         return "<?php\n\ndeclare(strict_types=1);\n\nnamespace {$namespace};\n\n"
+            . self::XMF2_NOTE
             . "use Xmf\\Bridge\\HandlerToRepositoryBridge;\n\n"
             . "/** WRAP-stage adapter; opt in explicitly until legacy side effects are extracted. */\n"
             . "final class Bridged{$class}Handler extends HandlerToRepositoryBridge\n{\n"
@@ -390,6 +393,7 @@ declare(strict_types=1);
 
 namespace {{NAMESPACE}};
 
+// Requires xoops/xmf ^2.0 (Xmf\Bridge); not available in XMF 1.x.
 use Xmf\Bridge\EntityRepositoryInterface;
 use Xmf\Bridge\TranslatedCriteria;
 

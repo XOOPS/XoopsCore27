@@ -19,7 +19,7 @@ legacy `mtools_setup` table are intentionally not part of this library.
 
 ## Requirements
 
-- PHP 8.2+, XOOPS 2.7.5+ or 2.8.0+ (`xoops/xmf` ^1.3, `xoops/helpers` ^1.0). Smarty is Core's; the
+- PHP 8.2+, XOOPS 2.7.5+ or 2.8.0+ (`xoops/xmf` ^1.3.3, `xoops/helpers` ^1.1). Smarty is Core's; the
   library ships no templates and only drives `XoopsTpl` from PHP.
 
 ## Development

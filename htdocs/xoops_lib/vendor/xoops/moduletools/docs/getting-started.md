@@ -30,7 +30,7 @@ every request. Nothing to install, nothing to activate — there is no `mtools` 
 composer require xoops/moduletools
 ```
 
-Requirements: PHP 8.2+, `xoops/xmf ^1.3`, `xoops/helpers ^1.0`. Smarty is Core's; the library
+Requirements: PHP 8.2+, `xoops/xmf ^1.3.3`, `xoops/helpers ^1.1`. Smarty is Core's; the library
 ships no templates.
 
 **XOOPS 2.7.0–2.7.4** sites keep using the separately distributed mTools *module*; the class names

@@ -63,20 +63,15 @@ if (false === $file || false === $dir
     exit();
 }
 
-//We can't output empty files and php files do not output
-if (empty($file) || strpos($file, '.php') !== false) {
+// $file stays the resolved path: the path that passed the check above is the one
+// that is read. Only a regular file is served, and never PHP source. The name is
+// compared in lower case, and "phtml" is named because it does not contain ".php".
+$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+if (!is_file($file) || str_contains(strtolower($file), '.php') || 'phtml' === $ext) {
     http_response_code(404);
     exit();
 }
 
-$file = $xoops->path($path);
-// Is there really a file to output?
-if (!file_exists($file)) {
-    http_response_code(404);
-    exit();
-}
-
-$ext   = substr($file, strrpos($file, '.') + 1);
 $types = include $xoops->path('include/mimetypes.inc.php');
 //$content_type = isset($types[$ext]) ? $types[$ext] : 'text/plain';
 //Do not output garbage
@@ -98,6 +93,12 @@ header('Expires: ' . gmdate('D, d M Y H:i:s', time() + $expires) . ' GMT');
 header('Content-type: ' . $types[$ext]);
 // browse.php skips include/common.php, which sends this header for every other page.
 header('X-Content-Type-Options: nosniff');
+// A browser runs the script in an HTML or XML document with the site's cookies and
+// pages in reach. Such a file is served sandboxed: it is displayed, but its scripts
+// and forms do not run and it is not treated as part of the site.
+if (1 === preg_match('~html|xml~i', $types[$ext])) {
+    header('Content-Security-Policy: sandbox');
+}
 
 // Emit SourceMap header for JS/CSS files when a companion .map file exists.
 // Browsers cannot resolve relative sourceMappingURL references inside files

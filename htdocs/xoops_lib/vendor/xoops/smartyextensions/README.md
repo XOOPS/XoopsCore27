@@ -257,7 +257,7 @@ Wrappers around XOOPS globals and handlers.
 | `xo_render_menu` | function | Module admin menu as Bootstrap nav |
 | `xo_avatar` | function | User avatar (XOOPS upload or Gravatar fallback) |
 | `xo_debug` | function | Dump variable (only outputs when `debug_mode` is active) |
-| `translate` | modifier | Resolve XOOPS language constant with string fallback |
+| `translate` | modifier | Resolve a XOOPS language constant (`_UPPER_CASE` name only) with string fallback |
 
 ```smarty
 <{xo_get_config name="sitename" assign="siteName"}>
@@ -268,6 +268,53 @@ Wrappers around XOOPS globals and handlers.
 
 An `assign`ed value is raw, so escape it when you print it. With Smarty's `$escape_html`
 on, drop that `|escape`: auto-escaping covers it, and Smarty 4 would encode it twice.
+
+---
+
+### TranslationExtension
+
+Translation tags for the XMF translation engine (`Xmf\I18n\Translation`, XMF 1.5 and later).
+Without the engine, a key that is a language constant (`_MI_NEWS_TITLE`) is resolved from the
+constant, so the same template works on older sites. This package does not require XMF.
+
+**Constructor**: `new TranslationExtension(bool $debug = false)`. In debug mode a missing key fires
+the `core.i18n.missing` preload event and `file=` raises a deprecation notice.
+
+| Name | Type | Description |
+|---|---|---|
+| `xoTrans` | function | Translate `key`; `trans` and `xoT` are aliases |
+| `xoTrans` | modifier | `<{"key"\|xoTrans:'dirname':'domain'}>`, no placeholders |
+
+| Attribute | Meaning |
+|---|---|
+| `key` (or `id`) | Translation key or language constant |
+| `domain` | Catalog domain, default `main` (`file` is a deprecated alias) |
+| `dirname` | Module directory, default: the current module |
+| `count` | Number for plural selection |
+| `params` | Array of placeholder values |
+| `default` | Text to use when the key does not resolve |
+| `assign` | Template variable to store the result in, instead of printing it |
+| `escape` | `false` passes placeholder values and `default` unescaped |
+| `locale`, `context` | Reserved and ignored; a placeholder with one of these names goes in `params` |
+| any other | A placeholder value: `name=$author` fills `{name}` |
+
+```smarty
+<{xoTrans key="_MI_NEWS_TITLE" domain="news" assign="title"}>
+<{xoTrans key="_MI_NEWS_BY" name=$author}>
+<{xoTrans key="_MI_NEWS_MISSING" default="News"}>
+<{"_MD_NEWS_MORE"|xoTrans:'news'}>
+```
+
+**Escaping.** The translated string is printed as it is, because translations may contain
+markup. A catalog is therefore as trusted as a template: never load text that a visitor typed
+into one. What the template passes in is HTML-escaped: the placeholder values and `default`
+(unless `escape=false`), and a key that does not resolve (always). The result is HTML, so print
+an `assign`ed result without escaping it again (`<{$title nofilter}>`, which also holds with
+Smarty's `$escape_html` on). A placeholder is not safe as a web address
+(`href="{url}"` in a translation): keep links in the template and use `sanitize_url` there.
+
+On Smarty 5, call `TranslationExtension::probeCollisions($smarty)` before `registerAll()`: it lists
+the tag names another extension already answers, since Smarty uses the first match without a warning.
 
 ---
 
@@ -302,6 +349,7 @@ src/
     ├── DataExtension.php
     ├── AssetExtension.php
     ├── XoopsCoreExtension.php
+    ├── TranslationExtension.php
     └── RayDebugExtension.php
 ```
 

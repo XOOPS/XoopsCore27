@@ -42,6 +42,7 @@ use Xoops\SmartyExtensions\Extension\FormExtension;
 use Xoops\SmartyExtensions\Extension\XoopsCoreExtension;
 use Xoops\SmartyExtensions\Extension\RayDebugExtension;
 use Xoops\SmartyExtensions\Extension\AssetExtension;
+use Xoops\SmartyExtensions\Extension\TranslationExtension;
 
 $registry = new ExtensionRegistry();
 $registry->add(new TextExtension());
@@ -53,6 +54,7 @@ $registry->add(new FormExtension($xoopsSecurity));
 $registry->add(new XoopsCoreExtension());
 $registry->add(new RayDebugExtension());
 $registry->add(new AssetExtension());
+$registry->add(new TranslationExtension());
 
 $registry->registerAll($smarty);
 ```
@@ -829,7 +831,7 @@ Use the `xo_permission` block to conditionally show content:
 <{$userInput|sanitize_string}>
 
 <{* URL sanitization *}>
-<a href="<{$url|sanitize_url}>">Link</a>
+<a href="<{$url|sanitize_url nofilter}>">Link</a>
 
 <{* Filename sanitization (strips everything except A-Za-z0-9-_.) *}>
 <{$uploadName|sanitize_filename}>
@@ -838,7 +840,7 @@ Use the `xo_permission` block to conditionally show content:
 <{$value|sanitize_string_for_xml}>
 ```
 
-`sanitize_url` allows these schemes: `http://`, `https://`, `ftp://`, `mailto:`, relative paths (`/path`, `page.html`), and hash fragments (`#section`). All other schemes (including `javascript:`, `data:`, and entity-encoded variants) are blocked and return an empty string. The accepted URL is returned HTML-escaped (`&` becomes `&amp;`, quotes become `&quot;`), ready to drop into an attribute — do not add `|escape` after it.
+`sanitize_url` allows these schemes: `http://`, `https://`, `ftp://`, `mailto:`, relative paths (`/path`, `page.html`), and hash fragments (`#section`). All other schemes (including `javascript:`, `data:`, and entity-encoded variants) are blocked and return an empty string. The accepted URL is returned HTML-escaped (`&` becomes `&amp;`, quotes become `&quot;`), ready to drop into an attribute — do not add `|escape` after it. The `nofilter` in the example keeps Smarty's `$escape_html` from escaping it a second time (`&amp;amp;`). It also skips, for that one output, any default modifiers and variable filters the site has registered; XOOPS itself registers none.
 
 `form_open`, `form_input` (`src`, `formaction`), `embed_pdf`, `render_breadcrumbs` and `render_pagination` apply the same scheme check: an unsafe `action` renders as `action=""`, an unsafe PDF URL renders nothing, an unsafe breadcrumb becomes plain text, and an unsafe pagination pattern links to `#`.
 
@@ -959,6 +961,70 @@ The `translate` modifier looks up a XOOPS language constant:
 <{* If _MI_NEWS_TITLE is defined, outputs its value; otherwise outputs the literal string *}>
 <h1><{"_MI_NEWS_TITLE"|translate}></h1>
 ```
+
+It reads only language constants, which are `_UPPER_CASE` names. Any other name, such as
+`XOOPS_DB_PASS`, is printed as it is, so a title from the database cannot make the modifier
+print another constant. The modifier does not escape HTML: add `|escape` when the value comes
+from the database (`<{$block.title|translate|escape}>`). For a constant with another name, write
+`<{$smarty.const.NAME}>`.
+
+### Translation tags
+
+`xoTrans` translates a key through the XMF translation engine (XMF 1.5 and later). `trans` and
+`xoT` are shorter names for the same tag. On a site without the engine, a key that is a language
+constant (`_MI_NEWS_TITLE`) is read from the constant, so the same template works on both.
+
+```smarty
+<h1><{xoTrans key="_MI_NEWS_TITLE"}></h1>
+
+<{* A {name} placeholder in the translation is filled from the attribute of that name *}>
+<p><{xoTrans key="_MI_NEWS_BY" name=$author}></p>
+
+<{* Text to show when the key has no translation *}>
+<{xoTrans key="_MI_NEWS_MISSING" default="News"}>
+
+<{* Plural form by number; catalog of another module and domain *}>
+<{xoTrans key="comments.count" count=$total dirname="news" domain="blocks"}>
+
+<{* Store the result instead of printing it. It is finished HTML: do not escape it again *}>
+<{nocache}>
+<{xoTrans key="_MI_NEWS_TITLE" assign="title"}>
+<h2><{$title nofilter}></h2>
+<{/nocache}>
+```
+
+The modifier form takes no placeholders: `<{"_MD_NEWS_MORE"|xoTrans:'news'}>`. Without a module
+name it reads the catalog of the current module, as the tag does.
+
+**Output caching.** The tag runs again for every visitor, also on a cached page, so each one
+gets their own language. Two forms do not: the tags that read an `assign`ed result, and the
+modifier. On a page that is output-cached and shown in more than one language, wrap them in
+`<{nocache}>…<{/nocache}>` as above.
+
+**Escaping.** The translation itself is printed as it is, because translations may contain
+markup such as `<strong>`. That makes a catalog as trusted as a template: whoever can edit one
+can put markup, and with it script, on the page, so never load text that a visitor typed into a
+catalog. The placeholder values are HTML-escaped, so `name=$author` is safe
+with a name a visitor typed. The `default` text is escaped the same way, and a key without a
+translation is always printed escaped. Pass `escape=false` only when the placeholder values and
+`default` are already safe HTML. The result is HTML in every case, so an `assign`ed result is
+printed as it is: with `<{$title|escape}>` the visitor would read `&amp;` where the translation
+has `&amp;` for an ampersand. The `nofilter` in the example does the same on a site that has
+Smarty's `$escape_html` on. It also skips, for that one output, any default modifiers and
+variable filters the site has registered; XOOPS itself registers none.
+
+Escaping makes a value safe as text and inside a quoted attribute that holds plain text, such
+as `title` or `alt`. It does not make a value safe as script or style: in an `onclick` or
+`style` attribute the browser decodes the entities before it runs the code. It does not make a
+web address safe either: `javascript:alert(1)` has nothing to escape. Keep addresses out of the
+translated text and write the link in the template:
+
+```smarty
+<a href="<{$url|sanitize_url nofilter}>"><{xoTrans key="_MI_NEWS_MORE"}></a>
+```
+
+Like `translate`, these tags read only language constants (`_UPPER_CASE` names), never
+another constant.
 
 ### Debug output
 

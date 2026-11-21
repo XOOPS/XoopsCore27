@@ -345,13 +345,18 @@ final class XoopsCoreExtension extends AbstractExtension
      * Returns a raw string (language constants may contain markup); pipe through
      * |escape when interpolating the result into HTML attribute/text context.
      *
+     * Only language constants (`_UPPER_CASE` names) are read, so a value that
+     * reaches this modifier from the database cannot name another constant
+     * (XOOPS_DB_PASS, …). For a constant with another name, write
+     * `<{$smarty.const.NAME}>` in the template.
+     *
      * Usage: <{$string|translate}>
      *        <{"_MI_NEWS_TITLE"|translate}>
      *        <{"_MI_NEWS_TITLE"|translate:'Latest news'}>
      */
     public function translate(string $string, ?string $default = null): string
     {
-        if (\defined($string)) {
+        if (self::isLanguageConstant($string)) {
             return (string) \constant($string);
         }
 

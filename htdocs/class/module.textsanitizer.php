@@ -65,7 +65,8 @@ class MyTextSanitizerExtension
         if (!file_exists($configFileName)) {
             if (false === copy($distFileName, $configFileName)) {
                 trigger_error('Could not create textsanitizer config file ' . basename($configFileName));
-                return $a = [];
+                // The shipped defaults are what the copy would have held.
+                return is_file($distFileName) ? include $distFileName : [];
             }
         }
         $configs = include $configFileName;
@@ -201,7 +202,8 @@ class MyTextSanitizer
         if (!file_exists($configFileName)) {
             if (false === copy($distFileName, $configFileName)) {
                 trigger_error('Could not create textsanitizer config file ' . basename($configFileName));
-                return [];
+                // The shipped defaults are what the copy would have held.
+                return is_file($distFileName) ? include $distFileName : [];
             }
         }
         return include $configFileName;
@@ -937,7 +939,7 @@ class MyTextSanitizer
      */
     public function executeExtensions()
     {
-        $extensions = array_filter($this->config['extensions']);
+        $extensions = array_filter($this->config['extensions'] ?? []);
         if (empty($extensions)) {
             return true;
         }

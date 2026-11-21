@@ -173,7 +173,7 @@ class XoopsDhtmlToolbar
         $code .= $this->button($btn, $this->jsCall('openWithSelfMain', [XOOPS_URL . '/misc.php?action=showpopups&type=smilies&target=' . rawurlencode($textareaId), 'smilies', 300, 475]), _XOOPS_FORM_ALT_SMILEY, 'fa-solid fa-face-smile');
 
         $myts       = \MyTextSanitizer::getInstance();
-        $extensions = array_filter($myts->config['extensions']);
+        $extensions = array_filter($myts->config['extensions'] ?? []);
         foreach (array_keys($extensions) as $key) {
             $extension = $myts->loadExtension($key);
             if (!$extension) {

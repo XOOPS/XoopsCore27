@@ -1,7 +1,7 @@
 XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 
 ===================================
-2.7.5 NOT RELEASED
+2.7.5 Beta 2                  2026-11
 ===================================
 Enhancements:
 - the Composer Packages panel of the control panel marks every bundled library whose installed version is covered by a published security advisory, with a link to the advisory, and says so when none is. The control panel asks Packagist's advisory service for this at most once a day and sends the package names only. When the service cannot be reached the panel shows "Advisory check unavailable" and tries again after an hour. Version ranges are read with composer/semver, so the result agrees with "composer audit". XoopsHttpGet::setTimeouts() lets a caller shorten the wait for a request (modules/system/themes/ComposerAdvisories.php, ComposerInfo.php, class/xoopshttpget.php) (#330)

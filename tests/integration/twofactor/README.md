@@ -1,6 +1,6 @@
 # Two-factor MySQL integration tests
 
-Run from the repository root with PHP 8.2–8.5, `mysqli`, `sodium`, `proc_open`
+Run from the repository root with PHP 8.2–8.6, `mysqli`, `sodium`, `proc_open`
 enabled, and the normal `htdocs/xoops_lib/vendor` dependencies installed:
 
 ```sh

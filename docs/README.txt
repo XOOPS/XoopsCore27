@@ -4,7 +4,7 @@ The XOOPS Development Team is pleased to announce XOOPS 2.7.5 Beta 2, the
 second test release of XOOPS 2.7.5. This is a maintenance release: it collects
 the bug fixes and security hardening made since XOOPS 2.7.4 and adds a
 light/dark toggle to the Default and Transition admin themes. XOOPS 2.7.5 runs
-on PHP 8.2 through 8.5.
+on PHP 8.2 through 8.6.
 
 This is a beta: more fixes may follow before the final release. Beta 2 adds
 the fixes made since Beta 1 (see "Changes since Beta 1" below), a security
@@ -65,10 +65,10 @@ Changes since Beta 1
   a failed Profile registration step shows its errors.
 - XML-RPC (off by default): /xmlrpc.php parses requests again, including
   indented ones, and accepts a name or password holding a quote or backslash.
-- PHP: a NUL byte in request input no longer stops a page with a ValueError on
-  PHP 8.6, and the XML parsers raise no deprecation notices on PHP 8.4 and
-  later. PHP 8.6 is tested but not yet supported: the bundled HTMLPurifier
-  allows PHP up to 8.5.
+- PHP 8.6 is supported: a NUL byte in request input no longer stops a page
+  with a ValueError there, and the unit and integration tests run on PHP 8.2
+  through 8.6. The XML parsers raise no deprecation notices on PHP 8.4 and
+  later.
 - Bundled libraries: XMF 1.3.4 RC3, xoops/helpers 1.1.3,
   xoops/smartyextensions 2.0.0 Beta1, Smarty 4.6.0 (PHP 8.5 and 8.6 support),
   Monolog 3.13.0 and php-debugbar 3.8.1 are updated; composer/semver 3.6.0 and

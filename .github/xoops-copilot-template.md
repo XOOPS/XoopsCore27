@@ -37,7 +37,7 @@ composer fix              # Auto-fix code style issues
 
 ## PHP Compatibility
 
-Code must run on PHP 8.2 through 8.5. Features introduced in PHP 8.0, 8.1, and 8.2 (named arguments, match expressions, union type hints, enums, fibers, readonly properties/classes, intersection types, DNF types, `never` return type, first-class callable syntax, constructor promotion, attributes `#[...]`, nullsafe operator `?->`, standalone `true`/`false`/`null` types, constants in traits) are allowed; avoid features introduced in PHP 8.3+ to preserve the 8.2 minimum.
+Code must run on PHP 8.2 through 8.6. Features introduced in PHP 8.0, 8.1, and 8.2 (named arguments, match expressions, union type hints, enums, fibers, readonly properties/classes, intersection types, DNF types, `never` return type, first-class callable syntax, constructor promotion, attributes `#[...]`, nullsafe operator `?->`, standalone `true`/`false`/`null` types, constants in traits) are allowed; avoid features introduced in PHP 8.3+ to preserve the 8.2 minimum.
 
 ## XOOPS Coding Conventions
 

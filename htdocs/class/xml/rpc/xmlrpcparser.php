@@ -521,7 +521,8 @@ class RpcNameHandler extends XmlTagHandler
     {
         switch ($parser->getParentTag()) {
             case 'member':
-                $parser->setTempName($data);
+                // The text of a name arrives in several pieces around an entity such as &amp;
+                $parser->setTempName($parser->getTempName() . $data);
                 break;
             default:
                 break;
@@ -548,7 +549,9 @@ class RpcValueHandler extends XmlTagHandler
      */
     public function handleCharacterData($parser, &$data)
     {
+        // Text straight inside <value> is a value without a type element: a string
         switch ($parser->getParentTag()) {
+            case 'param':
             case 'member':
                 $parser->setTempValue($data);
                 break;
@@ -575,16 +578,18 @@ class RpcValueHandler extends XmlTagHandler
      */
     public function handleEndElement($parser)
     {
+        // An empty value (<value></value>, <string/>) is the empty string
+        $value = $parser->getTempValue() ?? '';
         switch ($parser->getCurrentTag()) {
             case 'member':
-                $parser->setTempMember($parser->getTempName(), $parser->getTempValue());
+                $parser->setTempMember($parser->getTempName(), $value);
                 break;
             case 'array':
             case 'data':
-                $parser->setTempArray($parser->getTempValue());
+                $parser->setTempArray($value);
                 break;
             default:
-                $parser->setParam($parser->getTempValue());
+                $parser->setParam($value);
                 break;
         }
         $parser->resetTempValue();
@@ -612,6 +617,8 @@ class RpcMemberHandler extends XmlTagHandler
     {
         $parser->setWorkingLevel();
         $parser->resetTempMember();
+        // Each member starts without a name: the previous member's name is not carried over
+        $parser->setTempName('');
     }
 
     /**

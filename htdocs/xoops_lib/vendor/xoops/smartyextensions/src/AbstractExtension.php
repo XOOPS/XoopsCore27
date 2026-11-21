@@ -112,4 +112,16 @@ abstract class AbstractExtension
 
         return !\str_contains(\substr($url, 0, \strcspn($url, '/?#')), ':');
     }
+
+    /**
+     * True when $name is a defined XOOPS language constant: a global constant
+     * named `_UPPER_CASE` (`_MI_NEWS_TITLE`). Check this before `constant()` on a
+     * name that comes from a template, so that no other constant
+     * (XOOPS_DB_PASS, PHP_VERSION, a class constant) can be read through it.
+     */
+    protected static function isLanguageConstant(string $name): bool
+    {
+        // \z (not $) so a trailing newline in $name cannot slip past the anchor.
+        return 1 === \preg_match('/^_[A-Z][A-Z0-9_]*\z/', $name) && \defined($name);
+    }
 }

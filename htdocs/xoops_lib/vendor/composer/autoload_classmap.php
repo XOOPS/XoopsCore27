@@ -1112,6 +1112,7 @@ return array(
     'Xoops\\SmartyExtensions\\Extension\\SecurityExtension' => $vendorDir . '/xoops/smartyextensions/src/Extension/SecurityExtension.php',
     'Xoops\\SmartyExtensions\\Extension\\TextExtension' => $vendorDir . '/xoops/smartyextensions/src/Extension/TextExtension.php',
     'Xoops\\SmartyExtensions\\Extension\\TokenExtension' => $vendorDir . '/xoops/smartyextensions/src/Extension/TokenExtension.php',
+    'Xoops\\SmartyExtensions\\Extension\\TranslationExtension' => $vendorDir . '/xoops/smartyextensions/src/Extension/TranslationExtension.php',
     'Xoops\\SmartyExtensions\\Extension\\XoopsCoreExtension' => $vendorDir . '/xoops/smartyextensions/src/Extension/XoopsCoreExtension.php',
     'chillerlan\\QRCode\\Common\\BitBuffer' => $vendorDir . '/chillerlan/php-qrcode/src/Common/BitBuffer.php',
     'chillerlan\\QRCode\\Common\\ECICharset' => $vendorDir . '/chillerlan/php-qrcode/src/Common/ECICharset.php',

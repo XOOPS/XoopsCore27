@@ -1292,6 +1292,7 @@ class ComposerStaticInitdcd8bb0b135e004111c0e95f5addbb05
         'Xoops\\SmartyExtensions\\Extension\\SecurityExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/SecurityExtension.php',
         'Xoops\\SmartyExtensions\\Extension\\TextExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/TextExtension.php',
         'Xoops\\SmartyExtensions\\Extension\\TokenExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/TokenExtension.php',
+        'Xoops\\SmartyExtensions\\Extension\\TranslationExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/TranslationExtension.php',
         'Xoops\\SmartyExtensions\\Extension\\XoopsCoreExtension' => __DIR__ . '/..' . '/xoops/smartyextensions/src/Extension/XoopsCoreExtension.php',
         'chillerlan\\QRCode\\Common\\BitBuffer' => __DIR__ . '/..' . '/chillerlan/php-qrcode/src/Common/BitBuffer.php',
         'chillerlan\\QRCode\\Common\\ECICharset' => __DIR__ . '/..' . '/chillerlan/php-qrcode/src/Common/ECICharset.php',

@@ -56,6 +56,11 @@ class Blocksadmin
             : $this->helper->dirname();
         $this->moduleDirNameUpper = \mb_strtoupper($this->moduleDirName);
 
+        // Every method here works on \XoopsBlock, which core loads on front pages only.
+        if (!\class_exists(\XoopsBlock::class, false)) {
+            require_once XOOPS_ROOT_PATH . '/class/xoopsblock.php';
+        }
+
         \xoops_loadLanguage('admin', 'system');
         \xoops_loadLanguage('admin/blocksadmin', 'system');
         \xoops_loadLanguage('admin/groups', 'system');
@@ -167,13 +172,11 @@ class Blocksadmin
             } elseif (\XOOPS_CENTERBLOCK_BOTTOM === $i->getVar('side')) {
                 $ssel7 = ' checked';
             }
-            if ('' === $i->getVar('title')) {
+            // A stored _MI_* key shows as its translation; storeBlockLabel() keeps the key
+            // when that translation comes back unchanged.
+            $title = self::blockLabel($i, 'title');
+            if ('' === $title) {
                 $title = '&nbsp;';
-            } else {
-                // A stored _MI_* token resolves through the module's modinfo for display;
-                // the hidden oldtitle below keeps the raw value so orderBlock() can tell
-                // an unchanged resolved label from a real edit.
-                $title = \method_exists($i, 'title') ? (string) $i->title('s') : $i->getVar('title');
             }
             echo "<tr valign='top'><td class='$class' align='center'><input type='text' name='title[" . $i->getVar('bid') . "]' value='" . $title . "'></td>
             <td class='$class' align='center' nowrap='nowrap'><div align='center' >
@@ -304,9 +307,9 @@ class Blocksadmin
 
         $isCustom = \in_array($myblock->getVar('block_type'), ['C', 'E']);
         $block    = [
-            'title'      => $myblock->getVar('title') . ' Clone',
+            'title'      => self::blockLabel($myblock, 'title') . ' Clone',
             'form_title' => \constant('_CO_' . $this->moduleDirNameUpper . '_' . 'BLOCKS_CLONEBLOCK'),
-            'name'       => $myblock->getVar('name'),
+            'name'       => self::blockLabel($myblock, 'name'),
             'side'       => $myblock->getVar('side'),
             'weight'     => $myblock->getVar('weight'),
             'visible'    => $myblock->getVar('visible'),
@@ -358,7 +361,7 @@ class Blocksadmin
         $clone->setVar('weight', $bweight);
         $clone->setVar('visible', $bvisible);
         //$clone->setVar('content', $_POST['bcontent']);
-        $clone->setVar('title', Request::getString('btitle', '', 'POST'));
+        self::storeBlockLabel($clone, 'title', Request::getString('btitle', '', 'POST'));
         $clone->setVar('bcachetime', $bcachetime);
         if (\is_array($options) && (\count($options) > 0)) {
             $options = \implode('|', $options);
@@ -416,7 +419,7 @@ class Blocksadmin
     public function setOrder(int|string $bid, int|string $title, int|string $weight, int|string $visible, int|string $side, int|string $bcachetime, ?array $bmodule = null): void
     {
         $myblock = new \XoopsBlock((int)$bid);
-        $myblock->setVar('title', (string)$title);
+        self::storeBlockLabel($myblock, 'title', (string) $title);
         $myblock->setVar('weight', (int)$weight);
         $myblock->setVar('visible', (int)$visible);
         $myblock->setVar('side', (int)$side);
@@ -450,7 +453,7 @@ class Blocksadmin
 
         $isCustom = \in_array($myblock->getVar('block_type'), ['C', 'E']);
         $block    = [
-            'title'      => $myblock->getVar('title'),
+            'title'      => self::blockLabel($myblock, 'title'),
             'form_title' => \_AM_SYSTEM_BLOCKS_EDITBLOCK,
             //        'name'       => $myblock->getVar('name'),
             'side'       => $myblock->getVar('side'),
@@ -488,7 +491,7 @@ class Blocksadmin
         $this->assertToken();
 
         $myblock = new \XoopsBlock($bid);
-        $myblock->setVar('title', $btitle);
+        self::storeBlockLabel($myblock, 'title', $btitle);
         $myblock->setVar('weight', $bweight);
         $myblock->setVar('visible', $bvisible);
         $myblock->setVar('side', $bside);
@@ -580,7 +583,7 @@ class Blocksadmin
 
             $this->setOrder(
                 $blockId,
-                $this->preserveTitleToken((string) ($oldtitle[$i] ?? ''), (string) ($title[$i] ?? '')),
+                (string) ($title[$i] ?? ''),
                 $weight[$i] ?? 0,
                 $visible[$i] ?? 0,
                 $side[$i] ?? 0,
@@ -730,22 +733,34 @@ class Blocksadmin
     }
 
     /**
-     * The list shows a stored `_MI_*` token resolved; if the admin submits that
-     * resolved label unchanged, keep the token so the block title stays translatable.
+     * A block's title or name as the admin sees it. XOOPS 2.7.5+ resolves a stored language
+     * key (`_MI_*`) in XoopsBlock::title() and name(); an older core only has the raw column.
      */
-    private function preserveTitleToken(string $storedTitle, string $submittedTitle): string
+    private static function blockLabel(\XoopsObject $block, string $column, string $format = 's'): string
     {
-        if (
-            $submittedTitle === $storedTitle
-            || !\class_exists(\Xmf\I18n\LabelResolver::class)
-            || !\Xmf\I18n\LabelResolver::isToken($storedTitle)
-        ) {
-            return $submittedTitle;
-        }
+        return \method_exists($block, $column)
+            ? (string) $block->{$column}($format)
+            : (string) $block->getVar($column, $format);
+    }
 
-        return $submittedTitle === (string) \Xmf\I18n\LabelResolver::resolve($storedTitle, $this->moduleDirName)
-            ? $storedTitle
-            : $submittedTitle;
+    /**
+     * Store a submitted block label. When the admin sends back exactly what the form showed,
+     * the stored value stays as it is: a language key stays a key, and the label keeps following
+     * the site language. XOOPS 2.8 applies this rule in XoopsBlock::setTitle(). XOOPS 2.7.5
+     * resolves keys for display but has no setter, so the same rule is applied here.
+     */
+    private static function storeBlockLabel(\XoopsObject $block, string $column, string $submitted): void
+    {
+        $setter = 'set' . \ucfirst($column);
+        if (\method_exists($block, $setter)) {
+            $block->{$setter}($submitted);
+
+            return;
+        }
+        if (\method_exists($block, $column) && $submitted === (string) $block->{$column}('n')) {
+            return;
+        }
+        $block->setVar($column, $submitted);
     }
 
     /**

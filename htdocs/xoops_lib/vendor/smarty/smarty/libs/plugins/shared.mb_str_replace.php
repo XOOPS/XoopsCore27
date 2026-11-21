@@ -44,17 +44,27 @@ if (!function_exists('smarty_mb_str_replace')) {
                 }
             }
         } else {
-            // mb_regex_encoding()/mb_split() are deprecated since PHP 8.6 (bundled oniguruma is unmaintained).
-            // str_replace() is byte-exact and safe on UTF-8, which is self-synchronizing; other multibyte
-            // charsets (EUC-JP, GB2312, ...) are round-tripped through UTF-8 so no match spans a character boundary.
-            $convert = (bool)strcasecmp(Smarty::$_CHARSET, 'UTF-8');
-            if ($convert) {
-                $subject = mb_convert_encoding($subject ?? '', 'UTF-8', Smarty::$_CHARSET);
+            $subject = $subject ?? '';
+            $search = $search ?? '';
+            $replace = $replace ?? '';
+            // Byte-wise str_replace() is only safe on UTF-8, where a match cannot start in the middle of
+            // a character. Other multibyte charsets (e.g. Shift_JIS) are converted to UTF-8 first.
+            $convert_result = (bool)strcasecmp(Smarty::$_CHARSET, 'UTF-8');
+            if($convert_result) {
+                $subject = mb_convert_encoding($subject, 'UTF-8', Smarty::$_CHARSET);
                 $search = mb_convert_encoding($search, 'UTF-8', Smarty::$_CHARSET);
                 $replace = mb_convert_encoding($replace, 'UTF-8', Smarty::$_CHARSET);
             }
-            $subject = str_replace($search, $replace, $subject ?? '', $count);
-            if ($convert) {
+
+            if (!mb_check_encoding((string)$subject, 'UTF-8') || !mb_check_encoding((string)$search, 'UTF-8')) {
+                // Keep the result of the former mb_split() based implementation for invalid input.
+                $count = -1;
+                return '';
+            }
+
+            $subject = str_replace($search, $replace, $subject, $count);
+            // Convert results back to charset used by Smarty, if needed.
+            if($convert_result) {
                 $subject = mb_convert_encoding($subject, Smarty::$_CHARSET, 'UTF-8');
             }
         }

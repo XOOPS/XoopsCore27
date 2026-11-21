@@ -191,6 +191,28 @@ class XoopsUserUtility
 
         return $xoopsMailer->send();
     }
+
+    /**
+     * Say why a new password cannot be stored.
+     *
+     * password_hash() throws on a NUL byte, so every page that stores a
+     * password chosen in a form asks here first and reports the answer the way
+     * it reports its other errors. Sign-in and directory synchronisation do not
+     * call this: they test the NUL byte themselves and take no further rule.
+     *
+     * @param string $password the password as typed
+     * @return string an error message, or an empty string when the password can be stored
+     */
+    public static function passwordProblem(string $password): string
+    {
+        if (str_contains($password, "\0")) {
+            // A page may not have loaded language/<lang>/user.php, and a translation may predate the constant.
+            return defined('_US_PWDBADCHAR') ? (string) constant('_US_PWDBADCHAR') : 'The password contains a character that cannot be used.';
+        }
+
+        return '';
+    }
+
     /**
      * $uname, $email, $pass = null, $vpass = null
      */
@@ -337,6 +359,9 @@ class XoopsUserUtility
             $stop .= sprintf(_US_PWDTOOSHORT, $xoopsConfigUser['minpass']) . '<br>';
         } elseif ($pass !== '' && $pass !== null && $uname !== null && mb_strtolower($pass, 'UTF-8') === mb_strtolower($uname, 'UTF-8')) {
             $stop .= _US_PWDEQUALSUNAME . '<br>';
+        }
+        if (is_string($pass) && '' !== ($problem = self::passwordProblem($pass))) {
+            $stop .= $problem . '<br>';
         }
 
         return $stop;

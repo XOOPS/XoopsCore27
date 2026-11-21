@@ -219,6 +219,10 @@ try {
     echo "PASS: separate HTTP challenge, real session transport, closed-site challenge\n";
     $page = siteRequest($siteUrl . '/modules/system/admin.php?fct=users&op=users_2fa_reset&uid=1', $cookies);
     siteCheck(str_contains($page['body'], 'administrator password'), 'Users-admin reset did not render');
+    // A new password holding a NUL byte is refused with a message and no account: password_hash() throws on one, and siteRequest refuses a 5xx.
+    $refused = siteRequest($siteUrl . '/modules/system/admin.php?fct=users', $cookies, siteToken($page) + ['op' => 'users_save', 'uname' => 'smokenul', 'email' => 'smokenul@example.com', 'password' => "smoke\0password", 'pass2' => "smoke\0password"]);
+    siteCheck(str_contains($refused['body'], 'character that cannot be used') && $db->query("SELECT uid FROM `{$prefix}_users` WHERE uname='smokenul'")->num_rows === 0, 'A password holding a NUL byte was not refused: ' . substr(strip_tags($refused['body']), 0, 800));
+    $page = siteRequest($siteUrl . '/modules/system/admin.php?fct=users&op=users_2fa_reset&uid=1', $cookies);
     $page = siteRequest($siteUrl . '/modules/system/admin.php?fct=users', $cookies, siteToken($page) + ['op' => 'users_2fa_reset', 'uid' => 1, 'action' => 'reset', 'password' => 'test-password-only']);
     siteCheck(str_contains($page['body'], 'authentication was reset'), 'Password-confirmed administrator reset failed');
     $factor = $db->query("SELECT state FROM `{$prefix}_user_2fa` WHERE uid=1")->fetch_assoc();

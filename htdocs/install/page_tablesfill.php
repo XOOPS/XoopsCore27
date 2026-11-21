@@ -84,6 +84,12 @@ $siteconfig = is_array($_SESSION['siteconfig'] ?? null) ? $_SESSION['siteconfig'
 $adminname  = (string) ($siteconfig['adminname'] ?? '');
 $adminmail  = (string) ($siteconfig['adminmail'] ?? '');
 $adminpass  = (string) ($siteconfig['adminpass'] ?? '');
+// The session keeps a password the administrator page refused. password_hash()
+// throws on a NUL byte, so such a password goes back to that page instead.
+if (str_contains($adminpass, "\0")) {
+    $wizard->redirectToPage('siteinit');
+    exit();
+}
 
 require_once __DIR__ . '/include/makedata.php';
 

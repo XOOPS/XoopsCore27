@@ -95,6 +95,12 @@ if ($uid > 0 && $token !== '') {
             $errors[] = defined('_US_PWDTOOLONG')
                 ? constant('_US_PWDTOOLONG')
                 : 'Password exceeds maximum length.';
+        } else {
+            xoops_load('XoopsUserUtility');
+            $problem = XoopsUserUtility::passwordProblem($pass);
+            if ('' !== $problem) {
+                $errors[] = $problem;
+            }
         }
 
         if (!empty($errors)) {

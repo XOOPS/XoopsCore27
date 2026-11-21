@@ -208,3 +208,5 @@ define('_WEBSITE_CENSOR_REPLACE', 'OOPS');
 // 2.7.1
 define('MISSING_REQUIRED_EXTENSIONS', 'Required PHP extensions are missing');
 define('MISSING_REQUIRED_EXTENSIONS_MSG', 'XOOPS cannot be installed because the following mandatory PHP extension(s) are not available: %s. Enable them in your PHP configuration (php.ini) and restart your web server, then reload this page.');
+// 2.7.5
+define('ERR_PASSWORD_CHARACTER', 'The password contains a character that cannot be used.');

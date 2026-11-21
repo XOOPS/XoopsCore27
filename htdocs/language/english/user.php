@@ -136,3 +136,6 @@ define('_US_DESCRIPTIONMIN', 'Minimum required length: %s');
 define('_US_DESCRIPTIONMAX', 'Maximum length: %s');
 // XOOPS 2.7.3
 define('_US_SURETOLOGOUT', 'Are you sure you want to log out?');
+// 2.7.5
+define('_US_PWDBADCHAR', 'The password contains a character that cannot be used.');
+define('_US_PWDTOOLONG', 'Password exceeds maximum length.');

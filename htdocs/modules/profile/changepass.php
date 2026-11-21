@@ -66,6 +66,11 @@ if (!Request::hasVar('submit', 'POST')) {
     } elseif ($password !== '' && mb_strtolower($password, 'UTF-8') === mb_strtolower((string) $GLOBALS['xoopsUser']->getVar('uname', 'n'), 'UTF-8')) {
         $errors[] = _US_PWDEQUALSUNAME;
     }
+    xoops_load('XoopsUserUtility');
+    $problem = XoopsUserUtility::passwordProblem($password);
+    if ('' !== $problem) {
+        $errors[] = $problem;
+    }
 
     if ($errors) {
         $msg = implode('<br>', $errors);

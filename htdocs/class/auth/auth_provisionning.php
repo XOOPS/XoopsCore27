@@ -155,6 +155,10 @@ class XoopsAuthProvisionning
         if ($pwd === null || trim($pwd) === '') {
             redirect_header(XOOPS_URL . '/user.php', 5, 'Password cannot be empty.');
         }
+        // No directory bind accepts a NUL byte, and password_hash() throws on one.
+        if (str_contains((string) $pwd, "\0")) {
+            return false;
+        }
         // The password exactly as the directory bind accepted it.
         $newuser->setVar('pass', password_hash((string) $pwd, PASSWORD_DEFAULT));
         $newuser->setVar('rank', 0);
@@ -203,8 +207,9 @@ class XoopsAuthProvisionning
         // (common.php ends a session whose stamp no longer matches the hash).
         $password = (string) $pwd; // exactly as the directory bind accepted it
         $hash     = (string) $xoopsUser->getVar('pass', 'n');
-        // The binds refuse an empty password; never store one regardless.
-        if ('' !== $password && ('' === $hash || !password_verify($password, $hash))) {
+        // The binds refuse an empty password; never store one regardless. Nor one
+        // with a NUL byte, which password_hash() throws on: the stored hash stays.
+        if ('' !== $password && !str_contains($password, "\0") && ('' === $hash || !password_verify($password, $hash))) {
             $xoopsUser->setVar('pass', password_hash($password, PASSWORD_DEFAULT));
         }
         $tab_mapping = explode('|', $this->ldap_field_mapping);

@@ -13,6 +13,7 @@
  * @license             GNU GPL 2 (https://www.gnu.org/licenses/gpl-2.0.html)
  * @package             core
  * @since               2.0.0
+ * @deprecated          since XOOPS 2.7.5: XML-RPC will be removed in XOOPS 2.8.0
  */
 
 define('XOOPS_XMLRPC', 1);
@@ -20,7 +21,7 @@ define('XOOPS_XMLRPC', 1);
 include __DIR__ . '/mainfile.php';
 
 /**
- * XML-RPC is disabled by default for security.
+ * XML-RPC is disabled by default for security, and deprecated: it will be removed in XOOPS 2.8.0.
  *
  * To enable it, add the following to XOOPS_VAR_PATH/configs/xoopsconfig.php:
  *   'xmlrpc_enabled' => true,
@@ -28,8 +29,11 @@ include __DIR__ . '/mainfile.php';
 if (empty($xoopsConfig['xmlrpc_enabled'])) {
     http_response_code(403);
     header('Content-Type: text/plain; charset=UTF-8');
-    exit("XML-RPC is disabled. To enable it, set 'xmlrpc_enabled' => true in XOOPS_VAR_PATH/configs/xoopsconfig.php");
+    exit("XML-RPC is disabled. It is deprecated and will be removed in XOOPS 2.8.0. To enable it until then, set 'xmlrpc_enabled' => true in XOOPS_VAR_PATH/configs/xoopsconfig.php");
 }
+
+// Recorded by the debug log of a site that still uses the endpoint
+$GLOBALS['xoopsLogger']->addDeprecated('XML-RPC (xmlrpc.php) is deprecated since XOOPS 2.7.5 and will be removed in XOOPS 2.8.0');
 
 error_reporting(0);
 

@@ -166,9 +166,17 @@ namespace xoopsxml {
          */
         private function getPost(\XoopsApi $api, bool $respond = true): ?array
         {
-            set_error_handler(
-                static fn (int $severity, string $message): bool => str_contains($message, 'class.newsstory.php'),
-                E_WARNING
+            // Everything else goes on to the handler that was in place, PHPUnit's
+            $previous = null;
+            $previous = set_error_handler(
+                static function (int $severity, string $message, string $file = '', int $line = 0) use (&$previous): bool {
+                    // PHP 8.6 no longer names the file in the first of the two warnings
+                    if (E_WARNING === $severity && str_starts_with($message, 'include_once(')) {
+                        return true;
+                    }
+
+                    return null !== $previous && false !== $previous($severity, $message, $file, $line);
+                }
             );
             try {
                 return $api->getPost($respond);

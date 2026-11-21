@@ -4,7 +4,7 @@ LANGUAGE DIFFERENCES
 Below are language differences from one version to the next.
 
 ================================
-2.7.5 NOT RELEASED
+2026/11: Version 2.7.5-Beta2
 ================================
 /upgrade/language/english/upd_2.7.4-to-2.7.5.php (new file)
 - added define('_XOOPS_UPGRADE_275_HTACCESS_UPDATED', '%s was updated so that Apache 2.4 denies access to it as Apache 2.2 does');

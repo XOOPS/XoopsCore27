@@ -168,6 +168,20 @@ class XoopsXmlRpcParserTest extends TestCase
     }
 
     #[Test]
+    public function aMemberNameHoldingAnEntityIsKeptWhole(): void
+    {
+        // The XML parser hands over the text around an entity in several pieces
+        $body = '<methodCall><methodName>xoops.getPost</methodName><params><param><value><struct>'
+            . '<member><name>R&amp;D &lt;notes&gt;</name><value><string>x</string></value></member>'
+            . '<member><value><string>unnamed</string></value></member>'
+            . '<member><name>plain</name><value><string>y</string></value></member>'
+            . '</struct></value></param></params></methodCall>';
+
+        $expected = ['R&D <notes>' => 'x', '' => 'unnamed', 'plain' => 'y'];
+        $this->assertSame([true, 'xoops.getPost', [$expected]], $this->parse($body));
+    }
+
+    #[Test]
     public function aUrlEncodedBodyIsNotARequest(): void
     {
         // What /xmlrpc.php handed the parser before 2.7.5: no request ever parsed

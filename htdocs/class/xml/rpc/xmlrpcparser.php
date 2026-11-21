@@ -521,7 +521,8 @@ class RpcNameHandler extends XmlTagHandler
     {
         switch ($parser->getParentTag()) {
             case 'member':
-                $parser->setTempName($data);
+                // The text of a name arrives in several pieces around an entity such as &amp;
+                $parser->setTempName($parser->getTempName() . $data);
                 break;
             default:
                 break;
@@ -612,6 +613,8 @@ class RpcMemberHandler extends XmlTagHandler
     {
         $parser->setWorkingLevel();
         $parser->resetTempMember();
+        // Each member starts without a name: the previous member's name is not carried over
+        $parser->setTempName('');
     }
 
     /**

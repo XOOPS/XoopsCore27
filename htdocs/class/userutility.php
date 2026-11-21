@@ -207,7 +207,7 @@ class XoopsUserUtility
     {
         if (str_contains($password, "\0")) {
             // A page may not have loaded language/<lang>/user.php, and a translation may predate the constant.
-            return defined('_US_PWDBADCHAR') ? (string) constant('_US_PWDBADCHAR') : 'The password contains a character that cannot be used.';
+            return defined('_US_PWDBADCHAR') ? _US_PWDBADCHAR : 'The password contains a character that cannot be used.';
         }
 
         return '';

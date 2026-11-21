@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (str_contains((string) $vars['adminpass'], "\0")) {
         // password_hash() refuses a NUL byte. A translation may predate the constant.
-        $error['pass'][] = defined('ERR_PASSWORD_CHARACTER') ? constant('ERR_PASSWORD_CHARACTER') : 'The password contains a character that cannot be used.';
+        $error['pass'][] = defined('ERR_PASSWORD_CHARACTER') ? ERR_PASSWORD_CHARACTER : 'The password contains a character that cannot be used.';
     }
     if ($error) {
         $wizard->redirectToPage('+0');

@@ -224,7 +224,8 @@ if ($current_step == 1) {
 
     $newuser->setVar('uname', $uname);
     $newuser->setVar('email', $email);
-    $newuser->setVar('pass', $pass ? password_hash($pass, PASSWORD_DEFAULT) : '');
+    // validate() below reports a password that cannot be stored; it is not hashed here.
+    $newuser->setVar('pass', ($pass && '' === XoopsUserUtility::passwordProblem($pass)) ? password_hash($pass, PASSWORD_DEFAULT) : '');
     $stop .= XoopsUserUtility::validate($newuser, $pass, $vpass);
 
     xoops_load('XoopsCaptcha');
@@ -258,7 +259,8 @@ if ($current_step > 0 && empty($stop) && (!empty($steps[$current_step - 1]['step
             $pass  = Request::getVar('pass', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
             $newuser->setVar('uname', $uname);
             $newuser->setVar('email', $email);
-            $newuser->setVar('pass', $pass ? password_hash($pass, PASSWORD_DEFAULT) : '');
+            $storable = $pass && '' === XoopsUserUtility::passwordProblem($pass);
+            $newuser->setVar('pass', $storable ? password_hash($pass, PASSWORD_DEFAULT) : '');
             // The step number is supplied by the client, so this request may
             // never have passed step 1, or may carry different identity values
             // now. Check both at the point of insertion.

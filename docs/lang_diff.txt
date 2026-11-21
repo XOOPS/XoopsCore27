@@ -4,6 +4,15 @@ LANGUAGE DIFFERENCES
 Below are language differences from one version to the next.
 
 ================================
+2026/11: Version 2.7.5 NOT RELEASED
+================================
+/htdocs/language/english/user.php
+- added define('_US_PWDBADCHAR', 'The password contains a character that cannot be used.');
+- added define('_US_PWDTOOLONG', 'Password exceeds maximum length.');
+/htdocs/install/language/english/install.php
+- added define('ERR_PASSWORD_CHARACTER', 'The password contains a character that cannot be used.');
+
+================================
 2026/11: Version 2.7.5-Beta2
 ================================
 /upgrade/language/english/upd_2.7.4-to-2.7.5.php (new file)

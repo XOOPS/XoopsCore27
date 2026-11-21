@@ -58,6 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($vars['adminpass'] != $vars['adminpass2']) {
         $error['pass'][] = ERR_PASSWORD_MATCH;
     }
+    if (str_contains((string) $vars['adminpass'], "\0")) {
+        // password_hash() refuses a NUL byte. A translation may predate the constant.
+        $error['pass'][] = defined('ERR_PASSWORD_CHARACTER') ? ERR_PASSWORD_CHARACTER : 'The password contains a character that cannot be used.';
+    }
     if ($error) {
         $wizard->redirectToPage('+0');
 

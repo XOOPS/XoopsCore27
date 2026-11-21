@@ -226,6 +226,15 @@ case 'users_save':
             xoops_error(_AM_SYSTEM_USERS_PWDEQUALSUNAME);
             break;
         }
+
+        xoops_load('XoopsUserUtility');
+        $problem = '' !== Request::getVar('pass2', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM)
+            ? XoopsUserUtility::passwordProblem(Request::getVar('password', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM))
+            : '';
+        if ('' !== $problem) {
+            xoops_error($problem);
+            break;
+        }
         // --- End Validation ---
 
         // Apply changes
@@ -325,6 +334,13 @@ case 'users_save':
 
         if (mb_strtolower($pass1, 'UTF-8') === mb_strtolower(Request::getString('uname', '', 'POST'), 'UTF-8')) {
             xoops_error(_AM_SYSTEM_USERS_PWDEQUALSUNAME);
+            break;
+        }
+
+        xoops_load('XoopsUserUtility');
+        $problem = XoopsUserUtility::passwordProblem($pass1);
+        if ('' !== $problem) {
+            xoops_error($problem);
             break;
         }
 

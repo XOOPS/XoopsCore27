@@ -64,6 +64,12 @@ if ($op === 'saveuser') {
                 $errors[] = _US_PASSNOTSAME;
             } elseif (mb_strtolower($password, 'UTF-8') === mb_strtolower((string) $xoopsUser->getVar('uname', 'n'), 'UTF-8')) {
                 $errors[] = _US_PWDEQUALSUNAME;
+            } else {
+                xoops_load('XoopsUserUtility');
+                $problem = XoopsUserUtility::passwordProblem($password);
+                if ('' !== $problem) {
+                    $errors[] = $problem;
+                }
             }
         }
     }

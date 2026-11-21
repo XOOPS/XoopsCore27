@@ -983,6 +983,18 @@ class XoopsMemberHandlerTest extends TestCase
     }
 
     /**
+     * bcrypt verification stops reading at a NUL byte, so "password\0x" would
+     * verify against the hash of "password", and the rehash would then throw.
+     * Such a password is refused before the account is even looked up.
+     */
+    public function testLoginUserRefusesAPasswordHoldingANulByte(): void
+    {
+        $this->userHandler->expects($this->never())->method('getObjects');
+
+        $this->assertFalse($this->handler->loginUser('admin', "correct_password\0x"));
+    }
+
+    /**
      * A bare number would make MySQL compare the varchar column numerically
      * ('1' = '001', '0' = every non-numeric name) and skip its index: a
      * digit-only name is sent as a quoted string, and the duplicate-detecting

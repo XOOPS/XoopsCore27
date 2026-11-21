@@ -695,4 +695,16 @@ class XoopsUserUtilityTest extends TestCase
             \XoopsUserUtility::rememberFingerprint($user, self::FIXTURE_KEY)
         );
     }
+
+    public function testPasswordProblemNamesAPasswordThatPasswordHashRefuses(): void
+    {
+        foreach (["\0", "abc\0def", "abcdef\0"] as $password) {
+            $this->assertNotSame('', \XoopsUserUtility::passwordProblem($password), bin2hex($password));
+        }
+        // What it lets through, password_hash() takes: long, multibyte, control characters, spaces.
+        foreach (['', '0', 'correct horse', "tab\there\f", 'пароль-密碼', str_repeat('x', 5000)] as $password) {
+            $this->assertSame('', \XoopsUserUtility::passwordProblem($password));
+            $this->assertTrue(password_verify($password, password_hash($password, PASSWORD_BCRYPT, ['cost' => 4])));
+        }
+    }
 }

@@ -131,15 +131,18 @@ switch ($op) {
             $newLevel = Request::getInt('level', 0, 'POST');
             $user->setVar('level', $newLevel);
         }
+        xoops_load('xoopsuserutility');
         $password = $vpass = null;
         if (Request::getVar('password', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM) !== '') {
             $password = Request::getVar('password', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
             $vpass    = Request::getVar('vpass', '', 'POST', 'string', Request::MASK_ALLOW_RAW | Request::MASK_NO_TRIM);
-            $user->setVar('pass', password_hash($password, PASSWORD_DEFAULT));
+            // validate() below reports a password that cannot be stored; it is not hashed here.
+            if ('' === XoopsUserUtility::passwordProblem($password)) {
+                $user->setVar('pass', password_hash($password, PASSWORD_DEFAULT));
+            }
         } elseif ($user->isNew()) {
             $password = $vpass = '';
         }
-        xoops_load('xoopsuserutility');
         $stop = XoopsUserUtility::validate($user, $password, $vpass);
 
         $errors = [];

@@ -209,7 +209,10 @@ final class RegisterSaveBoundaryTest extends TestCase
                 . '   public static function getUrl($n, $d = "", $h = "POST") { return self::read($n, $d); }'
                 . '   public static function getVar($n, $d = "", $h = "POST", $t = "string", $m = 0) { return self::read($n, $d); }'
                 . ' }'
-                . ' class XoopsUserUtility { public static function validate($u, $p, $v) { return $GLOBALS["saveBoundaryValidation"]; } }');
+                . ' class XoopsUserUtility {'
+                . '   public static function validate($u, $p, $v) { return $GLOBALS["saveBoundaryValidation"]; }'
+                . '   public static function passwordProblem($p) { return str_contains($p, "\0") ? "refused" : ""; }'
+                . ' }');
         }
         if (!defined('_US_REGISTERNG')) {
             define('_US_REGISTERNG', 'Registration failed');

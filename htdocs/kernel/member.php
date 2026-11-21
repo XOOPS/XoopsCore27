@@ -420,6 +420,12 @@ class XoopsMemberHandler
      */
     public function loginUser($uname, $pwd)
     {
+        // No stored password holds a NUL byte (password_hash() refuses one), bcrypt
+        // verification stops reading at one, and the rehash below would throw on it.
+        if (str_contains((string) $pwd, "\0")) {
+            return false;
+        }
+
         // Use Criteria for safe querying of username; password is handled separately for verification
         // An IN list quotes every element, so a digit-only name stays a
         // string comparison ('1' does not match '001') and the index bounds it.

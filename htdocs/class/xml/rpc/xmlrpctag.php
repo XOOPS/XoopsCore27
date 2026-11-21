@@ -314,7 +314,8 @@ class XoopsXmlRpcDatetime extends XoopsXmlRpcTag
     public function __construct($value)
     {
         if (!is_numeric($value)) {
-            $this->_value = strtotime($value);
+            // (string): a story that does not exist has no date, and strtotime(null) is deprecated
+            $this->_value = strtotime((string) $value);
         } else {
             $this->_value = (int) $value;
         }

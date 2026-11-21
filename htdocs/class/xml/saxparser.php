@@ -218,7 +218,7 @@ class SaxParser
     /****************************************************************************
      * Callback function that executes whenever a the start of a tag
      * occurs when being parsed.
-     * @param int    $parser          The handle to the parser.
+     * @param \XMLParser $parser      The parser.
      * @param string $tagName         The name of the tag currently being parsed.
      * @param array  $attributesArray The list of attributes associated with the tag.
      * @private
@@ -238,7 +238,7 @@ class SaxParser
     /****************************************************************************
      * Callback function that executes whenever the end of a tag
      * occurs when being parsed.
-     * @param int    $parser  The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param string $tagName The name of the tag currently being parsed.
      * @private
      * @returns void
@@ -257,7 +257,7 @@ class SaxParser
     /****************************************************************************
      * Callback function that executes whenever character data is encountered
      * while being parsed.
-     * @param int    $parser The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param string $data   Character data inside the tag
      * @returns void
      */
@@ -272,7 +272,7 @@ class SaxParser
     }
 
     /****************************************************************************
-     * @param int $parser The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param     $target
      * @param     $data
      * @returns void
@@ -285,14 +285,14 @@ class SaxParser
     }
 
     /****************************************************************************
-     * @param int $parser The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param $data
      * @returns void
      */
     public function handleDefault($parser, $data) {}
 
     /****************************************************************************
-     * @param int $parser The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param     $entityName
      * @param     $base
      * @param     $systemId
@@ -304,7 +304,7 @@ class SaxParser
     public function handleUnparsedEntityDecl($parser, $entityName, $base, $systemId, $publicId, $notationName) {}
 
     /****************************************************************************
-     * @param int $parser The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param     $notationName
      * @param     $base
      * @param     $systemId
@@ -314,7 +314,7 @@ class SaxParser
     public function handleNotationDecl($parser, $notationName, $base, $systemId, $publicId) {}
 
     /****************************************************************************
-     * @param int $parser The handle to the parser.
+     * @param \XMLParser $parser The parser.
      * @param     $openEntityNames
      * @param     $base
      * @param     $systemId

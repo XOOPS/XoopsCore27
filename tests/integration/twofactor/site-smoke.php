@@ -151,12 +151,17 @@ try {
     file_put_contents($docroot . '/uploads/smoke-page.html', '<html><body><script>document.title = "ran"</script>smoke page</body></html>');
     file_put_contents($docroot . '/uploads/smoke-source.phtml', '<?php echo "smoke source";');
     file_put_contents($docroot . '/uploads/smoke-upper.PHP', '<?php echo "smoke source";');
+    file_put_contents($docroot . '/uploads/smoke-empty.css', '');
     foreach (['smoke-source.phtml', 'smoke-upper.PHP', 'smoke-upper.php', 'index.php'] as $name) {
         $asset = siteRequest($siteUrl . '/browse.php?www/uploads/' . $name, $cookies);
         siteCheck(str_contains($asset['headers'], ' 404') && !str_contains($asset['body'], '<?php'), "browse.php served PHP source: $name: " . $asset['headers']);
     }
     $asset = siteRequest($siteUrl . '/browse.php?www/uploads/smoke-page.html', $cookies);
-    siteCheck(str_contains($asset['body'], 'smoke page') && str_contains(strtolower($asset['headers']), 'content-security-policy: sandbox'), 'browse.php served an HTML file without a sandbox: ' . $asset['headers']);
+    // The whole header value is "sandbox": an "allow-scripts" after it would let the scripts run.
+    siteCheck(str_contains($asset['body'], 'smoke page') && preg_match('/^content-security-policy:\s*sandbox\s*$/mi', $asset['headers']) === 1, 'browse.php served an HTML file without a full sandbox: ' . $asset['headers']);
+    // An empty stylesheet is served empty, not as a server error (siteRequest refuses a 5xx).
+    $asset = siteRequest($siteUrl . '/browse.php?www/uploads/smoke-empty.css', $cookies);
+    siteCheck(str_contains($asset['headers'], ' 200') && $asset['body'] === '', 'browse.php did not serve an empty stylesheet: ' . $asset['headers']);
     $asset = siteRequest($siteUrl . '/browse.php?Frameworks/jquery/jquery.js', $cookies);
     siteCheck(str_contains(strtolower($asset['headers']), 'content-type: application/x-javascript') && str_contains(strtolower($asset['headers']), 'x-content-type-options: nosniff'), 'browse.php served a script without its type or without nosniff: ' . $asset['headers']);
     $search = siteRequest($siteUrl . '/search.php', $cookies);

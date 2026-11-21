@@ -4,7 +4,7 @@ XOOPS 2.7.x Changelog (Language changes: see: /docs/lang_diff.txt)
 2.7.5 NOT RELEASED
 ===================================
 Bug fixes:
-- browse.php no longer sends a .phtml file as text: it refused names holding ".php" but not that extension, so browse.php?www/... returned the source of such a file under the web root. The name is now compared in lower case, only a regular file is served, and the file that is read is the resolved path that passed the containment check. A file sent as HTML or XML (html, htm, tpl, xhtml, xml, xsl) carries Content-Security-Policy: sandbox, so a browser displays it without running its scripts or treating it as part of the site (browse.php) (#353)
+- browse.php no longer sends a .phtml file as text: it refused names holding ".php" but not that extension, so browse.php?www/... returned the source of such a file under the web root. The name is now compared in lower case, only a regular file is served, and the file that is read is the resolved path that passed the containment check. A file sent as HTML or XML (html, htm, tpl, xhtml, xml, xsl) carries Content-Security-Policy: sandbox, so a browser displays it without running its scripts or treating it as part of the site. The ".php" test reads the file name only, so a site installed under a folder whose name holds ".php" keeps its assets, and an empty JavaScript or CSS file is served empty instead of ending in a server error (browse.php) (#353)
 
 ===================================
 2.7.5 Beta 2                  2026-11

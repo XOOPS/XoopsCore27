@@ -64,10 +64,11 @@ if (false === $file || false === $dir
 }
 
 // $file stays the resolved path: the path that passed the check above is the one
-// that is read. Only a regular file is served, and never PHP source. The name is
-// compared in lower case, and "phtml" is named because it does not contain ".php".
-$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-if (!is_file($file) || str_contains(strtolower($file), '.php') || 'phtml' === $ext) {
+// that is read. Only a regular file is served, and never PHP source. The file name
+// (not its directories: an installation may live under "site.php/") is compared in
+// lower case, and "phtml" is named because it does not contain ".php".
+$ext = strtolower((string) pathinfo($file, PATHINFO_EXTENSION));
+if (!is_file($file) || str_contains(strtolower(basename($file)), '.php') || 'phtml' === $ext) {
     http_response_code(404);
     exit();
 }
@@ -108,7 +109,8 @@ if (in_array($ext, ['js', 'css'], true)) {
     $fsize = filesize($file);
     $tailSize = min(512, $fsize);
     $tail = '';
-    $fh = fopen($file, 'rb');
+    // An empty file has no tail to read, and fread() refuses a length of 0.
+    $fh = $tailSize > 0 ? fopen($file, 'rb') : false;
     if ($fh !== false) {
         fseek($fh, $fsize - $tailSize);
         $tail = fread($fh, $tailSize);

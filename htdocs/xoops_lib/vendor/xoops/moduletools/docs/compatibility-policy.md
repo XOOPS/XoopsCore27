@@ -48,7 +48,7 @@ Until it is announced, the period is open-ended and nothing is removed.
 
 ## Versioning
 
-ModuleTools 1.7.2 provides API 1.2.0. Consumers needing its added public surface
+ModuleTools 1.7.3 provides API 1.2.0. Consumers needing its added public surface
 (such as `Common\Output::navigationTarget()`) must explicitly request
 `minimumApiVersion: '1.2.0'` in `ConsumerRuntime::guard()`.
 Existing consumers requiring API 1.0.0 or 1.1.0 remain supported.

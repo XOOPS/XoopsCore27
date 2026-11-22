@@ -51,6 +51,8 @@ interface DbInterface
      * @param int          $id        id of the record to clone
      *
      * @return mixed new id on success, false otherwise
+     *
+     * @throws \RuntimeException when the INSERT of the copy fails
      */
     public static function cloneRecord(\XoopsMySQLDatabase $db, $tableName, string $idField, int $id);
 
@@ -59,6 +61,8 @@ interface DbInterface
      *
      * @param string $tableName  unprefixed table name
      * @param string $columnName column to inspect
+     *
+     * @throws \RuntimeException when the query fails
      */
     public static function enumerate(\XoopsMySQLDatabase $db, string $tableName, string $columnName): array;
 

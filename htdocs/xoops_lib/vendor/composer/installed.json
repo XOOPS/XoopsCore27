@@ -1768,17 +1768,17 @@
         },
         {
             "name": "xoops/helpers",
-            "version": "v1.1.3",
-            "version_normalized": "1.1.3.0",
+            "version": "v1.1.4",
+            "version_normalized": "1.1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/helpers.git",
-                "reference": "45e114bc7e56d9566715561cd83f2fbaaa580864"
+                "reference": "aef77e5bd829fdb4e1b0896f28ed0d792ec53167"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/45e114bc7e56d9566715561cd83f2fbaaa580864",
-                "reference": "45e114bc7e56d9566715561cd83f2fbaaa580864",
+                "url": "https://api.github.com/repos/XOOPS/helpers/zipball/aef77e5bd829fdb4e1b0896f28ed0d792ec53167",
+                "reference": "aef77e5bd829fdb4e1b0896f28ed0d792ec53167",
                 "shasum": ""
             },
             "require": {
@@ -1796,8 +1796,8 @@
                 "ext-zip": "Required for zip/unzip filesystem operations",
                 "ezyang/htmlpurifier": "Required by Service\\HtmlSanitizer; without it every entry point returns null so callers can fall back"
             },
-            "time": "2026-11-20T08:57:31+00:00",
-            "published-time": "2026-11-20T08:58:13+00:00",
+            "time": "2026-11-22T00:47:32+00:00",
+            "published-time": "2026-11-22T00:47:55+00:00",
             "type": "library",
             "extra": {
                 "xoops-helpers": {
@@ -1829,23 +1829,23 @@
             ],
             "support": {
                 "issues": "https://github.com/XOOPS/helpers/issues",
-                "source": "https://github.com/XOOPS/helpers/tree/v1.1.3"
+                "source": "https://github.com/XOOPS/helpers/tree/v1.1.4"
             },
             "install-path": "../xoops/helpers"
         },
         {
             "name": "xoops/moduletools",
-            "version": "v1.7.2",
-            "version_normalized": "1.7.2.0",
+            "version": "v1.7.3",
+            "version_normalized": "1.7.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/moduletools.git",
-                "reference": "a6ef89d92e68251218a5f86949a63d6c752e57b7"
+                "reference": "818feebf4591625dbacf0b23722373cf12aedd0d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/moduletools/zipball/a6ef89d92e68251218a5f86949a63d6c752e57b7",
-                "reference": "a6ef89d92e68251218a5f86949a63d6c752e57b7",
+                "url": "https://api.github.com/repos/XOOPS/moduletools/zipball/818feebf4591625dbacf0b23722373cf12aedd0d",
+                "reference": "818feebf4591625dbacf0b23722373cf12aedd0d",
                 "shasum": ""
             },
             "require": {
@@ -1866,8 +1866,8 @@
                 "squizlabs/php_codesniffer": "^3.10 || ^4.0",
                 "xoops/rector-xoops": "^1.0.0-alpha2@alpha"
             },
-            "time": "2026-11-18T07:21:34+00:00",
-            "published-time": "2026-11-18T07:27:16+00:00",
+            "time": "2026-11-22T00:47:39+00:00",
+            "published-time": "2026-11-22T00:48:01+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -2042,17 +2042,17 @@
         },
         {
             "name": "xoops/xmf",
-            "version": "v1.3.4-RC3",
-            "version_normalized": "1.3.4.0-RC3",
+            "version": "v1.3.4-RC4",
+            "version_normalized": "1.3.4.0-RC4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/XOOPS/xmf.git",
-                "reference": "2e0445646f8a2a0a27089e0d8ac2112448f4c067"
+                "reference": "4043ba685fb1d0f15e2fb35502bc6f0be18c88b7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/2e0445646f8a2a0a27089e0d8ac2112448f4c067",
-                "reference": "2e0445646f8a2a0a27089e0d8ac2112448f4c067",
+                "url": "https://api.github.com/repos/XOOPS/xmf/zipball/4043ba685fb1d0f15e2fb35502bc6f0be18c88b7",
+                "reference": "4043ba685fb1d0f15e2fb35502bc6f0be18c88b7",
                 "shasum": ""
             },
             "require": {
@@ -2068,8 +2068,8 @@
                 "roave/security-advisories": "dev-latest",
                 "squizlabs/php_codesniffer": "^3.11 || ^4.0"
             },
-            "time": "2026-11-20T08:56:45+00:00",
-            "published-time": "2026-11-20T08:58:16+00:00",
+            "time": "2026-11-22T00:47:35+00:00",
+            "published-time": "2026-11-22T00:47:58+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {

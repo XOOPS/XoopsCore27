@@ -74,7 +74,9 @@ final class Db implements DbInterface
      */
     public static function fieldExists(\XoopsMySQLDatabase $db, string $fieldname, string $table): bool
     {
-        if (!preg_match('/^[A-Za-z0-9_]+$/', $fieldname) || !preg_match('/^[A-Za-z0-9_`]+$/', $table)) {
+        // \z, not $: a trailing line feed must not pass. The backtick stays allowed for
+        // callers that pass the table name already quoted.
+        if (!preg_match('/^[A-Za-z0-9_]+\z/', $fieldname) || !preg_match('/^[A-Za-z0-9_`]+\z/', $table)) {
             return false;
         }
 
@@ -92,13 +94,15 @@ final class Db implements DbInterface
      * @param int                             $id        id of the record to clone
      *
      * @return mixed new id on success, false otherwise
+     *
+     * @throws \RuntimeException when the INSERT of the copy fails
      */
     public static function cloneRecord(\XoopsMySQLDatabase $db, $tableName, string $idField, int $id)
     {
         $new_id = false;
         if (
-            !preg_match('/^[A-Za-z0-9_]+$/', (string)$tableName)
-            || !preg_match('/^[A-Za-z0-9_]+$/', (string)$idField)
+            !preg_match('/^[A-Za-z0-9_]+\z/', (string)$tableName)
+            || !preg_match('/^[A-Za-z0-9_]+\z/', (string)$idField)
         ) {
             return false;
         }
@@ -124,7 +128,7 @@ final class Db implements DbInterface
         $sql     = "INSERT INTO $table (" . \implode(', ', $columns) . ') VALUES (' . \implode(', ', $values) . ')';
         $result  = $db->exec($sql);
         if (!$result) {
-            \trigger_error(\sprintf(\_DB_QUERY_ERROR, $sql) . $db->error(), \E_USER_ERROR);
+            throw new \RuntimeException(\sprintf(\_DB_QUERY_ERROR, $sql) . $db->error());
         }
         // Return the new id
         $new_id = $db->getInsertId();
@@ -139,10 +143,12 @@ final class Db implements DbInterface
      * @param string $columnName column to inspect
      *
      * @return list<string>
+     *
+     * @throws \RuntimeException when the query fails
      */
     public static function enumerate(\XoopsMySQLDatabase $db, string $tableName, string $columnName): array
     {
-        if (!preg_match('/^[A-Za-z0-9_]+$/', $tableName) || !preg_match('/^[A-Za-z0-9_]+$/', $columnName)) {
+        if (!preg_match('/^[A-Za-z0-9_]+\z/', $tableName) || !preg_match('/^[A-Za-z0-9_]+\z/', $columnName)) {
             return [];
         }
 
@@ -154,7 +160,7 @@ final class Db implements DbInterface
             . $db->quote($table) . ' AND COLUMN_NAME = ' . $db->quote($columnName);
         $result = $db->query($sql);
         if (!$db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            \trigger_error(\sprintf(\_DB_QUERY_ERROR, $sql) . $db->error(), \E_USER_ERROR);
+            throw new \RuntimeException(\sprintf(\_DB_QUERY_ERROR, $sql) . $db->error());
         }
 
         $row = (($db->isResultSet($result) && ($result instanceof \mysqli_result)) ? $db->fetchBoth($result) : false);

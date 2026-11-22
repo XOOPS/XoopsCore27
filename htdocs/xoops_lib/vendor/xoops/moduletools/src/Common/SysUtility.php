@@ -118,6 +118,8 @@ class SysUtility
      *
      * @param $tableName
      * @param $columnName
+     *
+     * @throws \RuntimeException when the query fails
      */
     public static function enumerate($tableName, $columnName): array
     {
@@ -200,6 +202,8 @@ class SysUtility
      * @param int          $id
      *
      * @return mixed
+     *
+     * @throws \RuntimeException when the INSERT of the copy fails
      */
     public static function cloneRecord($tableName, $id_field, $id)
     {

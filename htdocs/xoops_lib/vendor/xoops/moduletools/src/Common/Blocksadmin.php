@@ -69,6 +69,8 @@ class Blocksadmin
 
     /**
      * @return void
+     *
+     * @throws \RuntimeException when a query fails
      */
     public function listBlocks(): void
     {
@@ -124,7 +126,7 @@ class Blocksadmin
             $sql               = 'SELECT module_id FROM ' . $this->db->prefix('block_module_link') . ' WHERE block_id=' . $i->getVar('bid');
             $result            = $this->db->query($sql);
             if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-                \trigger_error("Query Failed! SQL: $sql Error: " . $this->db->error(), \E_USER_ERROR);
+                throw new \RuntimeException("Query Failed! SQL: $sql Error: " . $this->db->error());
             }
             $modules           = [];
             while (false !== ($row = (($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) ? $this->db->fetchArray($result) : false))) {
@@ -252,6 +254,8 @@ class Blocksadmin
 
     /**
      * @param int $bid
+     *
+     * @throws \RuntimeException when a query fails
      */
     public function deleteBlock(int $bid): void
     {
@@ -268,12 +272,12 @@ class Blocksadmin
         $sql    = \sprintf('DELETE FROM `%s` WHERE bid = %u', $this->db->prefix('newblocks'), $bid);
         $result = $this->db->exec($sql);
         if (!$result) {
-            \trigger_error("Query Failed! SQL: $sql Error: " . $this->db->error(), \E_USER_ERROR);
+            throw new \RuntimeException("Query Failed! SQL: $sql Error: " . $this->db->error());
         }
         $sql = \sprintf('DELETE FROM `%s` WHERE block_id = %u', $this->db->prefix('block_module_link'), $bid);
         $result = $this->db->exec($sql);
         if (!$result) {
-            \trigger_error("Query Failed! SQL: $sql Error: " . $this->db->error(), \E_USER_ERROR);
+            throw new \RuntimeException("Query Failed! SQL: $sql Error: " . $this->db->error());
         }
         // The block's own permission and template rows go with it; nothing else references them.
         $sql = \sprintf("DELETE FROM `%s` WHERE gperm_itemid = %u AND gperm_modid = 1 AND gperm_name = 'block_read'", $this->db->prefix('group_permission'), $bid);
@@ -286,6 +290,8 @@ class Blocksadmin
 
     /**
      * @param int $bid
+     *
+     * @throws \RuntimeException when a query fails
      */
     public function cloneBlock(int $bid): void
     {
@@ -298,7 +304,7 @@ class Blocksadmin
         $sql     = 'SELECT module_id FROM ' . $this->db->prefix('block_module_link') . ' WHERE block_id=' . $bid;
         $result  = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            \trigger_error("Query Failed! SQL: $sql Error: " . $this->db->error(), \E_USER_ERROR);
+            throw new \RuntimeException("Query Failed! SQL: $sql Error: " . $this->db->error());
         }
         $modules = [];
         while (false !== ($row = (($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) ? $this->db->fetchArray($result) : false))) {
@@ -433,6 +439,8 @@ class Blocksadmin
     /**
      * @param int $bid
      * @return void
+     *
+     * @throws \RuntimeException when a query fails
      */
     public function editBlock(int $bid): void
     {
@@ -444,7 +452,7 @@ class Blocksadmin
         $sql     = 'SELECT module_id FROM ' . $this->db->prefix('block_module_link') . ' WHERE block_id=' . $bid;
         $result  = $this->db->query($sql);
         if (!$this->db->isResultSet($result) || !($result instanceof \mysqli_result)) {
-            \trigger_error("Query Failed! SQL: $sql Error: " . $this->db->error(), \E_USER_ERROR);
+            throw new \RuntimeException("Query Failed! SQL: $sql Error: " . $this->db->error());
         }
         $modules = [];
         while (false !== ($row = (($this->db->isResultSet($result) && ($result instanceof \mysqli_result)) ? $this->db->fetchArray($result) : false))) {

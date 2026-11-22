@@ -131,7 +131,12 @@ class Paginator
      */
     public function processQuery(array $usedQuery): string
     {
-        \parse_str((string) ($_SERVER['QUERY_STRING'] ?? ''), $queryVars);
+        $queryString = (string) ($_SERVER['QUERY_STRING'] ?? '');
+        // parse_str() cut the string at a raw NUL byte up to PHP 8.5 and throws as of 8.6.
+        if (\str_contains($queryString, "\0")) {
+            return '';
+        }
+        \parse_str($queryString, $queryVars);
         $filtered = \array_diff_key($queryVars, \array_flip($usedQuery));
 
         return [] === $filtered ? '' : '?' . \http_build_query($filtered, '', '&', \PHP_QUERY_RFC3986);

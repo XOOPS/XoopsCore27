@@ -1081,6 +1081,7 @@ return array(
     'Xoops\\ModuleTools\\Internal\\Presentation\\ObjectValuePresenter' => $vendorDir . '/xoops/moduletools/src/Internal/Presentation/ObjectValuePresenter.php',
     'Xoops\\ModuleTools\\Internal\\Presentation\\SortControlBuilder' => $vendorDir . '/xoops/moduletools/src/Internal/Presentation/SortControlBuilder.php',
     'Xoops\\ModuleTools\\Internal\\Presentation\\SortControlResult' => $vendorDir . '/xoops/moduletools/src/Internal/Presentation/SortControlResult.php',
+    'Xoops\\ModuleTools\\Internal\\SampleFolders' => $vendorDir . '/xoops/moduletools/src/Internal/SampleFolders.php',
     'Xoops\\ModuleTools\\Internal\\Tools\\ConsumerBridgeGenerator' => $vendorDir . '/xoops/moduletools/src/Internal/Tools/ConsumerBridgeGenerator.php',
     'Xoops\\ModuleTools\\Internal\\Update\\VersionUpdatePolicy' => $vendorDir . '/xoops/moduletools/src/Internal/Update/VersionUpdatePolicy.php',
     'Xoops\\ModuleTools\\Internal\\Webmaster' => $vendorDir . '/xoops/moduletools/src/Internal/Webmaster.php',

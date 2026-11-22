@@ -7,6 +7,7 @@ namespace Xoops\ModuleTools\Module;
 use Xoops\ModuleTools\Common\Configurator;
 use Xoops\ModuleTools\Common\SysUtility;
 use Xoops\ModuleTools\Internal\Installation\InstallationPlan;
+use Xoops\ModuleTools\Internal\SampleFolders;
 
 /**
  * Shared module install/update filesystem helper.
@@ -81,14 +82,12 @@ final class Installer
 
     /**
      * Recursively copy each configured `[source, destination]` test-data folder pair.
+     * A pair whose source folder the module does not ship is skipped.
      */
     public static function copyTestFolders(Configurator $configurator): void
     {
-        foreach (self::plan($configurator)->testFolderCopies as $pair) {
-            [$src, $dest] = $pair;
-            if (!SysUtility::rcopy($src, $dest)) {
-                \trigger_error(\sprintf('Test data folder "%s" was not copied to "%s"', $src, $dest), \E_USER_WARNING);
-            }
+        foreach (SampleFolders::copy(self::plan($configurator)->testFolderCopies) as [$src, $dest]) {
+            \trigger_error(\sprintf('Test data folder "%s" was not copied to "%s"', $src, $dest), \E_USER_WARNING);
         }
     }
 

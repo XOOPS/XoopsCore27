@@ -19,6 +19,7 @@ namespace Xoops\ModuleTools\Common;
 use Xmf\Database\TableLoad;
 use Xoops\Helpers\Utility\HtmlBuilder;
 use Xoops\ModuleTools\Internal\PackageLanguage;
+use Xoops\ModuleTools\Internal\SampleFolders;
 use Xoops\ModuleTools\Utility;
 
 /**
@@ -64,7 +65,6 @@ class TestdataSample
     public function loadData(): void
     {
         $this->assertAuthorized();
-        $utility      = new Utility();
         $configurator = new Configurator($this->modHelper->path());
         $tables       = $this->modHelper->getModule()->getInfo('tables');
 
@@ -83,14 +83,8 @@ class TestdataSample
 
         //  ---  COPY test folder files ---------------
         if (\is_array($configurator->copyTestFolders) && \count($configurator->copyTestFolders) > 0) {
-            $failed = [];
-            foreach (\array_keys($configurator->copyTestFolders) as $i) {
-                $src  = $configurator->copyTestFolders[$i][0];
-                $dest = $configurator->copyTestFolders[$i][1];
-                if (!$utility::rcopy($src, $dest)) {
-                    $failed[] = (string) $dest;
-                }
-            }
+            // A sample folder the module does not ship is skipped, as at install time.
+            $failed = \array_column(SampleFolders::copy($configurator->copyTestFolders), 1);
             // rcopy() is webmaster-only: a module-only admin gets the rows but not the files,
             // and must be told so instead of seeing a success message.
             if ([] !== $failed) {

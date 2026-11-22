@@ -14,8 +14,10 @@ declare(strict_types=1);
 /**
  * Runs XoopsLogger's fatal path in its own process, because that path ends in exit().
  *
- * Usage: php fatal-screen-runner.php <guest|member|developer|throwing> <error|exception> [panel]
+ * Usage: php fatal-screen-runner.php <guest|member|developer|throwing>
+ *            <error|exception|notrace-exception|word-prefix|multiline|long> [panel|nologger]
  *
+ * "nologger" registers no logger, as on a site without debug.php.
  * "panel" turns the debug panel on for an audience of everyone (debugLevel 0), so the
  * page also carries whatever render() adds when exit() flushes the buffer.
  *
@@ -60,12 +62,15 @@ error_reporting(E_ALL);
 
 $GLOBALS['recorded'] = [];
 $logger = new XoopsLogger();
-$logger->addLogger(new class {
-    public function log($level, $message, array $context = []): void
-    {
-        $GLOBALS['recorded'][] = (string) $message;
-    }
-});
+// 'nologger' is a site without debug.php: nothing is registered.
+if ('nologger' !== ($argv[3] ?? '')) {
+    $logger->addLogger(new class {
+        public function log($level, $message, array $context = []): void
+        {
+            $GLOBALS['recorded'][] = (string) $message;
+        }
+    });
+}
 
 if ('panel' === ($argv[3] ?? '')) {
     // render.php's query table asks the database for its table prefix.
@@ -101,6 +106,14 @@ register_shutdown_function(static function (): void {
 
 if ('exception' === $entry) {
     $logger->handleException(new RuntimeException('MARKER-7f3a secret detail'));
+} elseif ('notrace-exception' === $entry) {
+    $logger->handleException(new RuntimeException('notrace:MARKER-7f3a secret detail'));
+} elseif ('word-prefix' === $entry) {
+    $logger->handleError(E_USER_ERROR, 'operation: notrace:MARKER-7f3a token', XOOPS_ROOT_PATH . '/somefile.php', 12);
+} elseif ('multiline' === $entry) {
+    $logger->handleError(E_USER_ERROR, "notrace:MARKER-7f3a first\r\nforged notrace:entry", XOOPS_ROOT_PATH . '/somefile.php', 12);
+} elseif ('long' === $entry) {
+    $logger->handleError(E_USER_ERROR, 'MARKER-7f3a ' . str_repeat('x', 10000), XOOPS_ROOT_PATH . '/somefile.php', 12);
 } else {
     $logger->handleError(E_USER_ERROR, 'MARKER-7f3a secret detail', XOOPS_ROOT_PATH . '/somefile.php', 12);
 }

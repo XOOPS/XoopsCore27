@@ -396,6 +396,12 @@ class XoopsLogger
             // developer request sees them; everyone else gets the generic page. The
             // registered loggers above have already received the full detail.
             if (!$this->canSeeErrorDetail()) {
+                $this->logHiddenFatal(
+                    (string) $errstr,
+                    (string) $errfile,
+                    $errline,
+                    is_string($exceptionClass) ? $exceptionClass : null
+                );
                 $errstr       = 'Internal server error';
                 $includeTrace = false;
                 // The panel lists the stored message too, and exit() below flushes it
@@ -529,6 +535,51 @@ class XoopsLogger
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    /**
+     * Write a fatal error whose detail the requester does not get to the PHP error log.
+     *
+     * The requester sees only "Internal server error". The registered loggers have the
+     * detail, but a site without debug.php registers none, so a missing PHP extension or
+     * a database that is down left no trace anywhere. The PHP error log is the last
+     * resort here on purpose: it needs no configuration, and it works before the
+     * bootstrap has loaded anything a PSR-3 logger would need.
+     *
+     * It is written even when loggers are registered: log() cannot tell whether one of
+     * them kept the entry (a failed write is swallowed there, and a collector such as
+     * the debug bar keeps it for the request only).
+     *
+     * Only the message is cut. It is the one part without a natural bound; the file and
+     * line that follow are short, and they are what an administrator needs to find the
+     * place, so a cut over the whole entry would drop them from exactly the long ones.
+     *
+     * @param string      $message        the error message; handleError() has already removed
+     *                                    a "notrace:" marker that opened it
+     * @param string      $file           the file the error was raised in
+     * @param int|string  $line           the line number
+     * @param string|null $exceptionClass the class of the uncaught exception, as
+     *                                    handleException() passes it; null for an error
+     *
+     * @return void
+     */
+    protected function logHiddenFatal(string $message, string $file, $line, ?string $exceptionClass = null): void
+    {
+        // handleException() puts the class name in front of the message, so the marker of
+        // an exception follows that name. Only that exact prefix counts: the same text
+        // anywhere else, or after another word, is part of the message and stays.
+        if (null !== $exceptionClass && str_starts_with($message, $exceptionClass . ': notrace:')) {
+            $message = $exceptionClass . ': ' . substr($message, strlen($exceptionClass) + 10);
+        }
+        // strlen() and substr(), not mb_*: mbstring may be the extension that is missing.
+        if (strlen($message) > 2048) {
+            $message = substr($message, 0, 2048) . ' [truncated]';
+        }
+        $entry = 'XOOPS fatal error: ' . $message . ' in ' . $file . ' on line ' . $line;
+        // One error, one line: a message can carry text from a request, and a line break
+        // in it would start what looks like a separate log entry.
+        $entry = preg_replace('/[\x00-\x1F\x7F]+/', ' ', $entry) ?? $entry;
+        error_log($entry); // pre-commit: allow error_log
     }
 
     /**

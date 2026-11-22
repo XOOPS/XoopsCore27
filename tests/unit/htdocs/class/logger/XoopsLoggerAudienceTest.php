@@ -205,6 +205,99 @@ final class XoopsLoggerAudienceTest extends TestCase
     }
 
     /**
+     * The requester gets the generic page, and a site without debug.php has no logger
+     * registered: the PHP error log is then the only place that names the cause.
+     */
+    #[Test]
+    #[DataProvider('refusedRequesterProvider')]
+    public function aHiddenFatalIsWrittenToThePhpErrorLog(string $requester, string $entry): void
+    {
+        [, , $errorLog] = $this->runFatal($requester, $entry);
+
+        self::assertStringContainsString('XOOPS fatal error: ', $errorLog);
+        self::assertStringContainsString('MARKER-7f3a secret detail', $errorLog);
+        if ('error' === $entry) {
+            self::assertStringContainsString(' in /somefile.php on line 12', $errorLog);
+        }
+    }
+
+    /**
+     * The case the entry exists for: no debug.php, so no logger is registered, and the
+     * PHP error log is the only record.
+     */
+    #[Test]
+    public function aHiddenFatalOnASiteWithoutALoggerIsWrittenToThePhpErrorLog(): void
+    {
+        [$page, $result, $errorLog] = $this->runFatal('guest', 'error', 'nologger');
+
+        self::assertSame([], $result['recorded']);
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a secret detail in /somefile.php on line 12', $errorLog);
+        self::assertStringContainsString('Error : Internal server error', $page);
+        self::assertStringNotContainsString('MARKER-7f3a', $page);
+    }
+
+    /**
+     * The leading marker goes, the same text further in stays, and the entry is one line.
+     */
+    #[Test]
+    public function theErrorLogEntryIsOneLineWithoutTheNotraceMarker(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'multiline');
+
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a first forged notrace:entry in ', $errorLog);
+        self::assertSame(0, substr_count(trim($errorLog), "\n"), $errorLog);
+    }
+
+    /**
+     * handleException() puts the class name in front of the message, so the marker of
+     * "notrace:mysqli extension not loaded" is not at the start any more.
+     */
+    #[Test]
+    public function theNotraceMarkerOfAnExceptionMessageIsRemoved(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'notrace-exception');
+
+        self::assertStringContainsString('XOOPS fatal error: RuntimeException: MARKER-7f3a secret detail in ', $errorLog);
+    }
+
+    /**
+     * Only the class name of a real exception counts as a prefix: "operation: " in an
+     * ordinary message is text, and so is what follows it.
+     */
+    #[Test]
+    public function aWordBeforeTheMarkerInAnOrdinaryMessageIsNotAnExceptionPrefix(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'word-prefix');
+
+        self::assertStringContainsString('XOOPS fatal error: operation: notrace:MARKER-7f3a token in ', $errorLog);
+    }
+
+    /**
+     * The message is the only part of the entry without a natural bound, so it is the
+     * part that is cut; the file and line after it must survive.
+     */
+    #[Test]
+    public function aLongMessageIsCutInTheErrorLog(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'long');
+
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a xxx', $errorLog);
+        self::assertStringContainsString('x [truncated] in /somefile.php on line 12', $errorLog);
+        self::assertLessThan(2400, strlen($errorLog));
+    }
+
+    /**
+     * A developer reads the message on the page: nothing is hidden, nothing is logged.
+     */
+    #[Test]
+    public function aFatalShownToADeveloperIsNotWrittenToThePhpErrorLog(): void
+    {
+        [, , $errorLog] = $this->runFatal('developer', 'error');
+
+        self::assertSame('', $errorLog);
+    }
+
+    /**
      * @param array<string, mixed>|null $config
      */
     private function setRequest(?array $config, string $requester): void
@@ -219,22 +312,31 @@ final class XoopsLoggerAudienceTest extends TestCase
     }
 
     /**
-     * @return array{string, array{status: int|false, recorded: list<string>}}
+     * @return array{string, array{status: int|false, recorded: list<string>}, string} the page,
+     *                the runner's result and what the run wrote to the PHP error log
      */
     private function runFatal(string $requester, string $entry, string $panel = ''): array
     {
-        $command = escapeshellarg(PHP_BINARY)
-            . ' ' . escapeshellarg(__DIR__ . '/fixtures/fatal-screen-runner.php')
-            . ' ' . escapeshellarg($requester)
-            . ' ' . escapeshellarg($entry)
-            . ('' === $panel ? '' : ' ' . escapeshellarg($panel));
-        $output = (string) shell_exec($command);
+        // The run gets its own PHP error log: the default one in the CLI is stderr.
+        $errorLogFile = (string) tempnam(sys_get_temp_dir(), 'xoops-fatal-log-');
+        try {
+            $command = escapeshellarg(PHP_BINARY)
+                . ' -d ' . escapeshellarg('error_log=' . $errorLogFile)
+                . ' ' . escapeshellarg(__DIR__ . '/fixtures/fatal-screen-runner.php')
+                . ' ' . escapeshellarg($requester)
+                . ' ' . escapeshellarg($entry)
+                . ('' === $panel ? '' : ' ' . escapeshellarg($panel));
+            $output   = (string) shell_exec($command);
+            $errorLog = (string) file_get_contents($errorLogFile);
+        } finally {
+            unlink($errorLogFile);
+        }
 
         $parts = explode("\n--RESULT--\n", $output, 2);
         self::assertCount(2, $parts, 'the runner did not finish: ' . $output);
         $result = json_decode($parts[1], true);
         self::assertIsArray($result, 'the runner did not return JSON: ' . $parts[1]);
 
-        return [$parts[0], $result];
+        return [$parts[0], $result, $errorLog];
     }
 }

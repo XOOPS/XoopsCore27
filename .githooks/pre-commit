@@ -114,7 +114,12 @@ if [ -n "$added" ]; then
     hits=$(printf '%s\n' "$added" | grep -E '\beval[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*eval' || true)
     [ -n "$hits" ] && report "eval() is banned — no exceptions" "$hits"
 
-    hits=$(printf '%s\n' "$added" | grep -E '\berror_log[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*error_log' || true)
+    # A call whose line ends in the comment `pre-commit: allow error_log` is
+    # exempt. The one sanctioned use is XoopsLogger::logHiddenFatal(): the
+    # last resort for a fatal error when no PSR-3 logger may be registered.
+    # The marker is per line, so every other call is still reported.
+    hits=$(printf '%s\n' "$added" | grep -E '\berror_log[[:space:]]*\(' | grep -vE '(->|::)[[:space:]]*error_log' \
+        | grep -vE '//[[:space:]]*pre-commit: allow error_log[[:space:]]*$' || true)
     [ -n "$hits" ] && report "error_log() — use the PSR-3 logger instead in new code" "$hits"
 
     # 7. queryF() — deprecated in 2.7

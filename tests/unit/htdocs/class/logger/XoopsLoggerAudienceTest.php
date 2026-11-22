@@ -221,13 +221,53 @@ final class XoopsLoggerAudienceTest extends TestCase
         }
     }
 
+    /**
+     * The case the entry exists for: no debug.php, so no logger is registered, and the
+     * PHP error log is the only record.
+     */
     #[Test]
-    public function theErrorLogEntryIsOneLineWithoutTheNotracePrefix(): void
+    public function aHiddenFatalOnASiteWithoutALoggerIsWrittenToThePhpErrorLog(): void
+    {
+        [$page, $result, $errorLog] = $this->runFatal('guest', 'error', 'nologger');
+
+        self::assertSame([], $result['recorded']);
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a secret detail in /somefile.php on line 12', $errorLog);
+        self::assertStringContainsString('Error : Internal server error', $page);
+        self::assertStringNotContainsString('MARKER-7f3a', $page);
+    }
+
+    /**
+     * The leading marker goes, the same text further in stays, and the entry is one line.
+     */
+    #[Test]
+    public function theErrorLogEntryIsOneLineWithoutTheNotraceMarker(): void
     {
         [, , $errorLog] = $this->runFatal('guest', 'multiline');
 
-        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a first forged entry in ', $errorLog);
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a first forged notrace:entry in ', $errorLog);
         self::assertSame(0, substr_count(trim($errorLog), "\n"), $errorLog);
+    }
+
+    /**
+     * handleException() puts the class name in front of the message, so the marker of
+     * "notrace:mysqli extension not loaded" is not at the start any more.
+     */
+    #[Test]
+    public function theNotraceMarkerOfAnExceptionMessageIsRemoved(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'notrace-exception');
+
+        self::assertStringContainsString('XOOPS fatal error: RuntimeException: MARKER-7f3a secret detail in ', $errorLog);
+    }
+
+    #[Test]
+    public function aLongMessageIsCutInTheErrorLog(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'long');
+
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a xxx', $errorLog);
+        self::assertStringContainsString('x [truncated] in /somefile.php on line 12', $errorLog);
+        self::assertLessThan(2400, strlen($errorLog));
     }
 
     /**

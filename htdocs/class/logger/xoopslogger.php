@@ -537,9 +537,13 @@ class XoopsLogger
      *
      * The requester sees only "Internal server error". The registered loggers have the
      * detail, but a site without debug.php registers none, so a missing PHP extension or
-     * a database that is down left no trace anywhere. error_log() is the last resort
-     * here on purpose: it needs no configuration, and it works before the bootstrap has
-     * loaded anything a PSR-3 logger would need.
+     * a database that is down left no trace anywhere. The PHP error log is the last
+     * resort here on purpose: it needs no configuration, and it works before the
+     * bootstrap has loaded anything a PSR-3 logger would need.
+     *
+     * It is written even when loggers are registered: log() cannot tell whether one of
+     * them kept the entry (a failed write is swallowed there, and a collector such as
+     * the debug bar keeps it for the request only).
      *
      * @param string     $message the error message, with or without the "notrace:" marker
      * @param string     $file    the file the error was raised in
@@ -549,10 +553,18 @@ class XoopsLogger
      */
     protected function logHiddenFatal(string $message, string $file, $line): void
     {
-        $entry = 'XOOPS fatal error: ' . str_replace('notrace:', '', $message) . ' in ' . $file . ' on line ' . $line;
+        // The marker opens the message, or follows the class name handleException() puts
+        // in front. The same text further in is part of the message and stays.
+        $message = preg_replace('/^((?:[\w\\\\]+: )?)notrace:/', '$1', $message) ?? $message;
+        // strlen() and substr(), not mb_*: mbstring may be the extension that is missing.
+        if (strlen($message) > 2048) {
+            $message = substr($message, 0, 2048) . ' [truncated]';
+        }
+        $entry = 'XOOPS fatal error: ' . $message . ' in ' . $file . ' on line ' . $line;
         // One error, one line: a message can carry text from a request, and a line break
         // in it would start what looks like a separate log entry.
-        error_log((string) preg_replace('/[\x00-\x1F\x7F]+/', ' ', $entry));
+        $entry = preg_replace('/[\x00-\x1F\x7F]+/', ' ', $entry) ?? $entry;
+        error_log($entry); // pre-commit: allow error_log
     }
 
     /**

@@ -27,7 +27,7 @@ Sniffs staged PHP and `.tpl` changes for known-bad shapes:
 | 3 | `unserialize($x)` without `'allowed_classes' => false` | Object-injection risk; the rule requires `=> false` literally so `=> true` (allows ANY class) and ambiguous variable-options forms don't slip through |
 | 4 | `extract(` | Banned — access keys explicitly |
 | 5 | `eval(` | Banned, no exceptions |
-| 6 | `error_log(` | Use the PSR-3 logger in new code |
+| 6 | `error_log(` | Use the PSR-3 logger in new code. A call whose line ends in `// pre-commit: allow error_log` is exempt; the one sanctioned use is `XoopsLogger::logHiddenFatal()`, the last resort for a fatal error when no logger may be registered |
 | 7 | `->queryF(` | Deprecated in 2.7 — bypassed Protector |
 | 8 | `->quoteString(` | Deprecated in 2.7 — use `quote()` |
 | 9 | `// removed` | BC-shim antipattern — delete the code instead |

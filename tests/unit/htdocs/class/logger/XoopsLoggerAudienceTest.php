@@ -260,6 +260,22 @@ final class XoopsLoggerAudienceTest extends TestCase
         self::assertStringContainsString('XOOPS fatal error: RuntimeException: MARKER-7f3a secret detail in ', $errorLog);
     }
 
+    /**
+     * Only the class name of a real exception counts as a prefix: "operation: " in an
+     * ordinary message is text, and so is what follows it.
+     */
+    #[Test]
+    public function aWordBeforeTheMarkerInAnOrdinaryMessageIsNotAnExceptionPrefix(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'word-prefix');
+
+        self::assertStringContainsString('XOOPS fatal error: operation: notrace:MARKER-7f3a token in ', $errorLog);
+    }
+
+    /**
+     * The message is the only part of the entry without a natural bound, so it is the
+     * part that is cut; the file and line after it must survive.
+     */
     #[Test]
     public function aLongMessageIsCutInTheErrorLog(): void
     {

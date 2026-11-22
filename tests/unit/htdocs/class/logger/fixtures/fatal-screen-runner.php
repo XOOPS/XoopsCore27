@@ -15,7 +15,7 @@ declare(strict_types=1);
  * Runs XoopsLogger's fatal path in its own process, because that path ends in exit().
  *
  * Usage: php fatal-screen-runner.php <guest|member|developer|throwing>
- *            <error|exception|notrace-exception|multiline|long> [panel|nologger]
+ *            <error|exception|notrace-exception|word-prefix|multiline|long> [panel|nologger]
  *
  * "nologger" registers no logger, as on a site without debug.php.
  * "panel" turns the debug panel on for an audience of everyone (debugLevel 0), so the
@@ -108,6 +108,8 @@ if ('exception' === $entry) {
     $logger->handleException(new RuntimeException('MARKER-7f3a secret detail'));
 } elseif ('notrace-exception' === $entry) {
     $logger->handleException(new RuntimeException('notrace:MARKER-7f3a secret detail'));
+} elseif ('word-prefix' === $entry) {
+    $logger->handleError(E_USER_ERROR, 'operation: notrace:MARKER-7f3a token', XOOPS_ROOT_PATH . '/somefile.php', 12);
 } elseif ('multiline' === $entry) {
     $logger->handleError(E_USER_ERROR, "notrace:MARKER-7f3a first\r\nforged notrace:entry", XOOPS_ROOT_PATH . '/somefile.php', 12);
 } elseif ('long' === $entry) {

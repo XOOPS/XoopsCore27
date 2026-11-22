@@ -396,7 +396,12 @@ class XoopsLogger
             // developer request sees them; everyone else gets the generic page. The
             // registered loggers above have already received the full detail.
             if (!$this->canSeeErrorDetail()) {
-                $this->logHiddenFatal((string) $errstr, (string) $errfile, $errline);
+                $this->logHiddenFatal(
+                    (string) $errstr,
+                    (string) $errfile,
+                    $errline,
+                    is_string($exceptionClass) ? $exceptionClass : null
+                );
                 $errstr       = 'Internal server error';
                 $includeTrace = false;
                 // The panel lists the stored message too, and exit() below flushes it
@@ -545,17 +550,27 @@ class XoopsLogger
      * them kept the entry (a failed write is swallowed there, and a collector such as
      * the debug bar keeps it for the request only).
      *
-     * @param string     $message the error message, with or without the "notrace:" marker
-     * @param string     $file    the file the error was raised in
-     * @param int|string $line    the line number
+     * Only the message is cut. It is the one part without a natural bound; the file and
+     * line that follow are short, and they are what an administrator needs to find the
+     * place, so a cut over the whole entry would drop them from exactly the long ones.
+     *
+     * @param string      $message        the error message; handleError() has already removed
+     *                                    a "notrace:" marker that opened it
+     * @param string      $file           the file the error was raised in
+     * @param int|string  $line           the line number
+     * @param string|null $exceptionClass the class of the uncaught exception, as
+     *                                    handleException() passes it; null for an error
      *
      * @return void
      */
-    protected function logHiddenFatal(string $message, string $file, $line): void
+    protected function logHiddenFatal(string $message, string $file, $line, ?string $exceptionClass = null): void
     {
-        // The marker opens the message, or follows the class name handleException() puts
-        // in front. The same text further in is part of the message and stays.
-        $message = preg_replace('/^((?:[\w\\\\]+: )?)notrace:/', '$1', $message) ?? $message;
+        // handleException() puts the class name in front of the message, so the marker of
+        // an exception follows that name. Only that exact prefix counts: the same text
+        // anywhere else, or after another word, is part of the message and stays.
+        if (null !== $exceptionClass && str_starts_with($message, $exceptionClass . ': notrace:')) {
+            $message = $exceptionClass . ': ' . substr($message, strlen($exceptionClass) + 10);
+        }
         // strlen() and substr(), not mb_*: mbstring may be the extension that is missing.
         if (strlen($message) > 2048) {
             $message = substr($message, 0, 2048) . ' [truncated]';

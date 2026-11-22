@@ -205,6 +205,43 @@ final class XoopsLoggerAudienceTest extends TestCase
     }
 
     /**
+     * The requester gets the generic page, and a site without debug.php has no logger
+     * registered: the PHP error log is then the only place that names the cause.
+     */
+    #[Test]
+    #[DataProvider('refusedRequesterProvider')]
+    public function aHiddenFatalIsWrittenToThePhpErrorLog(string $requester, string $entry): void
+    {
+        [, , $errorLog] = $this->runFatal($requester, $entry);
+
+        self::assertStringContainsString('XOOPS fatal error: ', $errorLog);
+        self::assertStringContainsString('MARKER-7f3a secret detail', $errorLog);
+        if ('error' === $entry) {
+            self::assertStringContainsString(' in /somefile.php on line 12', $errorLog);
+        }
+    }
+
+    #[Test]
+    public function theErrorLogEntryIsOneLineWithoutTheNotracePrefix(): void
+    {
+        [, , $errorLog] = $this->runFatal('guest', 'multiline');
+
+        self::assertStringContainsString('XOOPS fatal error: MARKER-7f3a first forged entry in ', $errorLog);
+        self::assertSame(0, substr_count(trim($errorLog), "\n"), $errorLog);
+    }
+
+    /**
+     * A developer reads the message on the page: nothing is hidden, nothing is logged.
+     */
+    #[Test]
+    public function aFatalShownToADeveloperIsNotWrittenToThePhpErrorLog(): void
+    {
+        [, , $errorLog] = $this->runFatal('developer', 'error');
+
+        self::assertSame('', $errorLog);
+    }
+
+    /**
      * @param array<string, mixed>|null $config
      */
     private function setRequest(?array $config, string $requester): void
@@ -219,22 +256,31 @@ final class XoopsLoggerAudienceTest extends TestCase
     }
 
     /**
-     * @return array{string, array{status: int|false, recorded: list<string>}}
+     * @return array{string, array{status: int|false, recorded: list<string>}, string} the page,
+     *                the runner's result and what the run wrote to the PHP error log
      */
     private function runFatal(string $requester, string $entry, string $panel = ''): array
     {
-        $command = escapeshellarg(PHP_BINARY)
-            . ' ' . escapeshellarg(__DIR__ . '/fixtures/fatal-screen-runner.php')
-            . ' ' . escapeshellarg($requester)
-            . ' ' . escapeshellarg($entry)
-            . ('' === $panel ? '' : ' ' . escapeshellarg($panel));
-        $output = (string) shell_exec($command);
+        // The run gets its own PHP error log: the default one in the CLI is stderr.
+        $errorLogFile = (string) tempnam(sys_get_temp_dir(), 'xoops-fatal-log-');
+        try {
+            $command = escapeshellarg(PHP_BINARY)
+                . ' -d ' . escapeshellarg('error_log=' . $errorLogFile)
+                . ' ' . escapeshellarg(__DIR__ . '/fixtures/fatal-screen-runner.php')
+                . ' ' . escapeshellarg($requester)
+                . ' ' . escapeshellarg($entry)
+                . ('' === $panel ? '' : ' ' . escapeshellarg($panel));
+            $output   = (string) shell_exec($command);
+            $errorLog = (string) file_get_contents($errorLogFile);
+        } finally {
+            unlink($errorLogFile);
+        }
 
         $parts = explode("\n--RESULT--\n", $output, 2);
         self::assertCount(2, $parts, 'the runner did not finish: ' . $output);
         $result = json_decode($parts[1], true);
         self::assertIsArray($result, 'the runner did not return JSON: ' . $parts[1]);
 
-        return [$parts[0], $result];
+        return [$parts[0], $result, $errorLog];
     }
 }

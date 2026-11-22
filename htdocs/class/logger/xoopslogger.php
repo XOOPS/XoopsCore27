@@ -396,6 +396,7 @@ class XoopsLogger
             // developer request sees them; everyone else gets the generic page. The
             // registered loggers above have already received the full detail.
             if (!$this->canSeeErrorDetail()) {
+                $this->logHiddenFatal((string) $errstr, (string) $errfile, $errline);
                 $errstr       = 'Internal server error';
                 $includeTrace = false;
                 // The panel lists the stored message too, and exit() below flushes it
@@ -529,6 +530,29 @@ class XoopsLogger
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    /**
+     * Write a fatal error whose detail the requester does not get to the PHP error log.
+     *
+     * The requester sees only "Internal server error". The registered loggers have the
+     * detail, but a site without debug.php registers none, so a missing PHP extension or
+     * a database that is down left no trace anywhere. error_log() is the last resort
+     * here on purpose: it needs no configuration, and it works before the bootstrap has
+     * loaded anything a PSR-3 logger would need.
+     *
+     * @param string     $message the error message, with or without the "notrace:" marker
+     * @param string     $file    the file the error was raised in
+     * @param int|string $line    the line number
+     *
+     * @return void
+     */
+    protected function logHiddenFatal(string $message, string $file, $line): void
+    {
+        $entry = 'XOOPS fatal error: ' . str_replace('notrace:', '', $message) . ' in ' . $file . ' on line ' . $line;
+        // One error, one line: a message can carry text from a request, and a line break
+        // in it would start what looks like a separate log entry.
+        error_log((string) preg_replace('/[\x00-\x1F\x7F]+/', ' ', $entry));
     }
 
     /**

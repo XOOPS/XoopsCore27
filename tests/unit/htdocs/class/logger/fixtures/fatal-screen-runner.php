@@ -14,7 +14,7 @@ declare(strict_types=1);
 /**
  * Runs XoopsLogger's fatal path in its own process, because that path ends in exit().
  *
- * Usage: php fatal-screen-runner.php <guest|member|developer|throwing> <error|exception> [panel]
+ * Usage: php fatal-screen-runner.php <guest|member|developer|throwing> <error|exception|multiline> [panel]
  *
  * "panel" turns the debug panel on for an audience of everyone (debugLevel 0), so the
  * page also carries whatever render() adds when exit() flushes the buffer.
@@ -101,6 +101,8 @@ register_shutdown_function(static function (): void {
 
 if ('exception' === $entry) {
     $logger->handleException(new RuntimeException('MARKER-7f3a secret detail'));
+} elseif ('multiline' === $entry) {
+    $logger->handleError(E_USER_ERROR, "notrace:MARKER-7f3a first\r\nforged entry", XOOPS_ROOT_PATH . '/somefile.php', 12);
 } else {
     $logger->handleError(E_USER_ERROR, 'MARKER-7f3a secret detail', XOOPS_ROOT_PATH . '/somefile.php', 12);
 }

@@ -101,4 +101,41 @@ class ProfileCorePreload extends XoopsPreloadItem
         header('location: ./modules/profile/userinfo.php' . self::filteredQueryString());
         exit();
     }
+
+    /**
+     * An account was deleted: remove its row of profile field values.
+     * XoopsMemberHandler::deleteUser() raises the event for every delete path
+     * (own account, system and profile administration) once the account is
+     * gone, so a failure here is reported and never undoes the delete. A row
+     * that stays is removed by cleanOrphan() on the next module update.
+     * admin/user.php also calls this directly, for a module that is inactive
+     * and has no listener; a second run finds no row.
+     *
+     * @param mixed $args the deleted XoopsUser
+     * @return void
+     */
+    public static function eventCoreBehaviorUserDelete($args)
+    {
+        $uid = $args instanceof XoopsUser ? (int) $args->getVar('uid') : 0;
+        if ($uid <= 0) {
+            return;
+        }
+        try {
+            $handler = static::profileHandler();
+            $removed = is_object($handler) && false !== $handler->deleteAll(new Criteria('profile_id', $uid));
+        } catch (\Throwable) {
+            $removed = false;
+        }
+        if (!$removed) {
+            trigger_error(sprintf('User %d deleted; its profile row could not be removed', $uid), E_USER_WARNING);
+        }
+    }
+
+    /**
+     * @return ProfileProfileHandler|false
+     */
+    protected static function profileHandler()
+    {
+        return xoops_getModuleHandler('profile', basename(dirname(__DIR__)), true);
+    }
 }

@@ -20,9 +20,12 @@ use PHPUnit\Framework\TestCase;
 use RedirectHeaderException;
 
 /**
- * The profile module's admin delete used to remove the profile row and then
- * call deleteUser(). deleteUser() can refuse (its token delete can fail), and
- * a refused account must keep its profile row, so the account goes first.
+ * The profile row of a deleted account is removed by the module's listener of
+ * core.behavior.user.delete (see ProfileCorePreloadUserDeleteTest). The admin
+ * page can be opened while the module is inactive and no listener is loaded,
+ * so after a successful deleteUser() it runs that listener itself; it has no
+ * row delete of its own. deleteUser() can refuse (its token delete can fail):
+ * the page then says what failed and the account keeps its profile row.
  * The confirmed-delete branch of modules/profile/admin/user.php is sliced out
  * and executed with spies; each case runs in its own process because the
  * branch needs a language constant.
@@ -34,9 +37,13 @@ use RedirectHeaderException;
  * @license   GNU GPL 2 or later (https://www.gnu.org/licenses/gpl-2.0.html)
  * @link      https://xoops.org
  */
-final class AdminUserDeleteOrderTest extends TestCase
+final class AdminUserDeleteTest extends TestCase
 {
     private const NS = 'Tests\\Unit\\Modules\\Profile\\DeleteSandbox';
+
+    private const BRANCH_START = "            if (!\$handler->deleteUser(\$obj)) {";
+
+    private const BRANCH_END = "        } else {\n            xoops_confirm(";
 
     protected function setUp(): void
     {
@@ -49,20 +56,31 @@ final class AdminUserDeleteOrderTest extends TestCase
         $GLOBALS['userErrors'] = [];
         $GLOBALS['deleteOrderLog']       = [];
         $GLOBALS['deleteUserResult']     = true;
-        $GLOBALS['profileDeleteResult']  = true;
-        $GLOBALS['profileExists']        = true;
+        $GLOBALS['profileCleanupThrows'] = false;
         $this->loadSandbox();
     }
 
     #[Test]
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
-    public function theAccountIsDeletedBeforeItsProfileRowAndSuccessRedirects(): void
+    public function aCleanupThatThrowsStillEndsInTheSuccessRedirect(): void
+    {
+        // the account is gone; the page must not end in the error page
+        $GLOBALS['profileCleanupThrows'] = true;
+        $out = $this->runBranch();
+        self::assertInstanceOf(RedirectHeaderException::class, $out['redirect']);
+        self::assertSame(['deleteUser:10', 'profileCleanup:10'], $GLOBALS['deleteOrderLog']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function theProfileRowIsCleanedAfterTheAccountAndSuccessRedirects(): void
     {
         $out = $this->runBranch();
         self::assertInstanceOf(RedirectHeaderException::class, $out['redirect']);
         self::assertStringContainsString('Deleted alice', $out['redirect']->getMessage());
-        self::assertSame(['deleteUser:10', 'profileDelete:10'], $GLOBALS['deleteOrderLog']);
+        self::assertSame(['deleteUser:10', 'profileCleanup:10'], $GLOBALS['deleteOrderLog']);
         self::assertSame('', $out['echo']);
     }
 
@@ -77,6 +95,23 @@ final class AdminUserDeleteOrderTest extends TestCase
         self::assertSame(['deleteUser:10'], $GLOBALS['deleteOrderLog'], 'the profile row must not be touched');
         // deleteUser() leaves no error on the object when its token step fails
         self::assertSame('error:Deleting alice failed', $out['echo']);
+    }
+
+    #[Test]
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function thePageRemovesTheRowThroughTheListenerOnly(): void
+    {
+        $source = (string) file_get_contents(dirname(__DIR__, 5) . '/htdocs/modules/profile/admin/user.php');
+        // an inactive module's preload is not loaded by XoopsPreload
+        self::assertStringContainsString("include_once dirname(__DIR__) . '/preloads/core.php';", $source);
+        $start = strpos($source, "    case 'delete':");
+        self::assertNotFalse($start);
+        $case = substr($source, $start);
+        self::assertSame(1, substr_count($case, '->deleteUser('));
+        self::assertSame(1, substr_count($case, 'ProfileCorePreload::eventCoreBehaviorUserDelete($obj);'));
+        self::assertStringNotContainsString('xoops_getModuleHandler(', $case, 'no second row delete beside the listener');
+        self::assertStringNotContainsString('->delete(', $case, 'no second row delete beside the listener');
     }
 
     #[Test]
@@ -116,29 +151,6 @@ final class AdminUserDeleteOrderTest extends TestCase
         self::assertSame('error:row locked', $out['echo']);
     }
 
-    #[Test]
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
-    public function aFailedProfileDeleteIsReportedAfterTheAccountIsGone(): void
-    {
-        $GLOBALS['profileDeleteResult'] = false;
-        $out = $this->runBranch();
-        self::assertNull($out['redirect']);
-        self::assertSame(['deleteUser:10', 'profileDelete:10'], $GLOBALS['deleteOrderLog']);
-        self::assertSame('profile-errors', $out['echo']);
-    }
-
-    #[Test]
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
-    public function anAccountWithoutAProfileRowIsDeletedAndRedirects(): void
-    {
-        $GLOBALS['profileExists'] = false;
-        $out = $this->runBranch();
-        self::assertInstanceOf(RedirectHeaderException::class, $out['redirect']);
-        self::assertSame(['deleteUser:10'], $GLOBALS['deleteOrderLog']);
-    }
-
     /**
      * @return array{redirect: ?RedirectHeaderException, echo: string}
      */
@@ -165,8 +177,8 @@ final class AdminUserDeleteOrderTest extends TestCase
         }
         $source = file_get_contents(dirname(__DIR__, 5) . '/htdocs/modules/profile/admin/user.php');
         self::assertNotFalse($source);
-        $start = strpos($source, "            \$profile_handler = xoops_getModuleHandler('profile');");
-        $end   = strpos($source, "        } else {\n            xoops_confirm(", (int) $start);
+        $start = strpos($source, self::BRANCH_START);
+        $end   = strpos($source, self::BRANCH_END, (int) $start);
         self::assertNotFalse($start, 'confirmed-delete branch start marker');
         self::assertNotFalse($end, 'confirmed-delete branch end marker');
         $branch = substr($source, $start, $end - $start);
@@ -177,22 +189,14 @@ final class AdminUserDeleteOrderTest extends TestCase
         function xoops_error(string|array $msg): void {
             echo 'error:' . (is_array($msg) ? implode(',', $msg) : $msg);
         }
-        function xoops_getModuleHandler(string $name): object {
-            return new class {
-                public function get(int $uid): ?object {
-                    if (!$GLOBALS['profileExists']) { return null; }
-                    return new class($uid) {
-                        public function __construct(private int $uid) {}
-                        public function isNew(): bool { return false; }
-                        public function getHtmlErrors(): string { return 'profile-errors'; }
-                        public function uid(): int { return $this->uid; }
-                    };
+        // the branch names the class unqualified, so this one stands in for the module's
+        final class ProfileCorePreload {
+            public static function eventCoreBehaviorUserDelete(object $user): void {
+                $GLOBALS['deleteOrderLog'][] = 'profileCleanup:' . $user->getVar('uid');
+                if ($GLOBALS['profileCleanupThrows']) {
+                    throw new \RuntimeException('cleanup broke');
                 }
-                public function delete(object $profile): bool {
-                    $GLOBALS['deleteOrderLog'][] = 'profileDelete:' . $profile->uid();
-                    return $GLOBALS['profileDeleteResult'];
-                }
-            };
+            }
         }
         PHP;
         eval($stubs);

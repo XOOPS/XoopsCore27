@@ -27,6 +27,12 @@ use ReflectionProperty;
  */
 class XoopsMemberHandlerTest extends TestCase
 {
+    /** core.behavior.user.delete, as XoopsPreload keys it */
+    private const USER_DELETE_EVENT = 'corebehavioruserdelete';
+
+    /** the warning for a listener that threw RuntimeException('listener broke') in this file */
+    private const LISTENER_FAILED = '/^User 10 deleted; a core\.behavior\.user\.delete listener failed: RuntimeException at XoopsMemberHandlerTest\.php:\d+$/';
+
     /** @var XoopsMemberHandler */
     private $handler;
     /** @var XoopsGroupHandler|\PHPUnit\Framework\MockObject\MockObject */
@@ -504,6 +510,14 @@ class XoopsMemberHandlerTest extends TestCase
             rmdir($dir);
         }
         $this->factorDirs = [];
+        if ($this->listening) {
+            $events = &\XoopsPreload::getInstance()->_events;
+            unset($events[self::USER_DELETE_EVENT]);
+            if (null !== $this->listenersBefore) {
+                $events[self::USER_DELETE_EVENT] = $this->listenersBefore;
+            }
+            $this->listening = false;
+        }
         parent::tearDown();
     }
 
@@ -626,6 +640,123 @@ class XoopsMemberHandlerTest extends TestCase
         $this->userHandler->expects($this->never())->method('delete');
 
         $this->assertFalse($this->handler->deleteUser($user));
+    }
+
+    public function testDeleteUserTellsListenersOnceTheAccountIsGone(): void
+    {
+        $this->listenForUserDelete();
+        $user = $this->createStubUser(10, 'olduser');
+        $this->membershipHandler->method('deleteAll')->willReturn(true);
+        $this->userHandler->method('delete')->willReturnCallback(static function () {
+            // the account row goes before any listener runs
+            self::assertSame([], UserDeleteEventSpy::$deleted);
+            return true;
+        });
+
+        $this->assertTrue($this->handler->deleteUser($user));
+        $this->assertSame([$user], UserDeleteEventSpy::$deleted);
+    }
+
+    public function testDeleteUserTellsNoListenerWhenTheDeleteIsRefused(): void
+    {
+        $this->listenForUserDelete();
+        $this->membershipHandler->method('deleteAll')->willReturn(true);
+        $this->userHandler->method('delete')->willReturn(false);
+
+        $this->assertFalse($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
+        $this->assertSame([], UserDeleteEventSpy::$deleted);
+    }
+
+    public function testDeleteUserStaysDeletedWhenAListenerThrows(): void
+    {
+        $this->listenForUserDelete();
+        UserDeleteEventSpy::$failure = new \RuntimeException('listener broke');
+        $this->membershipHandler->method('deleteAll')->willReturn(true);
+        $this->userHandler->method('delete')->willReturn(true);
+
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = [$level, $message];
+            return true;
+        });
+        try {
+            $this->assertTrue($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
+        } finally {
+            restore_error_handler();
+        }
+        self::assertCount(1, $warnings);
+        self::assertSame(E_USER_WARNING, $warnings[0][0]);
+        // class and place of the failure, never the exception's own text
+        self::assertMatchesRegularExpression(self::LISTENER_FAILED, $warnings[0][1]);
+    }
+
+    public function testDeleteUserOnAnotherConnectionTellsNoListener(): void
+    {
+        // uid 10 of another database is not this site's uid 10: a listener
+        // would remove this site's rows for an account that still exists.
+        $this->listenForUserDelete();
+        $this->userHandler->db = $this->db;
+        $this->membershipHandler->method('deleteAll')->willReturn(true);
+        $this->userHandler->method('delete')->willReturn(true);
+
+        $this->assertTrue($this->handler->deleteUser($this->createStubUser(10, 'olduser')));
+        $this->assertSame([], UserDeleteEventSpy::$deleted);
+    }
+
+    public function testDeleteUserStaysDeletedWhenTheUserObjectFailsAfterwards(): void
+    {
+        $this->listenForUserDelete();
+        UserDeleteEventSpy::$failure = new \RuntimeException('listener broke');
+        $gone = false;
+        $user = $this->createMock(XoopsUser::class);
+        $user->method('getVar')->willReturnCallback(static function () use (&$gone) {
+            if ($gone) {
+                throw new \LogicException('the account is gone');
+            }
+            return 10;
+        });
+        $this->membershipHandler->method('deleteAll')->willReturn(true);
+        $this->userHandler->method('delete')->willReturnCallback(static function () use (&$gone) {
+            $gone = true;
+            return true;
+        });
+
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            $this->assertTrue($this->handler->deleteUser($user));
+        } finally {
+            restore_error_handler();
+        }
+        self::assertCount(1, $warnings);
+        self::assertMatchesRegularExpression(self::LISTENER_FAILED, $warnings[0]);
+    }
+
+    /** @var array<int, array{class_name: string, method: string}>|null listeners registered before the spy */
+    private ?array $listenersBefore = null;
+
+    private bool $listening = false;
+
+    /**
+     * Register the spy, on a handler that works on this site's connection.
+     */
+    private function listenForUserDelete(): void
+    {
+        UserDeleteEventSpy::$deleted = [];
+        UserDeleteEventSpy::$failure = null;
+        $this->userHandler->db       = $GLOBALS['xoopsDB'];
+        $events                      = &\XoopsPreload::getInstance()->_events;
+        $this->listenersBefore       = $events[self::USER_DELETE_EVENT] ?? null;
+        $this->listening             = true;
+        // The spy alone: a listener registered earlier would add its own
+        // warnings. tearDown() puts the earlier list back.
+        $events[self::USER_DELETE_EVENT] = [[
+            'class_name' => UserDeleteEventSpy::class,
+            'method'     => 'eventCoreBehaviorUserDelete',
+        ]];
     }
 
     // =========================================================================
@@ -1731,5 +1862,25 @@ class XoopsMemberHandlerTest extends TestCase
                  ->willReturnOnConsecutiveCalls(...$fetchReturns);
 
         return $result;
+    }
+}
+
+/**
+ * Listener for core.behavior.user.delete: records the user it is given, or
+ * throws the failure it was told to throw.
+ */
+final class UserDeleteEventSpy
+{
+    /** @var list<mixed> */
+    public static array $deleted = [];
+
+    public static ?\Throwable $failure = null;
+
+    public static function eventCoreBehaviorUserDelete(mixed $args): void
+    {
+        if (null !== self::$failure) {
+            throw self::$failure;
+        }
+        self::$deleted[] = $args;
     }
 }

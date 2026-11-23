@@ -41,14 +41,33 @@ final class ProfileCorePreloadUserDeleteTest extends TestCase
     }
 
     #[Test]
-    public function theListenerIsFoundUnderTheEventName(): void
+    public function xoopsPreloadRegistersTheListenerAndTheEventReachesIt(): void
     {
-        self::assertTrue(method_exists(\ProfileCorePreload::class, 'eventCoreBehaviorUserDelete'));
-        // XoopsPreload derives the event from the method name
-        self::assertSame(
-            str_replace('.', '', 'core.behavior.user.delete'),
-            strtolower(str_replace('event', '', 'eventCoreBehaviorUserDelete')),
-        );
+        // Let XoopsPreload build its registry from the module's preload file,
+        // as it does for an active module, then raise the event through it.
+        $preload  = \XoopsPreload::getInstance();
+        $preloads = $preload->_preloads;
+        $events   = $preload->_events;
+        $warnings = [];
+        set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+            $warnings[] = [$level, $message];
+            return true;
+        });
+        try {
+            $preload->_preloads = [['module' => 'profile', 'file' => 'core']];
+            $preload->_events   = [];
+            $preload->setEvents();
+            $registered = $preload->_events['corebehavioruserdelete'] ?? [];
+            $preload->triggerEvent('core.behavior.user.delete', $this->user(10));
+        } finally {
+            restore_error_handler();
+            $preload->_preloads = $preloads;
+            $preload->_events   = $events;
+        }
+
+        self::assertSame([['class_name' => 'ProfileCorePreload', 'method' => 'eventCoreBehaviorUserDelete']], $registered);
+        // The real listener ran: the test bootstrap has no profile handler, and it says so.
+        self::assertSame([[E_USER_WARNING, 'User 10 deleted; its profile row could not be removed']], $warnings);
     }
 
     #[Test]
@@ -149,6 +168,10 @@ final class ProfilePreloadWithFakeHandler extends \ProfileCorePreload
     }
 }
 
+/**
+ * Stands in for ProfileProfileHandler: records the criteria of each delete
+ * and returns, or throws, what the test set.
+ */
 final class FakeProfileRowHandler
 {
     /** @var list<\Criteria> */

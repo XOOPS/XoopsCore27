@@ -751,10 +751,12 @@ class XoopsMemberHandlerTest extends TestCase
         $events                      = &\XoopsPreload::getInstance()->_events;
         $this->listenersBefore       = $events[self::USER_DELETE_EVENT] ?? null;
         $this->listening             = true;
-        $events[self::USER_DELETE_EVENT][] = [
+        // The spy alone: a listener registered earlier would add its own
+        // warnings. tearDown() puts the earlier list back.
+        $events[self::USER_DELETE_EVENT] = [[
             'class_name' => UserDeleteEventSpy::class,
             'method'     => 'eventCoreBehaviorUserDelete',
-        ];
+        ]];
     }
 
     // =========================================================================

@@ -199,7 +199,9 @@ class XoopsMemberHandler
         // Tokens go first: a user delete that fails afterwards must not leave
         // a dead account with live tokens, and a token delete that fails
         // stops the account delete for the same reason.
-        if (null !== $this->tokenHandler && !$this->tokenHandler->deleteByUid((int) $user->getVar('uid'))) {
+        // Read once: nothing after the account delete may depend on the object.
+        $uid = (int) $user->getVar('uid');
+        if (null !== $this->tokenHandler && !$this->tokenHandler->deleteByUid($uid)) {
             return false;
         }
         $criteria = $this->createSafeInCriteria('uid', $user->getVar('uid'));
@@ -210,19 +212,49 @@ class XoopsMemberHandler
         // account is gone: deleting it first would disable 2FA on a failed
         // account deletion, and a transaction cannot restore a MyISAM user.
         try {
-            if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid((int) $user->getVar('uid'))) {
+            if (null !== $this->user2faHandler && !$this->user2faHandler->deleteByUid($uid)) {
                 throw new \RuntimeException('Second-factor cleanup failed');
             }
         } catch (\Throwable $e) {
             // The account is already gone; an orphaned factor grants no login.
-            try {
-                trigger_error(sprintf('User %d deleted; second-factor cleanup unavailable', (int) $user->getVar('uid')), E_USER_WARNING);
-            } catch (\Throwable) {
-                // The account is already gone; a throwing diagnostic handler must not report the deletion as failed.
+            $this->warnAfterDelete(sprintf('User %d deleted; second-factor cleanup unavailable', $uid));
+        }
+        // Modules that keep rows per user (the profile module does) remove
+        // them here. $user still holds the deleted account's values.
+        // Listeners work on this site's tables, so a handler built on another
+        // connection, whose uid is another site's account, tells nobody.
+        try {
+            if (class_exists('XoopsPreload') && isset($GLOBALS['xoopsDB']) && $this->userHandler->db === $GLOBALS['xoopsDB']) {
+                XoopsPreload::getInstance()->triggerEvent('core.behavior.user.delete', $user);
             }
+        } catch (\Throwable $e) {
+            // Where it failed, without the exception's own text: that can hold a server path.
+            $this->warnAfterDelete(sprintf(
+                'User %d deleted; a core.behavior.user.delete listener failed: %s at %s:%d',
+                $uid,
+                $e::class,
+                basename($e->getFile()),
+                $e->getLine(),
+            ));
         }
 
         return true;
+    }
+
+    /**
+     * Report a cleanup that failed once the account was gone. A diagnostic
+     * handler that throws must not report the deletion as failed.
+     *
+     * @param string $message
+     * @return void
+     */
+    private function warnAfterDelete(string $message): void
+    {
+        try {
+            trigger_error($message, E_USER_WARNING);
+        } catch (\Throwable) {
+            // the account is already gone
+        }
     }
 
     /**

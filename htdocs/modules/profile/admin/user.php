@@ -20,6 +20,8 @@
 use Xmf\Request;
 
 include_once __DIR__ . '/admin_header.php';
+// for the delete below; XoopsPreload loads it only for an active module
+include_once dirname(__DIR__) . '/preloads/core.php';
 xoops_cp_header();
 $indexAdmin = new ModuleAdmin();
 $indexAdmin->addItemButton(_PROFILE_AM_ADDUSER, 'user.php?op=new', 'add', '');
@@ -232,10 +234,9 @@ switch ($op) {
             if (!$GLOBALS['xoopsSecurity']->check()) {
                 redirect_header('user.php', 3, implode(',', $GLOBALS['xoopsSecurity']->getErrors()), false);
             }
-            $profile_handler = xoops_getModuleHandler('profile');
-            $profile         = $profile_handler->get($obj->getVar('uid'));
-            // The account goes first: deleteUser() can refuse, and a refused
-            // account keeps its profile row.
+            // The profile row goes with the account: deleteUser() raises
+            // core.behavior.user.delete, and this module's preload removes
+            // the row once the account is gone. A refused account keeps it.
             if (!$handler->deleteUser($obj)) {
                 // A refused delete (tokens, memberships or the row) does not
                 // always leave an error on the object; say what failed.
@@ -248,9 +249,16 @@ switch ($op) {
                     default                              => 'Deleting %s failed; the account was not removed',
                 };
                 xoops_error([] === $errors ? sprintf($failed, (string) $obj->getVar('uname')) : $errors);
-            } elseif ($profile && !$profile->isNew() && !$profile_handler->delete($profile)) {
-                echo $profile->getHtmlErrors();
             } else {
+                // This page also opens while the module is inactive, and an
+                // inactive module's preload is not loaded: run the cleanup
+                // here as well. After the listener it finds no row.
+                try {
+                    ProfileCorePreload::eventCoreBehaviorUserDelete($obj);
+                } catch (\Throwable) {
+                    // The account is gone and the listener has reported what
+                    // failed; a row that stays goes on the next module update.
+                }
                 redirect_header('user.php', 3, sprintf(_PROFILE_AM_DELETEDSUCCESS, $obj->getVar('uname') . ' (' . $obj->getVar('email') . ')'), false);
             }
         } else {

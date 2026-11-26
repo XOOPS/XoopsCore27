@@ -1,16 +1,16 @@
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
-    <li><{$smarty.const._MD_LEXIKON_SUBMITART}></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
+    <li class="breadcrumb-item"><{$smarty.const._MD_LEXIKON_SUBMITART}></li>
 </ol>
 
 <div class="row">
     <div class="col-md-12">
-        <div class="panel panel-info">
-            <div class="panel-heading">
+        <div class="card border-info">
+            <div class="card-header">
                 <h4><{$send_def_to}></h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <p><{$smarty.const._MD_LEXIKON_GOODDAY}></p>
                 <p><b><{$lx_user_name}></b>, <{$smarty.const._MD_LEXIKON_SUB_SNEWNAMEDESC}></p>
             </div>
@@ -35,7 +35,7 @@
 </div>
 <script type="text/javascript">
     $('#sub-lex select').each(function () {
-        $(this).addClass("form-control");
+        $(this).addClass("form-select");
     });
     $('#sub-lex input[type=text]').each(function () {
         $(this).addClass("form-control");

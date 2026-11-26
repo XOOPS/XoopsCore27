@@ -97,7 +97,7 @@
 </div>
 
 <{if isset($itemfooter)}>
-    <div class="panel-footer">
+    <div class="card-footer">
         <small><{$itemfooter}></small>
     </div>
 <{/if}>

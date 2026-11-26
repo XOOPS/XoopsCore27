@@ -9,3 +9,4 @@
 // Task: datahtaccess; %s is the file, e.g. xoops_data/.htaccess
 define('_XOOPS_UPGRADE_275_HTACCESS_UPDATED', '%s was updated so that Apache 2.4 denies access to it as Apache 2.2 does');
 define('_XOOPS_UPGRADE_275_HTACCESS_NOT_WRITTEN', '%s could not be written. It still uses Apache 2.2 syntax, which Apache 2.4 answers with a server error instead of denying access. Replace it with xoops_data/.htaccess from this release.');
+define('_XOOPS_UPGRADE_275_ASSET_NOT_REMOVED', 'Could not remove obsolete asset %s. Remove it manually or correct its directory permissions and retry.');

@@ -1,7 +1,7 @@
 <{* New Header block *}>
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-    <li><{$lang_modulename}></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
+    <li class="breadcrumb-item"><{$lang_modulename}></li>
 </ol>
 
 <{if $empty|default:false == 1}>
@@ -11,8 +11,8 @@
 <{if $teaser == true}>
     <div class="row">
         <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-body">
                     <{$teaser}>
                 </div>
             </div>
@@ -26,7 +26,7 @@
         <h3 style="padding-bottom: 10px;"><{$smarty.const._MD_LEXIKON_SEARCHENTRY}></h3>
         <{$searchform}>
     </div>
-    <hr class="visible-sm visible-xs">
+    <hr class="d-md-none">
     <div class="col-md-6">
         <h3 style="padding-bottom: 10px;"><{$smarty.const._MD_LEXIKON_WEHAVE}></h3>
         <{$smarty.const._MD_LEXIKON_DEFS}><{$publishedwords}><br>
@@ -46,23 +46,23 @@
         <h3><{$smarty.const._MD_LEXIKON_BROWSELETTER}></h3>
 
         <ul class="pagination pagination-sm">
-            <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php" title="[ <{$publishedwords}> ]"><{$smarty.const._MD_LEXIKON_ALL}></a></li>
+            <li class="page-item"><a class="page-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php" title="[ <{$publishedwords}> ]"><{$smarty.const._MD_LEXIKON_ALL}></a></li>
             <{foreach item=letterlinks from=$alpha.initial|default:null}>
                 <{if $letterlinks.total > 0}>
-                    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$letterlinks.id}>" title="[ <{$letterlinks.total}> ]">
+                    <li class="page-item"><a class="page-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$letterlinks.id}>" title="[ <{$letterlinks.total}> ]">
                             <{$letterlinks.linktext}>
                         </a></li>
                 <{else}>
-                    <li class="nav-item"><a class="nav-link" href="#"><{$letterlinks.linktext}></a></li>
+                    <li class="page-item"><a class="page-link" href="#"><{$letterlinks.linktext}></a></li>
                 <{/if}>
             <{/foreach}>
 
             <{if $totalother > 0}>
-                <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$smarty.const._MD_LEXIKON_OTHER}>" title="[ <{$totalother}> ]">
+                <li class="page-item"><a class="page-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$smarty.const._MD_LEXIKON_OTHER}>" title="[ <{$totalother}> ]">
                         <{$smarty.const._MD_LEXIKON_OTHER}>
                     </a></li>
             <{else}>
-                <li class="nav-item"><a class="nav-link" href="#"><{$smarty.const._MD_LEXIKON_OTHER}></a></li>
+                <li class="page-item"><a class="page-link" href="#"><{$smarty.const._MD_LEXIKON_OTHER}></a></li>
             <{/if}>
         </ul>
     </div>
@@ -85,7 +85,8 @@
 
             <{/if}>
         <{/foreach}>
-        <table class="table table-bordered table-responsive">
+        <div class="table-responsive">
+        <table class="table table-bordered">
             <tbody>
             <tr>
                 <td>
@@ -118,6 +119,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
     <{/if}>
 <{else}>
     <{if $multicats == 1}>
@@ -132,7 +134,8 @@
 
             <{/if}>
         <{/foreach}>
-        <table class="table table-bordered table-responsive">
+        <div class="table-responsive">
+        <table class="table table-bordered">
             <tbody>
             <tr>
                 <!-- Start category loop -->
@@ -158,6 +161,7 @@
             </tr>
             </tbody>
         </table>
+        </div>
         <div style="text-align: right">
             <a class="btn btn-primary btn-sm" role="button" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/category.php" title="[ <{$publishedwords}> ]">
                 <{$smarty.const._MD_LEXIKON_ALLCATS}>&nbsp;[<{$publishedwords}>]
@@ -218,11 +222,11 @@
         <div class="col-md-12">
             <h3><{$smarty.const._MD_LEXIKON_SUBANDREQ}></h3>
 
-            <dl class="dl-horizontal">
-                <dt><{$smarty.const._MD_LEXIKON_SUB}></dt>
+            <dl class="row">
+                <dt class="col-sm-3"><{$smarty.const._MD_LEXIKON_SUB}></dt>
                 <{if $wehavesubs == '0'}>
-                    <dd><{$smarty.const._MD_LEXIKON_NOSUB}></dd><{/if}>
-                <dd>
+                    <dd class="col-sm-9"><{$smarty.const._MD_LEXIKON_NOSUB}></dd><{/if}>
+                <dd class="col-sm-9">
             <{foreach item=subentries from=$blockS.substuff|default:null}>
                         <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/admin/entry.php?op=mod&entryID=<{$subentries.id}>"><{$subentries.linktext}></a>
                         &nbsp;
@@ -230,11 +234,11 @@
                 </dd>
             </dl>
 
-            <dl class="dl-horizontal">
-                <dt><{$smarty.const._MD_LEXIKON_REQ}></dt>
+            <dl class="row">
+                <dt class="col-sm-3"><{$smarty.const._MD_LEXIKON_REQ}></dt>
                 <{if $wehavereqs == '0'}>
-                    <dd><{$smarty.const._MD_LEXIKON_NOREQ}></dd><{/if}>
-                <dd>
+                    <dd class="col-sm-9"><{$smarty.const._MD_LEXIKON_NOREQ}></dd><{/if}>
+                <dd class="col-sm-9">
             <{foreach item=reqentries from=$blockR.reqstuff|default:null}>
                         <a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/admin/entry.php?op=mod&entryID=<{$reqentries.id}>"><{$reqentries.linktext}></a>
                         &nbsp;
@@ -249,12 +253,12 @@
             <h3><{$smarty.const._MD_LEXIKON_REQ}></h3>
         </div>
     </div>
-    <dl class="dl-horizontal">
-        <dt><{$smarty.const._MD_LEXIKON_REQ}></dt>
+    <dl class="row">
+        <dt class="col-sm-3"><{$smarty.const._MD_LEXIKON_REQ}></dt>
         <{if $wehavereqs == '0'}>
-        <dd><{$smarty.const._MD_LEXIKON_NOREQ}></dd>
+        <dd class="col-sm-9"><{$smarty.const._MD_LEXIKON_NOREQ}></dd>
         <{else}>
-        <dd>
+        <dd class="col-sm-9">
             <h5><{$smarty.const._MD_LEXIKON_REQUESTSUGGEST}></h5>
             <{/if}>
             <{foreach item=reqentries from=$blockR.reqstuff|default:null}>
@@ -275,9 +279,9 @@
 <br>
 <br>
 <script type="text/javascript">
-    $("select[name*='type']").addClass("form-control");
+    $("select[name*='type']").addClass("form-select");
     $("select[name*='type']").css({"width": "90%", "margin-bottom": "5px"});
-    $("select[name*='categoryID']").addClass("form-control");
+    $("select[name*='categoryID']").addClass("form-select");
     $("select[name*='categoryID']").css({"width": "90%", "margin-bottom": "5px"});
     $("input[name*='term']").addClass("form-control");
     $("input[name*='term']").css({"width": "90%", "margin-bottom": "5px", "background-position": "1px 8px"});

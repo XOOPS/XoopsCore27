@@ -1,17 +1,17 @@
 <div class="newbb-viewtopic">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$lang_forum_index}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$lang_forum_index}></a></li>
 
-        <li class="breadcrumb-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$smarty.const._MD_NEWBB_FORUMHOME}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$smarty.const._MD_NEWBB_FORUMHOME}></a></li>
 
-        <li class="breadcrumb-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php?cat=<{$category.id}>"><{$category.title}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php?cat=<{$category.id}>"><{$category.title}></a></li>
         <{if isset($parentforum)}>
             <{foreach item=forum from=$parentforum|default:null}>
-                <li class="breadcrumb-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum.forum_id}>"><{$forum.forum_name}></a></li>
+                <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum.forum_id}>"><{$forum.forum_name}></a></li>
             <{/foreach}>
         <{/if}>
-        <li class="breadcrumb-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum_id}>"><{$forum_name}></a></li>
-        <li class="active"><{$topic_title|strip_tags}> <{if isset($topicstatus)}><{$topicstatus}><{/if}></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum_id}>"><{$forum_name}></a></li>
+        <li class="breadcrumb-item active"><{$topic_title|strip_tags}> <{if isset($topicstatus)}><{$topicstatus}><{/if}></li>
     </ol>
 
     <{if $tagbar|default:''}>
@@ -27,17 +27,17 @@
                 <{foreach item=user from=$online.users|default:null}>
                     <a href="<{$user.link}>">
                         <{if $user.level == 2}><!-- If is admin -->
-                            <label class="label label-success"><{$user.uname}></label>
+                            <label class="badge text-bg-success"><{$user.uname}></label>
                         <{elseif $user.level == 1}><!-- If is moderator -->
-                            <label class="label label-warning"><{$user.uname}></label>
+                            <label class="badge text-bg-warning"><{$user.uname}></label>
                         <{else}>
-                            <label class="label label-info"><{$user.uname}></label>
+                            <label class="badge text-bg-info"><{$user.uname}></label>
                         <{/if}>
                     </a>
                 <{/foreach}>
 
             <{if $online.num_anonymous}>
-                    <span class="label label-default"><{$online.num_anonymous}> <{$smarty.const._MD_NEWBB_ANONYMOUS_USERS}></span>
+                    <span class="badge text-bg-secondary"><{$online.num_anonymous}> <{$smarty.const._MD_NEWBB_ANONYMOUS_USERS}></span>
             <{/if}>
             </div>
         </div><!-- .newbb-online-users -->
@@ -105,7 +105,7 @@
 
         </div>
 
-        <div class="col-sm-6 col-md-6 text-end hidden-xs">
+        <div class="col-sm-6 col-md-6 text-end d-none d-sm-block">
             <a id="threadtop"></a>
             <a class="btn btn-info" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewtopic.php?order=<{$order_current}>&amp;topic_id=<{$topic_id}>&amp;forum=<{$forum_id}>&amp;move=prev" title="<{$smarty.const._MD_NEWBB_PREVTOPIC}>">
                 <span class="fa-solid fa-circle-left"></span>
@@ -130,9 +130,7 @@
                     <input type="hidden" name="action" id="action" value="yes">
                     <input type="hidden" name="searchin" id="searchin" value="both">
                     <input type="hidden" name="show_search" id="show_search" value="post_text">
-                    <span class="input-group-btn">
-                        <input type="submit" class="btn btn-primary" value="<{$smarty.const._MD_NEWBB_SEARCH}>">
-                    </span>
+                    <input type="submit" class="btn btn-primary" value="<{$smarty.const._MD_NEWBB_SEARCH}>">
                 </form>
             <{/if}>
         </div>
@@ -140,7 +138,7 @@
 
     <div class="row mb10">
         <div class="<{if isset($rating_enable)}>col-sm-4 col-md-4<{else}>col-sm-8 col-md-8<{/if}>">
-            <select class="form-control" name="topicoption" id="topicoption" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.document.location=this.options[this.selectedIndex].value;}">
+            <select class="form-select" name="topicoption" id="topicoption" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.document.location=this.options[this.selectedIndex].value;}">
                 <option value=""><{$smarty.const._MD_NEWBB_TOPICOPTION}></option>
                 <{if $viewer_level >= 1}>
                     <{foreach item=act from=$admin_actions|default:null}>
@@ -159,7 +157,7 @@
 
         <div class="col-sm-4 col-md-4">
             <{if $rating_enable && $forum_post && $forum_reply}>
-                <select class="form-control" name="rate" id="rate" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.document.location=this.options[this.selectedIndex].value;}">
+                <select class="form-select" name="rate" id="rate" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.document.location=this.options[this.selectedIndex].value;}">
                     <option value=""><{$smarty.const._MD_NEWBB_RATE}></option>
                     <option value="<{$xoops_url}>/modules/<{$xoops_dirname}>/ratethread.php?topic_id=<{$topic_id}>&amp;forum=<{$forum_id}>&amp;rate=5"><{$smarty.const._MD_NEWBB_RATE5}></option>
                     <option value="<{$xoops_url}>/modules/<{$xoops_dirname}>/ratethread.php?topic_id=<{$topic_id}>&amp;forum=<{$forum_id}>&amp;rate=4"><{$smarty.const._MD_NEWBB_RATE4}></option>
@@ -171,7 +169,7 @@
         </div>
 
         <div class="col-sm-4 col-md-4">
-            <select class="form-control" name="viewmode" id="viewmode" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.location=this.options[this.selectedIndex].value;}">
+            <select class="form-select" name="viewmode" id="viewmode" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.location=this.options[this.selectedIndex].value;}">
                 <option value=""><{$smarty.const._MD_NEWBB_VIEWMODE}></option>
                 <{foreach item=act from=$viewmode_options|default:null}>
                     <option value="<{$act.link}>"><{$act.title}></option>
@@ -196,7 +194,7 @@
 
     <div class="newbb-viewtopic-footer">
     <div class="row mb10">
-        <div class="col-sm-6 col-md-6 hidden-xs">
+        <div class="col-sm-6 col-md-6 d-none d-sm-block">
             <{if $forum_reply|default:''}>
                 <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/reply.php?topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_FORUM_REPLY}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_REPLY}></a>
             <{/if}>
@@ -220,7 +218,7 @@
             <{$forum_jumpbox}>
         </div>
 
-        <div class="col-sm-2 col-md-2 text-end nompl hidden-xs">
+        <div class="col-sm-2 col-md-2 text-end nompl d-none d-sm-block">
             <a id="threadbottom"></a>
             <a class="btn btn-info" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewtopic.php?order=<{$order_current}>&amp;topic_id=<{$topic_id}>&amp;forum=<{$forum_id}>&amp;move=prev" title="<{$smarty.const._MD_NEWBB_PREVTOPIC}>">
                 <span class="fa-solid fa-circle-left"></span>

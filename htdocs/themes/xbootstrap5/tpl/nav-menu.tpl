@@ -93,7 +93,7 @@
                     </ul>
 
                     <{if $xoops_search|default:false}>
-                        <form class="form-inline ms-auto" role="search" action="<{xoAppUrl 'search.php'}>" method="get">
+                        <form class="ms-auto" role="search" action="<{xoAppUrl 'search.php'}>" method="get">
                             <div class="input-group">
                                 <input type="text" name="query" class="form-control" placeholder="<{$smarty.const.THEME_SEARCH_TEXT}>">
                                 <input type="hidden" name="action" value="results">

@@ -356,7 +356,7 @@ class UpgradeControl
         $actionAttr = htmlspecialchars($action, ENT_QUOTES, 'UTF-8');
         $form  = '<form action="' . $actionAttr . '" method="post">';
         if ('' !== $confirmLabel) {
-            $form .= '<div class="checkbox"><label><input type="checkbox" name="confirmed" value="1" required> '
+            $form .= '<div class="form-check mb-3"><label class="form-check-label"><input class="form-check-input" type="checkbox" name="confirmed" value="1" required> '
                 . htmlspecialchars($confirmLabel, ENT_QUOTES, 'UTF-8') . '</label></div>';
         }
         $form .= '<button class="btn btn-lg btn-success" type="submit">' . _CONTINUE;

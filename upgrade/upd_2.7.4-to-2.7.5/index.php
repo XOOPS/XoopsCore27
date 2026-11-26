@@ -19,6 +19,7 @@ use Xoops\Upgrade\XoopsUpgrade;
  * Tasks:
  *  1. datahtaccess — replace the Apache 2.2-only xoops_data/.htaccess with the form
  *                    that works on Apache 2.2 and 2.4.
+ *  2. bootstrapassets — remove retired wizard and editor assets and stock Bootstrap theme files.
  *
  * Why: xoops_data/.htaccess shipped as "order deny,allow / deny from all". Apache 2.4
  * without mod_access_compat answers that with HTTP 500 instead of 403. It still refuses
@@ -72,6 +73,35 @@ HTACCESS;
     /** Session key set when the file could not be written and the admin was told. */
     private const SKIP_KEY = 'xoops_upgrade_275_datahtaccess_skipped';
 
+    /** Paths relative to the deployed web root, including the uploaded upgrade folder. */
+    private const OBSOLETE_BOOTSTRAP_FILES = [
+        'install/assets/css/bootstrap.css',
+        'install/assets/css/bootstrap.min.css',
+        'install/assets/fonts/glyphicons-halflings-regular.eot',
+        'install/assets/fonts/glyphicons-halflings-regular.svg',
+        'install/assets/fonts/glyphicons-halflings-regular.ttf',
+        'install/assets/fonts/glyphicons-halflings-regular.woff',
+        'install/assets/fonts/glyphicons-halflings-regular.woff2',
+        'install/assets/js/bootstrap.js',
+        'install/assets/js/bootstrap.min.js',
+        'upgrade/assets/css/bootstrap.css',
+        'upgrade/assets/css/bootstrap.min.css',
+        'upgrade/assets/fonts/glyphicons-halflings-regular.eot',
+        'upgrade/assets/fonts/glyphicons-halflings-regular.svg',
+        'upgrade/assets/fonts/glyphicons-halflings-regular.ttf',
+        'upgrade/assets/fonts/glyphicons-halflings-regular.woff',
+        'upgrade/assets/fonts/glyphicons-halflings-regular.woff2',
+        'upgrade/assets/js/bootstrap.js',
+        'upgrade/assets/js/bootstrap.min.js',
+        'upgrade/assets/js/jquery.js',
+        'upgrade/assets/js/xo-installer.js',
+        'class/xoopseditor/tinymce5/js/tinymce/plugins/xoopsemoticons/css/bootstrap.min.css',
+        'class/xoopseditor/tinymce5/js/tinymce/plugins/xoopsimagemanager/css/bootstrap.min.css',
+        'class/xoopseditor/tinymce5/js/tinymce/plugins/xoopsimagemanager/js/bootstrap.bundle.min.js',
+        'class/xoopseditor/tinymce7/js/tinymce/plugins/xoopsimagemanager/css/bootstrap.min.css',
+        'class/xoopseditor/tinymce7/js/tinymce/plugins/xoopsimagemanager/js/bootstrap.bundle.min.js',
+    ];
+
     /**
      * @param XoopsMySQLDatabase $db      database connection
      * @param UpgradeControl     $control upgrade control instance
@@ -79,7 +109,7 @@ HTACCESS;
     public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
         parent::__construct($db, $control, basename(__DIR__));
-        $this->tasks = ['datahtaccess'];
+        $this->tasks = ['datahtaccess', 'bootstrapassets'];
     }
 
     // =========================================================================
@@ -203,12 +233,7 @@ HTACCESS;
         if (!is_file($path) || is_link($path)) {
             return false;
         }
-        set_error_handler(static fn (): bool => true);
-        try {
-            $content = file_get_contents($path);
-        } finally {
-            restore_error_handler();
-        }
+        $content = self::readCandidateFile($path);
         if (!is_string($content)) {
             return false;
         }
@@ -224,6 +249,77 @@ HTACCESS;
         }
 
         return $lines === ['order deny,allow', 'deny from all'];
+    }
+
+    /** @return \Generator<string, string> relative name => absolute filename */
+    private function obsoleteBootstrapFiles(): \Generator
+    {
+        $root = realpath(XOOPS_ROOT_PATH);
+        if (false === $root) {
+            throw new \RuntimeException(sprintf(_FILE_ACCESS_ERROR, 'XOOPS_ROOT_PATH'));
+        }
+        $themeHashes = require __DIR__ . '/bootstrap-theme-hashes.php';
+        foreach (array_fill_keys(self::OBSOLETE_BOOTSTRAP_FILES, null) + $themeHashes as $relative => $hashes) {
+            $path = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+            $dir = dirname($path);
+            $actual = realpath($dir);
+            if (false === $actual) {
+                continue;
+            }
+            // A linked parent can lead to another site's assets, even inside the same web root.
+            $sameDirectory = PHP_OS_FAMILY === 'Windows' ? strcasecmp($actual, $dir) === 0 : $actual === $dir;
+            $file = $actual . DIRECTORY_SEPARATOR . basename($path);
+            if (!$sameDirectory || (!is_file($file) && !is_link($file))) {
+                continue;
+            }
+            if (null === $hashes || self::isStockThemeFile($file, $hashes)) {
+                yield $relative => $file;
+            }
+        }
+    }
+
+    /** @param string[] $hashes stock SHA-256 digests for this exact theme path */
+    private static function isStockThemeFile(string $file, array $hashes): bool
+    {
+        if (is_link($file) || !is_file($file)) {
+            return false;
+        }
+        // Every stock file fits in 1 MiB, including CRLF checkouts. Bound reads of custom files.
+        $limit = 1048576;
+        $content = self::readCandidateFile($file, $limit + 1);
+        return false !== $content && strlen($content) <= $limit
+            && in_array(hash('sha256', str_replace("\r\n", "\n", $content)), $hashes, true);
+    }
+
+    /** A failed read leaves the file untouched and keeps absolute paths off the upgrade page. */
+    private static function readCandidateFile(string $path, ?int $length = null): string|false
+    {
+        set_error_handler(static fn (): bool => true, E_WARNING);
+        try {
+            return file_get_contents($path, false, null, 0, $length);
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    public function check_bootstrapassets(): bool
+    {
+        return !$this->obsoleteBootstrapFiles()->valid();
+    }
+
+    public function apply_bootstrapassets(): bool
+    {
+        $ok = true;
+        foreach ($this->obsoleteBootstrapFiles() as $relative => $path) {
+            if (!$this->removeLeftover($path)) {
+                $message = defined('_XOOPS_UPGRADE_275_ASSET_NOT_REMOVED')
+                    ? _XOOPS_UPGRADE_275_ASSET_NOT_REMOVED
+                    : 'Could not remove obsolete asset %s. Remove it manually or correct its directory permissions and retry.';
+                $this->logError($message, $relative);
+                $ok = false;
+            }
+        }
+        return $ok;
     }
 }
 

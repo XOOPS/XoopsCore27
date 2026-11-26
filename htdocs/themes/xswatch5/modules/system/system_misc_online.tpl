@@ -31,7 +31,7 @@
 
         <div class="col-12 col-sm-6 my-1">
             <{if $online.module_name <> "" }>
-                <h5 class="text-center text-sm-left font-weight-bold"><{$online.module_name}></h5>
+                <h5 class="text-center text-sm-start fw-bold"><{$online.module_name}></h5>
             <{/if}>
             <{if !empty($isadmin)}>
                 <div class="ms-5 ms-sm-0">

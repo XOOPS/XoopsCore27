@@ -250,10 +250,10 @@ function xoFormField($name, $value, $label, $help = '')
     $label = installerHtmlSpecialChars($label);
     $name  = installerHtmlSpecialChars($name);
     $value = installerHtmlSpecialChars($value);
-    echo '<div class="form-group">';
-    echo '<label class="xolabel" for="' . $name . '">' . $label . '</label>';
+    echo '<div class="mb-3">';
+    echo '<label class="form-label" for="' . $name . '">' . $label . '</label>';
     if ($help) {
-        echo '<div class="xoform-help alert alert-info">' . $help . '</div>';
+        echo '<div class="xoform-help collapse form-text">' . $help . '</div>';
     }
     echo '<input type="text" class="form-control" name="'.$name.'" id="'.$name.'" value="'.$value.'">';
     echo '</div>';
@@ -270,10 +270,10 @@ function xoPassField($name, $value, $label, $help = '')
     $label = installerHtmlSpecialChars($label);
     $name  = installerHtmlSpecialChars($name);
     $value = installerHtmlSpecialChars($value);
-    echo '<div class="form-group">';
-    echo '<label class="xolabel" for="' . $name . '">' . $label . '</label>';
+    echo '<div class="mb-3">';
+    echo '<label class="form-label" for="' . $name . '">' . $label . '</label>';
     if ($help) {
-        echo '<div class="xoform-help alert alert-info">' . $help . '</div>';
+        echo '<div class="xoform-help collapse form-text">' . $help . '</div>';
     }
     if ($name === 'adminpass') {
         echo '<input type="password" class="form-control" name="'.$name.'" id="'.$name.'" value="'.$value.'"  onkeyup="passwordStrength(this.value)">';
@@ -296,12 +296,12 @@ function xoFormSelect($name, $value, $label, $options, $help = '', $extra='')
     $label = installerHtmlSpecialChars($label);
     $name  = installerHtmlSpecialChars($name);
     $value = installerHtmlSpecialChars($value);
-    echo '<div class="form-group">';
-    echo '<label class="xolabel" for="' . $name . '">' . $label . '</label>';
+    echo '<div class="mb-3">';
+    echo '<label class="form-label" for="' . $name . '">' . $label . '</label>';
     if ($help) {
-        echo '<div class="xoform-help alert alert-info">' . $help . '</div>';
+        echo '<div class="xoform-help collapse form-text">' . $help . '</div>';
     }
-    echo '<select class="form-control" name="'.$name.'" id="'.$name.'" value="'.$value.'" '.$extra.'>';
+    echo '<select class="form-select" name="'.$name.'" id="'.$name.'" value="'.$value.'" '.$extra.'>';
     foreach ($options as $optionValue => $optionReadable) {
         $selected = ($value === $optionValue) ? ' selected' : '';
         echo '<option value="'.$optionValue . '"' . $selected . '>' . $optionReadable . '</option>';
@@ -657,7 +657,7 @@ function xoFormFieldCharset($name, $value, $label, $help, $link)
     $label = installerHtmlSpecialChars($label);
     $name  = installerHtmlSpecialChars($name);
     $value = installerHtmlSpecialChars($value);
-    $extra = 'onchange="setFormFieldCollation(\'DB_COLLATION\', this.value)"';
+    $extra = 'onchange="setFormFieldCollation(this.value)"';
     return xoFormSelect($name, $value, $label, $charsets, $help, $extra);
 }
 

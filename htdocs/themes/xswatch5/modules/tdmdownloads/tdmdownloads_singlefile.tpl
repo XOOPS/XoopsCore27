@@ -4,7 +4,7 @@
 
     <!-- <{if $new || $pop}><{$new}><{$pop}><{/if}> -->
 
-    <h1 class="tdm-title"><{$title}> <{if !empty($version)}><label class="label label-success"><{$version}></label><{/if}></h1>
+    <h1 class="tdm-title"><{$title}> <{if !empty($version)}><label class="badge text-bg-success"><{$version}></label><{/if}></h1>
 
     <div class="tdm-download-data row">
         <{if isset($show_screenshot) && $show_screenshot == true}>
@@ -62,11 +62,11 @@
                 <!--<li><{$tellafriend_texte}></li>-->
 
                 <{if !empty($perm_download)}>
-                    <li><a class="btn btn-md btn-success" href="visit.php?cid=<{$cid}>&amp;lid=<{$lid}>" target="_blank" title="Download"><{$smarty.const._MD_TDMDOWNLOADS_INDEX_DLNOW}></a>
+                    <li><a class="btn btn-success" href="visit.php?cid=<{$cid}>&amp;lid=<{$lid}>" target="_blank" title="Download"><{$smarty.const._MD_TDMDOWNLOADS_INDEX_DLNOW}></a>
                     </li>
                 <{else}>
                     <li>
-                        <div class="alert alert-danger alert-dismissable">
+                        <div class="alert alert-danger alert-dismissible">
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             <{$smarty.const._MD_TDMDOWNLOADS_SINGLEFILE_NOPERM}>
                         </div>
@@ -80,7 +80,7 @@
         </div>
     </div><!-- .tdm-download-data -->
 
-    <div class="col m2-3 mb-3">
+    <div class="col mb-3 mb-3">
         <{$description}>
     </div>
 

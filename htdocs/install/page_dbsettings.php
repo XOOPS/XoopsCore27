@@ -128,22 +128,25 @@ ob_start();
 } ?>
 
     <script type="text/javascript">
-        function setFormFieldCollation(id, val) {
+        function setFormFieldCollation(val) {
             $.get(<?php echo json_encode($_SERVER['PHP_SELF']); ?>, { action: 'updateCollation', charset: val } )
                 .done(function( data ) {
-                    $('#'+id).html(data);
+                    $('#collation-field').html(data);
+                    if (document.querySelector('[data-bs-target=".xoform-help"]')?.getAttribute('aria-expanded') === 'true') {
+                        $('#collation-field .xoform-help').addClass('show');
+                    }
                 });
         }
     </script>
 
-    <div class="panel panel-info">
-        <div class="panel-heading"><?php echo LEGEND_DATABASE; ?></div>
-        <div class="panel-body">
+    <div class="card border-info mb-3">
+        <div class="card-header"><?php echo LEGEND_DATABASE; ?></div>
+        <div class="card-body">
 
         <?php echo xoFormField('DB_NAME', $vars['DB_NAME'], DB_NAME_LABEL, DB_NAME_HELP); ?>
         <?php echo xoFormField('DB_PREFIX', $vars['DB_PREFIX'], DB_PREFIX_LABEL, DB_PREFIX_HELP); ?>
         <?php echo xoFormFieldCharset('DB_CHARSET', $vars['DB_CHARSET'], DB_CHARSET_LABEL, DB_CHARSET_HELP, $link); ?>
-        <?php echo xoFormBlockCollation('DB_COLLATION', $vars['DB_COLLATION'], DB_COLLATION_LABEL, DB_COLLATION_HELP, $link, $vars['DB_CHARSET']); ?>
+        <div id="collation-field"><?php echo xoFormBlockCollation('DB_COLLATION', $vars['DB_COLLATION'], DB_COLLATION_LABEL, DB_COLLATION_HELP, $link, $vars['DB_CHARSET']); ?></div>
         </div>
     </div>
 

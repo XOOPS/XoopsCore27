@@ -1,16 +1,16 @@
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
-    <li><{$smarty.const._MD_LEXIKON_ASKFORDEF}></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
+    <li class="breadcrumb-item"><{$smarty.const._MD_LEXIKON_ASKFORDEF}></li>
 </ol>
 
 <div class="row">
     <div class="col-md-12">
-        <div class="panel panel-info">
-            <div class="panel-heading">
+        <div class="card border-info">
+            <div class="card-header">
                 <h4><{$smarty.const._MD_LEXIKON_ASKFORDEF}></h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <p><{$smarty.const._MD_LEXIKON_INTROREQUEST}></p>
             </div>
         </div>

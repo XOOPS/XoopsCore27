@@ -17,7 +17,7 @@
                 <h5><{$smarty.const.THEME_SLIDE_LABEL1}></h5>
                 <p><{$smarty.const.THEME_SLIDE_SUBLABEL1}></p>
 
-                <p><a href="<{$xoops_url}>/modules/pm" class="btn btn-large btn-primary"><{$smarty.const.THEME_READMORE}></a></p>
+                <p><a href="<{$xoops_url}>/modules/pm" class="btn btn-lg btn-primary"><{$smarty.const.THEME_READMORE}></a></p>
 
             </div>
         </div>

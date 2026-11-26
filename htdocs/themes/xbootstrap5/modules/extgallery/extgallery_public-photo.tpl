@@ -1,13 +1,13 @@
 <div class="row extGalleryAlbum">
     <div class="col-md-12">
         <ul class="breadcrumb">
-            <li><a title="<{$extgalleryName}>" href="<{xoAppUrl 'modules/extgallery/'}>"><{$extgalleryName}></a></li>
+            <li class="breadcrumb-item"><a title="<{$extgalleryName}>" href="<{xoAppUrl 'modules/extgallery/'}>"><{$extgalleryName}></a></li>
 
             <{foreach item=node from=$catPath|default:null name=breadcrumb}>
-            <li>
+            <li class="breadcrumb-item">
                 <a href="<{xoAppUrl 'modules/extgallery/'}>public-<{if $node.cat_isalbum}><{$display_type}><{else}>categories<{/if}>.php?id=<{$node.cat_id}>" title="<{$node.cat_name}>"><{$node.cat_name}></a></li>
             <{/foreach}>
-            <li><{$photo.photo_title}></li>
+            <li class="breadcrumb-item"><{$photo.photo_title}></li>
         </ul>
     </div>
 
@@ -16,7 +16,7 @@
         <div class="row photo-nav-controls">
             <div class="col-6 col-md-6">
                 <{if isset($xoops_isadmin)}>
-                    <div class="pull-left">
+                    <div class="float-start">
                         <a title="edit" class="btn btn-primary btn-sm" href="<{xoAppUrl 'modules/extgallery/'}>public-modify.php?op=edit&id=<{$photo.photo_id}>"><span class="fa-solid fa-pen-to-square"></span></a>
                         <a title="delete" class="btn btn-danger btn-sm" href="<{xoAppUrl 'modules/extgallery/'}>public-modify.php?op=delete&id=<{$photo.photo_id}>"><span class="fa-solid fa-trash-can"></span></a>
                     </div>
@@ -24,7 +24,7 @@
             </div>
 
             <div class="col-6 col-md-6">
-                <ul class="pull-right list-unstyled">
+                <ul class="float-end list-unstyled">
                     <{if $prevId|default:0 != 0}>
                         <li class="nav-btn"><a href="<{xoAppUrl 'modules/extgallery/'}>public-photo.php?photoId=<{$prevId}>"><span class="fa-solid fa-circle-left"></span></a><{else}>
                         </li>
@@ -83,7 +83,7 @@
 
         <!-- Start social network and bookmarks -->
         <div class="col-md-12 aligncenter">
-            <div class="shareaholic-canvas" data-bs-app="share_buttons" data-bs-app-id=""></div>
+            <div class="shareaholic-canvas" data-app="share_buttons" data-app-id=""></div>
         </div>
     </div><!-- .gallery-image-details -->
 
@@ -107,7 +107,7 @@
         <div class="text-center">
             <a href="#gallery-info" data-bs-toggle="collapse" class="big-info-icon-link" title="Info"><span class="fa-solid fa-circle-info"></span></a>
         </div>
-        <div class="panel-collapse collapse" id="gallery-info">
+        <div class="collapse" id="gallery-info">
 
             <h3 class="gallerytitle aligncenter"><{$lang.photoInfo}></h3>
             <ul class="list-unstyled photo-info">

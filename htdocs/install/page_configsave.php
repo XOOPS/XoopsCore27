@@ -76,7 +76,7 @@ if (true === $writeCheck) {
         ?>
 
         <div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> <?php echo SAVED_MAINFILE; ?></div>
-        <div class='well'><?php echo SAVED_MAINFILE_MSG; ?>
+        <div class='bg-body-tertiary border rounded p-3 mb-3'><?php echo SAVED_MAINFILE_MSG; ?>
         <ul class='diags'>
             <?php
             foreach ($vars as $k => $v) {

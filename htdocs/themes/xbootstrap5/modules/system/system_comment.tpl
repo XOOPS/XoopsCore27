@@ -1,12 +1,12 @@
 <div class="xoops-comment-template" id="comment<{$comment.id}>">
-    <div class="row hidden-xs">
+    <div class="row d-none d-sm-flex">
         <div class="col-2 col-md-2 aligncenter"><{$comment.poster.uname}></div><!-- .col-md-3 -->
         <div class="col-4 col-md-4">
-            <small class="label label-info"><strong><{$lang_posted}></strong> <{$comment.date_posted}></small>
+            <small class="badge text-bg-info"><strong><{$lang_posted}></strong> <{$comment.date_posted}></small>
         </div><!-- .col-md-3 -->
         <{if $comment.date_posted != $comment.date_modified}>
             <div class="col-5 col-md-5">
-                <small class="label label-info"><strong><{$lang_updated}></strong> <{$comment.date_modified}></small>
+                <small class="badge text-bg-info"><strong><{$lang_updated}></strong> <{$comment.date_modified}></small>
             </div>
             <!-- .col-md-3 -->
         <{/if}>
@@ -17,7 +17,7 @@
             <{if $comment.poster.id|default:0 != 0}>
                 <img src="<{$xoops_upload_url}>/<{$comment.poster.avatar}>" class="img-fluid rounded-circle image-avatar" alt="">
                 <ul class="list-unstyled">
-                    <li><strong class="poster-rank hidden-xs"><{$comment.poster.rank_title}></strong></li>
+                    <li><strong class="poster-rank d-none d-sm-inline"><{$comment.poster.rank_title}></strong></li>
                     <li><img src="<{$xoops_upload_url}>/<{$comment.poster.rank_image}>" alt="<{$comment.poster.rank_title}>" class="poster-rank img-fluid"></li>
                 </ul>
                 <ul class="list-unstyled poster-info hidden">

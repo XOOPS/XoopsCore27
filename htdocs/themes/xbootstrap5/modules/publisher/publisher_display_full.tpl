@@ -6,7 +6,7 @@
 <{if $indexpage|default:false || $category.subcats || ($category && $display_category_summary)}>
 
     <{if $display_category_summary && $category|default:''}>
-        <div class="well-sm card">
+        <div class="p-2 card">
             <{$lang_category_summary}>
         </div>
     <{/if}>

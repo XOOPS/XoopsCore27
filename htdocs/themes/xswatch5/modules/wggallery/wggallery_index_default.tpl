@@ -1,7 +1,7 @@
 <{include file='db:wggallery_header.tpl'}>
 
 <{if isset($albums)}>
-	<div class='card panel-<{$panel_type|default:'none'}>'>
+	<div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}>'>
 		<div class='card-header wgg-cats-header'><{$index_alb_title}></div>
 		<div class='row card-body'>
 			<{foreach item=album from=$albums|default:null}>
@@ -39,7 +39,7 @@
     <{/if}>
 <{/if}>
 <{if isset($categories)}>
-	<div class='card panel-<{$panel_type|default:'none'}>'>
+	<div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}>'>
 		<div class='card-header wgg-cats-header'><{$index_cats_title}></div>
 		<div class='row card-body'>
 			<{foreach item=category from=$categories|default:null}>

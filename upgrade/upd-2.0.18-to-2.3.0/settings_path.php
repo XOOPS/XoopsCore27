@@ -46,7 +46,7 @@ function genPathCheckHtml($path, $valid)
         }
         $msg = $myts->htmlSpecialChars($msg, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
-        return '<span class="result-y">y</span> ' . $msg;
+        return '<span class="text-success">y</span> ' . $msg;
     } else {
         switch ($path) {
             case 'lib':
@@ -57,7 +57,7 @@ function genPathCheckHtml($path, $valid)
         }
         $msg = $myts->htmlSpecialChars($msg, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
-        return '<span class="result-x">x</span> ' . $msg;
+        return '<span class="text-danger">x</span> ' . $msg;
     }
 }
 
@@ -77,8 +77,8 @@ $myts = \MyTextSanitizer::getInstance();
         <legend><?php echo LEGEND_XOOPS_PATHS; ?></legend>
         <label for="data"><?php echo XOOPS_DATA_PATH_LABEL; ?></label>
 
-        <div class="xoform-help"><?php echo $myts->htmlSpecialChars(XOOPS_DATA_PATH_HELP, ENT_QUOTES, _UPGRADE_CHARSET, false); ?></div>
-        <span class="bold"><?php echo $pathController->xoopsPath['data']; ?></span>
+        <div class="form-text"><?php echo $myts->htmlSpecialChars(XOOPS_DATA_PATH_HELP, ENT_QUOTES, _UPGRADE_CHARSET, false); ?></div>
+        <span class="fw-bold"><?php echo $pathController->xoopsPath['data']; ?></span>
 
         <div><?php echo genPathCheckHtml('data', $pathController->validPath['data']); ?></div>
         <?php if ($pathController->validPath['data'] && !empty($pathController->permErrors['data'])) { ?>
@@ -101,14 +101,15 @@ $myts = \MyTextSanitizer::getInstance();
 
         <label for="lib"><?php echo XOOPS_LIB_PATH_LABEL; ?></label>
 
-        <div class="xoform-help"><?php echo $myts->htmlSpecialChars(XOOPS_LIB_PATH_HELP, ENT_QUOTES, _UPGRADE_CHARSET, false); ?></div>
-        <span class="bold"><?php echo $pathController->xoopsPath['lib']; ?></span><br/>
+        <div class="form-text"><?php echo $myts->htmlSpecialChars(XOOPS_LIB_PATH_HELP, ENT_QUOTES, _UPGRADE_CHARSET, false); ?></div>
+        <span class="fw-bold"><?php echo $pathController->xoopsPath['lib']; ?></span><br/>
         <span><?php echo genPathCheckHtml('lib', $pathController->validPath['lib']); ?></span>
 
     </fieldset>
     <input type="hidden" name="action" value="next"/>
     <input type="hidden" name="task" value="path"/>
 
-    <div class="xo-formbuttons">
-        <button type="submit"><?php echo _SUBMIT; ?></button>
+    <div class="mt-3">
+        <button class="btn btn-primary" type="submit"><?php echo _SUBMIT; ?></button>
     </div>
+</form>

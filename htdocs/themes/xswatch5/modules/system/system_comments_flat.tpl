@@ -10,7 +10,7 @@
     <{/if}>
     <{if isset($commentform)}>
         <div class="aligncenter">
-            <button class="btn-comment btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#comments-form">
+            <button class="btn-comment btn btn-primary" data-bs-toggle="modal" data-bs-target="#comments-form">
                 <span class="fa-solid fa-comment"></span> <{$smarty.const.THEME_COMMENT_ADD}>
             </button>
         </div>

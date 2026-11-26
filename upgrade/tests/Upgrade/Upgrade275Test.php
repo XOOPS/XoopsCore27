@@ -250,6 +250,97 @@ final class Upgrade275Test extends TestCase
         );
     }
 
+    #[Test]
+    public function theWizardRetiresObsoleteAssetsAndPreservesCustomizedThemesOnRerun(): void
+    {
+        self::assertSame(realpath(dirname(__DIR__)), realpath(XOOPS_ROOT_PATH), 'Use the upgrade test sandbox.');
+        $obsolete = [];
+        foreach (['install', 'upgrade'] as $wizard) {
+            foreach (['css/bootstrap.css', 'css/bootstrap.min.css', 'js/bootstrap.js', 'js/bootstrap.min.js'] as $file) {
+                $obsolete[] = "$wizard/assets/$file";
+            }
+            foreach (['eot', 'svg', 'ttf', 'woff', 'woff2'] as $extension) {
+                $obsolete[] = "$wizard/assets/fonts/glyphicons-halflings-regular.$extension";
+            }
+        }
+        $obsolete[] = 'upgrade/assets/js/jquery.js';
+        $obsolete[] = 'upgrade/assets/js/xo-installer.js';
+        foreach (['tinymce5', 'tinymce7'] as $editor) {
+            $manager = "class/xoopseditor/$editor/js/tinymce/plugins/xoopsimagemanager";
+            $obsolete[] = "$manager/css/bootstrap.min.css";
+            $obsolete[] = "$manager/js/bootstrap.bundle.min.js";
+        }
+        $obsolete[] = 'class/xoopseditor/tinymce5/js/tinymce/plugins/xoopsemoticons/css/bootstrap.min.css';
+        $themeCss = 'themes/xbootstrap5/css/bootstrap-reboot.min.css';
+        $obsolete[] = $themeCss;
+        $css = file_get_contents(dirname(__DIR__) . '/fixtures/bootstrap-reboot-5.3.8.min.css');
+        self::assertIsString($css);
+        $contents = [
+            $themeCss => str_replace("\n", "\r\n", str_replace("\r\n", "\n", $css)),
+            'themes/xswatch5/css/bootstrap.min.css' => $css . '/* site customization */',
+            'themes/xbootstrap5/css/bootstrap.min.css' => $css, // Stock CSS, wrong path.
+            'themes/xswatch5/css-cerulean/bootstrap.min.css' => $css,
+        ];
+        $keep = array_merge(
+            ['install/assets/js/jquery.min.js', 'install/assets/js/xo-installer.js', 'upgrade/assets/css/site.css', 'media/bootstrap5/css/bootstrap.min.css'],
+            array_diff(array_keys($contents), $obsolete)
+        );
+
+        $files = $dirs = [];
+        try {
+            foreach (array_merge($obsolete, $keep) as $relative) {
+                $path = XOOPS_ROOT_PATH . '/' . $relative;
+                $missing = [];
+                for ($dir = dirname($path); !is_dir($dir); $dir = dirname($dir)) {
+                    $missing[] = $dir;
+                }
+                foreach (array_reverse($missing) as $dir) {
+                    self::assertTrue(mkdir($dir));
+                    $dirs[] = $dir;
+                }
+                self::assertFileDoesNotExist($path);
+                $content = $contents[$relative] ?? 'asset';
+                self::assertSame(strlen($content), file_put_contents($path, $content));
+                $files[] = $path;
+            }
+
+            $patch = $this->patch();
+            self::assertContains('bootstrapassets', $patch->isApplied()->tasks);
+            $blocked = $this->getMockBuilder(Upgrade_275::class)
+                ->setConstructorArgs([$this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)])
+                ->onlyMethods(['removeLeftover'])
+                ->getMock();
+            $blocked->method('removeLeftover')->willReturn(false);
+            self::assertFalse($blocked->apply());
+            self::assertStringContainsString('install/assets/css/bootstrap.css', $blocked->message());
+            self::assertContains('bootstrapassets', $blocked->isApplied()->tasks);
+
+            self::assertTrue($patch->apply());
+            foreach ($obsolete as $relative) {
+                self::assertFileDoesNotExist(XOOPS_ROOT_PATH . '/' . $relative);
+                $packagePath = str_starts_with($relative, 'upgrade/') ? $relative : 'htdocs/' . $relative;
+                self::assertFileDoesNotExist(dirname(__DIR__, 3) . '/' . $packagePath);
+            }
+            foreach ($keep as $relative) {
+                self::assertSame($contents[$relative] ?? 'asset', file_get_contents(XOOPS_ROOT_PATH . '/' . $relative));
+            }
+            $custom = $css . '/* customized reboot */';
+            self::assertSame(strlen($custom), file_put_contents(XOOPS_ROOT_PATH . '/' . $themeCss, $custom));
+            self::assertTrue($patch->isApplied()->applied);
+            self::assertTrue($patch->apply());
+            self::assertSame($custom, file_get_contents(XOOPS_ROOT_PATH . '/' . $themeCss));
+        } finally {
+            foreach ($files as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+            foreach (array_reverse($dirs) as $dir) {
+                rmdir($dir);
+            }
+        }
+    }
+
     private function removeFile(): void
     {
         if (is_file($this->file) || is_link($this->file)) {

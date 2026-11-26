@@ -68,7 +68,7 @@
     <div>
         <{$item.maintext}>
 
-        <div class="shareaholic-canvas" data-bs-app="share_buttons" data-bs-app-id=""></div>
+        <div class="shareaholic-canvas" data-app="share_buttons" data-app-id=""></div>
     </div>
 
 </div>
@@ -80,18 +80,18 @@
 <div class="clearfix"></div>
 <div class="pub_article_extras">
     <{if isset($rating_enabled)}>
-        <div class="pull-left">
+        <div class="float-start">
             <small><{$item.ratingbar}></small>
         </div>
     <{/if}>
-    <div class="pull-right text-end">
+    <div class="float-end text-end">
         <{$item.adminlink}>
     </div>
     <div class="clearfix"></div>
 </div>
 
 <{if isset($itemfooter)}>
-    <div class="panel-footer">
+    <div class="card-footer">
         <small><{$itemfooter}></small>
     </div>
 <{/if}>
@@ -103,7 +103,7 @@
     <{foreach item=file from=$item.files|default:null}>
 
     <{/foreach}>
-    <table class="table table-bordered table-condensed" style="margin: 15px 0;">
+    <table class="table table-bordered table-sm" style="margin: 15px 0;">
         <thead>
         <tr>
             <th width="60%"><{$smarty.const._CO_PUBLISHER_FILENAME}></th>
@@ -151,7 +151,7 @@
 <{if $other_items == "previous_next"}>
     <{if $previous_item_link|default:'' || $next_item_link|default:''}>
         <{if isset($previous_item_link)}>
-            <div class="pull-left">
+            <div class="float-start">
                 <a href="<{$previous_item_url}>">
                     <img style="vertical-align: middle;" src="<{$publisher_images_url}>/links/previous.gif" title="<{$smarty.const._MD_PUBLISHER_PREVIOUS_ITEM}>" alt="<{$smarty.const._MD_PUBLISHER_PREVIOUS_ITEM}>">
                 </a>
@@ -186,7 +186,7 @@
         <{/if}>
 
     <{/foreach}>
-    <table class="table table-bordered table-condensed" style="margin: 15px 0;">
+    <table class="table table-bordered table-sm" style="margin: 15px 0;">
         <thead>
         <tr>
             <th><{$smarty.const._MD_PUBLISHER_OTHER_ITEMS}></th>

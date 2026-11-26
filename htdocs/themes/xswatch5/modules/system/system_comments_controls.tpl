@@ -14,18 +14,18 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form class="form-horizontal" method="get" action="<{$pageName}>">
-                    <div class="form-group">
+                <form  method="get" action="<{$pageName}>">
+                    <div class="mb-3">
                     <{$commentModeSelect->render()|replace:'id="com_mode"':''}>
                     </div>
-                    <div class="form-group">
+                    <div class="mb-3">
                     <{$commentOrderSelect->render()|replace:'id="com_order"':''}>
                     </div>
-                    <div class="form-group">
+                    <div class="mb-3">
                     <{$commentRefreshButton->render()}>
                     </div>
                     <{if !empty($commentPostButton)}>
-                    <div class="form-group">
+                    <div class="mb-3">
                     <{$commentPostButton->render()}>
                     </div>
                     <{/if}>

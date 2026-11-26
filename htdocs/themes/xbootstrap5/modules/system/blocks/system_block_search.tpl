@@ -8,15 +8,11 @@
 
             <input type="hidden" name="action" value="results">
 
-            <span class="input-group-btn">
-
-                <button class="btn btn-primary" type="submit">
+            <button class="btn btn-primary" type="submit">
 
                     <span class="fa-solid fa-magnifying-glass"></span>
 
                 </button>
-
-            </span>
 
         </div>
 

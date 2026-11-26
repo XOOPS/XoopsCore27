@@ -118,7 +118,7 @@
 </div><!-- .newbb-thread -->
 
 <div class="clearfix newbb-links mb10">
-    <div class="col-md-6 nompl hidden-xs">
+    <div class="col-md-6 nompl d-none d-sm-block">
         <{if $topic_post.thread_action}>
             <{foreach item=btn from=$topic_post.thread_action|default:null}>
             <a href="<{$btn.link}>&post_id=<{$topic_post.post_id}>" title="<{$btn.name}>" <{if $btn.target}>target="<{$btn.target}>"<{/if}>>

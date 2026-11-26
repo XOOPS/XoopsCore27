@@ -2,11 +2,11 @@
     <div class="row">
         <div class="col-md-12">
             <ul class="breadcrumb">
-                <li><a title="<{$extgalleryName}>" href="<{xoAppUrl 'modules/extgallery/'}>"><{$extgalleryName}></a></li>
+                <li class="breadcrumb-item"><a title="<{$extgalleryName}>" href="<{xoAppUrl 'modules/extgallery/'}>"><{$extgalleryName}></a></li>
                 <{foreach item=node from=$catPath|default:null name=breadcrumb}>
-                <li><a title="<{$node.cat_name}>" href="<{xoAppUrl 'modules/extgallery/'}>public-categories.php?id=<{$node.cat_id}>"><{$node.cat_name}></a></li>
+                <li class="breadcrumb-item"><a title="<{$node.cat_name}>" href="<{xoAppUrl 'modules/extgallery/'}>public-categories.php?id=<{$node.cat_id}>"><{$node.cat_name}></a></li>
                 <{/foreach}>
-                <li><{$cat.cat_name}></li>
+                <li class="breadcrumb-item"><{$cat.cat_name}></li>
             </ul>
         </div>
 

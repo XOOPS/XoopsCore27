@@ -92,11 +92,11 @@ function xoFormFieldCollation($name, $value, $label, $help = '')
     $name  = $myts->htmlSpecialChars($name, ENT_QUOTES, _UPGRADE_CHARSET, false);
     $value = $myts->htmlSpecialChars($value, ENT_QUOTES, _UPGRADE_CHARSET, false);
 
-    $field = "<label for='$name'>$label</label>\n";
+    $field = "<label class='form-label' for='$name'>$label</label>\n";
     if ($help) {
-        $field .= '<div class="xoform-help">' . htmlspecialchars($help, ENT_QUOTES, _UPGRADE_CHARSET) . "</div>\n";
+        $field .= '<div class="form-text">' . htmlspecialchars($help, ENT_QUOTES, _UPGRADE_CHARSET) . "</div>\n";
     }
-    $field .= "<select name='$name' id='$name'>";
+    $field .= "<select class='form-select' name='$name' id='$name'>";
     $field .= "<option value=''>" . DB_COLLATION_NOCHANGE . '</option>';
 
     $collation_default = '';
@@ -128,7 +128,7 @@ if (!isset($vars['DB_COLLATION'])) {
 
 ?>
 <?php if (!empty($error)) {
-    echo '<div class="x2-note error">' . $error . "</div>\n";
+    echo '<div class="alert alert-danger">' . $error . "</div>\n";
 } ?>
 
 <form action="<?php echo htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES, _UPGRADE_CHARSET); ?>" method='post'>
@@ -140,6 +140,7 @@ if (!isset($vars['DB_COLLATION'])) {
     <input type="hidden" name="action" value="next"/>
     <input type="hidden" name="task" value="db"/>
 
-    <div class="xo-formbuttons">
-        <button type="submit"><?php echo _SUBMIT; ?></button>
+    <div class="mt-3">
+        <button class="btn btn-primary" type="submit"><?php echo _SUBMIT; ?></button>
     </div>
+</form>

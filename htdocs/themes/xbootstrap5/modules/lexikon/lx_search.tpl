@@ -1,16 +1,16 @@
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
-    <li><{$smarty.const._MD_LEXIKON_SEARCHHEAD}></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
+    <li class="breadcrumb-item"><{$smarty.const._MD_LEXIKON_SEARCHHEAD}></li>
 </ol>
 
 <div class="row">
     <div class="col-md-12">
-        <div class="panel panel-info">
-            <div class="panel-heading">
+        <div class="card border-info">
+            <div class="card-header">
                 <h4><{$smarty.const._MD_LEXIKON_SEARCHHEAD}></h4>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <p><{$intro}></p>
             </div>
         </div>
@@ -28,7 +28,7 @@
         <input class="btn btn-info btn-sm form-control" type="button" value="<{$smarty.const._MD_LEXIKON_REQUESTDEF}>" onclick="location.href = 'request.php'">
     </div>
     <div class="col-md-6 col-12">
-        <hr class="visible-sm">
+        <hr class="d-none d-sm-block d-md-none">
         <h3><{$smarty.const._MD_LEXIKON_SEARCHENTRY}></h3>
         <{$searchform}>
     </div>
@@ -57,7 +57,7 @@
 </div>
 <script type="text/javascript">
     $('select').each(function () {
-        $(this).addClass("form-control");
+        $(this).addClass("form-select");
         $(this).css("margin-bottom", "5px");
     });
     $('input[type=text]').each(function () {

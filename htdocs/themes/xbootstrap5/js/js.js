@@ -65,8 +65,8 @@ jQuery(function ($) {
 
 /* Newbb styling adjustments */
 jQuery(function ($) {
-	$(".xoopsform").find('form').addClass("form-inline");
-	$(".xoopsform").find('select').addClass("form-control");
+	$(".xoopsform").find('form').addClass("d-flex flex-wrap align-items-center gap-2");
+	$(".xoopsform").find('select').removeClass('form-control').addClass('form-select');
 	$(".xoopsform").find('input[type="submit"]').addClass("btn btn-primary");
 	$(".newbb-links").find('span').removeClass('forum_icon forum_button');
 	$('.newbb-thread-attachment').find('br, hr').remove();

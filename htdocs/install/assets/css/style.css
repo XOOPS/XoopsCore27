@@ -1,72 +1,62 @@
-body {
-    padding-top: 56px;
+.navbar-brand img {
+    max-height: 2rem;
+    max-width: 100%;
 }
 
-.navbar {
-    height: 56px;
-}
-
-.side-nav {
-    position: fixed;
-    top: 56px;
-    left: 0;
-    bottom: 0;
-    width: 250px;
+.navbar-collapse {
+    max-height: calc(100dvh - 3.5rem);
     overflow-y: auto;
-    background-color: #343a40;
-    padding-top: 1rem;
 }
 
-.content-wrapper {
-    margin-left: 250px;
-    padding: 20px;
-    min-height: 568px;
-    background-color: #fff;
-}
-
-.navbar-nav .nav-link {
-    color: rgba(255,255,255,.75);
+.side-nav .nav-link {
     padding: .5rem 1rem;
 }
 
-.navbar-nav .nav-link.active {
-    color: #fff;
-    background-color: rgba(255,255,255,.1);
+.side-nav .nav-link.active {
+    background-color: #343a40;
 }
 
-.navbar-nav .nav-link.disabled {
-    color: rgba(255,255,255,.25);
-}
-
-/* Logger styles */
+.content-wrapper,
 #xo-logger-output {
-    margin-left: 250px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-top: 1px solid #e9ecef;
+    padding: 1rem;
+    overflow-wrap: anywhere;
 }
 
-#xo-logger-tabs {
-    position: relative;
-    z-index: 1001;
-    margin-bottom: 10px;
-}
+@media (min-width: 992px) {
+    .navbar {
+        height: 3.5rem;
+    }
 
-#xo-logger-output table {
-    position: relative;
-    z-index: 1000;
-    width: 100%;
-}
+    .navbar-collapse {
+        overflow: visible;
+    }
 
-/* Responsive styles */
-@media (max-width: 992px) {
     .side-nav {
-        position: static;
-        width: 100%;
+        position: fixed;
+        inset-block: 3.5rem 0;
+        inset-inline-start: 0;
+        width: 15rem;
+        padding-block: .5rem;
+        overflow-y: auto;
+        background: var(--bs-dark);
     }
 
     .content-wrapper,
     #xo-logger-output {
-        margin-left: 0;
+        margin-inline-start: 15rem;
     }
 }
+
+.module-row:has(input:checked) {
+    background-color: var(--bs-success-bg-subtle);
+}
+
+#passwordStrength {
+    padding: .25rem .5rem;
+    border-radius: var(--bs-border-radius);
+}
+
+.strength0, .strength1 { background: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
+.strength2 { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.strength3 { background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis); }
+.strength4 { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }

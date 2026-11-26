@@ -49,7 +49,7 @@ final class UpgradeControlFormTest extends TestCase
     {
         $form = $this->control()->oneButtonContinueForm('index.php', ['action' => 'next'], 'Backup of <db> & files');
 
-        self::assertStringContainsString('<input type="checkbox" name="confirmed" value="1" required>', $form);
+        self::assertStringContainsString('type="checkbox" name="confirmed" value="1" required>', $form);
         self::assertStringContainsString('Backup of &lt;db&gt; &amp; files', $form);
         self::assertLessThan(strpos($form, '<button'), strpos($form, 'name="confirmed"'));
     }

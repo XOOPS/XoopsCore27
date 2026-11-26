@@ -26,7 +26,7 @@
     })();
     </script>
     <script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
-    <script src="<{$themeUrl}>js/bootstrap.bundle.min.js"></script>
+    <script src="<{$xoops_url}>/media/bootstrap5/js/bootstrap.bundle.min.js"></script>
 
     <{if !empty($closeHead)}>
 </head>

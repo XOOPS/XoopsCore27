@@ -1,7 +1,7 @@
 <{foreach item=item from=$block.items|default:null}>
 
 <{/foreach}>
-<table class="table table-striped table-condensed">
+<table class="table table-striped table-sm">
     <thead>
     <tr>
         <th class="head"><{$block.lang_title}></th>

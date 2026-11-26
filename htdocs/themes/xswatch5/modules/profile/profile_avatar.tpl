@@ -11,7 +11,7 @@
 <{$uploadavatar.javascript}>
 <legend class="bold"><{$uploadavatar.title}></legend>
 <form name="<{$uploadavatar.name}>" action="<{$uploadavatar.action}>" method="<{$uploadavatar.method}>" <{$uploadavatar.extra}>>
-	<div class="form-group row">
+	<div class="mb-3 row">
 		<!-- start of form elements loop -->
 		<{foreach item=element from=$uploadavatar.elements|default:null}>
 			<{if empty($element.hidden)}>
@@ -40,7 +40,7 @@
 <{$chooseavatar.javascript}>
 <legend class="bold"><{$chooseavatar.title}></legend>
 <form name="<{$chooseavatar.name}>" action="<{$chooseavatar.action}>" method="<{$chooseavatar.method}>" <{$chooseavatar.extra}>>
-	<div class="form-group">
+	<div class="mb-3">
 		<!-- start of form elements loop -->
 		<{foreach item=element from=$chooseavatar.elements|default:null}>
 			<{if !$element.hidden}>

@@ -23,7 +23,7 @@
     <{/section}>
     <{if isset($commentform)}>
         <div class="aligncenter">
-            <button class="btn-comment btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#comments-form">
+            <button class="btn-comment btn btn-primary" data-bs-toggle="modal" data-bs-target="#comments-form">
                 <span class="fa-solid fa-comment"></span> Add Comment
             </button>
         </div>
@@ -37,7 +37,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">&times;</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
                     </div>
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->

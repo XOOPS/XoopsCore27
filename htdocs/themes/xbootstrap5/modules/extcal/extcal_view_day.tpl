@@ -1,6 +1,6 @@
 <script>
     jQuery(document).ready(function ($) {
-        $('.extcalform > form select').addClass('form-control');
+        $('.extcalform > form select').addClass('form-select');
         $('.extcalform > form input[type="submit"]').addClass('btn btn-primary');
     });
 </script>
@@ -8,7 +8,7 @@
     <form action="<{$navigSelectBox.action}>" method="<{$navigSelectBox.method}>">
         <ul class="list-inline">
             <{foreach item=element from=$navigSelectBox.elements|default:null}>
-                <li><{$element.body}></li>
+                <li class="list-inline-item"><{$element.body}></li>
             <{/foreach}>
         </ul>
     </form>

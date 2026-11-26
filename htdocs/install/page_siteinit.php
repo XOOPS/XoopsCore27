@@ -109,9 +109,9 @@ if ($isadmin) {
         </script>';
 
     ?>
-    <div class="panel panel-info">
-        <div class="panel-heading"><?php echo LEGEND_ADMIN_ACCOUNT; ?></div>
-        <div class="panel-body">
+    <div class="card border-info mb-3">
+        <div class="card-header"><?php echo LEGEND_ADMIN_ACCOUNT; ?></div>
+        <div class="card-body">
 
         <?php
         echo '<div class="row"><div class="col-md-9">';
@@ -146,23 +146,25 @@ if ($isadmin) {
         </div>
     </div>
     <div class="col-md-3">
-            <div id="passwordmeter" class="well">
+            <div id="passwordmeter" class="bg-body-tertiary border rounded p-3 mb-3">
                 <h4><?php echo PASSWORD_LABEL; ?></h4>
 
-                <div id='passwordStrength' class='strength0'>
+                <div id='passwordStrength' class='strength0' aria-live='polite'>
                     <span id='passwordDescription'><?php echo PASSWORD_DESC; ?></span>
                 </div>
 
 
                 <div id="passwordgenerator">
-                    <label for='password_generator'><?php echo PASSWORD_GENERATOR; ?></label>
-                    <label for="generated_pw"></label><input type="text" class="form-control" name="generated_pw" id="generated_pw" value="" onclick="this.setSelectionRange(0, this.value.length); document.execCommand('copy');"><br>
-                    <button type="button" class="btn btn-default" onclick="suggestPassword(16);">
+                    <label class="form-label" for="generated_pw"><?php echo PASSWORD_GENERATOR; ?></label>
+                    <input type="text" class="form-control" name="generated_pw" id="generated_pw" value="" onclick="this.setSelectionRange(0, this.value.length); document.execCommand('copy');"><br>
+                    <button type="button" class="btn btn-outline-secondary" onclick="suggestPassword(16);">
                     <?php echo PASSWORD_GENERATE; ?></button>
-                    <button type="button" class="btn btn-default" onclick="suggestPasswordCopy();">
+                    <button type="button" class="btn btn-outline-secondary" onclick="suggestPasswordCopy();">
                     <?php echo PASSWORD_COPY; ?></button>
                 </div>
             </div>
+        </div>
+    </div>
         </div>
     </div>
     <?php

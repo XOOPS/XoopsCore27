@@ -4,12 +4,12 @@
         <{if $user.avatar|default:'' != ''}>
             <li class="avatar-image">
                 <img src="<{$user.avatar}>" alt="<{$user.name}>" class="rounded-circle">
-                <span class="badge pull-right"><{$user.rank}></span>
+                <span class="badge float-end"><{$user.rank}></span>
             </li>
         <{else}>
             <li class="avatar-image">
                 <img src="<{$xoops_imageurl}>images/blank.gif" alt="<{$user.name}>" class="rounded-circle">
-                <span class="badge pull-right"><{$user.rank}></span>
+                <span class="badge float-end"><{$user.rank}></span>
             </li>
         <{/if}>
 

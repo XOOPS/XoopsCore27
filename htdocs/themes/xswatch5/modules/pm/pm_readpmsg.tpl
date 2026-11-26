@@ -49,9 +49,9 @@
 						<a href="<{$xoops_url}>/userinfo.php?uid=<{$poster->getVar('uid')}>">
 							<h5><{$poster->getVar('uname')}></h5>
 							<{if ($poster->getVar("user_avatar") != "blank.gif")}>
-								<img src="<{$xoops_url}>/uploads/<{$poster->getVar('user_avatar')}>" alt="<{$poster->getVar('uname')}>" class="img-fluid img-rounded img-thumbnail" width="128">
+								<img src="<{$xoops_url}>/uploads/<{$poster->getVar('user_avatar')}>" alt="<{$poster->getVar('uname')}>" class="img-fluid rounded img-thumbnail" width="128">
 							<{else}>
-								<img src="<{$xoops_imageurl}>images/no-avatar.png" alt="<{$poster->getVar('uname')}>" class="img-fluid img-rounded img-thumbnail" width="128">
+								<img src="<{$xoops_imageurl}>images/no-avatar.png" alt="<{$poster->getVar('uname')}>" class="img-fluid rounded img-thumbnail" width="128">
 							<{/if}>
 						</a>
 						<{if ( $poster->getVar("user_from") != "" ) }>

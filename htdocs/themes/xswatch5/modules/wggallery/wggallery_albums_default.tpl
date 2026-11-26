@@ -1,9 +1,9 @@
 <{include file='db:wggallery_header.tpl'}>
 <{if isset($albums_list)}>
 	<div class='col-sm-12 col-sm-8'>
-	<div class='panel panel-<{$panel_type|default:'none'}>'>
-		<div class='panel-heading'><{$smarty.const._CO_WGGALLERY_ALBUMS_TITLE}></div>
-		<div class='panel-body'>
+	<div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}>'>
+		<div class='card-header'><{$smarty.const._CO_WGGALLERY_ALBUMS_TITLE}></div>
+		<div class='card-body'>
 			<{foreach item=album from=$albums_list|default:null}>
 				<div class='row wgg-album-list'>
 					<div class='col-sm-4'>
@@ -81,9 +81,9 @@
 
 
 	<div class='col-sm-12 col-sm-4'>
-		<div class='panel panel-<{$panel_type|default:'none'}>'>
-			<div class='panel-heading'><{$smarty.const._CO_WGGALLERY_ALBUMS_SORT}></div>
-			<div class='panel-body'>
+		<div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}>'>
+			<div class='card-header'><{$smarty.const._CO_WGGALLERY_ALBUMS_SORT}></div>
+			<div class='card-body'>
 				<ol class="sortable ui-sortable mjs-nestedSortable-branch mjs-nestedSortable-expanded">
 					<{$albumlist_sort}>
 				</ol>
@@ -110,8 +110,8 @@
         <div class="modal-dialog wgg-modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     <h4 class="modal-title" id="myModalLabel"><{$smarty.const._CO_WGGALLERY_IMAGES_TITLE}></h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <{foreach item=image from=$images|default:null}>

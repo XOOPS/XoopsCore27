@@ -127,10 +127,10 @@ if ($process) {
         $error = true;
         $content = '<div class="alert alert-danger"><span class="fa-solid fa-ban text-danger"></span> '
             . FAILED . '</div><div class="alert alert-warning">'
-            . XOOPS_ERROR_SEE_BELOW . '</div><div class="well">' . $dbm->report() . '</div>';
+            . XOOPS_ERROR_SEE_BELOW . '</div><div class="bg-body-tertiary border rounded p-3 mb-3">' . $dbm->report() . '</div>';
     } else {
         $content = '<div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> '
-            . DATA_INSERTED . '</div><div class="well">' . $dbm->report() . '</div>';
+            . DATA_INSERTED . '</div><div class="bg-body-tertiary border rounded p-3 mb-3">' . $dbm->report() . '</div>';
     }
 } else {
     $content = '<div class="alert alert-info"><span class="fa-solid fa-circle-info text-info"></span> '

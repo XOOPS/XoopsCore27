@@ -1,5 +1,5 @@
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="index.php"><{$smarty.const._XO_LA_XOOPSFAQ}></a></li>
+    <li class="breadcrumb-item"><a href="index.php"><{$smarty.const._XO_LA_XOOPSFAQ}></a></li>
 </ol>
 
 <div class="alert alert-info"><{$smarty.const._XO_LA_TOC}></div>
@@ -7,7 +7,7 @@
 <ul class="list-group">
     <{foreach item=category from=$categories|default:null}>&nbsp;&nbsp;&nbsp;
         <strong><a href="index.php?cat_id=<{$category.id}>">
-                <li class="list-group-item"><span class="label label-danger"><span class="fa-solid fa-check"></span>&nbsp;&nbsp;<{$category.name}></span>
+                <li class="list-group-item"><span class="badge text-bg-danger"><span class="fa-solid fa-check"></span>&nbsp;&nbsp;<{$category.name}></span>
                 </li>
             </a></strong>
         <!-- start question loop -->

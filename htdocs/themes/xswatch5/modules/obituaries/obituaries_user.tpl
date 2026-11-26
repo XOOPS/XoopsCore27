@@ -48,7 +48,7 @@
     <{if $obituaries_user.obituaries_uid > 0}>
         <br>
         <br>
-        <div align="center"><b><a href="<{$xoops_url}>/userinfo.php?uid=<{$obituaries_user.obituaries_uid}>"><span class="label label-danger"><{$smarty.const._AM_OBITUARIES_XOOPS_PROFILE}></span></a></b>
+        <div align="center"><b><a href="<{$xoops_url}>/userinfo.php?uid=<{$obituaries_user.obituaries_uid}>"><span class="badge text-bg-danger"><{$smarty.const._AM_OBITUARIES_XOOPS_PROFILE}></span></a></b>
         </div>
         <br>
     <{/if}>

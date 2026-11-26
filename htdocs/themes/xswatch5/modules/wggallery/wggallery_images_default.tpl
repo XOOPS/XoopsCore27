@@ -1,6 +1,6 @@
 <{include file='db:wggallery_header.tpl'}>
 
-<div class='card panel-<{$panel_type|default:'none'}> mb-3'>
+<div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}> mb-3'>
 	<{if isset($showlist)}>
         <div class='card-header wgg-imgindex-header'><{$smarty.const._CO_WGGALLERY_IMAGES_TITLE}> <{$alb_name}></div>
         <div class='card-body'>
@@ -111,13 +111,13 @@
     <{/if}>
     <{if isset($showimage)}>
         <div class='wgg-img-panel-row col-12 col-sm-12 col-md-12 col-lg-12 center'><img class='img-fluid wgg-img' src='<{$file}>' alt='<{$image.title}>'></div>
-        <div class='wgg-img-panel-row col-12 col-sm-6 col-md-6 col-lg6'>
+        <div class='wgg-img-panel-row col-12 col-sm-6 col-md-6 col-lg-6'>
             <p><img class='wgg-btn-icon' src='<{$wggallery_icon_url_16}>photos.png' alt='<{$smarty.const._CO_WGGALLERY_IMAGE_TITLE}>' title='<{$smarty.const._CO_WGGALLERY_IMAGE_TITLE}>'><{$image.title}></p>
             <{if $image.desc|default:''}>
                 <p class='justify'><{$image.desc}></p>
             <{/if}>
         </div>
-        <div class='wgg-img-panel-row col-12 col-sm-6 col-md-6 col-lg6'>
+        <div class='wgg-img-panel-row col-12 col-sm-6 col-md-6 col-lg-6'>
             <p><img class='wgg-btn-icon' src='<{$wggallery_icon_url_16}>size.png' alt='<{$smarty.const._CO_WGGALLERY_IMAGE_SIZE}>' title='<{$smarty.const._CO_WGGALLERY_IMAGE_SIZE}>'><{$image.size}> kb</p>
             <p><img class='wgg-btn-icon' src='<{$wggallery_icon_url_16}>dimension.png' alt='<{$smarty.const._CO_WGGALLERY_IMAGE_SIZE}>' title='<{$smarty.const._CO_WGGALLERY_IMAGE_SIZE}>'><{$image.resx}>px / <{$image.resy}>px</p>
             <{if isset($img_allowdownload)}>

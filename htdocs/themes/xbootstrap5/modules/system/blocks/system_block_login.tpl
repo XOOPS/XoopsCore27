@@ -10,10 +10,10 @@
             <input class="form-control" type="password" name="pass" placeholder="<{$smarty.const.THEME_PASS}>">
         </div>
 
-        <div class="checkbox">
-            <label>
+        <div class="form-check">
+            <label class="form-check-label">
                 <{if isset($block.lang_rememberme)}>
-                    <input type="checkbox" name="rememberme" value="On" class="formButton">
+                    <input type="checkbox" name="rememberme" value="On" class="form-check-input formButton">
                     <{$block.lang_rememberme}>
                 <{/if}>
             </label>

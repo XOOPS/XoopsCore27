@@ -3,7 +3,7 @@
 <{if $indexpage || $category.subcats || ($category && $display_category_summary)}>
 
     <{if $display_category_summary && $category}>
-        <div class="well-sm card">
+        <div class="p-2 card">
             <{$lang_category_summary}>
         </div>
     <{/if}>

@@ -69,8 +69,8 @@ xoops_load('xoopsformloader');
 //xoops_load("xoopsmodule");
 include_once XOOPS_ROOT_PATH . '/include/cp_functions.php';
 include_once XOOPS_ROOT_PATH . '/modules/system/constants.php';
-xoops_load('xoopsformrendererbootstrap4');
-XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap4());
+xoops_load('xoopsformrendererbootstrap5');
+XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap5());
 
 
 global $xoopsConfig;
@@ -309,7 +309,6 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
         }
 
         xoops_header();
-        echo "<link href='css/xoopsimagebrowser.css' rel='stylesheet' type='text/css' />";
         xoops_confirm(['op' => 'delcatok', 'imgcat_id' => $imgcat_id, 'target' => $target], $current_file, _AM_SYSTEM_IMAGES_RUDELIMGCAT);
         xoops_footer();
         exit();
@@ -376,7 +375,6 @@ if ($isadmin || ($catreadcount > 0) || ($catwritecount > 0)) {
     // Confirm delete file - start
     if ($op === 'delfile' && \Xmf\Request::hasVar('op', 'GET')) {
         xoops_header();
-        echo "<link href='css/xoopsimagebrowser.css' rel='stylesheet' type='text/css' />";
         xoops_confirm(['op' => 'delfileok', 'image_id' => $image_id, 'target' => $target], $current_file, _AM_SYSTEM_IMAGES_RUDELIMG);
         xoops_footer();
         exit();
@@ -423,17 +421,16 @@ echo '<html lang="' . _LANGCODE . '">';
 echo '<head>';
 echo '<meta http-equiv="content-type" content="text/html; charset=' . _CHARSET . '" />';
 echo '<meta http-equiv="content-language" content="' . _LANGCODE . '" />';
-echo '<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css"/>';
+echo '<link href="' . XOOPS_URL . '/media/bootstrap5/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>';
 echo '<link href="css/xoopsimagemanager.css" rel="stylesheet" type="text/css"/>';
 echo '<link href="' . xoops_getcss($xoopsConfig['theme_set']) . '" rel="stylesheet" type="text/css"/>';
-echo '<script src="' . XOOPS_URL . '/browse.php?Frameworks/jquery/jquery.js"></script>';
-echo '<script type="text/javascript" src="js/bootstrap.bundle.min.js"></script>';
+echo '<script src="' . XOOPS_URL . '/media/bootstrap5/js/bootstrap.bundle.min.js"></script>';
 echo '</head>';
 echo '<body>';
 echo '<div class="container-fluid pt-1">';
 
 echo '<ul class="nav nav-tabs" id="imgTabs" role="tablist">';
-echo '<li class="nav-item"><a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home"
+echo '<li class="nav-item" role="presentation"><a class="nav-link active" id="home-tab" data-bs-toggle="tab" href="#home" role="tab" aria-controls="home"
 aria-selected="true">';
 if ($op === 'listimg') {
     echo _AM_SYSTEM_IMAGES_IMGLIST;
@@ -442,12 +439,12 @@ if ($op === 'listimg') {
 }
 echo '</a></li>';
 if (!empty($catwritelist)) {
-    echo '<li class="nav-item"><a class="nav-link" id="addimg-tab" data-toggle="tab" href="#addimg" role="tab" aria-controls="img" aria-selected="true">';
+    echo '<li class="nav-item" role="presentation"><a class="nav-link" id="addimg-tab" data-bs-toggle="tab" href="#addimg" role="tab" aria-controls="addimg" aria-selected="false">';
     echo _AM_SYSTEM_IMAGES_ADDIMG;
     echo '</a></li>';
 }
 if ($isadmin) {
-    echo '<li class="nav-item"><a class="nav-link" id="addcat-tab" data-toggle="tab" href="#addcat" role="tab" aria-controls="cat" aria-selected="true">';
+    echo '<li class="nav-item" role="presentation"><a class="nav-link" id="addcat-tab" data-bs-toggle="tab" href="#addcat" role="tab" aria-controls="addcat" aria-selected="false">';
     echo _AM_SYSTEM_IMAGES_ADDCAT;
     echo '</a></li>';
 }
@@ -474,12 +471,12 @@ if ($op === 'list') {
                 $countimagesincat = $image_handler->getCount(new Criteria('imgcat_id', $this_imgcat_id));
                 echo '<td><a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=listimg&amp;imgcat_id=' . $this_imgcat_id . '">' . $imagecategories[$i]->getVar('imgcat_name') . '</a></td>';
                 echo '<td>' . $countimagesincat . ' ' . _AM_SYSTEM_IMAGES_NBIMAGES . '</td>';
-                echo '<td class="xo-actions txtcenter"><a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=listimg&amp;imgcat_id=' . $this_imgcat_id . '"><img src="images/display.png" data-toggle="tooltip" alt="' . _LIST . '" title="' . _LIST . '"></a>';
+                echo '<td class="xo-actions txtcenter"><a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=listimg&amp;imgcat_id=' . $this_imgcat_id . '" data-bs-toggle="tooltip" title="' . _LIST . '"><img src="images/display.png" alt="' . _LIST . '"></a>';
                 if ($isadmin) {
-                    echo '&nbsp;<a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=editcat&amp;imgcat_id=' . $this_imgcat_id . '"><img src="images/edit.png" data-toggle="tooltip" alt="' . _EDIT . '" title="' . _EDIT . '"></a>';
+                    echo '&nbsp;<a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=editcat&amp;imgcat_id=' . $this_imgcat_id . '" data-bs-toggle="tooltip" title="' . _EDIT . '"><img src="images/edit.png" alt="' . _EDIT . '"></a>';
                 }
                 if ($isadmin && $imagecategories[$i]->getVar('imgcat_type') === 'C') {
-                    echo '&nbsp;<a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=delcat&amp;imgcat_id=' . $this_imgcat_id . '"><img src="images/delete.png" data-toggle="tooltip" alt="' . _DELETE . '" title="' . _DELETE . '"></a>';
+                    echo '&nbsp;<a href="' . $current_file . '?target=' . $targetQuery . '&amp;op=delcat&amp;imgcat_id=' . $this_imgcat_id . '" data-bs-toggle="tooltip" title="' . _DELETE . '"><img src="images/delete.png" alt="' . _DELETE . '"></a>';
                 }
             }
             echo '<td></tr>';
@@ -598,7 +595,7 @@ echo '</div>';
 
 echo '</div>'; // Tab home
 
-echo '<div class="tab-pane fade" id="addimg" role="tabpanel" aria-labelledby="home-tab">';
+echo '<div class="tab-pane fade" id="addimg" role="tabpanel" aria-labelledby="addimg-tab">';
 echo '<div class="row">';
 echo '<div class="col p-4">';
 
@@ -652,11 +649,10 @@ echo '</div>';
 echo '</div>'; // tab-content
 
 echo '</div>';
-echo '</body>';
 ?>
 <script type="text/javascript">
-    $(function () {
-        $('[data-toggle="tooltip"]').tooltip()
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+        bootstrap.Tooltip.getOrCreateInstance(element);
     });
 
     var elements = document.getElementsByClassName('xoopsimg');

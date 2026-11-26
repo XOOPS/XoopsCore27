@@ -1,7 +1,7 @@
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="index.php"><{$smarty.const._XO_LA_XOOPSFAQ}></a></li>
-    <li class="nav-item"><a class="nav-link" href="index.php"><{$smarty.const._XO_LA_MAIN}></a></li>
-    <li class="nav-item"><a class="nav-link" href="#"><{$category_name}></a></li>
+    <li class="breadcrumb-item"><a href="index.php"><{$smarty.const._XO_LA_XOOPSFAQ}></a></li>
+    <li class="breadcrumb-item"><a href="index.php"><{$smarty.const._XO_LA_MAIN}></a></li>
+    <li class="breadcrumb-item"><a href="#"><{$category_name}></a></li>
 </ol>
 
 
@@ -17,12 +17,12 @@
 
 <!-- start question and answer loop -->
 <{foreach item=question from=$questions|default:null}>
-    <div class="panel panel-default">
-        <div class="panel-heading"><a id="q<{$question.id}>" name="q<{$question.id}>"></a><span class="label label-danger"><{$question.title}></span>
+    <div class="card">
+        <div class="card-header"><a id="q<{$question.id}>" name="q<{$question.id}>"></a><span class="badge text-bg-danger"><{$question.title}></span>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             <td class="even"><{$question.answer}>
-                <div style="text-align: right;"><a href="#top"><span class="label label-primary"><{$smarty.const._XO_LA_BACKTOTOP}></span></a></div>
+                <div style="text-align: right;"><a href="#top"><span class="badge text-bg-primary"><{$smarty.const._XO_LA_BACKTOTOP}></span></a></div>
             </td>
         </div>
     </div>

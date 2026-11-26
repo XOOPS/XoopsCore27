@@ -145,11 +145,11 @@ class Smarty4ScannerOutput extends ScannerOutput
         // build summary table
         $this->outputAppend('<table class="table"><tr><th>' . 'Scan Summary' . '</th><th></th></tr>');
         $this->outputAppend('<tr><td>' . 'Files Checked' . '</td><td>' . (string) $this->getCount('checked') . '</td></tr>');
-        $this->outputAppend('<tr class="warning"><td>' . 'Need file permission to fix' . '</td><td>' . (string) $this->getCount('notwritable') . '</td></tr>');
-        $this->outputAppend('<tr class="warning"><td>' . 'Foreach item/from name conflicts (auto-fixable)' . '</td><td>' . (string) $this->getCount('varname') . '</td></tr>');
+        $this->outputAppend('<tr class="table-warning"><td>' . 'Need file permission to fix' . '</td><td>' . (string) $this->getCount('notwritable') . '</td></tr>');
+        $this->outputAppend('<tr class="table-warning"><td>' . 'Foreach item/from name conflicts (auto-fixable)' . '</td><td>' . (string) $this->getCount('varname') . '</td></tr>');
         $this->outputAppend('<tr><td>' . 'Using includeq/foreachq' . '</td><td>' . (string) ($this->getCount('includeq') + $this->getCount('foreachq')) . '</td></tr>');
         $this->outputAppend('<tr><td>' . 'Missing Quotes' . '</td><td>' . (string) ($this->getCount('noquotes')) . '</td></tr>');
-        $this->outputAppend('<tr class="warning"><td>' . 'Quotes damaged by an earlier repair (auto-fixable)' . '</td><td>' . (string) ($this->getCount('brokenquotes')) . '</td></tr>');
+        $this->outputAppend('<tr class="table-warning"><td>' . 'Quotes damaged by an earlier repair (auto-fixable)' . '</td><td>' . (string) ($this->getCount('brokenquotes')) . '</td></tr>');
         $this->outputAppend('<tr><td></td><td></td></tr>');
         $this->outputAppend('</table>');
     }
@@ -169,11 +169,11 @@ class Smarty4ScannerOutput extends ScannerOutput
         if (!$writable) {
             $message = _XOOPS_SMARTY4_SCANNER_NOT_WRITABLE;
             $this->addToCount('notwritable');
-            $this->outputAppend("<tr class='warning'>"
+            $this->outputAppend("<tr class='table-warning'>"
                 . "<td>$rule</td><td>$match</td><td>$file<br>$message</td></tr>");
         } elseif ($rule == 'varname') {
             $message = _XOOPS_SMARTY4_SCANNER_AUTOFIX;
-            $this->outputAppend("<tr class='warning'>"
+            $this->outputAppend("<tr class='table-warning'>"
                 . "<td>$rule</td><td>$match</td><td>$file<br>$message</td></tr>");
         } else {
             $this->outputAppend("<tr><td>$rule</td><td>$match</td><td>$file</td></tr>");

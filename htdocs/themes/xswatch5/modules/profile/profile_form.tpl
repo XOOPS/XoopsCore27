@@ -2,7 +2,7 @@
 <{*
 <{$xoForm.javascript}>
 <form id="<{$xoForm.name}>" name="<{$xoForm.name}>" action="<{$xoForm.action}>" method="<{$xoForm.method}>" <{$xoForm.extra}> >
-	<div class="form-group">
+	<div class="mb-3">
 		<{foreach item=element from=$xoForm.elements|default:null}>
             <{if empty($element.hidden)}>
 				<label>

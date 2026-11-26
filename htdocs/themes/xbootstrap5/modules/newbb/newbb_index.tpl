@@ -1,6 +1,6 @@
 <div class="newbb">
 
-    <div class="jumbotron newbb-header">
+    <div class="p-4 mb-4 bg-body-tertiary rounded newbb-header">
         <h3>
             <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php" title="<{$index_title}>">
                 <{$index_title}>
@@ -10,7 +10,7 @@
         <p><{$index_desc}></p>
         <div class="row">
 
-            <div class="newbb-header-icons hidden-xs">
+            <div class="newbb-header-icons d-none d-sm-block">
                 <{if isset($viewer_level) &&  $viewer_level >= 1}>
                     <div class="col-md-6 mb10">
                         <strong><{$smarty.const._MD_NEWBB_TOPIC}>:</strong>
@@ -19,11 +19,11 @@
                         </a>
 
                         <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/list.topic.php?status=pending#admin" title="<{$smarty.const._MD_NEWBB_TYPE_PENDING}>" class="btn btn-sm btn-primary">
-                            <{if $wait_new_topic|default:false}><span class="badge"><{$wait_new_topic}></span><{/if}> <{$smarty.const._MD_NEWBB_TYPE_PENDING}>
+                            <{if $wait_new_topic|default:false}><span class="badge text-bg-secondary"><{$wait_new_topic}></span><{/if}> <{$smarty.const._MD_NEWBB_TYPE_PENDING}>
                         </a>
 
                         <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/list.topic.php?status=deleted#admin" title="<{$smarty.const._MD_NEWBB_TYPE_DELETED}>" class="btn btn-sm btn-danger">
-                            <{if isset($delete_topic)}><span class="badge"><{$delete_topic}></span><{/if}> <{$smarty.const._MD_NEWBB_TYPE_DELETED}>
+                            <{if isset($delete_topic)}><span class="badge text-bg-secondary"><{$delete_topic}></span><{/if}> <{$smarty.const._MD_NEWBB_TYPE_DELETED}>
                         </a>
                     </div>
                 <{/if}>
@@ -66,13 +66,13 @@
         </div><!-- .newbb-header -->
     </div>
 
-        <div class="panel-group newbb-category-list" id="accordion">
+        <div class="accordion newbb-category-list" id="accordion">
             <{foreach item=category from=$categories|default:null}><!-- Forum categories -->
-            <div class="panel panel-default mb10">
-                <div class="panel-heading">
-                    <h4 class="panel-title newbb-forum-title">
+            <div class="card mb10">
+                <div class="card-header">
+                    <h4 class="mb-0 newbb-forum-title">
                         <{if $category.forums}>
-                            <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#<{$category.cat_element_id}>"
+                            <a data-bs-toggle="collapse" href="#<{$category.cat_element_id}>"
                                title="<{$smarty.const.THEME_NEWBB_TOPIC}>">
                                 <span class="fa-solid fa-square-plus"></span>
                             </a>
@@ -87,26 +87,26 @@
 
                         <{if $category.cat_sponsor}>
                             <a href="<{$category.cat_sponsor.link}>" title="<{$smarty.const.THEME_FORUM_SPONSORBY}> <{$category.cat_sponsor.title}>"
-                               target="_blank" class="pull-right btn btn-sm btn-success">
+                               target="_blank" class="float-end ms-1 btn btn-sm btn-success">
                                 <{$category.cat_sponsor.title}>
                             </a>
                         <{/if}>
 
                         <{if $category.cat_description}>
                             <a href="#forum-desc-<{$category.cat_element_id}>" title="<{$smarty.const.THEME_FORUM_DESCRIPTION}>" data-bs-toggle="modal"
-                               data-bs-target="#forum-desc-<{$category.cat_element_id}>" class="btn btn-sm btn-info pull-right">
+                               data-bs-target="#forum-desc-<{$category.cat_element_id}>" class="btn btn-sm btn-info float-end ms-1">
                                 <span class="fa-solid fa-circle-info"></span>
                             </a>
                         <{/if}>
                     </h4>
                     <{if $category.cat_description}>
-                        <div class="modal fade" id="forum-desc-<{$category.cat_element_id}>" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+                        <div class="modal fade" id="forum-desc-<{$category.cat_element_id}>" tabindex="-1" role="dialog" aria-labelledby="category-title-<{$category.cat_element_id}>"
                              aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <button type="button" class="close" data-bs-dismiss="modal" aria-hidden="true">&times;</button>
-                                        <h4 class="modal-title" id="myModalLabel"><{$category.cat_title}></h4>
+                                        <h4 class="modal-title" id="category-title-<{$category.cat_element_id}>"><{$category.cat_title}></h4>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
                                     </div>
                                     <div class="modal-body">
                                         <p><{$category.cat_description}></p>
@@ -123,10 +123,10 @@
                     <{/if}>
                 </div><!-- .panel-heading -->
 
-                <div id="<{$category.cat_element_id}>" class="panel-collapse collapse <{if $subforum_display == 'expand'}>show<{/if}>">
-                    <div class="panel-body">
+                <div id="<{$category.cat_element_id}>" data-bs-parent="#accordion" class="collapse <{if $subforum_display == 'expand'}>show<{/if}>">
+                    <div class="card-body">
                         <{if $category.forums}>
-                            <div class="row hidden-xs">
+                            <div class="row d-none d-sm-flex">
                                 <{if $subforum_display == "expand"}>
                                     <div class="col-sm-6 col-md-6"><strong><{$smarty.const._MD_NEWBB_FORUM}></strong></div>
                                 <{else}>
@@ -141,11 +141,11 @@
                         <div class="row newbb-list-foruns mb10">
                             <div class="col-sm-6 col-md-6">
                                 <{if !empty($forum.subforum)}>
-                                    <div class="<{if $forum.forum_read == 1 }>forum-read<{else}>forum-new2<{/if}> pull-left">
+                                    <div class="<{if $forum.forum_read == 1 }>forum-read<{else}>forum-new2<{/if}> float-start">
                                         <{$forum.forum_folder}>
                                     </div>
                                 <{else}>
-                                    <div class="<{if $forum.forum_read == 1 }>forum-read<{else}>forum-new2<{/if}> pull-left">
+                                    <div class="<{if $forum.forum_read == 1 }>forum-read<{else}>forum-new2<{/if}> float-start">
                                         <{$forum.forum_folder}>
                                     </div>
                                 <{/if}>
@@ -156,21 +156,21 @@
 
                                 <{if isset($rss_enable)}>
                                     <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/rss.php?f=<{$forum.forum_id}>" target="_blank" title="RSS feed"
-                                       class="pull-right btn btn-sm btn-warning">
+                                       class="float-end ms-1 btn btn-sm btn-warning">
                                         RSS
                                     </a>
                                 <{/if}>
                                 <!-- Forum description -->
                                 <{if !empty($forum.forum_desc)}>
-                                    <button class="btn btn-primary btn-sm pull-right" data-bs-toggle="modal" data-bs-target="#forumDesc-<{$forum.forum_id}>"><span
+                                    <button class="btn btn-primary btn-sm float-end" data-bs-toggle="modal" data-bs-target="#forumDesc-<{$forum.forum_id}>"><span
                                                 class="fa-solid fa-circle-info"></span></button>
-                                    <div class="modal fade" id="forumDesc-<{$forum.forum_id}>" tabindex="-1" role="dialog" aria-labelledby="ForumDescription"
+                                    <div class="modal fade" id="forumDesc-<{$forum.forum_id}>" tabindex="-1" role="dialog" aria-labelledby="forum-title-<{$forum.forum_id}>"
                                          aria-hidden="true">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <button type="button" class="close" data-bs-dismiss="modal" aria-hidden="true">&times;</button>
-                                                    <h4 class="modal-title" id="ForumDescription"><{$smarty.const.THEME_FORUM_DESC}>: <{$category.cat_title}>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                                                    <h4 class="modal-title" id="forum-title-<{$forum.forum_id}>"><{$smarty.const.THEME_FORUM_DESC}>: <{$category.cat_title}>
                                                         - <{$forum.forum_name}></h4>
                                                 </div>
                                                 <div class="modal-body">
@@ -178,7 +178,7 @@
                                                 </div>
                                                 <div class="modal-footer">
                                                     <{if $forum.forum_moderators}>
-                                                        <div class="pull-left"><span class="label label-info"><{$smarty.const._MD_NEWBB_MODERATOR}>: <{$forum.forum_moderators}></span>
+                                                        <div class="float-start"><span class="badge text-bg-info"><{$smarty.const._MD_NEWBB_MODERATOR}>: <{$forum.forum_moderators}></span>
                                                         </div>
                                                     <{/if}>
                                                     <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php?cat=<{$category.cat_id}>"
@@ -194,7 +194,7 @@
                                 <!-- End forum description-->
                             </div>
 
-                            <div class="col-sm-1 col-md-1 text-center hidden-xs">
+                            <div class="col-sm-1 col-md-1 text-center d-none d-sm-block">
                                 <{if !empty($stats[$forum.forum_id].topic.day)}>
                                     <strong><{$stats[$forum.forum_id].topic.day}></strong>
                                     /
@@ -202,7 +202,7 @@
                                 <{$forum.forum_topics}>
                             </div>
 
-                            <div class="col-sm-1 col-md-1 text-center hidden-xs">
+                            <div class="col-sm-1 col-md-1 text-center d-none d-sm-block">
                                 <{if !empty($stats[$forum.forum_id].post.day)}>
                                     <strong><{$stats[$forum.forum_id].post.day}></strong>
                                     /
@@ -210,7 +210,7 @@
                                 <{$forum.forum_posts}>
                             </div>
 
-                            <div class="col-sm-4 col-md-4 hidden-xs">
+                            <div class="col-sm-4 col-md-4 d-none d-sm-block">
                                 <{if !empty($forum.forum_lastpost_subject)}>
                                     <{$forum.forum_lastpost_time}> <{$smarty.const._MD_NEWBB_BY}> <{$forum.forum_lastpost_user}>
                                     <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewtopic.php?post_id=<{$forum.forum_lastpost_id}>">
@@ -254,9 +254,7 @@
                     <input type="hidden" name="sortby" id="sortby" value="p.post_time desc">
                     <input type="hidden" name="searchin" id="searchin" value="both">
 
-                    <span class="input-group-btn">
-                <button class="btn btn-primary" type="submit" id="submit"><{$smarty.const.THEME_FORUM_SEARCH}></button>
-            </span>
+                    <button class="btn btn-primary" type="submit" id="submit"><{$smarty.const.THEME_FORUM_SEARCH}></button>
                 </form>
             </div>
             <div class="col-md-4">

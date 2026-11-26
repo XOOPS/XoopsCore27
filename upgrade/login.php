@@ -30,21 +30,18 @@ if ('' === $uname || [] === $passwords) {
     <h2><?php echo _USER_LOGIN; ?></h2>
 
     <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES | ENT_HTML5); ?>" method="post">
-        <label for="uname"><?php echo _USERNAME; ?></label>
-        <div class="input-group">
-            <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
-            <input class="form-control" type="text" name="uname" id="uname" value="" placeholder="<?php echo _USERNAME_PLACEHOLDER; ?>" autocomplete="current-password">
+        <label class="form-label" for="uname"><?php echo _USERNAME; ?></label>
+        <div class="input-group mb-3">
+            <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+            <input class="form-control" type="text" name="uname" id="uname" value="" placeholder="<?php echo _USERNAME_PLACEHOLDER; ?>" autocomplete="username">
         </div>
 
-        <label for="pass"><?php echo _PASSWORD; ?></label>
-        <div class="input-group">
-            <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
-            <input class="form-control" type="password" name="pass" id="pass" placeholder="<?php echo _PASSWORD_PLACEHOLDER; ?>">
+        <label class="form-label" for="pass"><?php echo _PASSWORD; ?></label>
+        <div class="input-group mb-3">
+            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+            <input class="form-control" type="password" name="pass" id="pass" autocomplete="current-password" placeholder="<?php echo _PASSWORD_PLACEHOLDER; ?>">
         </div>
-        <div class="input-group">
-            <br>
-            <button type="submit" class="btn btn-default"><?php echo _LOGIN; ?></button>
-        </div>
+        <button type="submit" class="btn btn-primary"><?php echo _LOGIN; ?></button>
     </form>
     <?php
 } else {

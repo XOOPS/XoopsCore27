@@ -85,7 +85,7 @@
                     <{foreach item=video_user from=$video_uid|default:null}>
                         <li><i class="fa-solid fa-film"></i>
                             <a href="<{$xoops_url}>/modules/<{$video.module_dir}>/singlevideo.php?cid=<{$video_user.cid}>&lid=<{$video_user.lid}>" title="<{$video_user.title}>"><{$video_user.title}></a>
-                            <span class="pull-right">(<{$video_user.published}>)</span>
+                            <span class="float-end">(<{$video_user.published}>)</span>
                         </li>
                     <{/foreach}>
                 </ul>
@@ -96,7 +96,7 @@
 
         <div class="col-md-12">
             <{if $video.showsbookmarx > 0}>
-                <div class="shareaholic-canvas" data-bs-app="share_buttons" data-bs-app-id=""></div>
+                <div class="shareaholic-canvas" data-app="share_buttons" data-app-id=""></div>
             <{/if}>
         </div>
     </div><!-- .xoopstube-data -->

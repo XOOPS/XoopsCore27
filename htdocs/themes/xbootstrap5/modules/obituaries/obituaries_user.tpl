@@ -1,8 +1,8 @@
 <{if isset($obituaries_user)}>
     <ol class="breadcrumb">
-        <li class="nav-item"><a class="nav-link" href="index.php"><{$breadcrumb}></a></li>
+        <li class="breadcrumb-item"><a href="index.php"><{$breadcrumb}></a></li>
         <{if isset($xoops_isadmin)}>
-            <li>[ <a href="<{$xoops_url}>/modules/obituaries/admin/main.php?op=edit&id=<{$obituaries_user.obituaries_id}>"><{$smarty.const._EDIT}></a> ]</li>
+            <li class="breadcrumb-item">[ <a href="<{$xoops_url}>/modules/obituaries/admin/main.php?op=edit&id=<{$obituaries_user.obituaries_id}>"><{$smarty.const._EDIT}></a> ]</li>
         <{/if}>
     </ol>
     <div style="margin-left: 10px; text-align: justify;">
@@ -52,25 +52,25 @@
         <br><br>
 
         <div class="alert alert-success"><b><{$smarty.const._AM_OBITUARIES_DESCRIPTION}></b> :</div>
-        <div class="well well-lg"><{$obituaries_user.obituaries_description}></div>
+        <div class="bg-body-tertiary border rounded p-4"><{$obituaries_user.obituaries_description}></div>
 
 
         <div class="alert alert-info"><b><{$smarty.const._AM_OBITUARIES_SURVIVORS}></b> :</div>
-        <div class="well well-lg"><{$obituaries_user.obituaries_survivors}></div>
+        <div class="bg-body-tertiary border rounded p-4"><{$obituaries_user.obituaries_survivors}></div>
 
 
         <div class="alert alert-warning"><b><{$smarty.const._AM_OBITUARIES_SERVICE}></b> :</div>
-        <div class="well well-lg"><{$obituaries_user.obituaries_service}></div>
+        <div class="bg-body-tertiary border rounded p-4"><{$obituaries_user.obituaries_service}></div>
 
         <{if $obituaries_user.obituaries_memorial|default:'' != ''}>
             <div class="alert alert-danger"><b><{$smarty.const._AM_OBITUARIES_MEMORIAL}></b> :</div>
-            <div class="well well-lg"><{$obituaries_user.obituaries_memorial}></div>
+            <div class="bg-body-tertiary border rounded p-4"><{$obituaries_user.obituaries_memorial}></div>
         <{/if}>
     </div>
     <{if $obituaries_user.obituaries_uid > 0}>
         <br>
         <br>
-        <div align="center"><b><a href="<{$xoops_url}>/userinfo.php?uid=<{$obituaries_user.obituaries_uid}>"><span class="label label-danger"><{$smarty.const._AM_OBITUARIES_XOOPS_PROFILE}></span></a></b>
+        <div align="center"><b><a href="<{$xoops_url}>/userinfo.php?uid=<{$obituaries_user.obituaries_uid}>"><span class="badge text-bg-danger"><{$smarty.const._AM_OBITUARIES_XOOPS_PROFILE}></span></a></b>
         </div>
         <br>
     <{/if}>

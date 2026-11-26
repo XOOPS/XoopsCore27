@@ -3,7 +3,7 @@
 <{if isset($form)}>
 	<{$form}>
 <{else}>
-    <div class='card panel-<{$panel_type|default:'none'}>'>
+    <div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}>'>
             <div class='card-header wgg-imgindex-header'>
                 <h3><{$smarty.const._CO_WGGALLERY_IMAGE_MANAGE}> <{$alb_name}></h3>
                 <p><{$smarty.const._CO_WGGALLERY_IMAGE_MANAGE_DESC}></p>
@@ -15,7 +15,7 @@
                             <li style="display: list-item;" class="mjs-nestedSortable-branch mjs-nestedSortable-collapsed mjs-nestedSortable-leaf" id="menuItem_<{$image.id}>">
                                 <div class="menuDiv ui-sortable-handle">
                                     <div class='col-1 wgg-img-sort'><img id='image_<{$image.id}>' src='<{$wggallery_icon_url_16}>drag.png' alt='drag&drop'></div>
-                                    <div class='col-3 wgg-img-sort'><img class='img-responsive' src='<{$image.thumb}>' alt='<{$image.title}>'></div>
+                                    <div class='col-3 wgg-img-sort'><img class='img-fluid' src='<{$image.thumb}>' alt='<{$image.title}>'></div>
                                     <div class='col-2 wgg-img-sort'><{$image.title}></div>
                                     <div class='col-1 wgg-img-sort'><{$image.date}></div>
                                     <div class='col-5 wgg-img-sort right'>

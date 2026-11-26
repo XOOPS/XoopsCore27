@@ -1,31 +1,13 @@
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.collapsefaq').forEach(function(el) {
-            new bootstrap.Collapse(el, {toggle: false}).hide();
-        });
-        if (window.location.hash) {
-            hashChange(window.location.hash);
+    function openFaqFromHash() {
+        const question = document.getElementById(window.location.hash.slice(1));
+        const answer = question && question.querySelector('.collapse');
+        if (answer) {
+            bootstrap.Collapse.getOrCreateInstance(answer, {toggle: false}).show();
         }
-    });
-    window.onhashchange = function () {
-        hashChange(window.location.hash);
-    };
-    function hashChange(hash) {
-        document.querySelectorAll('.collapsefaq').forEach(function(el) {
-            bootstrap.Collapse.getOrCreateInstance(el).hide();
-        });
-        setTimeout(function() {
-            const hashid = hash.substring(1);
-            const target = document.getElementById('collapsefa' + hashid);
-            if (target) {
-                bootstrap.Collapse.getOrCreateInstance(target).toggle();
-            }
-            const anchor = document.querySelector(hash);
-            if (anchor) {
-                anchor.scrollIntoView({behavior: 'smooth'});
-            }
-        }, 500);
     }
+    document.addEventListener('DOMContentLoaded', openFaqFromHash);
+    window.addEventListener('hashchange', openFaqFromHash);
 </script>
 <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="index.php"><{$smarty.const._XO_LA_XOOPSFAQ}></a></li>
@@ -37,13 +19,13 @@
     <div id="q<{$question.id}>" class="card">
         <div class="card-header" id="faqheading<{$question.id}>">
             <h2 class="mb-0">
-                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#collapsefaq<{$question.id}>" aria-expanded="true" aria-controls="collapseOne">
+                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#collapsefaq<{$question.id}>" aria-expanded="false" aria-controls="collapsefaq<{$question.id}>">
                     <{$question.title}>
                 </button>
             </h2>
         </div>
 
-        <div id="collapsefaq<{$question.id}>" class="collapsefaq show" aria-labelledby="faqheading<{$question.id}>" data-parent="#accordionExample">
+        <div id="collapsefaq<{$question.id}>" class="collapse" aria-labelledby="faqheading<{$question.id}>" data-bs-parent="#accordionExample">
             <div class="card-body">
                 <{$question.answer}>
             </div>

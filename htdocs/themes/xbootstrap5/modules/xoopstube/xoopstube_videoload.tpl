@@ -20,7 +20,7 @@
                         <{$video.title}>
                     </a>
                     <{if $video.published > 0 }>
-                        <span class="pull-right">
+                        <span class="float-end">
             <a href="<{$xoops_url}>/modules/<{$video.module_dir}>/singlevideo.php?cid=<{$video.cid}>&amp;lid=<{$video.id}>">
                 <i title="Play" class="fa-solid fa-play"></i>
             </a>

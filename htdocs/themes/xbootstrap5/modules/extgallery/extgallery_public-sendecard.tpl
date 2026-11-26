@@ -1,7 +1,7 @@
-<form class="form-horizontal" role="form" id="<{$send_ecard.name}>" action="<{$send_ecard.action}>" method="<{$send_ecard.method}>" <{$send_ecard.extra}="">>
+<form  role="form" id="<{$send_ecard.name}>" action="<{$send_ecard.action}>" method="<{$send_ecard.method}>" <{$send_ecard.extra}>>
 <h3 class="gallerytitle"><{$send_ecard.title}></h3>
 
-<img class="pull-right img-thumbnail" src="<{$photo}>" alt="<{$lang.from}>">
+<img class="float-end img-thumbnail" src="<{$photo}>" alt="<{$lang.from}>">
 
 <ul class="list-unstyled form-send-e-card">
 

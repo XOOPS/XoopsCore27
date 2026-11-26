@@ -17,7 +17,7 @@
     <div class="right" id="admin">
         <{if isset($mode) && $mode > 1}>
         <form class="d-flex flex-wrap gap-2" name="form_posts_admin" action="action.post.php" method="POST" onsubmit="if(window.document.form_posts_admin.op.value &lt; 1){return false;}">
-            <div class="form-row align-items-center">
+            <div class="row g-2 align-items-center">
                 <div class="col-auto">
                     <div class="form-check mb-2">
                         <label for="post_check">
@@ -27,7 +27,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <select name="op" class="custom-select mb-2">
+                    <select name="op" class="form-select mb-2">
                         <option value="0"><{$smarty.const._SELECT}></option>
                         <option value="delete"><{$smarty.const._DELETE}></option>
                         <{if isset($status) &&  $status == "pending"}>
@@ -66,7 +66,7 @@
 </a>
 </div>
 <div>
-        <div class="form-row">
+        <div class="row g-2">
             <div class="col">
                 <select
                         name="topicoption" id="topicoption"

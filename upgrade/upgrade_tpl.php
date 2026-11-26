@@ -50,7 +50,7 @@ if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
         <div class="container-fluid">
             <span class="navbar-brand"><img src="assets/img/logo_small.png" alt="XOOPS"></span>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#wizard-nav"
-                    aria-controls="wizard-nav" aria-expanded="false" aria-label="<?php echo _XOOPS_UPGRADE; ?>">
+                    aria-controls="wizard-nav" aria-expanded="false" aria-label="<?php echo htmlspecialchars(_XOOPS_UPGRADE, ENT_QUOTES, 'UTF-8'); ?>">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div id="wizard-nav" class="collapse navbar-collapse">
@@ -74,7 +74,7 @@ if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
-                        <button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="<?php echo _LANGUAGE; ?>"><i class="fa-solid fa-lg fa-language"></i><span class="visually-hidden"><?php echo _LANGUAGE; ?></span></button>
+                        <button type="button" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="<?php echo htmlspecialchars(_LANGUAGE, ENT_QUOTES, 'UTF-8'); ?>"><i class="fa-solid fa-lg fa-language"></i><span class="visually-hidden"><?php echo _LANGUAGE; ?></span></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <?php foreach ($viewModel['languages'] as $lang): ?>
                                 <li><a class="dropdown-item" href="?lang=<?php echo rawurlencode((string) $lang); ?>"><?php echo htmlspecialchars((string) $lang, ENT_QUOTES, 'UTF-8'); ?></a></li>

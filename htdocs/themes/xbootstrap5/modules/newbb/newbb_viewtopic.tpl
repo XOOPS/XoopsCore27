@@ -103,10 +103,10 @@
                 <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/polls.php?op=add&topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_ADD_POLL}>" class="btn btn-info"><{$smarty.const.THEME_ADD_POLL}></a>
             <{/if}>
 
+            <a id="threadtop"></a>
         </div>
 
         <div class="col-sm-6 col-md-6 text-end d-none d-sm-block">
-            <a id="threadtop"></a>
             <a class="btn btn-info" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewtopic.php?order=<{$order_current}>&amp;topic_id=<{$topic_id}>&amp;forum=<{$forum_id}>&amp;move=prev" title="<{$smarty.const._MD_NEWBB_PREVTOPIC}>">
                 <span class="fa-solid fa-circle-left"></span>
             </a>

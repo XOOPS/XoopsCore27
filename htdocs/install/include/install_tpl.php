@@ -63,7 +63,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
     <nav class="navbar navbar-expand-lg bg-dark sticky-top" data-bs-theme="dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#"><img src="assets/img/logo_small.png" alt="XOOPS"></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="<?php echo XOOPS_INSTALL_WIZARD; ?>">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="<?php echo htmlspecialchars(XOOPS_INSTALL_WIZARD, ENT_QUOTES, 'UTF-8'); ?>">
                 <span class="navbar-toggler-icon"></span>
             </button>
 

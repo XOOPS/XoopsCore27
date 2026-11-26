@@ -9,12 +9,12 @@
 
     <{if isset($commentform)}>
         <div class="aligncenter">
-            <button class="btn-comment btn btn-primary" data-bs-toggle="modal" data-bs-target="#comments-form">
+            <button id="comments-form-trigger" class="btn-comment btn btn-primary" data-bs-toggle="modal" data-bs-target="#comments-form">
                 <span class="fa-solid fa-comment"></span> Add Comment
             </button>
         </div>
         <!-- Modal -->
-        <div class="modal fade" id="comments-form" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal fade" id="comments-form" tabindex="-1" role="dialog" aria-labelledby="comments-form-trigger" aria-hidden="true">
             <div class="modal-dialog comments-modal">
                 <div class="modal-content">
                     <div class="modal-body">
@@ -23,7 +23,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                     </div>
                 </div><!-- /.modal-content -->
             </div><!-- /.modal-dialog -->

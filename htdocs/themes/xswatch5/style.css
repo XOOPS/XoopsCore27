@@ -371,6 +371,10 @@ ul.userblock > li.join-date {
     width: 9%;
 }
 
+.badge.text-bg-primary a:any-link {
+    color: inherit;
+}
+
 ul.userblock > li span.badge {
     background: #47A447;
     position: absolute;

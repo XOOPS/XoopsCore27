@@ -209,7 +209,7 @@
 
     <div class="newbb-viewtopic-footer">
     <div class="row mb10">
-        <div class="col-sm-6 col-md-6 d-none d-sm-block">
+        <div class="col-sm-6">
             <{if $forum_reply|default:''}>
                 <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/reply.php?topic_id=<{$topic_id}>" title="<{$smarty.const.THEME_FORUM_REPLY}>" class="btn btn-primary"><{$smarty.const.THEME_FORUM_REPLY}></a>
             <{/if}>
@@ -221,7 +221,7 @@
             <{/if}>
 
             <{if $quickreply.show}>
-                <a href="#quickReply" data-bs-toggle="collapse" title="" class="btn btn-info">Quick Reply</a>
+                <a href="#quickReply" data-bs-toggle="collapse" aria-controls="quickReply" aria-expanded="false" class="btn btn-info">Quick Reply</a>
             <{/if}>
 
             <{if $forum_addpoll|default:''}>

@@ -2,17 +2,17 @@
 <div class="message-current-tab">
     <{if $op==out}>
         <div class="alert alert-success alert-dismissible">
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE}>"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             <strong><a href="viewpmsg.php?op=out" title="<{$smarty.const._MD_PM_OUTBOX}>"><{$smarty.const._MD_PM_OUTBOX}></a></strong>
         </div>
     <{elseif $op == "save"}>
         <div class="alert alert-success alert-dismissible">
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE}>"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             <strong><a href="viewpmsg.php?op=save" title="<{$smarty.const._MD_PM_SAVEBOX}>"><{$smarty.const._MD_PM_SAVEBOX}></a></strong>
         </div>
     <{else}>
         <div class="alert alert-success alert-dismissible">
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE}>"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             <a href="viewpmsg.php?op=in" title="<{$smarty.const._MD_PM_INBOX}>"><{$smarty.const._MD_PM_INBOX}></a>
         </div>
     <{/if}>

@@ -17,7 +17,7 @@
             </li>
 
             <li>
-                <ul class="list-inline col-md-6 d-none d-sm-block">
+                <ul class="list-inline col-md-6">
                     <{if $sforum.forum_moderators}>
                         <li class="list-inline-item"><span class="badge text-bg-info"><{$smarty.const._MD_MODERATOR}>: <{$sforum.forum_moderators}></span></li><{/if}>
 
@@ -56,8 +56,8 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h4 class="modal-title"><{$sforum.forum_name}></h4>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                        <h4 class="modal-title" id="subforum-title-<{$sforum.forum_id}>"><{$sforum.forum_name}></h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                     </div>
                     <div class="modal-body">
                         <p><{$sforum.forum_desc}></p>

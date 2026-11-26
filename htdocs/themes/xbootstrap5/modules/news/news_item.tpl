@@ -31,7 +31,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title" id="news-image-title-<{$story.id}>"><{$story.news_title}></h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             </div>
             <div class="modal-body">
                 <img src="<{$story.picture}>" alt="<{$story.news_title|strip_tags}>" class="img-fluid">

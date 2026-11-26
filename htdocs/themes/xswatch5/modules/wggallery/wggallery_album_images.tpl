@@ -254,7 +254,7 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="getCroppedCanvasTitle"><{$smarty.const._PREVIEW}></h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                                     </div>
                                     <div class="modal-body"></div>
                                     <div class="modal-footer">

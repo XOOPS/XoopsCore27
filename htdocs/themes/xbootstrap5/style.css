@@ -381,6 +381,10 @@ a.navbar-brand.xlogo {
 }
 
 /* Badges */
+.badge.text-bg-primary a:any-link {
+    color: inherit;
+}
+
 .badge {
     font-size: 0.75em;
     padding: 0.35em 0.65em;

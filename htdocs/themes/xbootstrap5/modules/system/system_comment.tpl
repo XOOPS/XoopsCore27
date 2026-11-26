@@ -1,11 +1,11 @@
 <div class="xoops-comment-template" id="comment<{$comment.id}>">
-    <div class="row d-none d-sm-flex">
-        <div class="col-2 col-md-2 aligncenter"><{$comment.poster.uname}></div><!-- .col-md-3 -->
-        <div class="col-4 col-md-4">
+    <div class="row">
+        <div class="col-sm-2 aligncenter"><{$comment.poster.uname}></div><!-- .col-md-3 -->
+        <div class="col-sm-4 d-none d-sm-block">
             <small class="badge text-bg-info"><strong><{$lang_posted}></strong> <{$comment.date_posted}></small>
         </div><!-- .col-md-3 -->
         <{if $comment.date_posted != $comment.date_modified}>
-            <div class="col-5 col-md-5">
+            <div class="col-sm-5 d-none d-sm-block">
                 <small class="badge text-bg-info"><strong><{$lang_updated}></strong> <{$comment.date_modified}></small>
             </div>
             <!-- .col-md-3 -->

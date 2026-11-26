@@ -106,7 +106,7 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h4 class="modal-title" id="category-title-<{$category.cat_element_id}>"><{$category.cat_title}></h4>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                                     </div>
                                     <div class="modal-body">
                                         <p><{$category.cat_description}></p>
@@ -169,7 +169,7 @@
                                         <div class="modal-dialog">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                                                     <h4 class="modal-title" id="forum-title-<{$forum.forum_id}>"><{$smarty.const.THEME_FORUM_DESC}>: <{$category.cat_title}>
                                                         - <{$forum.forum_name}></h4>
                                                 </div>
@@ -210,7 +210,7 @@
                                 <{$forum.forum_posts}>
                             </div>
 
-                            <div class="col-sm-4 col-md-4 d-none d-sm-block">
+                            <div class="col-sm-4">
                                 <{if !empty($forum.forum_lastpost_subject)}>
                                     <{$forum.forum_lastpost_time}> <{$smarty.const._MD_NEWBB_BY}> <{$forum.forum_lastpost_user}>
                                     <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewtopic.php?post_id=<{$forum.forum_lastpost_id}>">

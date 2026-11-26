@@ -421,8 +421,8 @@ HTACCESS;
     }
 
     /**
-     * Keep a hard link to the selected file, including subsequent writes through open handles.
-     * This also establishes a common filesystem before rename(), which can otherwise copy and unlink.
+     * Probe with the empty archive index so a failed rename never changes the live asset's link count.
+     * A common filesystem guarantees rename() moves the inode, including writes through open handles.
      *
      * @param array{string, int, int} $candidate path, device and inode before hashing
      * @param string[] $hashes known hashes for the original path
@@ -431,31 +431,30 @@ HTACCESS;
     {
         [$path, $device, $inode] = $candidate;
         $saved = $archive . '/' . $relative;
-        if (!function_exists('link') || !self::inOriginalDirectory($path) || !link($path, $saved)) {
+        $probe = dirname($path) . '/.xoops-archive-' . bin2hex(random_bytes(12));
+        if (0 === $inode || !function_exists('link') || !self::inOriginalDirectory($path)
+            || !link($archive . '/index.html', $probe) || !unlink($probe)
+        ) {
             $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
             return false;
         }
-        $captured = $saved . '.captured';
-        if (!self::inOriginalDirectory($path) || !rename($path, $captured)) {
+        if (!self::inOriginalDirectory($path) || !rename($path, $saved)) {
             $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
             return false;
         }
         clearstatcache(true);
-        $before = lstat($saved);
-        $after = lstat($captured);
-        $same = $before !== false && $after !== false && $inode !== 0
-            && $device === $after['dev'] && $inode === $after['ino']
-            && $device === $before['dev'] && $inode === $before['ino'];
-        $stock = $this->isStockThemeFile($captured, $hashes);
-        if ($same && true === $stock && unlink($captured)) {
+        $after = lstat($saved);
+        $same = $after !== false && $device === $after['dev'] && $inode === $after['ino'] && 1 === $after['nlink'];
+        $stock = $this->isStockThemeFile($saved, $hashes);
+        if ($same && true === $stock) {
             return true;
         }
         // A no-clobber restore keeps a newer live file intact if another editor got there first.
-        $restored = self::inOriginalDirectory($path) && (is_link($captured)
-            ? function_exists('symlink') && false !== ($target = readlink($captured)) && symlink($target, $path)
-            : is_file($captured) && link($captured, $path));
+        $restored = self::inOriginalDirectory($path) && (is_link($saved)
+            ? function_exists('symlink') && false !== ($target = readlink($saved)) && symlink($target, $path)
+            : is_file($saved) && link($saved, $path));
         if (!$restored || false !== $stock) {
-            $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_RECOVER, $relative, 'xoops_data/' . basename($archive) . '/' . $relative . '.captured');
+            $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_RECOVER, $relative, 'xoops_data/' . basename($archive) . '/' . $relative);
             return false;
         }
         return true;

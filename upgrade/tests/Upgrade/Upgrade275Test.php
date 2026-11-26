@@ -325,9 +325,21 @@ final class Upgrade275Test extends TestCase
             self::assertSame($contents[$themeCss], file_get_contents(XOOPS_ROOT_PATH . '/' . $themeCss));
             self::assertTrue($patch->isApplied()->applied, 'Theme assets alone must never queue the patch.');
             self::assertTrue($patch->hasThemeAssets());
+            if (PHP_OS_FAMILY !== 'Windows' && function_exists('posix_geteuid') && posix_geteuid() !== 0) {
+                $themeDir = dirname(XOOPS_ROOT_PATH . '/' . $themeCss);
+                $mode = fileperms($themeDir) & 0777;
+                self::assertTrue(chmod($themeDir, 0555));
+                try {
+                    self::assertFalse($patch->archiveThemeAssets());
+                } finally {
+                    chmod($themeDir, $mode);
+                }
+                self::assertTrue($patch->hasThemeAssets(), 'Correcting directory permissions must allow another attempt.');
+            }
+            $beforeSuccess = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
             self::assertTrue($patch->archiveThemeAssets());
             self::assertFalse($patch->hasThemeAssets());
-            $archives = array_values(array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $existingArchives));
+            $archives = array_values(array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $beforeSuccess));
             self::assertCount(1, $archives);
             self::assertSame($contents[$themeCss], file_get_contents($archives[0] . '/' . $themeCss));
             foreach ($obsolete as $relative) {
@@ -389,7 +401,7 @@ final class Upgrade275Test extends TestCase
                 protected function isStockThemeFile(string $file, array $hashes): ?bool
                 {
                     $result = parent::isStockThemeFile($file, $hashes);
-                    if (str_ends_with($file, '.captured')) {
+                    if ('' !== $this->live) {
                         file_put_contents($this->live, 'new deployment');
                     } elseif ($result) {
                         $this->live = $file;
@@ -402,8 +414,8 @@ final class Upgrade275Test extends TestCase
             self::assertSame('new deployment', file_get_contents($path));
             $archives = array_values(array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $existingArchives));
             self::assertCount(1, $archives);
-            self::assertSame('edited after stock check', file_get_contents($archives[0] . '/' . $relative . '.captured'));
-            self::assertStringContainsString($relative . '.captured', $patch->message());
+            self::assertSame('edited after stock check', file_get_contents($archives[0] . '/' . $relative));
+            self::assertStringContainsString(basename($archives[0]) . '/' . $relative, $patch->message());
         } finally {
             $this->removeTestArchives($existingArchives);
             if (is_file($path)) {

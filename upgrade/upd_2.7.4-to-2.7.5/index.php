@@ -257,7 +257,7 @@ HTACCESS;
      * Yield existing candidates. A false value means the file could not be inspected.
      *
      * @param array<string, string[]|null> $manifest stock digests, or null for mandatory assets
-     * @return \Generator<string, array{string, int, int}|false> relative name => path, device and inode, or failure
+     * @return \Generator<string, array{0: string, 1: int, 2: int}|false> relative name => path, device and inode, or failure
      */
     private function obsoleteBootstrapFiles(array $manifest): \Generator
     {
@@ -424,7 +424,7 @@ HTACCESS;
      * Probe with the empty archive index so a failed rename never changes the live asset's link count.
      * A common filesystem guarantees rename() moves the inode, including writes through open handles.
      *
-     * @param array{string, int, int} $candidate path, device and inode before hashing
+     * @param array{0: string, 1: int, 2: int} $candidate path, device and inode before hashing
      * @param string[] $hashes known hashes for the original path
      */
     private function archiveThemeFile(array $candidate, string $archive, string $relative, array $hashes): bool
@@ -432,13 +432,13 @@ HTACCESS;
         [$path, $device, $inode] = $candidate;
         $saved = $archive . '/' . $relative;
         $probe = dirname($path) . '/.xoops-archive-' . bin2hex(random_bytes(12));
-        if (0 === $inode || !function_exists('link') || !self::inOriginalDirectory($path)
+        if (0 === $inode || !function_exists('link') || true !== self::inOriginalDirectory($path)
             || !link($archive . '/index.html', $probe) || !unlink($probe)
         ) {
             $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
             return false;
         }
-        if (!self::inOriginalDirectory($path) || !rename($path, $saved)) {
+        if (true !== self::inOriginalDirectory($path) || !rename($path, $saved)) {
             $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
             return false;
         }
@@ -450,7 +450,7 @@ HTACCESS;
             return true;
         }
         // A no-clobber restore keeps a newer live file intact if another editor got there first.
-        $restored = self::inOriginalDirectory($path) && (is_link($saved)
+        $restored = true === self::inOriginalDirectory($path) && (is_link($saved)
             ? function_exists('symlink') && false !== ($target = readlink($saved)) && symlink($target, $path)
             : is_file($saved) && link($saved, $path));
         if (!$restored || false !== $stock) {

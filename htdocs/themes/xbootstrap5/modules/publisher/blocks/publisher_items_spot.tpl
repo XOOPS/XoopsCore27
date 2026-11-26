@@ -41,7 +41,7 @@
                 </div>
 
                 <{if $block.truncate}>
-                    <div class="pull-right" style="margin-top: 15px;">
+                    <div class="float-end" style="margin-top: 15px;">
                         <a href="<{$item.itemurl}>" class="btn btn-primary btn-sm">
                             <{$block.lang_readmore}>
                         </a>

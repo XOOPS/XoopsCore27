@@ -54,9 +54,7 @@
             <form class="input-group" action="<{$xoops_url}>/modules/<{$xoops_dirname}>/search.php" method="get" role="search">
                 <input name="term" id="term" type="text" class="form-control" placeholder="<{$smarty.const.THEME_NEWBB_SEARCH_FORUM}>"> <input type="hidden" name="forum" value="<{$forum_id}>"> <input type="hidden" name="sortby" value="p.post_time desc"> <input type="hidden" name="since"
                                                                                                                                                                                                                                                                      value="<{$forum_since}>"> <input
-                        type="hidden" name="action" value="yes"> <input type="hidden" name="searchin" value="both"> <span class="input-group-btn">
-                    <input type="submit" class="btn btn-primary" value="<{$smarty.const.THEME_FORUM_SEARCH}>">
-                </span>
+                        type="hidden" name="action" value="yes"> <input type="hidden" name="searchin" value="both"> <input type="submit" class="btn btn-primary" value="<{$smarty.const.THEME_FORUM_SEARCH}>">
             </form>
         </div>
         <div class="col-sm-3 col-md-3">
@@ -75,7 +73,7 @@
                             <{/if}>
                             <{if isset($viewer_level) && $viewer_level> 1}>
                                 <{if isset($mode) && $mode> 1}>
-                                    <div class="form-row align-items-center">
+                                    <div class="row g-2 align-items-center">
                                         <div class="col-auto">
                                             <div class="form-check mb-2">
                                                 <label for="topic_check1">
@@ -83,7 +81,7 @@
                                             </div>
                                         </div>
                                         <div class="col-auto">
-                                            <select name="op" class="custom-select mb-2">
+                                            <select name="op" class="form-select mb-2">
                                                 <option value="0">
                                                     <{$smarty.const._SELECT}>
                                                 </option>
@@ -230,18 +228,18 @@
             <{strip}>
                 <form class="xoopsform" method="get" action="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php">
                     <ul class="list-inline">
-                        <li><strong> <{$smarty.const._MD_NEWBB_SORTEDBY}>: </strong></li>
-                        <li>
-                            <{$forum_selection_sort|replace: '<select name' : '<select class="form-control" name' }>
+                        <li class="list-inline-item"><strong> <{$smarty.const._MD_NEWBB_SORTEDBY}>: </strong></li>
+                        <li class="list-inline-item">
+                            <{$forum_selection_sort|replace: '<select name' : '<select class="form-select" name' }>
                         </li>
-                        <li>
-                            <{$forum_selection_order|replace: '<select name' : '<select class="form-control" name' }>
+                        <li class="list-inline-item">
+                            <{$forum_selection_order|replace: '<select name' : '<select class="form-select" name' }>
                         </li>
-                        <li>
+                        <li class="list-inline-item">
                             <{$forum_selection_since}>
                         </li>
                         <input type="hidden" name="forum" value="<{$forum_id}>"> <input type="hidden" name="status" value="<{$status}>">
-                        <li>
+                        <li class="list-inline-item">
                             <input type="submit" value="<{$smarty.const._SUBMIT}>" class="btn btn-primary">
                         </li>
                     </ul>

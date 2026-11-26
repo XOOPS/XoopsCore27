@@ -19,6 +19,9 @@ Libraries and assets:
 Tooling and CI:
 - the source package that GitHub builds for a release holds docs/ (changelogs, lang_diff.txt, license, README and the guides) and extras/ with their files again: both arrived empty. It no longer carries development files: the empty .github, .githooks and tests folders, tools/, upgrade/tests, the test folders of the system admin themes, cliff.toml, codecov.yml and phpstan-constants.stub.php (.gitattributes)
 
+Upgrade:
+- The installer, upgrader and TinyMCE dialogs use Bootstrap 5.3.9 from media/bootstrap5. The upgrade wizard removes 25 retired wizard and editor assets. Webmasters can separately archive recognized stock files from 47 former xBootstrap5 and xSwatch5 theme asset paths under xoops_data after confirming their templates use the shared assets. Customized copies and Bootswatch palettes are preserved.
+
 ===================================
 2.7.5 Beta 2                  2026-11
 ===================================

@@ -83,7 +83,7 @@
                 </div>
                 </div>
                 <div class="col-12 col-sm-12 center">
-					<form class="form-horizontal" name="form" id="form_selectalbimage" action="album_images.php" method="post" enctype="multipart/form-data">
+					<form  name="form" id="form_selectalbimage" action="album_images.php" method="post" enctype="multipart/form-data">
 						<input type="hidden" name="alb_imgid" id="alb_imgid" value="<{$album.alb_imgid}>">
 						<input type="hidden" name="op" id="op" value="saveAlbumImage">
 						<input type="hidden" name="alb_id" value="<{$album.id}>">
@@ -97,8 +97,8 @@
             <!-- *************** Tab for image grid ***************-->
 			<div class="tab-pane fade" id="grid" role="tabpanel" aria-labelledby="navtab_grid">
 				<div class="col-12 col-sm-12">
-					<label class="radio-inline"><input type="radio" name="gridtype" id="alb_imgtype1" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID4}>" value="1" checked onchange="changeGridSetting(this)"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID4}>&nbsp;</label>
-					<label class="radio-inline"><input type="radio" name="gridtype" id="alb_imgtype2" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID6}>" value="2" onchange="changeGridSetting(this)"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID6}>&nbsp;</label>
+					<label class="form-check form-check-inline"><input class="form-check-input" type="radio" name="gridtype" id="alb_imgtype1" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID4}>" value="1" checked onchange="changeGridSetting(this)"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID4}>&nbsp;</label>
+					<label class="form-check form-check-inline"><input class="form-check-input" type="radio" name="gridtype" id="alb_imgtype2" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID6}>" value="2" onchange="changeGridSetting(this)"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID6}>&nbsp;</label>
 				</div>
 				<div class="col-12 col-sm-4">
 					<button id="btnGridAdd1" type="button" class="btn btn-secondary wg-color1" style="display:inline;margin:5px" data-bs-toggle="modal" data-bs-target="#myModalImagePicker1"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID_SRC1}></button>
@@ -125,7 +125,7 @@
 				<div class="col-12 col-sm-12 center">
 					<button id="btnCreateGrid4" type="button" class="btn btn-secondary wg-color1" style="display:inline;margin:5px"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID_CREATE}></button>
 					<button id="btnCreateGrid6" type="button" class="btn btn-secondary hidden wg-color1" style="display:inline;margin:5px"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_GRID_CREATE}></button>
-					<form class="form-horizontal" name="form" id="form_selectalbimage" action="album_images.php" method="post" enctype="multipart/form-data">
+					<form  name="form" id="form_selectalbimage" action="album_images.php" method="post" enctype="multipart/form-data">
 						<input type="hidden" name="op" value="saveGrid">
 						<input type="hidden" name="alb_id" value="<{$album.id}>">
 						<input type="hidden" name="alb_pid" value="<{$album.alb_pid}>">
@@ -149,25 +149,25 @@
                 <div class="row" id="actions">
 					<div class="col-md-12 docs-toggles">
 						<!-- <h3>Toggles:</h3> -->
-                        <div class="btn-group d-flex flex-nowrap" data-bs-toggle="buttons">
-                            <label class="btn btn-crop btn-secondary">
-                                <input type="radio" class="visually-hidden" id="aspectRatio1" name="aspectRatio" value="1.7777777777777777">
+                        <div class="btn-group d-flex flex-nowrap">
+                            <input type="radio" class="btn-check" id="aspectRatio1" name="aspectRatio" value="1.7777777777777777">
+                            <label class="btn btn-crop btn-secondary" for="aspectRatio1">
                                 <span class="docs-tooltip" data-bs-toggle="tooltip" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_CROP_ASPECTRATIO}>: 16 / 9">16:9</span>
                             </label>
-                            <label class="btn btn-crop btn-secondary  active">
-                                <input type="radio" class="visually-hidden" id="aspectRatio2" name="aspectRatio" value="1.3333333333333333">
+                            <input type="radio" class="btn-check" id="aspectRatio2" name="aspectRatio" value="1.3333333333333333" checked>
+                            <label class="btn btn-crop btn-secondary" for="aspectRatio2">
                                 <span class="docs-tooltip" data-bs-toggle="tooltip" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_CROP_ASPECTRATIO}>: 4 / 3">4:3</span>
                             </label>
-                            <label class="btn btn-crop btn-secondary">
-                                <input type="radio" class="visually-hidden" id="aspectRatio3" name="aspectRatio" value="1">
+                            <input type="radio" class="btn-check" id="aspectRatio3" name="aspectRatio" value="1">
+                            <label class="btn btn-crop btn-secondary" for="aspectRatio3">
                                 <span class="docs-tooltip" data-bs-toggle="tooltip" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_CROP_ASPECTRATIO}>: 1 / 1">1:1</span>
                             </label>
-                            <label class="btn btn-crop btn-secondary">
-                                <input type="radio" class="visually-hidden" id="aspectRatio4" name="aspectRatio" value="0.6666666666666666">
+                            <input type="radio" class="btn-check" id="aspectRatio4" name="aspectRatio" value="0.6666666666666666">
+                            <label class="btn btn-crop btn-secondary" for="aspectRatio4">
                                 <span class="docs-tooltip" data-bs-toggle="tooltip" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_CROP_ASPECTRATIO}>: 2 / 3">2:3</span>
                             </label>
-                            <label class="btn btn-crop btn-secondary">
-                                <input type="radio" class="visually-hidden" id="aspectRatio5" name="aspectRatio" value="NaN">
+                            <input type="radio" class="btn-check" id="aspectRatio5" name="aspectRatio" value="NaN">
+                            <label class="btn btn-crop btn-secondary" for="aspectRatio5">
                                 <span class="docs-tooltip" data-bs-toggle="tooltip" title="<{$smarty.const._CO_WGGALLERY_ALBUM_IH_CROP_ASPECTRATIO}>: NaN"><{$smarty.const._CO_WGGALLERY_ALBUM_IH_CROP_ASPECTRATIO_FREE}></span>
                             </label>
                         </div>
@@ -254,7 +254,7 @@
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="getCroppedCanvasTitle"><{$smarty.const._PREVIEW}></h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE}>"></button>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                                     </div>
                                     <div class="modal-body"></div>
                                     <div class="modal-footer">

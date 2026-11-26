@@ -12,10 +12,10 @@
 			<span class="input-group-text"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
 			<input class="form-control" type="password" name="pass" id="profile-pass" placeholder="<{$smarty.const.THEME_PASS}>">
 		</div>
-		<div class="checkbox">
-			<label>
+		<div class="form-check">
+			<label class="form-check-label">
 				<{if isset($lang_rememberme)}>
-			<input type="checkbox" name="rememberme">
+			<input type="checkbox" name="rememberme" class="form-check-input">
 				<{$lang_rememberme}>
 				<{/if}>
 			</label>
@@ -33,7 +33,7 @@
 	<legend class="bold"><{$lang_lostpassword}></legend>
 	<p><{$lang_noproblem}></p>
 	<form action="lostpass.php" method="post">
-		<div class="form-group">
+		<div class="mb-3">
 			<div class="input-group mb-3">
 				<span class="input-group-text" id="mail-addon1">@</span>
 				<input class="form-control" type="text" name="email" id="profile-lostpass" placeholder="<{$smarty.const.THEME_EMAIL}>" aria-label="<{$smarty.const.THEME_EMAIL}>" aria-describedby="mail-addon1">

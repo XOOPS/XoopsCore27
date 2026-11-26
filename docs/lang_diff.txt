@@ -6,11 +6,22 @@ Below are language differences from one version to the next.
 ================================
 2026/11: Version 2.7.5 NOT RELEASED
 ================================
+/upgrade/language/english/upd_2.7.4-to-2.7.5.php
+- added define('_XOOPS_UPGRADE_275_ASSET_NOT_REMOVED', 'Could not remove obsolete asset %s. Remove it manually or correct its directory permissions and retry.');
+- added define('_XOOPS_UPGRADE_275_ASSET_UNREADABLE', 'Could not inspect %s. Check file and directory permissions and retry.');
+- added define('_XOOPS_UPGRADE_275_ARCHIVE_BUTTON', 'Archive unused theme Bootstrap files');
+- added define('_XOOPS_UPGRADE_275_ARCHIVE_HINT', 'Optional cleanup for xBootstrap5 and xSwatch5. Choose this only if your templates and custom pages no longer load Bootstrap from their theme folders. Recognized stock files will move into a recovery folder under xoops_data. Continue to keep them in place.');
+- added define('_XOOPS_UPGRADE_275_ARCHIVE_LOCATION', 'Recovery folder: %s. To restore an archived file, copy it back to its matching theme path.');
+- added define('_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE', 'Could not safely archive %s. Check that xoops_data and the theme directory are writable and support hard links on the same filesystem.');
+- added define('_XOOPS_UPGRADE_275_ARCHIVE_RECOVER', 'Cleanup of %s could not be completed. Review the preserved entry at %s before restoring it manually.');
 /htdocs/language/english/user.php
 - added define('_US_PWDBADCHAR', 'The password contains a character that cannot be used.');
 - added define('_US_PWDTOOLONG', 'Password exceeds maximum length.');
 /htdocs/install/language/english/install.php
 - added define('ERR_PASSWORD_CHARACTER', 'The password contains a character that cannot be used.');
+- added define('TOGGLE_NAVIGATION', 'Toggle navigation');
+/upgrade/language/english/upgrade.php
+- added define('_TOGGLE_NAVIGATION', 'Toggle navigation');
 
 ================================
 2026/11: Version 2.7.5-Beta2

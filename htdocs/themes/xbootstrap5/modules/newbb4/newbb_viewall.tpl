@@ -1,20 +1,20 @@
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$smarty.const._MD_FORUMHOME}></a></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$smarty.const._MD_FORUMHOME}></a></li>
     <{if isset($parent_forum)}>
-        <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$parent_forum}>"><{$parent_name}></a></li>
-        <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum_id}>"><{$forum_name}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$parent_forum}>"><{$parent_name}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum_id}>"><{$forum_name}></a></li>
     <{elseif $forum_name}>
-        <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum_id}>"><{$forum_name}></a></li>
+        <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewforum.php?forum=<{$forum_id}>"><{$forum_name}></a></li>
     <{/if}>
     <{if isset($current)}>
-        <li class="nav-item"><a class="nav-link" href="<{$current.link}>"><{$current.title}></a></li>
+        <li class="breadcrumb-item"><a href="<{$current.link}>"><{$current.title}></a></li>
     <{/if}>
 </ol>
 <div class="row">
     <div class="col-md-6 col-12">
         <h3><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php"><{$forum_index_title}></a></h3>
     </div>
-    <div class="col-md-6 col-12 pull-right">
+    <div class="col-md-6 col-12 float-end">
         <{if $mode >= 1}>
         <form name="form_topics_admin" action="<{$xoops_url}>/modules/<{$xoops_dirname}>/action.topic.php" method="POST" onsubmit="if(window.document.form_topics_admin.op.value < 1){return false;}">
             <{/if}>
@@ -24,7 +24,7 @@
                     <{if $mode >= 1}>
                         <{$smarty.const._ALL}>:
                         <input type="checkbox" name="topic_check1" id="topic_check1" value="1" onclick="xoopsCheckAll('form_topics_admin', 'topic_check1');"/>
-                        <select class="form-control" name="op">
+                        <select class="form-select" name="op">
                             <option value="0"><{$smarty.const._SELECT}></option>
                             <option value="delete"><{$smarty.const._DELETE}></option>
                             <{if $status == "pending"}>
@@ -69,7 +69,7 @@
             <div>
                 <div>
                     <{if $menumode == 0}>
-                        <select class="form-control menu" name="topicoption" id="topicoption" onchange="if(this.options[this.selectedIndex].value.length >0 )    { window.document.location=this.options[this.selectedIndex].value;}">
+                        <select class="form-select menu" name="topicoption" id="topicoption" onchange="if(this.options[this.selectedIndex].value.length >0 )    { window.document.location=this.options[this.selectedIndex].value;}">
                             <option value=""><{$smarty.const._MD_TOPICOPTION}></option>
                             <option value="<{$post_link}>"><{$smarty.const._MD_VIEW}>
                                 &nbsp;<{$smarty.const._MD_ALLPOSTS}></option>
@@ -159,7 +159,8 @@
 
     </div> <!-- end column -->
 </div><!-- end row -->
-<table class="table table-responsive" width="100%" align="center">
+<div class="table-responsive">
+<table class="table" width="100%" align="center">
     <!-- irmtfan hardcode removed align="left" -->
     <thead>
     <tr class="head" class="align_left">
@@ -240,6 +241,7 @@
     </tr>
     </tbody>
 </table>
+</div>
 <!-- end forum main table -->
 
 <{if $pagenav|default:false}>

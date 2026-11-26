@@ -139,17 +139,17 @@ function tplScannerForm($parameters=null)
     $action = XOOPS_URL . '/upgrade/preflight.php';
 
     $form = '<h2>' . _XOOPS_SMARTY5_RESCAN_OPTIONS . '</h2>';
-    $form .= '<form action="' . $action . '" method="post" class="form-horizontal">';
+    $form .= '<form action="' . $action . '" method="post">';
     $form .= preflightTokenField();
 
-    $form .= '<div class="form-group">';
-    $form .= '<input name="template_dir" class="form-control" type="text" placeholder="/themes/">';
-    $form .= '<label for="template_dir">' . _XOOPS_SMARTY4_TEMPLATE_DIR  . '</label>';
+    $form .= '<div class="mb-3">';
+    $form .= '<label class="form-label" for="template_dir">' . _XOOPS_SMARTY4_TEMPLATE_DIR  . '</label>';
+    $form .= '<input id="template_dir" name="template_dir" class="form-control" type="text" placeholder="/themes/">';
     $form .= '</div>';
 
-    $form .= '<div class="form-group">';
-    $form .= '<input name="template_ext" class="form-control" type="text" placeholder="tpl">';
-    $form .= '<label for="template_ext">' . _XOOPS_SMARTY4_TEMPLATE_EXT  . '</label>';
+    $form .= '<div class="mb-3">';
+    $form .= '<label class="form-label" for="template_ext">' . _XOOPS_SMARTY4_TEMPLATE_EXT  . '</label>';
+    $form .= '<input id="template_ext" name="template_ext" class="form-control" type="text" placeholder="tpl">';
     $form .= '</div>';
 
     $currentMode = Xmf\Request::getString('scan_mode', 'both', 'POST');
@@ -158,9 +158,9 @@ function tplScannerForm($parameters=null)
         'smarty4' => _XOOPS_SMARTY5_MODE_S4,
         'smarty5' => _XOOPS_SMARTY5_MODE_S5,
     ];
-    $form .= '<div class="form-group">';
-    $form .= '<label for="scan_mode">' . _XOOPS_SMARTY5_SCAN_MODE . '</label>';
-    $form .= '<select name="scan_mode" id="scan_mode" class="form-control">';
+    $form .= '<div class="mb-3">';
+    $form .= '<label class="form-label" for="scan_mode">' . _XOOPS_SMARTY5_SCAN_MODE . '</label>';
+    $form .= '<select name="scan_mode" id="scan_mode" class="form-select">';
     foreach ($modes as $value => $label) {
         $selected = ($value === $currentMode) ? ' selected' : '';
         $form .= '<option value="' . $value . '"' . $selected . '>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</option>';
@@ -168,24 +168,24 @@ function tplScannerForm($parameters=null)
     $form .= '</select>';
     $form .= '</div>';
 
-    $form .= '<div class="form-group row">';
-    $form .= '<div class="form-check">';
+    $form .= '<fieldset class="mb-3">';
     $form .= '<legend class="col-form-label">' . _XOOPS_SMARTY5_FIX_BUTTON . '</legend>';
-    $form .= '<input class="form-check-input" type="checkbox" name="runfix" >';
+    $form .= '<div class="form-check">';
+    $form .= '<input class="form-check-input" type="checkbox" name="runfix" id="runfix">';
     $form .= '<label class="form-check-label" for="runfix">' . _YES . '</label>';
     $form .= '</div>';
-    $form .= '</div>';
+    $form .= '</fieldset>';
 
-    $form .= '<div class="form-group">';
+    $form .= '<div class="mb-3">';
     $form .= '<button class="btn btn-lg btn-success" type="submit">' . _XOOPS_SMARTY5_SCANNER_RUN;
     $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
     $form .= '</div>';
 
     $form .= '</form>';
 
-    $form .= '<form action="' . $action . '" method="post" class="form-horizontal">';
+    $form .= '<form action="' . $action . '" method="post">';
     $form .= preflightTokenField();
-    $form .= '<div class="form-group">';
+    $form .= '<div class="mb-3">';
     $form .= '<button class="btn btn-lg btn-danger" type="submit">' . _XOOPS_SMARTY5_SCANNER_END;
     $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
     $form .= '<input type="hidden" name="endscan" value="yes">';
@@ -387,9 +387,9 @@ function smartyBlockerPanel(array $scan, string $scan_mode, string $errorMessage
     $token  = (string) ($scan['token'] ?? '');
     $files  = array_values((array) ($scan['files'] ?? []));
 
-    $html  = '<div class="panel panel-danger">';
-    $html .= '<div class="panel-heading">' . htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') . '</div>';
-    $html .= '<div class="panel-body">';
+    $html  = '<div class="card border-danger mb-3">';
+    $html .= '<div class="card-header">' . htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') . '</div>';
+    $html .= '<div class="card-body">';
     $html .= '<p>' . _XOOPS_SMARTY5_GATE_BLOCKER_INTRO . '</p>';
     $html .= '<ul>';
     foreach ($files as $file) {
@@ -404,7 +404,7 @@ function smartyBlockerPanel(array $scan, string $scan_mode, string $errorMessage
     $html .= '<form action="' . $action . '" method="post" style="display:inline-block;margin-right:1em;">';
     $html .= preflightTokenField();
     $html .= '<input type="hidden" name="scan_mode" value="' . $modeAttr . '">';
-    $html .= '<button class="btn btn-default" type="submit">' . _XOOPS_SMARTY5_GATE_RESCAN . '</button>';
+    $html .= '<button class="btn btn-outline-secondary" type="submit">' . _XOOPS_SMARTY5_GATE_RESCAN . '</button>';
     $html .= '</form>';
 
     // Proceed-anyway: ticking the box submits the scan-bound override token together

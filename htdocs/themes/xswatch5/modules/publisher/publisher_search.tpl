@@ -18,60 +18,60 @@
     <{/if}>
 <{/if}>
 
-<form name="search" action="search.php" method="post" class="form-horizontal" role="form">
-    <div class="form-group">
-        <label class="col-sm-2 control-label"><{$smarty.const._SR_KEYWORDS}></label>
+<form name="search" action="search.php" method="post"  role="form">
+    <div class="row mb-3">
+        <label class="col-sm-2 col-form-label"><{$smarty.const._SR_KEYWORDS}></label>
 
         <div class="col-sm-10">
             <input type="text" name="term" class="form-control" value="<{$search_term}>" placeholder="<{$smarty.const._SR_KEYWORDS}>">
         </div>
     </div>
-    <div class="form-group">
-        <label class="col-sm-2 control-label"><{$smarty.const._SR_TYPE}></label>
+    <div class="row mb-3">
+        <label class="col-sm-2 col-form-label"><{$smarty.const._SR_TYPE}></label>
 
         <div class="col-sm-10">
             <{$type_select}>
         </div>
     </div>
-    <div class="form-group">
-        <label class="col-sm-2 control-label"><{$smarty.const._CO_PUBLISHER_CATEGORY}></label>
+    <div class="row mb-3">
+        <label class="col-sm-2 col-form-label"><{$smarty.const._CO_PUBLISHER_CATEGORY}></label>
 
         <div class="col-sm-10">
             <{$category_select|default:''}>
         </div>
     </div>
-    <div class="form-group">
-        <label class="col-sm-2 control-label"><{$smarty.const._SR_SEARCHIN}></label>
+    <div class="row mb-3">
+        <label class="col-sm-2 col-form-label"><{$smarty.const._SR_SEARCHIN}></label>
 
         <div class="col-sm-10">
             <{$searchin_select}>
         </div>
     </div>
-    <div class="form-group">
-        <label class="col-sm-2 control-label"><{$smarty.const._CO_PUBLISHER_UID}></label>
+    <div class="row mb-3">
+        <label class="col-sm-2 col-form-label"><{$smarty.const._CO_PUBLISHER_UID}></label>
 
         <div class="col-sm-10">
             <input type="text" name="uname" class="form-control" value="<{$search_user}>" placeholder="<{$smarty.const._CO_PUBLISHER_UID}>">
         </div>
     </div>
-    <div class="form-group">
-        <label class="col-sm-2 control-label"><{$smarty.const._CO_PUBLISHER_SORTBY}></label>
+    <div class="row mb-3">
+        <label class="col-sm-2 col-form-label"><{$smarty.const._CO_PUBLISHER_SORTBY}></label>
 
         <div class="col-sm-10">
             <{$sortby_select}>
         </div>
     </div>
     <{if isset($search_rule)}>
-        <div class="form-group">
-            <label class="col-sm-2 control-label"><{$smarty.const._SR_SEARCHRULE}></label>
+        <div class="row mb-3">
+            <label class="col-sm-2 col-form-label"><{$smarty.const._SR_SEARCHRULE}></label>
 
             <div class="col-sm-10">
-                <p class="help-block"><{$search_rule}></p>
+                <p class="form-text"><{$search_rule}></p>
             </div>
         </div>
     <{/if}>
-    <div class="form-group">
-        <div class="col-sm-offset-2 col-sm-10">
+    <div class="row mb-3">
+        <div class="offset-sm-2 col-sm-10">
             <button type="submit" name="submit" class="btn btn-primary"><{$smarty.const._SUBMIT}></button>
             <button type="reset" name="cancel" class="btn btn-primary"><{$smarty.const._CANCEL}></button>
         </div>

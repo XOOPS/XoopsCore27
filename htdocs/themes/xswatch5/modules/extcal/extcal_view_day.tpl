@@ -1,6 +1,6 @@
 <script>
     jQuery(document).ready(function ($) {
-        $('.extcalform > form select').addClass('form-control');
+        $('.extcalform > form select').addClass('form-select');
         $('.extcalform > form button[type="submit"]').removeClass();
         $('.extcalform > form button[type="submit"]').addClass('btn btn-sm btn-secondary');
     });
@@ -8,7 +8,7 @@
 
 <div class="extcalform mb-3">
     <form action="<{$navigSelectBox.action}>" method="<{$navigSelectBox.method}>">
-        <div class="form-row">
+        <div class="row g-2">
             <{foreach item=element from=$navigSelectBox.elements|default:null}>
             <div class="col"><{$element.body}></div>
             <{/foreach}>

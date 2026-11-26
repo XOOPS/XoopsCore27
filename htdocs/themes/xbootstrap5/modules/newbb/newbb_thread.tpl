@@ -9,9 +9,9 @@
     <{if isset($topic_post.poster.uid) &&  $topic_post.poster.uid > -1}>
         <{if isset($topic_post.poster.uid) && $topic_post.poster.uid != 0}>
              <{if isset($topic_post.poster.avatar) && $topic_post.poster.avatar != "blank.gif"}>
-                    <img src="<{$xoops_upload_url}>/<{$topic_post.poster.avatar}>" alt="<{$topic_post.poster.name}>" class="img-circle img-fluid img-thumbnail">
+                    <img src="<{$xoops_upload_url}>/<{$topic_post.poster.avatar}>" alt="<{$topic_post.poster.name}>" class="rounded-circle img-fluid img-thumbnail">
                 <{else}>
-                   <img src="<{$xoops_imageurl}>images/newbb-noavatar.png" alt="<{$topic_post.poster.name}>" class="img-circle img-fluid img-thumbnail">
+                   <img src="<{$xoops_imageurl}>images/newbb-noavatar.png" alt="<{$topic_post.poster.name}>" class="rounded-circle img-fluid img-thumbnail">
             <{/if}>
 
             <{if !empty($topic_post.poster.rank.title)}>
@@ -118,7 +118,7 @@
 </div><!-- .newbb-thread -->
 
 <div class="clearfix newbb-links mb10">
-    <div class="col-md-6 nompl hidden-xs">
+    <div class="col-md-6 nompl d-none d-sm-block">
     <{if $topic_post.thread_action}>
         <{foreach item=btn from=$topic_post.thread_action|default:null}>
             <a href="<{$btn.link}>&amp;post_id=<{$topic_post.post_id}>" title="<{$btn.name}>" <{if $btn.target}>target="<{$btn.target}>"<{/if}>>

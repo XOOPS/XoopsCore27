@@ -13,7 +13,7 @@
 
 <{if $obituaries_users|default:''|is_array && count($obituaries_users) > 0}>
     <ol class="breadcrumb">
-        <li class="nav-item"><a class="nav-link" href="index.php"><{$breadcrumb}></a></li>
+        <li class="breadcrumb-item"><a href="index.php"><{$breadcrumb}></a></li>
     </ol>
     <p align="center">
         <a href="<{$xoops_url}>/modules/obituaries/index.php"><img src="<{$xoops_url}>/modules/obituaries/images/logo.png" alt="" class="img-thumbnail"/></a>
@@ -22,7 +22,7 @@
     <ul class="heyula">
         <{foreach item=obituaries_user from=$obituaries_users|default:null}>
             <div class="col-sm-6 col-md-4">
-                <div class="thumbnail">
+                <div class="card">
 
                     <{if trim($obituaries_user.obituaries_full_imgurl) != ''}>
                         <img src="<{$obituaries_user.obituaries_full_imgurl}>" alt="<{$obituaries_user.obituaries_href_title}>" class="img-thumbnail">
@@ -34,11 +34,11 @@
                              class="img-thumbnail"/>
                     <{/if}>
 
-                    <div class="caption">
+                    <div class="card-body">
                         <div style="text-align: center;"><h3><a href="<{$smarty.const.OBITUARIES_URL}>user.php?obituaries_id=<{$obituaries_user.obituaries_id}>"
                                                                 title="<{$obituaries_user.obituaries_href_title}>"><{$obituaries_user.obituaries_fullname}></a></h3></div>
-                        <div style="text-align: center;"><p><span class="fa-solid fa-calendar"></span>&nbsp;<span class="label label-danger"><{$obituaries_user.obituaries_formated_date}></span>&nbsp;<span
-                                        class="label label-success"><a
+                        <div style="text-align: center;"><p><span class="fa-solid fa-calendar"></span>&nbsp;<span class="badge text-bg-danger"><{$obituaries_user.obituaries_formated_date}></span>&nbsp;<span
+                                        class="badge text-bg-success"><a
                                             href="<{$smarty.const.OBITUARIES_URL}>user.php?obituaries_id=<{$obituaries_user.obituaries_id}>"
                                             title="<{$obituaries_user.obituaries_href_title}>">more</a></span></p></div>
                     </div>

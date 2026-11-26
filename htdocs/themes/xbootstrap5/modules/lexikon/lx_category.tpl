@@ -1,8 +1,8 @@
 <{* New Header block *}>
 <ol class="breadcrumb">
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
-    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
-    <li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>"><{$smarty.const._MD_LEXIKON_HOME}></a></li>
+    <li class="breadcrumb-item"><a href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/index.php"><{$lang_modulename}></a></li>
+    <li class="breadcrumb-item">
         <{if $pagetype == '0'}>
             <{$smarty.const._MD_LEXIKON_ALLCATS}>
         <{elseif $pagetype == '1'}>
@@ -17,23 +17,23 @@
         <h3><{$smarty.const._MD_LEXIKON_BROWSELETTER}></h3>
 
         <ul class="pagination pagination-sm">
-            <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php" title="[ <{$publishedwords}> ]"><{$smarty.const._MD_LEXIKON_ALL}></a></li>
+            <li class="page-item"><a class="page-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php" title="[ <{$publishedwords}> ]"><{$smarty.const._MD_LEXIKON_ALL}></a></li>
             <{foreach item=letterlinks from=$alpha.initial|default:null}>
                 <{if $letterlinks.total > 0}>
-                    <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$letterlinks.id}>" title="[ <{$letterlinks.total}> ]">
+                    <li class="page-item"><a class="page-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$letterlinks.id}>" title="[ <{$letterlinks.total}> ]">
                             <{$letterlinks.linktext}>
                         </a></li>
                 <{else}>
-                    <li class="nav-item"><a class="nav-link" href="#"><{$letterlinks.linktext}></a></li>
+                    <li class="page-item"><a class="page-link" href="#"><{$letterlinks.linktext}></a></li>
                 <{/if}>
             <{/foreach}>
 
             <{if $totalother > 0}>
-                <li class="nav-item"><a class="nav-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$smarty.const._MD_LEXIKON_OTHER}>" title="[ <{$totalother}> ]">
+                <li class="page-item"><a class="page-link" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/letter.php?init=<{$smarty.const._MD_LEXIKON_OTHER}>" title="[ <{$totalother}> ]">
                         <{$smarty.const._MD_LEXIKON_OTHER}>
                     </a></li>
             <{else}>
-                <li class="nav-item"><a class="nav-link" href="#"><{$smarty.const._MD_LEXIKON_OTHER}></a></li>
+                <li class="page-item"><a class="page-link" href="#"><{$smarty.const._MD_LEXIKON_OTHER}></a></li>
             <{/if}>
         </ul>
     </div>
@@ -60,7 +60,8 @@
 
                         <{/if}>
                     <{/foreach}>
-                    <table class="table table-bordered table-responsive">
+                    <div class="table-responsive">
+                    <table class="table table-bordered">
                         <tbody>
                         <tr>
                             <td>
@@ -92,6 +93,7 @@
                         </tr>
                         </tbody>
                     </table>
+                    </div>
                 <{/if}>
             <{else}>
                 <{if $multicats == 1}>
@@ -106,7 +108,8 @@
 
                         <{/if}>
                     <{/foreach}>
-                    <table class="table table-bordered table-responsive">
+                    <div class="table-responsive">
+                    <table class="table table-bordered">
                         <tbody>
                         <tr>
                             <!-- Start category loop -->
@@ -132,6 +135,7 @@
                         </tr>
                         </tbody>
                     </table>
+                    </div>
                     <div style="text-align: right">
                         <a class="btn btn-primary btn-sm" role="button" href="<{$xoops_url}>/modules/<{$lang_moduledirname}>/category.php" title="[ <{$publishedwords}> ]">
                             <{$smarty.const._MD_LEXIKON_ALLCATS}>&nbsp;[<{$publishedwords}>]
@@ -150,7 +154,8 @@
         <{if $pagetype == '0'}>
             <h3><{$smarty.const._MD_LEXIKON_ALLCATS}></h3>
             <{foreach item=eachcat from=$catsarray.single|default:null}>
-                <table class="table table-responsive">
+                <div class="table-responsive">
+                <table class="table">
                     <thead>
                     <tr>
                         <th><a href="<{$xoops_url}>/modules/<{$eachcat.dir}>/category.php?categoryID=<{$eachcat.id}>"><{$eachcat.name}></a></th>
@@ -172,6 +177,7 @@
                     </tr>
                     </tbody>
                 </table>
+                </div>
             <{/foreach}>
             <div align="left"><{$catsarray.navbar}></div>
     <div align="center"> [ <a href='javascript:history.go(-1)'><{$smarty.const._MD_LEXIKON_RETURN}></a><b> | </b>

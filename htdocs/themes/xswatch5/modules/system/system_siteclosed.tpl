@@ -33,7 +33,7 @@
     <link rel="stylesheet" type="text/css" href="<{xoAppUrl 'media/font-awesome6/css/v4-shims.min.css'}>">
     <link rel="stylesheet" type="text/css" media="all" href="<{$xoops_themecss}>">
     <script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
-    <script src="<{$xoops_imageurl}>js/bootstrap.bundle.min.js"></script>
+    <script src="<{$xoops_url}>/media/bootstrap5/js/bootstrap.bundle.min.js"></script>
     <link rel="alternate" type="application/rss+xml" title="" href="<{xoAppUrl 'backend.php'}>">
 
     <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{else}><{if !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{/if}><{/if}></title>
@@ -54,7 +54,7 @@
                 <{if !empty($redirect_message)}>
                     <p class="text-warning"><{$redirect_message}></p>
                 <{/if}>
-                <form action="<{xoAppUrl 'user.php'}>" method="post" role="form" class="form-horizontal">
+                <form action="<{xoAppUrl 'user.php'}>" method="post" role="form" >
                     <label for="xo-login-uname"><{$lang_username}></label>
                     <div class="input-group mb-3">
                         <span class="input-group-text" id="basic-addon1"><i class="fa-solid fa-user"> </i></span>

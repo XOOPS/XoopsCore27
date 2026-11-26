@@ -48,11 +48,11 @@
 
 <form name="<{$form_post.name}>" id="<{$form_post.name}>" action="<{$form_post.action}>"
       method="<{$form_post.method}>" <{$form_post.extra}> >
-	  <div class="form-group row">
+	  <div class="mb-3 row">
         <{foreach item=element from=$form_post.elements|default:null}>
         <{assign var="legend_required" value=false}>
         <{if isset($element.hidden) && $element.hidden != true}>
-			<label class="col-12 col-sm-2 col-form-label text-sm-right">
+			<label class="col-12 col-sm-2 col-form-label text-sm-end">
 				<{$element.caption|default:''}>
                 <{if !empty($element.required)}>
                     <span class="xo-caption-required">*</span>

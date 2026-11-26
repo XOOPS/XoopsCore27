@@ -109,7 +109,10 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
             $op = '';
         }
     }
-    if (!$upgradeControl->needUpgrade) {
+    if (
+        (!$upgradeControl->needUpgrade && 'archivethemes' !== $op)
+        || ($upgradeControl->needUpgrade && 'next' !== $op)
+    ) {
         $op = '';
     }
     // Patches change the database and files in place and cannot be rolled back
@@ -133,11 +136,11 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
         if ($backupMissing) {
             echo '<div class="alert alert-danger">' . _XOOPS_UPGRADE_BACKUP_REQUIRED . '</div>';
         }
-    } else {
+    } elseif ('next' === $op) {
         if (!empty($upgradeControl->needWriteFiles)) {
-            echo '<div class="panel panel-danger">'
-                . '<div class="panel-heading">' . _SET_FILES_WRITABLE . '</div>'
-                . '<div class="panel-body"><ul class="fa-ul">';
+            echo '<div class="card border-danger mb-3">'
+                . '<div class="card-header">' . _SET_FILES_WRITABLE . '</div>'
+                . '<div class="card-body"><ul class="fa-ul">';
             foreach ($upgradeControl->needWriteFiles as $file) {
                 echo '<li><i class="fa-li fa-solid fa-ban text-danger"></i>' . $file . '</li>';
                 $error = true;
@@ -153,7 +156,7 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
             // before apply() ran, so a patch that never took still read "Applied".
             printf('<h2>' . ($res ? _PERFORMING_UPGRADE : _FAILED_PATCH) . '</h2>', $next);
             if ($message = $upgrader->message()) {
-                echo '<div class="well">' . $message . '</div>';
+                echo '<div class="bg-body-tertiary border rounded p-3 mb-3">' . $message . '</div>';
             }
 
             if ($res) {
@@ -168,6 +171,22 @@ if (!xoops_upgrade_user_is_webmaster($xoopsUser)) {
             XOOPS_URL . '/modules/system/admin.php?fct=modulesadmin&op=update&module=system',
             [],
         );
+        $themePatch = ($upgradeControl->upgradeQueue['upd_2.7.4-to-2.7.5'] ?? null)?->getPatch();
+        if ($themePatch instanceof Upgrade_275) {
+            if ('archivethemes' === $op) {
+                $error = !$themePatch->archiveThemeAssets();
+                echo '<p>' . $themePatch->message() . '</p>';
+            }
+            if ($themePatch->hasThemeAssets()) {
+                echo '<p class="mt-4">' . htmlspecialchars(_XOOPS_UPGRADE_275_ARCHIVE_HINT, ENT_QUOTES, 'UTF-8') . '</p>';
+                echo $upgradeControl->oneButtonContinueForm(
+                    'index.php',
+                    ['action' => 'archivethemes', 'upgrade_token' => (string) $_SESSION['preflight_csrf']],
+                    empty($_SESSION['upgrade_backup_confirmed']) ? _XOOPS_UPGRADE_BACKUP_CONFIRM : '',
+                    _XOOPS_UPGRADE_275_ARCHIVE_BUTTON,
+                );
+            }
+        }
     } else {
         echo $upgradeControl->oneButtonContinueForm(
             'index.php',

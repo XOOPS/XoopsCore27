@@ -1,6 +1,6 @@
 <script>
     jQuery(document).ready(function ($) {
-        $('.extcalform > form select').addClass('form-control');
+        $('.extcalform > form select').addClass('form-select');
         $('.extcalform > form input[type="submit"]').addClass('btn btn-primary');
     });
 </script>
@@ -9,7 +9,7 @@
     <form action="<{$navigSelectBox.action}>" method="<{$navigSelectBox.method}>">
         <ul class="list-inline">
             <{foreach item=element from=$navigSelectBox.elements|default:null}>
-            <li><{$element.body}></li>
+            <li class="list-inline-item"><{$element.body}></li>
             <{/foreach}>
         </ul>
     </form>
@@ -35,6 +35,7 @@
             <{/foreach}>
         </tr>
         <tr>
+            <{foreach item=day from=$week|default:null}>
             <td class="<{if $day.isEmpty}>even<{else}>odd<{/if}>" style="width:14%; height:80px; vertical-align:top;<{if $day.isSelected}> background-color:#B6CDE4;<{/if}>">
                 <{if $day.isEmpty}>&nbsp;<{else}><a href="<{$xoops_url}>/modules/extcal/view_day.php?year=<{$day.year}>&month=<{$day.month}>&day=<{$day.dayNumber}>"><{$day.dayNumber}></a><{/if}><br>
                 <{foreach item=event from=$day.events|default:null}>

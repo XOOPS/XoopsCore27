@@ -15,14 +15,14 @@
 		<div class="col-3 col-md-2 xoops-comment-author aligncenter">
 			<{if $comment.poster.id != 0}>
 				<{if isset($comment.poster.avatar) && $comment.poster.avatar != 'blank.gif'}>
-				<img src="<{$xoops_upload_url}>/<{$comment.poster.avatar}>" class="img-fluid img-rounded img-thumbnail">
+				<img src="<{$xoops_upload_url}>/<{$comment.poster.avatar}>" class="img-fluid rounded img-thumbnail">
 				<{else}>
-				<img src="<{$xoops_imageurl}>images/no-avatar.png" class="img-fluid img-rounded img-thumbnail">
+				<img src="<{$xoops_imageurl}>images/no-avatar.png" class="img-fluid rounded img-thumbnail">
 				<{/if}>
 				<ul class="list-unstyled">
 					<li><strong class="poster-rank d-none d-sm-block"><{$comment.poster.rank_title|default:''}></strong></li>
 					<li><img src="<{$xoops_upload_url}>/<{$comment.poster.rank_image|default:''}>" alt="<{$comment.poster.rank_title|default:''}>"
-							 class="poster-rank img-responsive"></li>
+							 class="poster-rank img-fluid"></li>
 				</ul>
 				<ul class="list-unstyled poster-info hidden">
 					<li><{$lang_joined}> <{$comment.poster.regdate|default:''}></li>

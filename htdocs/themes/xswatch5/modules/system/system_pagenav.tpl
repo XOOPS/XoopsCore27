@@ -33,8 +33,8 @@
 <{/if}>
 <{if ($pageNavType == 'Select')}>
 	<form name="pagenavform" class="d-flex justify-content-end">
-		<div class="form-group">
-			<select class="form-control form-control-sm" name="pagenavselect" id="pagenavselect" onchange="location=this.options[this.options.selectedIndex].value;">
+		<div class="mb-3">
+			<select class="form-select form-select-sm" name="pagenavselect" id="pagenavselect" onchange="location=this.options[this.options.selectedIndex].value;">
 				<{$pageNavigation.select}>
 			</select>
 			<{if ($pageNavigation.button == true)}>

@@ -10,7 +10,7 @@
     </div>
 
     <{if !empty($message_erreur)}>
-        <div class="alert alert-error"><{$message_erreur}></div>
+        <div class="alert alert-danger"><{$message_erreur}></div>
     <{/if}>
-    <div class="form-group"><{$themeForm}></div>
+    <div class="mb-3"><{$themeForm}></div>
 </div>

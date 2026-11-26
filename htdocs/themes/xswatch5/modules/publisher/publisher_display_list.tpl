@@ -3,7 +3,7 @@
 <{if $indexpage || $category.subcats || ($category && $display_category_summary)}>
 
     <{if $display_category_summary && $category}>
-        <div class="well well-sm">
+        <div class="bg-body-tertiary border rounded p-2">
             <{$lang_category_summary}>
         </div>
     <{/if}>

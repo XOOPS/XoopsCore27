@@ -11,9 +11,9 @@
 <{/if}>
 
 <{if isset($showlist)}>
-    <div class='panel panel-<{$panel_type|default:'none'}>'>
-        <div class='panel-heading wgg-imgindex-header'><h3><{$smarty.const._MA_WGGALLERY_SEARCH_RESULT}></h3></div>
-        <div class=' panel-body'>
+    <div class='card <{if !empty($panel_type) && $panel_type != 'none' && $panel_type != 'default'}>border-<{$panel_type}><{/if}>'>
+        <div class='card-header wgg-imgindex-header'><h3><{$smarty.const._MA_WGGALLERY_SEARCH_RESULT}></h3></div>
+        <div class='card-body'>
             <{if isset($pagenav)}>
             <div class="col">
                 <div class="generic-pagination xo-pagenav float-end"><{$pagenav|replace:'form':'div'|replace:'id="xo-pagenav"':''|replace:' //':'/'}></div>

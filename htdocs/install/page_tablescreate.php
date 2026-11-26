@@ -47,6 +47,6 @@ if ($dbm->tableExists('users')) {
 } else {
     $result  = $dbm->queryFromFile('./sql/' . XOOPS_DB_TYPE . '.structure.sql');
     $content = '<div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> ' . XOOPS_TABLES_CREATED
-        . '</div><div class="well">' . $dbm->report() . '</div>';
+        . '</div><div class="bg-body-tertiary border rounded p-3 mb-3">' . $dbm->report() . '</div>';
 }
 include __DIR__ . '/include/install_tpl.php';

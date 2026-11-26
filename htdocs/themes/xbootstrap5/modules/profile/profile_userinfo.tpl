@@ -6,9 +6,9 @@
         <{/if}>
         <div class="aligncenter">
             <ul class="list-unstyled">
-                <li><span class="label label-info"><{$uname}></span></li>
+                <li><span class="badge text-bg-info"><{$uname}></span></li>
                 <{if isset($email)}>
-                    <li><span class="label label-info"><{$email}></span></li>
+                    <li><span class="badge text-bg-info"><{$email}></span></li>
                 <{/if}>
             </ul>
         </div><!-- .aligncenter -->

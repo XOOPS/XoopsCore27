@@ -371,6 +371,23 @@ ul.userblock > li.join-date {
     width: 9%;
 }
 
+.badge.text-bg-primary a:any-link {
+    color: inherit;
+}
+
+@supports (color: contrast-color(white)) {
+    .badge.text-bg-primary {
+        color: contrast-color(rgb(var(--bs-primary-rgb))) !important;
+    }
+}
+
+@supports not (color: contrast-color(white)) {
+    .badge.text-bg-primary {
+        color: white !important;
+        background-image: linear-gradient(#0009, #0009);
+    }
+}
+
 ul.userblock > li span.badge {
     background: #47A447;
     position: absolute;

@@ -88,9 +88,9 @@ $pageHasForm = true;
 $title = LANGUAGE_SELECTION;
 $label = 'Available Languages';
 $content =<<<EOT
-<div class="form-group col-md-4">
-    <label for="lang" class="control-label">{$label}</label>
-    <select name="lang" id="lang" class="form-control">
+<div class="mb-3 col-md-4">
+    <label for="lang" class="form-label">{$label}</label>
+    <select name="lang" id="lang" class="form-select">
 EOT;
 
 // List installer languages (not site languages) to match initLanguage() validation
@@ -102,7 +102,7 @@ foreach ($languages as $lang) {
 }
 $content .=<<<EOB
     </select>
-</div><div class="clearfix"></div>
+</div>
 EOB;
 
 

@@ -14,14 +14,14 @@
         <div style="margin-top:10px;">
             <{$item.summary}>
         </div>
-        <div class="pull-left">
+        <div class="float-start">
             <{if $op|default:'' != 'preview'}>
                 <span style="float: right; text-align: right;"><{$item.adminlink}></span>
             <{else}>
                 <span style="float: right;">&nbsp;</span>
             <{/if}>
         </div>
-        <div class="pull-right">
+        <div class="float-end">
             <a href="<{$item.itemurl}>" class="btn btn-primary btn-sm"> <{$smarty.const._MD_PUBLISHER_VIEW_MORE}></a>
         </div>
         <div class="clearfix"></div>

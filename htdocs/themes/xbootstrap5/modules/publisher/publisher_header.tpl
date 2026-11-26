@@ -3,7 +3,7 @@
     <{if $module_home || $categoryPath}>
         <ol class="breadcrumb">
             <{if isset($module_home)}>
-                <li><{$module_home}></li>
+                <li class="breadcrumb-item"><{$module_home}></li>
             <{/if}>
             <{$categoryPath|default:''}>
         </ol>

@@ -10,12 +10,12 @@
     <{/if}>
     <{if isset($commentform)}>
         <div class="aligncenter">
-            <button class="btn-comment btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#comments-form">
+            <button id="comments-form-trigger" class="btn-comment btn btn-primary" data-bs-toggle="modal" data-bs-target="#comments-form">
                 <span class="fa-solid fa-comment"></span> <{$smarty.const.THEME_COMMENT_ADD}>
             </button>
         </div>
         <!-- Modal -->
-        <div class="modal fade" id="comments-form" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal fade" id="comments-form" tabindex="-1" role="dialog" aria-labelledby="comments-form-trigger" aria-hidden="true">
             <div class="modal-dialog comments-modal">
                 <div class="modal-content">
                     <div class="modal-body">

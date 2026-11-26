@@ -320,25 +320,38 @@ abstract class XoopsUpgrade
 
     /**
      * Whether nothing exists at $path, confirmed by listing the nearest
-     * existing ancestor: an unreadable directory confirms nothing.
+     * existing ancestor: an unreadable directory confirms nothing, and a
+     * regular file in place of one of the path's folders confirms it.
      *
      * @param  string $path absolute filesystem path
      * @return bool
      */
-    private static function isConfirmedAbsent(string $path): bool
+    protected static function isConfirmedAbsent(string $path): bool
     {
-        $name = basename($path);
-        $dir  = dirname($path);
+        $name     = basename($path);
+        $dir      = dirname($path);
+        $ancestor = false;
         while (!is_dir($dir)) {
             if (dirname($dir) === $dir) {
                 return false;
             }
-            $name = basename($dir);
-            $dir  = dirname($dir);
+            $name     = basename($dir);
+            $dir      = dirname($dir);
+            $ancestor = true;
         }
-        $listing = scandir($dir);
+        set_error_handler(static fn (): bool => true, E_WARNING);
+        try {
+            $listing = scandir($dir);
+        } finally {
+            restore_error_handler();
+        }
 
-        return false !== $listing && !in_array($name, $listing, true);
+        if (false === $listing) {
+            return false;
+        }
+
+        // A regular file where a folder of $path would have to be: nothing exists beneath it.
+        return !in_array($name, $listing, true) || ($ancestor && is_file($dir . '/' . $name));
     }
 
     /**

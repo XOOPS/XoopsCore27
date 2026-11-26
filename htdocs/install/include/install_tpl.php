@@ -44,7 +44,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
     <title><?php echo XOOPS_VERSION . ' : ' . XOOPS_INSTALL_WIZARD; ?> (<?php echo ($wizard->pageIndex + 1) . '/' . count($wizard->pages); ?>)</title>
 
     <!-- Bootstrap CSS -->
-        <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../media/bootstrap5/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 -->
     <link href="../media/font-awesome6/css/fontawesome.min.css" rel="stylesheet" as="font" crossorigin="anonymous">
     <link href="../media/font-awesome6/css/solid.min.css" rel="stylesheet" as="font" crossorigin="anonymous">
@@ -60,10 +60,10 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
 <body>
 <div class="wrapper">
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg bg-dark sticky-top" data-bs-theme="dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#"><img src="assets/img/logo_small.png" alt="XOOPS"></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="<?php echo htmlspecialchars(defined('TOGGLE_NAVIGATION') ? TOGGLE_NAVIGATION : 'Toggle navigation', ENT_QUOTES, 'UTF-8'); ?>">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
@@ -73,9 +73,9 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                     <?php foreach (array_keys($wizard->pages) as $k => $page): ?>
                         <li class="nav-item">
                             <?php if ($k == $wizard->pageIndex): ?>
-                                <a class="nav-link active"><i class="<?php echo str_replace('fa fa-', 'fa-solid fa-', $wizard->pages[$page]['icon']); ?>"></i> <?php echo $wizard->pages[$page]['name']; ?></a>
+                                <span class="nav-link active" aria-current="step"><i class="<?php echo str_replace('fa fa-', 'fa-solid fa-', $wizard->pages[$page]['icon']); ?>"></i> <?php echo $wizard->pages[$page]['name']; ?></span>
                             <?php elseif ($k > $wizard->pageIndex): ?>
-                                <a class="nav-link disabled"><i class="<?php echo str_replace('fa fa-', 'fa-solid fa-', $wizard->pages[$page]['icon']); ?>"></i> <?php echo $wizard->pages[$page]['name']; ?></a>
+                                <span class="nav-link disabled" aria-disabled="true"><i class="<?php echo str_replace('fa fa-', 'fa-solid fa-', $wizard->pages[$page]['icon']); ?>"></i> <?php echo $wizard->pages[$page]['name']; ?></span>
                             <?php else: ?>
                                 <a class="nav-link" href="<?php echo htmlspecialchars($wizard->pageURI($page), ENT_QUOTES | ENT_HTML5); ?>"><i class="<?php echo str_replace('fa fa-', 'fa-solid fa-', $wizard->pages[$page]['icon']); ?> text-success"></i> <?php echo $wizard->pages[$page]['name']; ?></a>
                             <?php endif; ?>
@@ -86,7 +86,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                 <!-- Right menu -->
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#"><i class="fa-solid fa-book"></i> <?php echo SUPPORT; ?></a>
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" href="#"><i class="fa-solid fa-book"></i> <?php echo SUPPORT; ?></a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <?php
                             $supportFile = __DIR__ . '/../language/' . $wizard->language . '/support.php';
@@ -108,7 +108,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
         </div>
     </nav>
 
-    <div class="content-wrapper">
+    <main class="content-wrapper">
         <div class="container-fluid">
             <!-- Status Cards -->
             <div class="row g-4 mb-4">
@@ -178,6 +178,9 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                         <div class="card-body">
                             <form id="<?php echo $wizard->pages[$wizard->currentPage]['name']; ?>" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES | ENT_HTML5); ?>" method="post">
                                 <h2><?php echo $wizard->pages[$wizard->currentPage]['title']; ?></h2>
+                                <?php if (!empty($pageHasHelp) && str_contains($content, 'xoform-help')): ?>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm mb-3" data-bs-toggle="collapse" data-bs-target=".xoform-help" aria-expanded="false"><?php echo installerHtmlSpecialChars(defined('SHOW_HIDE_HELP') ? SHOW_HIDE_HELP : 'Show/hide help text'); ?></button>
+                                <?php endif; ?>
                                 <?php echo $content; ?>
 
                                 <div class="text-end mt-4">
@@ -198,21 +201,15 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
-<!-- Scripts -->
-<!-- jQuery -->
-<!--<script src="assets/js/bootstrap.bundle.min.js"></script>-->
-
-<!-- Bootstrap Core JavaScript -->
 <script src="assets/js/jquery.min.js"></script>
+<script src="../media/bootstrap5/js/bootstrap.bundle.min.js"></script>
+<?php if (!empty($extraSources)) { echo $extraSources; } ?>
 <script src="assets/js/xo-installer.js"></script>
-</body>
-</html>
 <script type="text/javascript">
     $(document).ready(function () {
-        $(".xoform-help").hide();
         /**
          * Check the url to see if we reached 'page_end.php' and if so, launch the cleanup via ajax.
          **/
@@ -226,3 +223,5 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
         }
     });
 </script>
+</body>
+</html>

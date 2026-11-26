@@ -62,7 +62,7 @@ echo '<html lang="' . _LANGCODE . '">';
 echo '<head>';
 echo '<meta http-equiv="content-type" content="text/html; charset=' . _CHARSET . '" />';
 echo '<meta http-equiv="content-language" content="' . _LANGCODE . '" />';
-echo '<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css"/>';
+echo '<link href="' . XOOPS_URL . '/media/bootstrap5/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>';
 echo '<link href="' . xoops_getcss($xoopsConfig['theme_set']) . '" rel="stylesheet" type="text/css"/>';
 echo '</head>';
 echo '<body>';
@@ -83,7 +83,7 @@ if ($smiles = $_SESSION['XoopsEmotions']) {
     if ($op == '') {
         echo '<div class="row">';
         echo '<div class="col">';
-        echo '<a class="btn btn-sm btn-secondary float-right" href="' . $current_file . '?op=' . _MORE . '">' . _MORE . '</a>';
+        echo '<a class="btn btn-sm btn-secondary float-end" href="' . $current_file . '?op=' . _MORE . '">' . _MORE . '</a>';
         echo '</div>';
         echo '</div>';
     }
@@ -92,7 +92,6 @@ if ($smiles = $_SESSION['XoopsEmotions']) {
 
 }
 echo '</div>';
-echo '</body>';
 ?>
 <script type="text/javascript">
     var elements = document.getElementsByClassName('xoopsemot');

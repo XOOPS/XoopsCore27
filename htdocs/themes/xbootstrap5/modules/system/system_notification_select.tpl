@@ -16,23 +16,23 @@
                 <{$lang_events}>
             </div>
         </div>
-        <div class="row">
-            <{foreach name=outer item=category from=$xoops_notification.categories}>
-                <{foreach name=inner item=event from=$category.events}>
-                    <{if $smarty.foreach.inner.first}>
-                        <div class="col-4 col-md-4"><strong><{$category.title}></strong></div>
-                    <{/if}>
-
-                    <{counter assign=index}>
-                    <input type="hidden" name="not_list[<{$index}>][params]" value="<{$category.name}>,<{$category.itemid}>,<{$event.name}>"/>
-                    <div class="col-8 col-md-8 pull-right">
-                        <input type="checkbox" id="not_list[]" name="not_list[<{$index}>][status]" value="1" <{if $event.subscribed}>checked<{/if}>>
-
-                        <{$event.caption}>
+        <{foreach item=category from=$xoops_notification.categories|default:null}>
+            <{if !empty($category.events)}>
+                <div class="row">
+                    <div class="col-4"><strong><{$category.title}></strong></div>
+                    <div class="col-8">
+                        <{foreach item=event from=$category.events}>
+                            <{counter assign=index}>
+                            <input type="hidden" name="not_list[<{$index}>][params]" value="<{$category.name}>,<{$category.itemid}>,<{$event.name}>"/>
+                            <label class="d-block">
+                                <input type="checkbox" name="not_list[<{$index}>][status]" value="1" <{if $event.subscribed}>checked<{/if}>>
+                                <{$event.caption}>
+                            </label>
+                        <{/foreach}>
                     </div>
-                <{/foreach}>
-            <{/foreach}>
-        </div>
+                </div>
+            <{/if}>
+        <{/foreach}>
 
         <p class="aligncenter"><input class="btn btn-primary" type="submit" name="not_submit" value="<{$lang_updatenow}>"></p>
 

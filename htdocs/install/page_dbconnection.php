@@ -85,22 +85,23 @@ ob_start();
 <?php if (!empty($error)) {
     echo '<div class="alert alert-danger"><span class="fa-solid fa-ban text-danger"></span> ' . htmlspecialchars($error, ENT_QUOTES | ENT_HTML5) . "</div>\n";
 } ?>
-    <div class="panel panel-info">
-    <div class="panel-heading"><?php echo LEGEND_CONNECTION; ?></div>
-    <div class="panel-body">
+    <div class="card border-info mb-3">
+    <div class="card-header"><?php echo LEGEND_CONNECTION; ?></div>
+    <div class="card-body">
         <?php echo xoFormSelect('DB_TYPE', $vars['DB_TYPE'], DB_DATABASE_LABEL, $wizard->configs['db_types']) ?>
 
         <?php echo xoFormField('DB_HOST', $vars['DB_HOST'], DB_HOST_LABEL, DB_HOST_HELP); ?>
         <?php echo xoFormField('DB_USER', $vars['DB_USER'], DB_USER_LABEL, DB_USER_HELP); ?>
         <?php echo xoPassField('DB_PASS', $vars['DB_PASS'], DB_PASS_LABEL, DB_PASS_HELP); ?>
 
-        <div class="checkbox">
-            <label>
-                <input class="checkbox" type="checkbox" name="DB_PCONNECT" value="1" <?php echo $vars['DB_PCONNECT'] ? 'checked' : ''; ?>/>
+        <div class="form-check">
+            <label class="form-check-label">
+                <input class="form-check-input" type="checkbox" name="DB_PCONNECT" value="1" <?php echo $vars['DB_PCONNECT'] ? 'checked' : ''; ?>/>
                 <?php echo DB_PCONNECT_LABEL; ?>
             </label>
-            <div class="xoform-help alert alert-info"><?php echo DB_PCONNECT_HELP; ?></div>
+            <div class="xoform-help collapse form-text"><?php echo DB_PCONNECT_HELP; ?></div>
         </div>
+    </div>
     </div>
 
 <?php

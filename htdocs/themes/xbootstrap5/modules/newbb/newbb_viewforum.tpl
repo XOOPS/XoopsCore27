@@ -57,9 +57,7 @@
                 <input type="hidden" name="since" id="since" value="<{$forum_since}>">
                 <input type="hidden" name="action" id="action" value="yes">
                 <input type="hidden" name="searchin" id="searchin" value="both">
-                <span class="input-group-btn">
-                    <input type="submit" class="btn btn-primary" value="<{$smarty.const.THEME_FORUM_SEARCH}>">
-                </span>
+                <input type="submit" class="btn btn-primary" value="<{$smarty.const.THEME_FORUM_SEARCH}>">
             </form>
         </div>
         <div class="col-sm-3 col-md-3">
@@ -109,7 +107,7 @@
                     <a class="btn btn-sm btn-info" href="<{$xoops_url}>/modules/<{$xoops_dirname}>/newtopic.php?op=add&forum=<{$forum_id}>" title="<{$smarty.const.THEME_ADD_POLL}>"><{$smarty.const.THEME_ADD_POLL}></a>
                 <{/if}>
             </div>
-            <div class="col-md-4 col-12 pull-right">
+            <div class="col-md-4 col-12 float-end">
                 <{include file="db:newbb_viewforum_menu.tpl"}>
             </div>
         </div>
@@ -129,13 +127,13 @@
     <div class="newbb-topiclist-loop">
         <div class="newbb-topiclist-header row">
         <div class="col-6 col-md-3"><a href="<{$h_topic_link}>" title="<{$smarty.const._MD_NEWBB_TOPICS}>"><{$smarty.const._MD_NEWBB_TOPICS}></a></div>
-        <div class="col-md-2 visible-lg visible-md"><a href="<{$h_poster_link}>" title="<{$smarty.const._MD_NEWBB_TOPICPOSTER}>"><{$smarty.const._MD_NEWBB_TOPICPOSTER}></a></div>
-        <div class="col-md-2 visible-lg visible-md"><a href="<{$h_publish_link}>" title="<{$smarty.const._MD_NEWBB_TOPICTIME}>"><{$smarty.const._MD_NEWBB_TOPICTIME}></a></div>
-        <div class="col-md-1 visible-lg visible-md"><a href="<{$h_reply_link}>" title="<{$smarty.const._MD_NEWBB_REPLIES}>"><{$smarty.const._MD_NEWBB_REPLIES}></a></div>
-        <div class="col-md-1 visible-lg visible-md"><a href="<{$h_views_link}>" title="<{$smarty.const._MD_NEWBB_VIEWS}>"><{$smarty.const._MD_NEWBB_VIEWS}></a></div>
+        <div class="col-md-2 d-none d-md-block"><a href="<{$h_poster_link}>" title="<{$smarty.const._MD_NEWBB_TOPICPOSTER}>"><{$smarty.const._MD_NEWBB_TOPICPOSTER}></a></div>
+        <div class="col-md-2 d-none d-md-block"><a href="<{$h_publish_link}>" title="<{$smarty.const._MD_NEWBB_TOPICTIME}>"><{$smarty.const._MD_NEWBB_TOPICTIME}></a></div>
+        <div class="col-md-1 d-none d-md-block"><a href="<{$h_reply_link}>" title="<{$smarty.const._MD_NEWBB_REPLIES}>"><{$smarty.const._MD_NEWBB_REPLIES}></a></div>
+        <div class="col-md-1 d-none d-md-block"><a href="<{$h_views_link}>" title="<{$smarty.const._MD_NEWBB_VIEWS}>"><{$smarty.const._MD_NEWBB_VIEWS}></a></div>
 
         <{if isset($rating_enable)}>
-            <div class="col-md-1 visible-lg"><a href="<{$h_rating_link}>" title="<{$smarty.const._MD_NEWBB_RATINGS}>"><{$smarty.const._MD_NEWBB_RATINGS}></a></div>
+            <div class="col-md-1 d-none d-lg-block"><a href="<{$h_rating_link}>" title="<{$smarty.const._MD_NEWBB_RATINGS}>"><{$smarty.const._MD_NEWBB_RATINGS}></a></div>
         <{/if}>
 
         <div class="<{if isset($rating_enable)}>col-6 col-md-2<{else}>col-6 col-md-3<{/if}>"><a href="<{$h_date_link}>" title="<{$smarty.const._MD_NEWBB_LASTPOSTTIME}>"><{$smarty.const._MD_NEWBB_LASTPOSTTIME}></a></div>
@@ -176,11 +174,11 @@
 
 <{*         <{$topic.attachment|default:''}> <{$topic.topic_page_jump}>*}>
 
-        <div class="col-md-2 visible-lg visible-md"><label class="label label-info"><span class="fa-solid fa-user"></span> <{$topic.topic_poster}></label></div>
-        <div class="col-md-2 visible-lg visible-md"><{$topic.topic_time}></div>
-        <div class="col-md-1 visible-lg visible-md text-center"><{$topic.topic_replies}></div>
-        <div class="col-md-1 visible-lg visible-md text-center"><{$topic.topic_views}></div>
-        <{if isset($rating_enable)}><div class="col-md-1 visible-lg"><{$topic.rating_img}></div><{/if}>
+        <div class="col-md-2 d-none d-md-block"><label class="badge text-bg-info"><span class="fa-solid fa-user"></span> <{$topic.topic_poster}></label></div>
+        <div class="col-md-2 d-none d-md-block"><{$topic.topic_time}></div>
+        <div class="col-md-1 d-none d-md-block text-center"><{$topic.topic_replies}></div>
+        <div class="col-md-1 d-none d-md-block text-center"><{$topic.topic_views}></div>
+        <{if isset($rating_enable)}><div class="col-md-1 d-none d-lg-block"><{$topic.rating_img}></div><{/if}>
         <div class="<{if isset($rating_enable)}>col-6 col-md-2<{else}>col-6 col-md-3<{/if}>"><{$topic.topic_last_posttime}> <{$smarty.const._MD_BY}> <{$topic.topic_last_poster}> <{$topic.topic_page_jump_icon}></div>
 
     </div><!-- .newbb-topiclist-itens -->

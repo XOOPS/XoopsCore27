@@ -266,18 +266,18 @@ class XoopsInstallWizard
         $ret    = '';
 
         foreach ($this->form as $form) {
-            $ret .= '<div class="panel panel-info">';
-            $ret .= '<div class="panel-heading">' . $form->getTitle() . '</div>';
-            $ret .= '<div class="panel-body">';
+            $ret .= '<div class="card border-info mb-3">';
+            $ret .= '<div class="card-header">' . $form->getTitle() . '</div>';
+            $ret .= '<div class="card-body">';
 
             foreach ($form->getElements() as $ele) {
                 if (is_object($ele)) {
                     if (!$ele->isHidden()) {
                         if (($caption = $ele->getCaption()) != '') {
                             $name = $ele->getName();
-                            $ret .= "<label class='xolabel' for='" . $ele->getName() . "'>" . $caption . '</label>';
+                            $ret .= "<label class='form-label' for='" . $ele->getName() . "'>" . $caption . '</label>';
                             if (($desc = $ele->getDescription()) != '') {
-                                $ret .= "<div class='xoform-help  alert alert-info'>";
+                                $ret .= "<div class='xoform-help collapse form-text'>";
                                 $ret .= $desc;
                                 $ret .= '</div>';
                             }

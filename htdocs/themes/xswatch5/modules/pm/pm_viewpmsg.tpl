@@ -1,14 +1,14 @@
 <h4><{$smarty.const._MD_PM_PRIVATEMESSAGE}></h4>
 <{if isset($op)}>
 	<{if isset($msg)}>
-		<div class="alert alert-success alert-dismissable">
+		<div class="alert alert-success alert-dismissible">
 			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 			<strong><{$msg}></strong>
 		</div>
 	<{/if}>
 
 	<{if isset($errormsg)}>
-		<div class="alert alert-danger alert-dismissable">
+		<div class="alert alert-danger alert-dismissible">
 			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 			<strong><{$errormsg}></strong>
 		</div>
@@ -93,9 +93,9 @@
 									<{xoUserInfo uid=$message.posteruid}>
 									<a href='<{$xoops_url}>/userinfo.php?uid=<{$message.posteruid}>' alt="<{$message.postername}>" title='<{$message.postername}>'>
 										<{if isset($userInfo.user_avatar) && $userInfo.user_avatar != "blank.gif"}>
-											<img src="<{$xoops_url}>/uploads/<{$userInfo.user_avatar}>" alt="<{$message.postername}>" class="img-rounded img-thumbnail" width="128">
+											<img src="<{$xoops_url}>/uploads/<{$userInfo.user_avatar}>" alt="<{$message.postername}>" class="rounded img-thumbnail" width="128">
 										<{else}>
-											<img src="<{$xoops_imageurl}>images/no-avatar.png" alt="<{$message.postername}>"  class="img-rounded img-thumbnail" width="128">
+											<img src="<{$xoops_imageurl}>images/no-avatar.png" alt="<{$message.postername}>"  class="rounded img-thumbnail" width="128">
 										<{/if}>
 										<br />
 										<{$message.postername}>

@@ -29,71 +29,71 @@
 
     <form name="save" id="save" action="<{xoAppUrl 'modules/contact/send.php'}>" onsubmit="return xoopsFormValidate_save();" method="post" enctype="multipart/form-data">
         <{!empty(securityToken)}><{*//mb*}>
-        <div class="form-group">
+        <div class="mb-3">
             <label for="contact_name"><{$lng_username|default:''}></label>
             <input type="text" class="form-control" id="contact_name" name="contact_name" placeholder="<{$lng_username_info|default:''}>">
           </div>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_mail"><{$lng_email|default:''}></label>
             <input type="text" class="form-control" id="contact_mail" name="contact_mail" placeholder="<{$lng_email_info|default:''}>">
           </div>
           <{if !empty($url)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_url"><{$lng_url|default:''}></label>
             <input type="text" class="form-control" id="contact_url" name="contact_url" placeholder="<{$lng_url_info|default:''}>">
           </div>
           <{/if}>
           <{if !empty($company)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_company"><{$lng_company|default:''}></label>
             <input type="text" class="form-control" id="contact_company" name="contact_company" placeholder="<{$lng_company_info|default:''}>">
           </div>
           <{/if}>
           <{if !empty($address)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_address"><{$lng_address|default:''}></label>
             <input type="text" class="form-control" id="contact_address" name="contact_address" placeholder="<{$lng_address_info|default:''}>">
           </div>
           <{/if}>
           <{if !empty($location)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_location"><{$lng_location|default:''}></label>
             <input type="text" class="form-control" id="contact_location" name="contact_location" placeholder="<{$lng_location_info|default:''}>">
           </div>
           <{/if}>
           <{if !empty($phone)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_phone"><{$lng_phone|default:''}></label>
             <input type="text" class="form-control" id="contact_phone" name="contact_phone" placeholder="<{$lng_phone_info|default:''}>">
           </div>
           <{/if}>
         <{if !empty($icq)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_icq"><{$lng_icq|default:''}></label>
             <input type="text" class="form-control" id="contact_icq" name="contact_icq" placeholder="<{$lng_icq_info|default:''}>">
           </div>
           <{/if}>
           <{if !empty($skype)}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_skype"><{$lng_skypename|default:''}></label>
             <input type="text" class="form-control" id="contact_skype" name="contact_skype" placeholder="<{$lng_skypename_info|default:''}>">
           </div>
           <{/if}>
           <{if !empty($depart)}>
-          <div class="form-group">
+          <div class="mb-3">
           <label for="contact_department"><{$lng_department}></label>
-          <select type="text" class="form-control" name="contact_department">
+          <select type="text" class="form-select" name="contact_department">
               <{foreach item=department from=$departments|default:null}>
                   <{html_options values=$department output=$department selected=$department}>
             <{/foreach}>
         </select>
         </div>
           <{/if}>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_subject"><{$lng_subject}></label>
             <input type="text" class="form-control" id="contact_subject" name="contact_subject" placeholder="<{$lng_subject_info}>">
           </div>
-          <div class="form-group">
+          <div class="mb-3">
             <label for="contact_message"><{$lng_message}></label>
               <textarea name="contact_message" id="contact_message" class="form-control" rows="3" placeholder="<{$lng_message_info}>"></textarea>
           </div>

@@ -182,7 +182,7 @@ class Smarty5ScannerOutput extends ScannerOutput
      */
     private function summaryRow(string $label, int $value, string $cssClass = ''): void
     {
-        $tr = '' === $cssClass ? '<tr>' : '<tr class="' . $cssClass . '">';
+        $tr = '' === $cssClass ? '<tr>' : '<tr class="table-' . $cssClass . '">';
         $this->outputAppend($tr . '<td>' . $this->esc($label) . '</td><td>' . $value . '</td></tr>');
     }
 
@@ -233,7 +233,7 @@ class Smarty5ScannerOutput extends ScannerOutput
 
         $writableNote = $writable ? '' : '<br>' . $this->esc(_XOOPS_SMARTY5_SCANNER_NOT_WRITABLE);
 
-        $this->outputAppend('<tr class="' . $rowClass . '">'
+        $this->outputAppend('<tr class="table-' . $rowClass . '">'
             . '<td>' . $this->esc($rule) . '</td>'
             . '<td>' . $this->esc($tier) . '</td>'
             . '<td>' . $this->esc($match) . '</td>'

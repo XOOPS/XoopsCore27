@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (count($msgs) > 0) {
         $content = '<div class="alert alert-success"><span class="fa-solid fa-check text-success"></span> '
-            . INSTALLED_MODULES . '</div><div class="well"><ul class="list-unstyled">';
+            . INSTALLED_MODULES . '</div><div class="bg-body-tertiary border rounded p-3 mb-3"><ul class="list-unstyled">';
         foreach ($msgs as $msg) {
             $noAnchors = preg_replace(['"<a (.*?)>"', '"</a>"'], ['', ''], $msg);
             $content .= "<li>{$noAnchors}</li>";
@@ -92,6 +92,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $GLOBALS['xoopsConfig']['language'] = \Xmf\Request::getString('xo_install_lang', '', 'COOKIE');
     }
 
+    xoops_load('XoopsFormRendererBootstrap5');
+    XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap5());
+
     // Get installed modules
     /** @var XoopsModuleHandler $module_handler */
     $module_handler = xoops_getHandler('module');
@@ -107,9 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $javascript = '';
     $content  = '';
-    $content .= '<div class="panel panel-info">';
-    $content .= '<div class="panel-heading">' . MODULES_AVAILABLE . '</div>';
-    $content .= '<div class="panel-body">';
+    $content .= '<div class="card border-info mb-3">';
+    $content .= '<div class="card-header">' . MODULES_AVAILABLE . '</div>';
+    $content .= '<div class="card-body">';
 
     foreach ($dirlist as $file) {
         clearstatcache();
@@ -130,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $form     = new XoopsThemeForm('', 'modules', 'index.php', 'post');
             $moduleYN = new XoopsFormCheckBox('', 'modules[' . $module->getInfo('dirname') . ']', $value);
             $moduleYN->addOption(1, sprintf(INSTALL_THIS_MODULE, $module->getInfo('name')));
-            $moduleYN->setExtra("onclick='selectModule(\"" . $file . "\", this)'");
             $form->addElement($moduleYN);
 /*
             $content .= "<tr id='" . $file . "'" . $style . ">\n";
@@ -143,9 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $content .= $moduleYN->render();
             $content .= "    </td></tr>\n";
 */
-            $content .= '<div class="row module-row" id="' . $file . '">';
+            $content .= '<div class="row module-row align-items-center border rounded py-2 mb-2" id="' . $file . '">';
             $content .= '<div class="col-md-2">';
-            $content .= '<br><img src="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname')
+            $content .= '<img class="img-fluid" src="' . XOOPS_URL . '/modules/' . $module->getInfo('dirname')
                 . '/' . $module->getInfo('image') . '" alt="' . $module->getInfo('name') . '">';
             $content .= '</div>';
             $content .= '<div class="col-md-7">';
@@ -154,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . ' (' . $module->getInfo('dirname') . ')' . '</small>' . '</h3>';
             $content .= '<i>' . $module->getInfo('description') . '</i>';
             $content .= '</div>';
-            $content .= '<div class="col-md-3"><br><br><br>' . $moduleYN->render() . '</div>';
+            $content .= '<div class="col-md-3">' . $moduleYN->render() . '</div>';
             $content .= '</div>';
 
             ++$toinstal;

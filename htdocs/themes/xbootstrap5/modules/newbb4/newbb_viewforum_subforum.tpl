@@ -1,4 +1,4 @@
-<a title="<{$smarty.const._MD_SUBFORUMS}>" data-bs-toggle="collapse" href="#xoops-subforum" class="btn btn-primary pull-right">
+<a title="<{$smarty.const._MD_SUBFORUMS}>" data-bs-toggle="collapse" href="#xoops-subforum" class="btn btn-primary float-end">
     <span class="fa-solid fa-circle-plus"></span> <{$smarty.const._MD_SUBFORUMS}>
 </a>
 <div class="newbb-subforum mb10 clearfix">
@@ -17,17 +17,17 @@
             </li>
 
             <li>
-                <ul class="list-inline col-md-6 hidden-xs">
+                <ul class="list-inline col-md-6">
                     <{if $sforum.forum_moderators}>
-                        <li><span class="label label-info"><{$smarty.const._MD_MODERATOR}>: <{$sforum.forum_moderators}></span></li><{/if}>
+                        <li class="list-inline-item"><span class="badge text-bg-info"><{$smarty.const._MD_MODERATOR}>: <{$sforum.forum_moderators}></span></li><{/if}>
 
-                    <li><span class="label label-info"><{$smarty.const._MD_TOPICS}>: <{$sforum.forum_topics}></span></li>
+                    <li class="list-inline-item"><span class="badge text-bg-info"><{$smarty.const._MD_TOPICS}>: <{$sforum.forum_topics}></span></li>
 
-                    <li><span class="label label-info"><{$smarty.const._MD_POSTS}>: <{$sforum.forum_posts}></span></li>
+                    <li class="list-inline-item"><span class="badge text-bg-info"><{$smarty.const._MD_POSTS}>: <{$sforum.forum_posts}></span></li>
 
                     <!-- If subforum description -->
                     <{if $sforum.forum_desc|default:'' != ''}>
-                        <li>
+                        <li class="list-inline-item">
                             <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#subforum-<{$sforum.forum_id}>">
                                 <span class="fa-solid fa-circle-info"></span>
                             </button>
@@ -37,14 +37,14 @@
 
                 <ul class="list-inline col-md-6 text-end">
                     <{if $sforum.forum_lastpost_subject}>
-                        <li>
+                        <li class="list-inline-item">
                             <a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/viewtopic.php?post_id=<{$sforum.forum_lastpost_id}>">
                                 <{$sforum.forum_lastpost_subject}>
                                 <{$sforum.forum_lastpost_icon}>
                             </a>
                         </li>
                     <{else}>
-                        <li><{$smarty.const._MD_NONEWPOSTS}></li>
+                        <li class="list-inline-item"><{$smarty.const._MD_NONEWPOSTS}></li>
                     <{/if}>
                 </ul>
             </li>
@@ -52,12 +52,12 @@
         </ul><!-- .subforum-loop -->
 
         <!-- Modal -->
-        <div class="modal fade" id="subforum-<{$sforum.forum_id}>" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal fade" id="subforum-<{$sforum.forum_id}>" tabindex="-1" role="dialog" aria-labelledby="subforum-title-<{$sforum.forum_id}>" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <button type="button" class="close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span><span class="visually-hidden">Close</span></button>
-                        <h4 class="modal-title"><{$sforum.forum_name}></h4>
+                        <h4 class="modal-title" id="subforum-title-<{$sforum.forum_id}>"><{$sforum.forum_name}></h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
                     </div>
                     <div class="modal-body">
                         <p><{$sforum.forum_desc}></p>

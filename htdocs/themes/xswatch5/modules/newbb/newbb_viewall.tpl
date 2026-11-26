@@ -24,7 +24,7 @@
                 <{if isset($mode) && $mode > 1}>
                     <{$smarty.const._ALL}>:
                     <input type="checkbox" name="topic_check1" id="topic_check1" value="1" onclick="xoopsCheckAll('form_topics_admin', 'topic_check1');">
-                    <select class="form-control" name="op">
+                    <select class="form-select" name="op">
                         <option value="0"><{$smarty.const._SELECT}></option>
                         <option value="delete"><{$smarty.const._DELETE}></option>
                         <{if isset($status) && $status == "pending"}>
@@ -69,7 +69,7 @@
         <div>
             <div>
                 <{if isset($menumode) && $menumode == 0}>
-                    <select class="form-control menu" name="topicoption" id="topicoption" onchange="if(this.options[this.selectedIndex].value.length >0 )    { window.document.location=this.options[this.selectedIndex].value;}">
+                    <select class="form-select menu" name="topicoption" id="topicoption" onchange="if(this.options[this.selectedIndex].value.length >0 )    { window.document.location=this.options[this.selectedIndex].value;}">
                         <option value=""><{$smarty.const._MD_NEWBB_TOPICOPTION}></option>
                         <option value="<{$post_link}>"><{$smarty.const._MD_NEWBB_VIEW}>
                             &nbsp;<{$smarty.const._MD_NEWBB_ALLPOSTS}></option>
@@ -159,7 +159,8 @@
 
         </div> <!-- end column -->
     </div><!-- end row -->
-<table class="table table-responsive" width="100%" align="center">
+<div class="table-responsive">
+<table class="table" width="100%" align="center">
     <!-- irmtfan hardcode removed align="left" -->
     <thead>
     <tr class="head" class="align_left">
@@ -222,10 +223,10 @@
         <{strip}>
             <form class="xoopsform" method="get" action="<{$selection.action}>">
                 <ul class="list-inline">
-                    <li><strong><{$smarty.const._MD_NEWBB_SORTEDBY}>:</strong></li>
-                    <li><{$selection.sort|replace:'<select name':'<select class="form-control" name'}></li>
-                    <li><{$selection.order|replace:'<select name':'<select class="form-control" name'}></li>
-                    <li><{$selection.since}></li>
+                    <li class="list-inline-item"><strong><{$smarty.const._MD_NEWBB_SORTEDBY}>:</strong></li>
+                    <li class="list-inline-item"><{$selection.sort|replace:'<select name':'<select class="form-select" name'}></li>
+                    <li class="list-inline-item"><{$selection.order|replace:'<select name':'<select class="form-select" name'}></li>
+                    <li class="list-inline-item"><{$selection.since}></li>
                 </ul>
                 <{foreach item=hidval from=$selection.vars|default:null key=hidvar }>
                     <{if $hidval && $hidvar neq "sort" && $hidvar neq "order" && $hidvar neq "since"}>
@@ -241,6 +242,7 @@
     </tr>
     </tbody>
 </table>
+</div>
 <!-- end forum main table -->
 
 <{if isset($pagenav)}>

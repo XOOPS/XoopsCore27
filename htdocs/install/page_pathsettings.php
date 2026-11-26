@@ -85,7 +85,7 @@ ob_start();
         function removeTrailing(id, val) {
             if (val[val.length - 1] == '/') {
                 val = val.substr(0, val.length - 1);
-                $(id).value = val;
+                document.getElementById(id).value = val;
             }
 
             return val;
@@ -115,13 +115,13 @@ ob_start();
         }
 
     </script>
-    <div class="panel panel-info">
-        <div class="panel-heading"><?php echo XOOPS_PATHS; ?></div>
-        <div class="panel-body">
+    <div class="card border-info mb-3">
+        <div class="card-header"><?php echo XOOPS_PATHS; ?></div>
+        <div class="card-body">
 
-            <div class="form-group">
-                <label class="xolabel" for="root"><?php echo XOOPS_ROOT_PATH_LABEL; ?></label>
-                <div class="xoform-help alert alert-info"><?php echo XOOPS_ROOT_PATH_HELP; ?></div>
+            <div class="mb-3">
+                <label class="form-label" for="root"><?php echo XOOPS_ROOT_PATH_LABEL; ?></label>
+                <div class="xoform-help collapse form-text"><?php echo XOOPS_ROOT_PATH_HELP; ?></div>
                 <input type="text" class="form-control" name="root" id="root" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['root']); ?>" onchange="updPath('root', this.value)"/>
                 <span id="rootpathimg"><?php echo genPathCheckHtml('root', $pathController->validPath['root']); ?></span>
             </div>
@@ -144,9 +144,9 @@ ob_start();
             }
             ?>
 
-            <div class="form-group">
-                <label for="data"><?php echo XOOPS_DATA_PATH_LABEL; ?></label>
-                <div class="xoform-help alert alert-info"><?php echo XOOPS_DATA_PATH_HELP; ?></div>
+            <div class="mb-3">
+                <label class="form-label" for="data"><?php echo XOOPS_DATA_PATH_LABEL; ?></label>
+                <div class="xoform-help collapse form-text"><?php echo XOOPS_DATA_PATH_HELP; ?></div>
                 <input type="text" class="form-control" name="data" id="data" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['data']); ?>" onchange="updPath('data', this.value)"/>
                 <span id="datapathimg"><?php echo genPathCheckHtml('data', $pathController->validPath['data']); ?></span>
             </div>
@@ -168,9 +168,9 @@ ob_start();
             }
             ?>
 
-            <div class="form-group">
-                <label class="xolabel" for="lib"><?php echo XOOPS_LIB_PATH_LABEL; ?></label>
-                <div class="xoform-help alert alert-info"><?php echo XOOPS_LIB_PATH_HELP; ?></div>
+            <div class="mb-3">
+                <label class="form-label" for="lib"><?php echo XOOPS_LIB_PATH_LABEL; ?></label>
+                <div class="xoform-help collapse form-text"><?php echo XOOPS_LIB_PATH_HELP; ?></div>
                 <input type="text" class="form-control" name="lib" id="lib" value="<?php echo installerHtmlSpecialChars($pathController->xoopsPath['lib']); ?>" onchange="updPath('lib', this.value)"/>
                 <span id="libpathimg"><?php echo genPathCheckHtml('lib', $pathController->validPath['lib']); ?></span>
             </div>
@@ -187,20 +187,20 @@ ob_start();
     </div>
 
 
-    <div class="panel panel-info">
-        <div class="panel-heading"><?php echo XOOPS_URLS; ?></div>
-        <div class="panel-body">
+    <div class="card border-info mb-3">
+        <div class="card-header"><?php echo XOOPS_URLS; ?></div>
+        <div class="card-body">
 
-            <div class="form-group">
-                <label class="xolabel" for="url"><?php echo XOOPS_URL_LABEL; ?></label>
-                <div class="xoform-help alert alert-info"><?php echo XOOPS_URL_HELP; ?></div>
+            <div class="mb-3">
+                <label class="form-label" for="url"><?php echo XOOPS_URL_LABEL; ?></label>
+                <div class="xoform-help collapse form-text"><?php echo XOOPS_URL_HELP; ?></div>
                 <input type="text" class="form-control" name="URL" id="url" value="<?php echo installerHtmlSpecialChars($pathController->xoopsUrl); ?>" onchange="removeTrailing('url', this.value)"/>
             </div>
 
-            <div class="form-group">
-                <label class="xolabel" for="cookie_domain"><?php echo XOOPS_COOKIE_DOMAIN_LABEL; ?></label>
-                <div class="xoform-help alert alert-info"><?php echo XOOPS_COOKIE_DOMAIN_HELP; ?></div>
-                <input type="text" class="form-control" name="COOKIE_DOMAIN" id="cookie_domain" value="<?php echo installerHtmlSpecialChars($pathController->xoopsCookieDomain); ?>" onchange="removeTrailing('url', this.value)"/>
+            <div class="mb-3">
+                <label class="form-label" for="cookie_domain"><?php echo XOOPS_COOKIE_DOMAIN_LABEL; ?></label>
+                <div class="xoform-help collapse form-text"><?php echo XOOPS_COOKIE_DOMAIN_HELP; ?></div>
+                <input type="text" class="form-control" name="COOKIE_DOMAIN" id="cookie_domain" value="<?php echo installerHtmlSpecialChars($pathController->xoopsCookieDomain); ?>" onchange="removeTrailing('cookie_domain', this.value)"/>
             </div>
         </div>
     </div>

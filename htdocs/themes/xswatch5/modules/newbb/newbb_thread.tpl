@@ -11,9 +11,9 @@
     <{if isset($topic_post.poster.uid) &&  $topic_post.poster.uid > -1}>
         <{if isset($topic_post.poster.uid) && $topic_post.poster.uid != 0}>
             <{if isset($topic_post.poster.avatar) && $topic_post.poster.avatar != "blank.gif"}>
-                    <img src="<{$xoops_upload_url}>/<{$topic_post.poster.avatar}>" alt="<{$topic_post.poster.name}>" class="img-circle img-thumbnail">
+                    <img src="<{$xoops_upload_url}>/<{$topic_post.poster.avatar}>" alt="<{$topic_post.poster.name}>" class="rounded-circle img-thumbnail">
                 <{else}>
-                   <img src="<{$xoops_imageurl}>images/no-avatar.png" alt="<{$topic_post.poster.name}>" class="img-circle img-thumbnail">
+                   <img src="<{$xoops_imageurl}>images/no-avatar.png" alt="<{$topic_post.poster.name}>" class="rounded-circle img-thumbnail">
             <{/if}>
 
             <{if !empty($topic_post.poster.rank.title)}>

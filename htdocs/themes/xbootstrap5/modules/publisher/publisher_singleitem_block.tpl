@@ -18,7 +18,7 @@
         <div style="margin-top:10px;">
             <{$item.summary}>
         </div>
-        <div class="pull-left" style="margin-top: 15px;">
+        <div class="float-start" style="margin-top: 15px;">
             <{if isset($op) && $op != 'preview'}>
                 <span style="float: right; text-align: right;"><{$item.adminlink}></span>
             <{else}>

@@ -1,4 +1,4 @@
-<select class="form-control" name="forumoption" id="forumoption" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.location=this.options[this.selectedIndex].value;}">
+<select class="form-select" name="forumoption" id="forumoption" onchange="if(this.options[this.selectedIndex].value.length >0 ) { window.location=this.options[this.selectedIndex].value;}">
     <option value=""><{$smarty.const._MD_NEWBB_FORUMOPTION}></option>
     <option value="<{$mark_read}>"><{$smarty.const._MD_NEWBB_MARK_ALL_TOPICS}>&nbsp;<{$smarty.const._MD_NEWBB_MARK_READ}></option>
     <option value="<{$mark_unread}>"><{$smarty.const._MD_NEWBB_MARK_ALL_TOPICS}>
@@ -13,7 +13,7 @@
 </select>
 
 <{if isset($typeOptions)}>
-    <select class="form-control" name="type" id="type" onchange="if(this.options[this.selectedIndex].value.length >0 )    { window.location=this.options[this.selectedIndex].value;}">
+    <select class="form-select" name="type" id="type" onchange="if(this.options[this.selectedIndex].value.length >0 )    { window.location=this.options[this.selectedIndex].value;}">
         <option value=""><{$smarty.const._MD_NEWBB_TYPE}></option>
         <{foreach item=opt from=$typeOptions|default:null}>
         <option value="<{$opt.link}>"><{$opt.title}></option>

@@ -74,10 +74,10 @@
     <table class="table table-hover">
         <{foreach item=category from=$categories|default:null}><!-- Forum categories -->
         <thead>
-        <tr class="thead-light">
+        <tr class="table-light">
             <th scope="col" colspan="5">
                 <span class="fa-solid fa-list"></span>
-                <span class="font-weight-bold"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php?cat=<{$category.cat_id}>" title="<{$category.cat_title}>"><{$category.cat_title}></a></span>
+                <span class="fw-bold"><a href="<{$xoops_url}>/modules/<{$xoops_dirname}>/index.php?cat=<{$category.cat_id}>" title="<{$category.cat_title}>"><{$category.cat_title}></a></span>
                 <br><small><{$category.cat_description}></small>
             </th>
         </tr>
@@ -137,9 +137,7 @@
                     <input type="hidden" name="sortby" id="sortby" value="p.post_time desc">
                     <input type="hidden" name="searchin" id="searchin" value="both">
 
-                    <span class="input-group-btn">
-                <button class="btn btn-primary" type="submit" id="searchsubmit"><{$smarty.const.THEME_FORUM_SEARCH}></button>
-            </span>
+                    <button class="btn btn-primary" type="submit" id="searchsubmit"><{$smarty.const.THEME_FORUM_SEARCH}></button>
                 </form>
             </div>
             <div class="col-md-4">

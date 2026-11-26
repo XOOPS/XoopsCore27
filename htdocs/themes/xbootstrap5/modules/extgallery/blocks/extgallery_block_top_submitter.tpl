@@ -3,7 +3,7 @@
         <li>
             <a class="btn btn-primary w-100" href="<{$xoops_url}>/modules/extgallery/public-useralbum.php?id=<{$designer.uid}>" title="<{$designer.uname}>">
                 <{$designer.uname}>
-                <span class="badge"><{$designer.countphoto}></span>
+                <span class="badge text-bg-secondary"><{$designer.countphoto}></span>
             </a>
         </li>
     <{/foreach}>

@@ -16,7 +16,7 @@
 <{/if}>
 
 <{if !empty($title_and_welcome) && !empty($lang_mainintro)}>
-    <div class="well">
+    <div class="p-3 bg-body-tertiary border rounded">
         <{$lang_mainintro}>
     </div>
 <{/if}>

@@ -27,7 +27,7 @@
     <link href="<{xoImgUrl}>js/owl/assets/owl.theme.default.css" rel="stylesheet">
 
     <link href="<{$xoops_url}>/favicon.ico" rel="shortcut icon">
-    <link rel="stylesheet" type="text/css" href="<{xoImgUrl}>css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="<{xoAppUrl 'media/bootstrap5/css/bootstrap.min.css'}>">
     <link rel="stylesheet" type="text/css" href="<{xoImgUrl}>css/xoops.css">
     <link rel="stylesheet" type="text/css" href="<{xoImgUrl}>css/reset.css">
 
@@ -58,7 +58,7 @@
     <title><{if isset($xoops_dirname) && $xoops_dirname == "system"}><{$xoops_sitename}><{if !empty($xoops_pagetitle)}> - <{$xoops_pagetitle}><{/if}><{elseif !empty($xoops_pagetitle)}><{$xoops_pagetitle}> - <{$xoops_sitename}><{else}><{$xoops_sitename}><{/if}></title>
 
     <script src="<{$xoops_url}>/browse.php?Frameworks/jquery/jquery.js"></script>
-    <script src="<{xoImgUrl}>js/bootstrap.bundle.min.js"></script>
+    <script src="<{xoAppUrl 'media/bootstrap5/js/bootstrap.bundle.min.js'}>"></script>
 
     <{include file="$theme_name/tpl/shareaholic-script.tpl"}>
 

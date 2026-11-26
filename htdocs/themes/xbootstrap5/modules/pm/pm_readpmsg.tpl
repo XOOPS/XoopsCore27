@@ -1,18 +1,18 @@
 <h4><{$smarty.const._MD_PM_PRIVATEMESSAGE}></h4>
 <div class="message-current-tab">
     <{if $op==out}>
-        <div class="alert alert-success alert-dismissable">
-            <button type="button" class="close" data-bs-dismiss="alert" aria-hidden="true">×</button>
+        <div class="alert alert-success alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             <strong><a href="viewpmsg.php?op=out" title="<{$smarty.const._MD_PM_OUTBOX}>"><{$smarty.const._MD_PM_OUTBOX}></a></strong>
         </div>
     <{elseif $op == "save"}>
-        <div class="alert alert-success alert-dismissable">
-            <button type="button" class="close" data-bs-dismiss="alert" aria-hidden="true">×</button>
+        <div class="alert alert-success alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             <strong><a href="viewpmsg.php?op=save" title="<{$smarty.const._MD_PM_SAVEBOX}>"><{$smarty.const._MD_PM_SAVEBOX}></a></strong>
         </div>
     <{else}>
-        <div class="alert alert-success alert-dismissable">
-            <button type="button" class="close" data-bs-dismiss="alert" aria-hidden="true">×</button>
+        <div class="alert alert-success alert-dismissible">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<{$smarty.const._CLOSE|escape:'html'}>"></button>
             <a href="viewpmsg.php?op=in" title="<{$smarty.const._MD_PM_INBOX}>"><{$smarty.const._MD_PM_INBOX}></a>
         </div>
     <{/if}>
@@ -44,7 +44,7 @@
 </div><!-- .sender-info -->
 
 <div class="col-8 col-md-8 message-read">
-    <p class="label label-info"><strong><{$smarty.const._MD_PM_SENTC}> </strong><{$message.msg_time}></p>
+    <p class="badge text-bg-info"><strong><{$smarty.const._MD_PM_SENTC}> </strong><{$message.msg_time}></p>
 
     <p><{$message.msg_text}></p>
 

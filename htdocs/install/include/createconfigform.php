@@ -38,8 +38,8 @@ if (defined('_MD_AM_AUTHENTICATION')) {
  */
 function createConfigform($config)
 {
-    xoops_load('XoopsFormRendererBootstrap3');
-    XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap3());
+    xoops_load('XoopsFormRendererBootstrap5');
+    XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap5());
 
     /** @var XoopsConfigHandler $config_handler */
     $config_handler         = xoops_getHandler('config');
@@ -242,8 +242,8 @@ function createConfigform($config)
  */
 function createThemeform($config)
 {
-    xoops_load('XoopsFormRendererBootstrap3');
-    XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap3());
+    xoops_load('XoopsFormRendererBootstrap5');
+    XoopsFormRenderer::getInstance()->set(new XoopsFormRendererBootstrap5());
 
     $title          = (!defined($config->getVar('conf_desc')) || constant($config->getVar('conf_desc')) === '') ? constant($config->getVar('conf_title')) : constant($config->getVar('conf_title')) . '<br><br><span>' . constant($config->getVar('conf_desc')) . '</span>';
     $form_theme_set = new XoopsFormSelect('', $config->getVar('conf_name'), $config->getConfValueForOutput(), 1, false);
@@ -289,9 +289,9 @@ function createThemeform($config)
             $label_content .= '<div class="alert alert-info" role="alert">' . $theme_ini['Description'] . '</div>';
         }
         if (isset($theme_ini['screenshot']) && $theme_ini['screenshot'] !== '' && file_exists(XOOPS_ROOT_PATH . '/themes/' . $theme . '/' . $theme_ini['screenshot'])) {
-            $label_content .= '<img class="img-responsive" src="' . XOOPS_URL . '/themes/' . $theme . '/' . $theme_ini['screenshot'] . '" alt="Screenshot" />';
+            $label_content .= '<img class="img-fluid" src="' . XOOPS_URL . '/themes/' . $theme . '/' . $theme_ini['screenshot'] . '" alt="Screenshot" />';
         } elseif (isset($theme_ini['thumbnail']) && $theme_ini['thumbnail'] !== '' && file_exists(XOOPS_ROOT_PATH . '/themes/' . $theme . '/' . $theme_ini['thumbnail'])) {
-            $label_content .= '<img class="img-responsive" src="' . XOOPS_URL . '/themes/' . $theme . '/' . $theme_ini['thumbnail'] . '" alt="$theme" />';
+            $label_content .= '<img class="img-fluid" src="' . XOOPS_URL . '/themes/' . $theme . '/' . $theme_ini['thumbnail'] . '" alt="$theme" />';
         } else {
             $label_content .= THEME_NO_SCREENSHOT;
         }

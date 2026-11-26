@@ -9,7 +9,7 @@
 <div class="card <{$cols}>">
     <{if $category.image}>
         <a class='' href='index.php?op=list&amp;alb_pid=<{$category.id}>' title='<{$smarty.const._CO_WGGALLERY_COLL_ALBUMS}>'>
-            <img class="card-img-top img-responsive" src="<{$category.image}>" alt="<{$category.name}>" title="<{$category.name}>"></a>
+            <img class="card-img-top img-fluid" src="<{$category.image}>" alt="<{$category.name}>" title="<{$category.name}>"></a>
     <{/if}>
     <div class="card-body">
         <{if isset($showTitle)}><h5 class="center"><{$category.name}></h5><{/if}>

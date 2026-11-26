@@ -30,7 +30,7 @@
             <{foreach item=category from=$categories|default:null}>
                 <div class="col-sm-4 col-md-4 category-titles">
                     <a href="<{$xoops_url}>/modules/<{$module_dir}>/viewcat.php?cid=<{$category.id}>" title="<{$category.title}>" class="btn btn-primary w-100">
-                        <{$category.title}> <span class="badge"><{$category.totalvideos}></span>
+                        <{$category.title}> <span class="badge text-bg-secondary"><{$category.totalvideos}></span>
                     </a>
                 </div>
                 <{if $category.subcategories}>

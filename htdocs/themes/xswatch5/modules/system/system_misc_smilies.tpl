@@ -13,7 +13,7 @@
 <{/if}>
 
 <table class="table table-hover table-sm">
-    <thead class="thead-dark">
+    <thead class="table-dark">
         <tr>
             <th class="text-center" scope="col"><{$lang_code}></th>
             <th class="text-center" scope="col"><{$lang_emotion}></th>

@@ -250,6 +250,363 @@ final class Upgrade275Test extends TestCase
         );
     }
 
+    #[Test]
+    public function theWizardRetiresObsoleteAssetsAndPreservesCustomizedThemesOnRerun(): void
+    {
+        self::assertSame(realpath(dirname(__DIR__)), realpath(XOOPS_ROOT_PATH), 'Use the upgrade test sandbox.');
+        $obsolete = [];
+        foreach (['install', 'upgrade'] as $wizard) {
+            foreach (['css/bootstrap.css', 'css/bootstrap.min.css', 'js/bootstrap.js', 'js/bootstrap.min.js'] as $file) {
+                $obsolete[] = "$wizard/assets/$file";
+            }
+            foreach (['eot', 'svg', 'ttf', 'woff', 'woff2'] as $extension) {
+                $obsolete[] = "$wizard/assets/fonts/glyphicons-halflings-regular.$extension";
+            }
+        }
+        $obsolete[] = 'upgrade/assets/js/jquery.js';
+        $obsolete[] = 'upgrade/assets/js/xo-installer.js';
+        foreach (['tinymce5', 'tinymce7'] as $editor) {
+            $manager = "class/xoopseditor/$editor/js/tinymce/plugins/xoopsimagemanager";
+            $obsolete[] = "$manager/css/bootstrap.min.css";
+            $obsolete[] = "$manager/js/bootstrap.bundle.min.js";
+        }
+        $obsolete[] = 'class/xoopseditor/tinymce5/js/tinymce/plugins/xoopsemoticons/css/bootstrap.min.css';
+        $themeCss = 'themes/xbootstrap5/css/bootstrap-reboot.min.css';
+        $obsolete[] = $themeCss;
+        $css = file_get_contents(dirname(__DIR__) . '/fixtures/bootstrap-reboot-5.3.8.min.css');
+        self::assertIsString($css);
+        $contents = [
+            $themeCss => str_replace("\n", "\r\n", str_replace("\r\n", "\n", $css)),
+            'themes/xswatch5/css/bootstrap.min.css' => $css . '/* site customization */',
+            'themes/xbootstrap5/css/bootstrap.min.css' => $css, // Stock CSS, wrong path.
+            'themes/xswatch5/css-cerulean/bootstrap.min.css' => $css,
+        ];
+        $keep = array_merge(
+            ['install/assets/js/jquery.min.js', 'install/assets/js/xo-installer.js', 'upgrade/assets/css/site.css', 'media/bootstrap5/css/bootstrap.min.css'],
+            array_diff(array_keys($contents), $obsolete)
+        );
+
+        $files = $dirs = [];
+        $existingArchives = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
+        try {
+            foreach (array_merge($obsolete, $keep) as $relative) {
+                $path = XOOPS_ROOT_PATH . '/' . $relative;
+                $missing = [];
+                for ($dir = dirname($path); !is_dir($dir); $dir = dirname($dir)) {
+                    $missing[] = $dir;
+                }
+                foreach (array_reverse($missing) as $dir) {
+                    self::assertTrue(mkdir($dir));
+                    $dirs[] = $dir;
+                }
+                self::assertFileDoesNotExist($path);
+                $content = $contents[$relative] ?? 'asset';
+                self::assertSame(strlen($content), file_put_contents($path, $content));
+                $files[] = $path;
+            }
+
+            $patch = $this->patch();
+            $mandatoryLink = XOOPS_ROOT_PATH . '/upgrade/assets/js/jquery.js';
+            $linkedTarget = XOOPS_ROOT_PATH . '/upgrade/assets/css/site.css';
+            unlink($mandatoryLink);
+            self::assertTrue(link($linkedTarget, $mandatoryLink));
+            self::assertContains('bootstrapassets', $patch->isApplied()->tasks);
+            $blocked = $this->getMockBuilder(Upgrade_275::class)
+                ->setConstructorArgs([$this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)])
+                ->onlyMethods(['removeLeftover'])
+                ->getMock();
+            $blocked->method('removeLeftover')->willReturn(false);
+            self::assertFalse($blocked->apply());
+            self::assertStringContainsString('install/assets/css/bootstrap.css', $blocked->message());
+            self::assertContains('bootstrapassets', $blocked->isApplied()->tasks);
+
+            self::assertTrue($patch->apply());
+            self::assertFileExists($linkedTarget);
+            self::assertSame($contents[$themeCss], file_get_contents(XOOPS_ROOT_PATH . '/' . $themeCss));
+            self::assertTrue($patch->isApplied()->applied, 'Theme assets alone must never queue the patch.');
+            self::assertTrue($patch->hasThemeAssets());
+            $disappearing = $this->getMockBuilder(Upgrade_275::class)
+                ->setConstructorArgs([$this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)])
+                ->onlyMethods(['isStockThemeFile'])
+                ->getMock();
+            $disappearing->method('isStockThemeFile')->willReturnCallback(static function (string $file) use ($themeCss): bool {
+                return str_ends_with(str_replace('\\', '/', $file), '/' . $themeCss) && unlink($file);
+            });
+            self::assertFalse($disappearing->archiveThemeAssets());
+            self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), 'A failed first capture must leave no empty archive.');
+            self::assertStringNotContainsString('theme-assets-275-', $disappearing->message());
+            file_put_contents(XOOPS_ROOT_PATH . '/' . $themeCss, $contents[$themeCss]);
+            if (PHP_OS_FAMILY !== 'Windows' && function_exists('posix_geteuid') && posix_geteuid() !== 0) {
+                $themeDir = dirname(XOOPS_ROOT_PATH . '/' . $themeCss);
+                $mode = fileperms($themeDir) & 0777;
+                self::assertTrue(chmod($themeDir, 0555));
+                try {
+                    self::assertFalse($patch->archiveThemeAssets());
+                } finally {
+                    chmod($themeDir, $mode);
+                }
+                self::assertTrue($patch->hasThemeAssets(), 'Correcting directory permissions must allow another attempt.');
+                self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'));
+            }
+            $beforeSuccess = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
+            self::assertTrue($patch->archiveThemeAssets());
+            self::assertFalse($patch->hasThemeAssets());
+            $archives = array_values(array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $beforeSuccess));
+            self::assertCount(1, $archives);
+            self::assertSame($contents[$themeCss], file_get_contents($archives[0] . '/' . $themeCss));
+            foreach ($obsolete as $relative) {
+                self::assertFileDoesNotExist(XOOPS_ROOT_PATH . '/' . $relative);
+                $packagePath = str_starts_with($relative, 'upgrade/') ? $relative : 'htdocs/' . $relative;
+                self::assertFileDoesNotExist(dirname(__DIR__, 3) . '/' . $packagePath);
+            }
+            foreach ($keep as $relative) {
+                self::assertSame($contents[$relative] ?? 'asset', file_get_contents(XOOPS_ROOT_PATH . '/' . $relative));
+            }
+            $custom = $css . '/* customized reboot */';
+            self::assertSame(strlen($custom), file_put_contents(XOOPS_ROOT_PATH . '/' . $themeCss, $custom));
+            self::assertTrue($patch->isApplied()->applied);
+            self::assertTrue($patch->apply());
+            self::assertTrue($patch->archiveThemeAssets());
+            self::assertSame($custom, file_get_contents(XOOPS_ROOT_PATH . '/' . $themeCss));
+
+            $unreadable = $this->getMockBuilder(Upgrade_275::class)
+                ->setConstructorArgs([$this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)])
+                ->onlyMethods(['isStockThemeFile'])
+                ->getMock();
+            $unreadable->method('isStockThemeFile')->willReturn(null);
+            self::assertTrue($unreadable->isApplied()->applied);
+            self::assertTrue($unreadable->hasThemeAssets());
+            self::assertFalse($unreadable->archiveThemeAssets());
+            self::assertStringContainsString(sprintf(_XOOPS_UPGRADE_275_ASSET_UNREADABLE, $themeCss), $unreadable->message());
+        } finally {
+            $this->removeTestArchives($existingArchives);
+            foreach ($files as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+            foreach (array_reverse($dirs) as $dir) {
+                rmdir($dir);
+            }
+        }
+    }
+
+    #[Test]
+    public function anEditDuringCleanupAndANewLiveFileBothSurvive(): void
+    {
+        $relative = 'themes/xbootstrap5/css/bootstrap-reboot.min.css';
+        $path = XOOPS_ROOT_PATH . '/' . $relative;
+        $dirs = [];
+        for ($dir = dirname($path); !is_dir($dir); $dir = dirname($dir)) {
+            $dirs[] = $dir;
+        }
+        foreach (array_reverse($dirs) as $dir) {
+            mkdir($dir);
+        }
+        $existingArchives = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
+        self::assertFileDoesNotExist($path);
+        try {
+            copy(dirname(__DIR__) . '/fixtures/bootstrap-reboot-5.3.8.min.css', $path);
+            $patch = new class ($this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)) extends Upgrade_275 {
+                public string $live = '';
+
+                protected function isStockThemeFile(string $file, array $hashes): ?bool
+                {
+                    $result = parent::isStockThemeFile($file, $hashes);
+                    if ('' !== $this->live) {
+                        file_put_contents($this->live, 'new deployment');
+                    } elseif ($result) {
+                        $this->live = $file;
+                        file_put_contents($file, 'edited after stock check');
+                    }
+                    return $result;
+                }
+            };
+            self::assertFalse($patch->archiveThemeAssets());
+            self::assertSame('new deployment', file_get_contents($path));
+            $archives = array_values(array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $existingArchives));
+            self::assertCount(1, $archives);
+            self::assertSame('edited after stock check', file_get_contents($archives[0] . '/' . $relative));
+            self::assertStringContainsString(basename($archives[0]) . '/' . $relative, $patch->message());
+        } finally {
+            $this->removeTestArchives($existingArchives);
+            if (is_file($path)) {
+                unlink($path);
+            }
+            foreach ($dirs as $dir) {
+                rmdir($dir);
+            }
+        }
+    }
+
+    #[Test]
+    public function anEditedFileIsRestoredWithoutASecondNameInTheRecoveryFolder(): void
+    {
+        $relative = 'themes/xbootstrap5/css/bootstrap-reboot.min.css';
+        $existingArchives = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
+        [$path, $dirs] = $this->stageStockThemeFile($relative);
+        try {
+            $patch = new class ($this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)) extends Upgrade_275 {
+                private bool $edited = false;
+
+                protected function isStockThemeFile(string $file, array $hashes): ?bool
+                {
+                    $result = parent::isStockThemeFile($file, $hashes);
+                    if ($result && !$this->edited) {
+                        $this->edited = true;
+                        file_put_contents($file, 'edited after stock check');
+                    }
+                    return $result;
+                }
+            };
+
+            self::assertTrue($patch->archiveThemeAssets());
+            self::assertSame('edited after stock check', file_get_contents($path));
+            clearstatcache(true);
+            self::assertSame(1, lstat($path)['nlink'], 'A later edit of the live file must not reach a recovery copy.');
+            self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), 'Nothing was archived, so no recovery folder stays.');
+            self::assertSame('', $patch->message());
+        } finally {
+            $this->unstageThemeFile($path, $dirs, $existingArchives);
+        }
+    }
+
+    #[Test]
+    public function aRedeployedStockFileIsPutBackAndArchivedOnTheNextAttempt(): void
+    {
+        $relative = 'themes/xbootstrap5/css/bootstrap-reboot.min.css';
+        $existingArchives = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
+        [$path, $dirs] = $this->stageStockThemeFile($relative);
+        $stock = (string) file_get_contents($path);
+        try {
+            $patch = new class ($this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)) extends Upgrade_275 {
+                private bool $redeployed = false;
+
+                protected function isStockThemeFile(string $file, array $hashes): ?bool
+                {
+                    $result = parent::isStockThemeFile($file, $hashes);
+                    if ($result && !$this->redeployed) {
+                        $this->redeployed = true;
+                        // Written beside the old file first, so the copy cannot reuse its inode.
+                        copy($file, $file . '.new');
+                        rename($file . '.new', $file);
+                    }
+                    return $result;
+                }
+            };
+
+            self::assertFalse($patch->archiveThemeAssets(), 'A file that changed identity is not archived in the same attempt.');
+            self::assertSame($stock, file_get_contents($path));
+            clearstatcache(true);
+            self::assertSame(1, lstat($path)['nlink'], 'The recovery folder must not keep a second name for the live file.');
+            self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'));
+            self::assertStringContainsString(sprintf(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative), $patch->message());
+
+            self::assertTrue($patch->archiveThemeAssets());
+            self::assertFileDoesNotExist($path);
+            $archives = array_values(array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $existingArchives));
+            self::assertCount(1, $archives);
+            self::assertSame($stock, file_get_contents($archives[0] . '/' . $relative));
+        } finally {
+            if (is_file($path . '.new')) {
+                unlink($path . '.new');
+            }
+            $this->unstageThemeFile($path, $dirs, $existingArchives);
+        }
+    }
+
+    #[Test]
+    public function aProbeThatCannotBeRemovedIsNamedInTheReport(): void
+    {
+        $relative = 'themes/xbootstrap5/css/bootstrap-reboot.min.css';
+        $existingArchives = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
+        [$path, $dirs] = $this->stageStockThemeFile($relative);
+        $stock = (string) file_get_contents($path);
+        $existingProbes = glob(dirname($path) . '/.xoops-archive-*');
+        try {
+            $patch = $this->getMockBuilder(Upgrade_275::class)
+                ->setConstructorArgs([$this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)])
+                ->onlyMethods(['removeLeftover'])
+                ->getMock();
+            $patch->method('removeLeftover')->willReturn(false);
+
+            self::assertFalse($patch->archiveThemeAssets());
+            $probes = array_values(array_diff(glob(dirname($path) . '/.xoops-archive-*'), $existingProbes));
+            self::assertCount(1, $probes);
+            self::assertStringContainsString(dirname($relative) . '/' . basename($probes[0]), $patch->message());
+            self::assertSame($stock, file_get_contents($path), 'The asset stays in place when the probe cannot be cleared.');
+            self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'));
+        } finally {
+            foreach (array_diff(glob(dirname($path) . '/.xoops-archive-*'), $existingProbes) as $probe) {
+                unlink($probe);
+            }
+            $this->unstageThemeFile($path, $dirs, $existingArchives);
+        }
+    }
+
+    #[Test]
+    public function aFileInPlaceOfARetiredFolderDoesNotHoldTheUpgrade(): void
+    {
+        $marker = XOOPS_ROOT_PATH . '/install';
+        self::assertFileDoesNotExist($marker);
+        self::assertSame(7, file_put_contents($marker, 'removed'));
+        try {
+            $patch = $this->patch();
+
+            self::assertTrue($patch->check_bootstrapassets(), 'Nothing can exist beneath a regular file.');
+            self::assertTrue($patch->apply_bootstrapassets());
+            self::assertSame('', $patch->message());
+            self::assertSame('removed', file_get_contents($marker));
+        } finally {
+            unlink($marker);
+        }
+    }
+
+    /**
+     * @return array{0: string, 1: string[]} the staged file and the folders created for it, deepest first
+     */
+    private function stageStockThemeFile(string $relative): array
+    {
+        $path = XOOPS_ROOT_PATH . '/' . $relative;
+        $dirs = [];
+        for ($dir = dirname($path); !is_dir($dir); $dir = dirname($dir)) {
+            $dirs[] = $dir;
+        }
+        foreach (array_reverse($dirs) as $dir) {
+            mkdir($dir);
+        }
+        self::assertFileDoesNotExist($path);
+        self::assertTrue(copy(dirname(__DIR__) . '/fixtures/bootstrap-reboot-5.3.8.min.css', $path));
+
+        return [$path, $dirs];
+    }
+
+    /**
+     * @param string[] $dirs             folders stageStockThemeFile() created
+     * @param string[] $existingArchives recovery folders that were there before the test
+     */
+    private function unstageThemeFile(string $path, array $dirs, array $existingArchives): void
+    {
+        $this->removeTestArchives($existingArchives);
+        if (is_file($path)) {
+            unlink($path);
+        }
+        foreach ($dirs as $dir) {
+            rmdir($dir);
+        }
+    }
+
+    private function removeTestArchives(array $existing): void
+    {
+        foreach (array_diff(glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), $existing) as $archive) {
+            $files = new \RecursiveDirectoryIterator($archive, \FilesystemIterator::SKIP_DOTS);
+            foreach (new \RecursiveIteratorIterator($files, \RecursiveIteratorIterator::CHILD_FIRST) as $entry) {
+                $entry->isDir() ? rmdir($entry->getPathname()) : unlink($entry->getPathname());
+            }
+            rmdir($archive);
+        }
+    }
+
     private function removeFile(): void
     {
         if (is_file($this->file) || is_link($this->file)) {

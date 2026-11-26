@@ -43,10 +43,6 @@
     <!-- Multi-level Menu -->
     <link rel="stylesheet" type="text/css" href="<{xoImgUrl}>css/multilevelmenu.css">
 
-    <{if isset($xoops_dirname) && $xoops_dirname == 'newbb'}>
-        <link rel="stylesheet" type="text/css" media="screen" href="<{xoImgUrl}>css/forums.css">
-    <{/if}>
-
     <link rel="stylesheet" type="text/css" href="<{xoAppUrl 'media/font-awesome7/css/fontawesome.min.css'}>">
     <link rel="stylesheet" type="text/css" href="<{xoAppUrl 'media/font-awesome7/css/solid.min.css'}>">
     <link rel="stylesheet" type="text/css" href="<{xoAppUrl 'media/font-awesome7/css/brands.min.css'}>">

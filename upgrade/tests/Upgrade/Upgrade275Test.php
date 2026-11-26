@@ -325,6 +325,17 @@ final class Upgrade275Test extends TestCase
             self::assertSame($contents[$themeCss], file_get_contents(XOOPS_ROOT_PATH . '/' . $themeCss));
             self::assertTrue($patch->isApplied()->applied, 'Theme assets alone must never queue the patch.');
             self::assertTrue($patch->hasThemeAssets());
+            $disappearing = $this->getMockBuilder(Upgrade_275::class)
+                ->setConstructorArgs([$this->createMock(XoopsMySQLDatabase::class), $this->createMock(UpgradeControl::class)])
+                ->onlyMethods(['isStockThemeFile'])
+                ->getMock();
+            $disappearing->method('isStockThemeFile')->willReturnCallback(static function (string $file) use ($themeCss): bool {
+                return str_ends_with(str_replace('\\', '/', $file), '/' . $themeCss) && unlink($file);
+            });
+            self::assertFalse($disappearing->archiveThemeAssets());
+            self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'), 'A failed first capture must leave no empty archive.');
+            self::assertStringNotContainsString('theme-assets-275-', $disappearing->message());
+            file_put_contents(XOOPS_ROOT_PATH . '/' . $themeCss, $contents[$themeCss]);
             if (PHP_OS_FAMILY !== 'Windows' && function_exists('posix_geteuid') && posix_geteuid() !== 0) {
                 $themeDir = dirname(XOOPS_ROOT_PATH . '/' . $themeCss);
                 $mode = fileperms($themeDir) & 0777;
@@ -335,6 +346,7 @@ final class Upgrade275Test extends TestCase
                     chmod($themeDir, $mode);
                 }
                 self::assertTrue($patch->hasThemeAssets(), 'Correcting directory permissions must allow another attempt.');
+                self::assertSame($existingArchives, glob(XOOPS_VAR_PATH . '/theme-assets-275-*'));
             }
             $beforeSuccess = glob(XOOPS_VAR_PATH . '/theme-assets-275-*');
             self::assertTrue($patch->archiveThemeAssets());

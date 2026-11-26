@@ -394,27 +394,49 @@ HTACCESS;
                 }
                 if (null === $archive) {
                     $name = 'theme-assets-275-' . bin2hex(random_bytes(12));
-                    $archive = XOOPS_VAR_PATH . '/' . $name;
+                    $dir = XOOPS_VAR_PATH . '/' . $name;
+                    if (!mkdir($dir, 0700)) {
+                        $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
+                        return false;
+                    }
+                    $archive = $dir;
                     if (
-                        !mkdir($archive, 0700)
-                        || file_put_contents($archive . '/.htaccess', self::DATA_HTACCESS) !== strlen(self::DATA_HTACCESS)
+                        file_put_contents($archive . '/.htaccess', self::DATA_HTACCESS) !== strlen(self::DATA_HTACCESS)
                         || false === file_put_contents($archive . '/index.html', '')
                     ) {
                         $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
                         return false;
                     }
-                    $this->log(sprintf(_XOOPS_UPGRADE_275_ARCHIVE_LOCATION, 'xoops_data/' . $name . '/'));
                 }
                 $saved = $archive . '/' . $relative;
                 $dir = dirname($saved);
                 if (!is_dir($dir) && !mkdir($dir, 0700, true)) {
                     $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
-                    $ok = false;
-                } elseif (!$this->archiveThemeFile($candidate, $archive, $relative, $hashes[$relative])) {
-                    $ok = false;
+                } elseif ($this->archiveThemeFile($candidate, $archive, $relative, $hashes[$relative])) {
+                    continue;
+                }
+                $ok = false;
+                // rmdir stops at the first directory containing a recovery copy.
+                for ($parent = dirname($relative); '.' !== $parent; $parent = dirname($parent)) {
+                    $dir = $archive . '/' . $parent;
+                    if (is_dir($dir) && !rmdir($dir)) {
+                        break;
+                    }
                 }
             }
         } finally {
+            if (null !== $archive) {
+                $entries = scandir($archive);
+                $guards = ['.htaccess', 'index.html'];
+                if (false !== $entries && [] === array_diff($entries, ['.', '..'], $guards)) {
+                    foreach (array_intersect($guards, $entries) as $guard) {
+                        unlink($archive . '/' . $guard);
+                    }
+                    rmdir($archive);
+                } else {
+                    $this->log(sprintf(_XOOPS_UPGRADE_275_ARCHIVE_LOCATION, 'xoops_data/' . basename($archive) . '/'));
+                }
+            }
             restore_error_handler();
         }
         return $ok;

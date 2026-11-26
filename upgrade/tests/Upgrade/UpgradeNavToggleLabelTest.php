@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Xoops\Upgrade\Tests\Upgrade;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -28,12 +29,26 @@ use PHPUnit\Framework\TestCase;
  */
 final class UpgradeNavToggleLabelTest extends TestCase
 {
+    /**
+     * A language pack without the constant, and one whose translation needs escaping.
+     *
+     * @return iterable<string, array{?string, string}> translation (null when the pack lacks it), expected attribute value
+     */
     public static function toggleLabels(): iterable
     {
         yield 'older language pack' => [null, 'Toggle navigation'];
         yield 'translated label' => ['Menu "principal" & étapes', 'Menu &quot;principal&quot; &amp; étapes'];
     }
 
+    /**
+     * The menu button carries the label as its escaped aria-label.
+     *
+     * @param string|null $label    translation of _TOGGLE_NAVIGATION, or null for a language pack that lacks it
+     * @param string      $expected the aria-label value as it must appear in the page
+     *
+     * @return void
+     */
+    #[Test]
     #[DataProvider('toggleLabels')]
     public function testNamesTheNavigationToggle(?string $label, string $expected): void
     {
@@ -46,6 +61,8 @@ final class UpgradeNavToggleLabelTest extends TestCase
      * Render the upgrader page in a clean process, so each case supplies its own language constant.
      *
      * @param string|null $label translation of _TOGGLE_NAVIGATION, or null for a language pack that lacks it
+     *
+     * @return string the page's HTML
      */
     private function render(?string $label): string
     {

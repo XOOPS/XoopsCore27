@@ -179,7 +179,7 @@ preg_match('/(^[a-z\s]*)([0-9\.]*)/i', XOOPS_VERSION, $versionParts);
                             <form id="<?php echo $wizard->pages[$wizard->currentPage]['name']; ?>" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES | ENT_HTML5); ?>" method="post">
                                 <h2><?php echo $wizard->pages[$wizard->currentPage]['title']; ?></h2>
                                 <?php if (!empty($pageHasHelp) && str_contains($content, 'xoform-help')): ?>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm mb-3" data-bs-toggle="collapse" data-bs-target=".xoform-help" aria-expanded="false"><?php echo SHOW_HIDE_HELP; ?></button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm mb-3" data-bs-toggle="collapse" data-bs-target=".xoform-help" aria-expanded="false"><?php echo installerHtmlSpecialChars(defined('SHOW_HIDE_HELP') ? SHOW_HIDE_HELP : 'Show/hide help text'); ?></button>
                                 <?php endif; ?>
                                 <?php echo $content; ?>
 

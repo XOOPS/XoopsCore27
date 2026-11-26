@@ -19,7 +19,7 @@ use Xoops\Upgrade\XoopsUpgrade;
  * Tasks:
  *  1. datahtaccess — replace the Apache 2.2-only xoops_data/.htaccess with the form
  *                    that works on Apache 2.2 and 2.4.
- *  2. bootstrapassets — remove retired wizard and editor assets and stock Bootstrap theme files.
+ *  2. bootstrapassets — remove retired wizard and editor assets. Theme cleanup is a separate webmaster action.
  *
  * Why: xoops_data/.htaccess shipped as "order deny,allow / deny from all". Apache 2.4
  * without mod_access_compat answers that with HTTP 500 instead of 403. It still refuses
@@ -109,6 +109,8 @@ HTACCESS;
     public function __construct(XoopsMySQLDatabase $db, UpgradeControl $control)
     {
         parent::__construct($db, $control, basename(__DIR__));
+        // An installed translation may predate the optional theme cleanup.
+        require_once dirname(__DIR__) . '/language/english/upd_2.7.4-to-2.7.5.php';
         $this->tasks = ['datahtaccess', 'bootstrapassets'];
     }
 
@@ -251,35 +253,67 @@ HTACCESS;
         return $lines === ['order deny,allow', 'deny from all'];
     }
 
-    /** @return \Generator<string, string> relative name => absolute filename */
-    private function obsoleteBootstrapFiles(): \Generator
+    /**
+     * Yield existing candidates. A false value means the file could not be inspected.
+     *
+     * @param array<string, string[]|null> $manifest stock digests, or null for mandatory assets
+     * @return \Generator<string, array{string, int, int}|false> relative name => path, device and inode, or failure
+     */
+    private function obsoleteBootstrapFiles(array $manifest): \Generator
     {
         $root = realpath(XOOPS_ROOT_PATH);
-        if (false === $root) {
-            throw new \RuntimeException(sprintf(_FILE_ACCESS_ERROR, 'XOOPS_ROOT_PATH'));
-        }
-        $themeHashes = require __DIR__ . '/bootstrap-theme-hashes.php';
-        foreach (array_fill_keys(self::OBSOLETE_BOOTSTRAP_FILES, null) + $themeHashes as $relative => $hashes) {
+        foreach ($manifest as $relative => $hashes) {
+            if (false === $root) {
+                yield $relative => false;
+                continue;
+            }
             $path = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
-            $dir = dirname($path);
-            $actual = realpath($dir);
-            if (false === $actual) {
+            $originalDirectory = self::inOriginalDirectory($path);
+            if (false === $originalDirectory) {
                 continue;
             }
-            // A linked parent can lead to another site's assets, even inside the same web root.
-            $sameDirectory = PHP_OS_FAMILY === 'Windows' ? strcasecmp($actual, $dir) === 0 : $actual === $dir;
-            $file = $actual . DIRECTORY_SEPARATOR . basename($path);
-            if (!$sameDirectory || (!is_file($file) && !is_link($file))) {
+            if (null === $originalDirectory || (!is_link($path) && !file_exists($path))) {
+                if (!self::isConfirmedAbsent($path)) {
+                    yield $relative => false;
+                }
                 continue;
             }
-            if (null === $hashes || self::isStockThemeFile($file, $hashes)) {
-                yield $relative => $file;
+            if (null === $hashes) {
+                if (is_file($path) || is_link($path)) {
+                    yield $relative => [$path, 0, 0];
+                }
+                continue;
+            }
+            if (is_link($path) || !is_file($path)) {
+                continue;
+            }
+            set_error_handler(static fn (): bool => true, E_WARNING);
+            try {
+                $stat = lstat($path);
+            } finally {
+                restore_error_handler();
+            }
+            if (false === $stat) {
+                yield $relative => false;
+                continue;
+            }
+            if ($stat['nlink'] > 1) {
+                continue;
+            }
+            $stock = $this->isStockThemeFile($path, $hashes);
+            if (null === $stock) {
+                yield $relative => false;
+            } elseif ($stock) {
+                yield $relative => [$path, $stat['dev'], $stat['ino']];
             }
         }
     }
 
-    /** @param string[] $hashes stock SHA-256 digests for this exact theme path */
-    private static function isStockThemeFile(string $file, array $hashes): bool
+    /**
+     * @param string[] $hashes stock SHA-256 digests for this exact theme path
+     * @return bool|null null when the content could not be verified
+     */
+    protected function isStockThemeFile(string $file, array $hashes): ?bool
     {
         if (is_link($file) || !is_file($file)) {
             return false;
@@ -287,7 +321,10 @@ HTACCESS;
         // Every stock file fits in 1 MiB, including CRLF checkouts. Bound reads of custom files.
         $limit = 1048576;
         $content = self::readCandidateFile($file, $limit + 1);
-        return false !== $content && strlen($content) <= $limit
+        if (false === $content) {
+            return null;
+        }
+        return strlen($content) <= $limit
             && in_array(hash('sha256', str_replace("\r\n", "\n", $content)), $hashes, true);
     }
 
@@ -302,24 +339,138 @@ HTACCESS;
         }
     }
 
+    /**
+     * @return bool true when every mandatory asset is gone or belongs to a linked directory
+     */
     public function check_bootstrapassets(): bool
     {
-        return !$this->obsoleteBootstrapFiles()->valid();
+        return !$this->obsoleteBootstrapFiles(array_fill_keys(self::OBSOLETE_BOOTSTRAP_FILES, null))->valid();
     }
 
+    /**
+     * @return bool true when the obsolete wizard and editor files were removed
+     */
     public function apply_bootstrapassets(): bool
     {
         $ok = true;
-        foreach ($this->obsoleteBootstrapFiles() as $relative => $path) {
-            if (!$this->removeLeftover($path)) {
-                $message = defined('_XOOPS_UPGRADE_275_ASSET_NOT_REMOVED')
-                    ? _XOOPS_UPGRADE_275_ASSET_NOT_REMOVED
-                    : 'Could not remove obsolete asset %s. Remove it manually or correct its directory permissions and retry.';
+        $manifest = array_fill_keys(self::OBSOLETE_BOOTSTRAP_FILES, null);
+        foreach ($this->obsoleteBootstrapFiles($manifest) as $relative => $candidate) {
+            if (false === $candidate || !$this->removeLeftover($candidate[0])) {
+                $message = false === $candidate ? _XOOPS_UPGRADE_275_ASSET_UNREADABLE : _XOOPS_UPGRADE_275_ASSET_NOT_REMOVED;
                 $this->logError($message, $relative);
                 $ok = false;
             }
         }
         return $ok;
+    }
+
+    /**
+     * @return bool true when the optional action can archive an asset or report an inspection failure
+     */
+    public function hasThemeAssets(): bool
+    {
+        return $this->obsoleteBootstrapFiles(require __DIR__ . '/bootstrap-theme-hashes.php')->valid();
+    }
+
+    /**
+     * Move recognized theme assets into a fresh private recovery directory, retaining the
+     * inode even if an editor still has the file open. Only the separate wizard action calls this.
+     *
+     * @return bool true when every eligible file was archived
+     * @throws \Random\RandomException when the operating system cannot generate an archive name
+     */
+    public function archiveThemeAssets(): bool
+    {
+        $hashes = require __DIR__ . '/bootstrap-theme-hashes.php';
+        $archive = null;
+        $ok = true;
+        set_error_handler(static fn (): bool => true, E_WARNING);
+        try {
+            foreach ($this->obsoleteBootstrapFiles($hashes) as $relative => $candidate) {
+                if (false === $candidate) {
+                    $this->logError(_XOOPS_UPGRADE_275_ASSET_UNREADABLE, $relative);
+                    $ok = false;
+                    continue;
+                }
+                if (null === $archive) {
+                    $name = 'theme-assets-275-' . bin2hex(random_bytes(12));
+                    $archive = XOOPS_VAR_PATH . '/' . $name;
+                    if (
+                        !mkdir($archive, 0700)
+                        || file_put_contents($archive . '/.htaccess', self::DATA_HTACCESS) !== strlen(self::DATA_HTACCESS)
+                        || false === file_put_contents($archive . '/index.html', '')
+                    ) {
+                        $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
+                        return false;
+                    }
+                    $this->log(sprintf(_XOOPS_UPGRADE_275_ARCHIVE_LOCATION, 'xoops_data/' . $name . '/'));
+                }
+                $saved = $archive . '/' . $relative;
+                $dir = dirname($saved);
+                if (!is_dir($dir) && !mkdir($dir, 0700, true)) {
+                    $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
+                    $ok = false;
+                } elseif (!$this->archiveThemeFile($candidate, $archive, $relative, $hashes[$relative])) {
+                    $ok = false;
+                }
+            }
+        } finally {
+            restore_error_handler();
+        }
+        return $ok;
+    }
+
+    /**
+     * Keep a hard link to the selected file, including subsequent writes through open handles.
+     * This also establishes a common filesystem before rename(), which can otherwise copy and unlink.
+     *
+     * @param array{string, int, int} $candidate path, device and inode before hashing
+     * @param string[] $hashes known hashes for the original path
+     */
+    private function archiveThemeFile(array $candidate, string $archive, string $relative, array $hashes): bool
+    {
+        [$path, $device, $inode] = $candidate;
+        $saved = $archive . '/' . $relative;
+        if (!function_exists('link') || !self::inOriginalDirectory($path) || !link($path, $saved)) {
+            $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
+            return false;
+        }
+        $captured = $saved . '.captured';
+        if (!self::inOriginalDirectory($path) || !rename($path, $captured)) {
+            $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
+            return false;
+        }
+        clearstatcache(true);
+        $before = lstat($saved);
+        $after = lstat($captured);
+        $same = $before !== false && $after !== false && $inode !== 0
+            && $device === $after['dev'] && $inode === $after['ino']
+            && $device === $before['dev'] && $inode === $before['ino'];
+        $stock = $this->isStockThemeFile($captured, $hashes);
+        if ($same && true === $stock && unlink($captured)) {
+            return true;
+        }
+        // A no-clobber restore keeps a newer live file intact if another editor got there first.
+        $restored = self::inOriginalDirectory($path) && (is_link($captured)
+            ? function_exists('symlink') && false !== ($target = readlink($captured)) && symlink($target, $path)
+            : is_file($captured) && link($captured, $path));
+        if (!$restored || false !== $stock) {
+            $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_RECOVER, $relative, 'xoops_data/' . basename($archive) . '/' . $relative . '.captured');
+            return false;
+        }
+        return true;
+    }
+
+    /** False for a redirected parent and null when its location cannot be established. */
+    private static function inOriginalDirectory(string $path): ?bool
+    {
+        clearstatcache(true);
+        $dir = dirname($path);
+        $actual = realpath($dir);
+        if (false === $actual) {
+            return null;
+        }
+        return PHP_OS_FAMILY === 'Windows' ? strcasecmp($actual, $dir) === 0 : $actual === $dir;
     }
 }
 

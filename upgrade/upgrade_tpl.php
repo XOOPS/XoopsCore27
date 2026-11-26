@@ -59,14 +59,14 @@ if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
                     $firstNeeded = true;
                     foreach ($viewModel['upgradeQueue'] as $stepName => $info) {
                         if (!$info->applied && $firstNeeded) {
-                            echo'<li class="nav-item"><span class="nav-link active" aria-current="step"><span class="fa-solid fa-exclamation-triangle"></span> '
+                            echo '<li class="nav-item"><span class="nav-link active" aria-current="step"><span class="fa-solid fa-exclamation-triangle"></span> '
                                 . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</span></li>';
                             $firstNeeded = false;
                         } elseif (!$info->applied) {
-                            echo'<li class="nav-item"><span class="nav-link"><span class="fa-solid fa-exclamation-triangle text-warning"></span> '
+                            echo '<li class="nav-item"><span class="nav-link"><span class="fa-solid fa-exclamation-triangle text-warning"></span> '
                                 . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</span></li>';
                         } else {
-                            echo'<li class="nav-item"><span class="nav-link"><span class="fa-solid fa-check text-success"></span> '
+                            echo '<li class="nav-item"><span class="nav-link"><span class="fa-solid fa-check text-success"></span> '
                                 . htmlspecialchars((string) $stepName, ENT_QUOTES, 'UTF-8') . '</span></li>';
                         }
                     }

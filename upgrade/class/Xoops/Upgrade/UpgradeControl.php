@@ -345,6 +345,7 @@ class UpgradeControl
      * @param string               $action       URL for the form action attribute
      * @param array<string, string> $parameters   hidden input name/value pairs
      * @param string               $confirmLabel plain-text checkbox label, '' for none
+     * @param string|null          $buttonLabel  plain-text submit label, null for Continue
      *
      * @return string HTML form markup
      */
@@ -352,6 +353,7 @@ class UpgradeControl
         string $action = 'index.php',
         array $parameters = ['action' => 'next'],
         string $confirmLabel = '',
+        ?string $buttonLabel = null,
     ): string {
         $actionAttr = htmlspecialchars($action, ENT_QUOTES, 'UTF-8');
         $form  = '<form action="' . $actionAttr . '" method="post">';
@@ -359,7 +361,7 @@ class UpgradeControl
             $form .= '<div class="form-check mb-3"><label class="form-check-label"><input class="form-check-input" type="checkbox" name="confirmed" value="1" required> '
                 . htmlspecialchars($confirmLabel, ENT_QUOTES, 'UTF-8') . '</label></div>';
         }
-        $form .= '<button class="btn btn-lg btn-success" type="submit">' . _CONTINUE;
+        $form .= '<button class="btn btn-lg btn-success" type="submit">' . htmlspecialchars($buttonLabel ?? _CONTINUE, ENT_QUOTES, 'UTF-8');
         $form .= '  <span class="fa-solid fa-caret-right"></span></button>';
         foreach ($parameters as $name => $value) {
             $nameAttr = htmlspecialchars((string) $name, ENT_QUOTES, 'UTF-8');

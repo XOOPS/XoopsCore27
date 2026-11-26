@@ -325,7 +325,7 @@ abstract class XoopsUpgrade
      * @param  string $path absolute filesystem path
      * @return bool
      */
-    private static function isConfirmedAbsent(string $path): bool
+    protected static function isConfirmedAbsent(string $path): bool
     {
         $name = basename($path);
         $dir  = dirname($path);
@@ -336,7 +336,12 @@ abstract class XoopsUpgrade
             $name = basename($dir);
             $dir  = dirname($dir);
         }
-        $listing = scandir($dir);
+        set_error_handler(static fn (): bool => true, E_WARNING);
+        try {
+            $listing = scandir($dir);
+        } finally {
+            restore_error_handler();
+        }
 
         return false !== $listing && !in_array($name, $listing, true);
     }

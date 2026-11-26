@@ -412,11 +412,12 @@ HTACCESS;
                 $dir = dirname($saved);
                 if (!is_dir($dir) && !mkdir($dir, 0700, true)) {
                     $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
-                } elseif ($this->archiveThemeFile($candidate, $archive, $relative, $hashes[$relative])) {
-                    continue;
+                    $ok = false;
+                } elseif (!$this->archiveThemeFile($candidate, $archive, $relative, $hashes[$relative])) {
+                    $ok = false;
                 }
-                $ok = false;
-                // rmdir stops at the first directory containing a recovery copy.
+                // A restored file leaves its folders empty as well. rmdir stops at the first
+                // directory containing a recovery copy.
                 for ($parent = dirname($relative); '.' !== $parent; $parent = dirname($parent)) {
                     $dir = $archive . '/' . $parent;
                     if (is_dir($dir) && !rmdir($dir)) {
@@ -455,9 +456,14 @@ HTACCESS;
         $saved = $archive . '/' . $relative;
         $probe = dirname($path) . '/.xoops-archive-' . bin2hex(random_bytes(12));
         if (0 === $inode || !function_exists('link') || true !== self::inOriginalDirectory($path)
-            || !link($archive . '/index.html', $probe) || !unlink($probe)
+            || !link($archive . '/index.html', $probe)
         ) {
             $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
+            return false;
+        }
+        if (!$this->removeLeftover($probe)) {
+            // Name the leftover so it can be removed by hand; a retry would only add another.
+            $this->logError(_XOOPS_UPGRADE_275_ASSET_NOT_REMOVED, dirname($relative) . '/' . basename($probe));
             return false;
         }
         if (true !== self::inOriginalDirectory($path) || !rename($path, $saved)) {
@@ -475,8 +481,15 @@ HTACCESS;
         $restored = true === self::inOriginalDirectory($path) && (is_link($saved)
             ? function_exists('symlink') && false !== ($target = readlink($saved)) && symlink($target, $path)
             : is_file($saved) && link($saved, $path));
-        if (!$restored || false !== $stock) {
+        // Once the live entry is back the archived name is no recovery copy: left in place, it
+        // would be a second name for the same file and follow every later edit.
+        if (!$restored || !unlink($saved)) {
             $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_RECOVER, $relative, 'xoops_data/' . basename($archive) . '/' . $relative);
+            return false;
+        }
+        if (false !== $stock) {
+            // Still a stock file, or unreadable: it is back in place and can be archived on a retry.
+            $this->logError(_XOOPS_UPGRADE_275_ARCHIVE_UNAVAILABLE, $relative);
             return false;
         }
         return true;

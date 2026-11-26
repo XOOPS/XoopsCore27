@@ -37,3 +37,5 @@ define('_CONTINUE', 'Continue');
 define('XOOPS_ERROR_ENCOUNTERED', 'Error');
 define('XOOPS_ERROR_SEE_BELOW', 'See below for messages.');
 define('_FILE_ACCESS_ERROR', 'Could not access the file %s');
+// 2.7.5
+define('_TOGGLE_NAVIGATION', 'Toggle navigation');

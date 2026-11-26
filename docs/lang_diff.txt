@@ -19,6 +19,9 @@ Below are language differences from one version to the next.
 - added define('_US_PWDTOOLONG', 'Password exceeds maximum length.');
 /htdocs/install/language/english/install.php
 - added define('ERR_PASSWORD_CHARACTER', 'The password contains a character that cannot be used.');
+- added define('TOGGLE_NAVIGATION', 'Toggle navigation');
+/upgrade/language/english/upgrade.php
+- added define('_TOGGLE_NAVIGATION', 'Toggle navigation');
 
 ================================
 2026/11: Version 2.7.5-Beta2

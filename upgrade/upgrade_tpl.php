@@ -50,7 +50,7 @@ if (file_exists('language/' . $viewModel['upgradeLanguage'] . '/style.css')) {
         <div class="container-fluid">
             <span class="navbar-brand"><img src="assets/img/logo_small.png" alt="XOOPS"></span>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#wizard-nav"
-                    aria-controls="wizard-nav" aria-expanded="false" aria-label="<?php echo htmlspecialchars(_XOOPS_UPGRADE, ENT_QUOTES, 'UTF-8'); ?>">
+                    aria-controls="wizard-nav" aria-expanded="false" aria-label="<?php echo htmlspecialchars(defined('_TOGGLE_NAVIGATION') ? _TOGGLE_NAVIGATION : 'Toggle navigation', ENT_QUOTES, 'UTF-8'); ?>">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div id="wizard-nav" class="collapse navbar-collapse">
